@@ -3,491 +3,491 @@
       "id": "p_coal",
       "name": "Coal",
       "type": "item",
-      "price": 0,
+      "price": 5.22,
       "rp_multiplier": 1
     },
     {
       "id": "p_raw_copper",
       "name": "Raw Copper",
       "type": "item",
-      "price": 0,
+      "price": 5.51,
       "rp_multiplier": 1
     },
     {
       "id": "p_steam",
       "name": "Steam",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 0.03,
+      "rp_multiplier": 0
     },
     {
       "id": "p_raw_iron",
       "name": "Raw Iron",
       "type": "item",
-      "price": 0,
+      "price": 5.8,
       "rp_multiplier": 1
     },
     {
       "id": "p_bauxite_residue",
       "name": "Bauxite Residue",
       "type": "item",
-      "price": 0,
+      "price": 50,
       "rp_multiplier": 1
     },
     {
       "id": "p_machine_oil",
       "name": "Machine Oil",
       "type": "fluid",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 29,
+      "rp_multiplier": 4
     },
     {
       "id": "p_lithium_ore",
       "name": "Lithium Ore",
       "type": "item",
-      "price": 0,
+      "price": 10,
       "rp_multiplier": 1
     },
     {
       "id": "p_soil",
       "name": "Soil",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 2,
+      "rp_multiplier": 0.1
     },
     {
       "id": "p_clay",
       "name": "Clay",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 2,
+      "rp_multiplier": 0.2
     },
     {
       "id": "p_sand",
       "name": "Sand",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 5,
+      "rp_multiplier": 0.1
     },
     {
       "id": "p_limestone",
       "name": "Limestone",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 1,
+      "rp_multiplier": 0
     },
     {
       "id": "p_water",
       "name": "Water",
-      "type": "item",
-      "price": 0,
+      "type": "fluid",
+      "price": 0.23,
       "rp_multiplier": 1
     },
     {
       "id": "p_liquid_nitrogen",
       "name": "Liquid Nitrogen",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 4,
+      "rp_multiplier": 3
     },
     {
       "id": "p_liquid_oxygen",
       "name": "Liquid Oxygen",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 6,
+      "rp_multiplier": 3
     },
     {
       "id": "p_liquid_argon",
       "name": "Liquid Argon",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 50,
+      "rp_multiplier": 3
     },
     {
       "id": "p_residue",
       "name": "Residue",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": -5.8,
+      "rp_multiplier": 0
     },
     {
       "id": "p_crude_oil",
       "name": "Crude Oil",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 11.6,
+      "rp_multiplier": 0.2
     },
     {
       "id": "p_hydrochloric_acid",
       "name": "Hydrochloric Acid",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 80,
+      "rp_multiplier": 10
     },
     {
       "id": "p_sulfuric_acid",
       "name": "Sulfuric Acid",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 65,
+      "rp_multiplier": 4
     },
     {
       "id": "p_acetic_acid",
       "name": "Acetic Acid",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 14.5,
+      "rp_multiplier": 7
     },
     {
       "id": "p_lithium_brine",
       "name": "Lithium Brine",
-      "type": "item",
-      "price": 0,
+      "type": "fluid",
+      "price": 25,
       "rp_multiplier": 1
     },
     {
       "id": "p_raw_gas",
       "name": "Raw Gas",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 0.03,
+      "rp_multiplier": 0
     },
     {
       "id": "p_fracking_oil",
       "name": "Fracking Oil",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 1,
+      "rp_multiplier": 0.2
     },
     {
       "id": "p_planks",
       "name": "Planks",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 13.05,
+      "rp_multiplier": 5
     },
     {
       "id": "p_nails",
       "name": "Nails",
       "type": "item",
-      "price": 0,
+      "price": 2.9,
       "rp_multiplier": 1
     },
     {
       "id": "p_chair",
       "name": "Chair",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 1029.5,
+      "rp_multiplier": 30
     },
     {
       "id": "p_steel_rod",
       "name": "Steel Rod",
       "type": "item",
-      "price": 0,
+      "price": 92.8,
       "rp_multiplier": 1
     },
     {
       "id": "p_gear",
       "name": "Gear",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 98.6,
+      "rp_multiplier": 20
     },
     {
       "id": "p_crankshaft",
       "name": "Crankshaft",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 754,
+      "rp_multiplier": 35
     },
     {
       "id": "p_black_dye",
       "name": "Black Dye",
       "type": "item",
-      "price": 0,
+      "price": 8.7,
       "rp_multiplier": 1
     },
     {
       "id": "p_toy",
       "name": "Toy",
       "type": "item",
-      "price": 0,
+      "price": 101.5,
       "rp_multiplier": 1
     },
     {
       "id": "p_copper_wire",
       "name": "Copper Wire",
       "type": "item",
-      "price": 0,
+      "price": 7.31,
       "rp_multiplier": 1
     },
     {
       "id": "p_rubber",
       "name": "Rubber",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 19.4,
+      "rp_multiplier": 90
     },
     {
       "id": "p_insulated_wire",
       "name": "Insulated Wire",
       "type": "item",
-      "price": 0,
+      "price": 40,
       "rp_multiplier": 1
     },
     {
       "id": "p_plastic_casing",
       "name": "Plastic Casing",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 145,
+      "rp_multiplier": 7
     },
     {
       "id": "p_gearbox",
       "name": "Gearbox",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 2552,
+      "rp_multiplier": 50
     },
     {
       "id": "p_hardened_plastic_casing",
       "name": "Hardened Plastic Casing",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 200,
+      "rp_multiplier": 20
     },
     {
       "id": "p_aluminium_ingot",
       "name": "Aluminium Ingot",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 800,
+      "rp_multiplier": 65
     },
     {
       "id": "p_steel_ingot",
       "name": "Steel Ingot",
       "type": "item",
-      "price": 0,
+      "price": 48.72,
       "rp_multiplier": 1
     },
     {
       "id": "p_tire_rim",
       "name": "Tire Rim",
       "type": "item",
-      "price": 0,
+      "price": 1800,
       "rp_multiplier": 1
     },
     {
       "id": "p_tire",
       "name": "Tire",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 2000,
+      "rp_multiplier": 40
     },
     {
       "id": "p_graphite_iron_electrode",
       "name": "Graphite Iron Electrode",
       "type": "item",
-      "price": 0,
+      "price": 80,
       "rp_multiplier": 1
     },
     {
       "id": "p_plastic_pellets",
       "name": "Plastic Pellets",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 0.87,
+      "rp_multiplier": 25
     },
     {
       "id": "p_lithium_carbonate",
       "name": "Lithium Carbonate",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 200,
+      "rp_multiplier": 40
     },
     {
       "id": "p_uncharged_lithium_ion_battery",
       "name": "Uncharged Lithium Ion Battery",
       "type": "item",
-      "price": 0,
+      "price": 2000,
       "rp_multiplier": 1
     },
     {
       "id": "p_graphite_zinc_electrode",
       "name": "Graphite Zinc Electrode",
       "type": "item",
-      "price": 0,
+      "price": 60,
       "rp_multiplier": 1
     },
     {
       "id": "p_charged_lithium_ion_battery",
       "name": "Charged Lithium Ion Battery",
       "type": "item",
-      "price": 0,
+      "price": 4000,
       "rp_multiplier": 1
     },
     {
       "id": "p_copper_plate",
       "name": "Copper Plate",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 32.86,
+      "rp_multiplier": 6
     },
     {
       "id": "p_lithium_battery_pack",
       "name": "Lithium Battery Pack",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 85000,
+      "rp_multiplier": 180
     },
     {
       "id": "p_iron_coil",
       "name": "Iron Coil",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 43.85,
+      "rp_multiplier": 4
     },
     {
       "id": "p_paper",
       "name": "Paper",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 14.5,
+      "rp_multiplier": 7
     },
     {
       "id": "p_filter",
       "name": "Filter",
       "type": "item",
-      "price": 0,
+      "price": 20,
       "rp_multiplier": 1
     },
     {
       "id": "p_gravel",
       "name": "Gravel",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 4,
+      "rp_multiplier": 0.1
     },
     {
       "id": "p_gunpowder",
       "name": "Gunpowder",
       "type": "item",
-      "price": 0,
+      "price": 70,
       "rp_multiplier": 1
     },
     {
       "id": "p_dynamite",
       "name": "Dynamite",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 120,
+      "rp_multiplier": 25
     },
     {
       "id": "p_electromagnet",
       "name": "Electromagnet",
       "type": "item",
-      "price": 0,
+      "price": 950,
       "rp_multiplier": 1
     },
     {
       "id": "p_steel_plate",
       "name": "Steel Plate",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 89.9,
+      "rp_multiplier": 18
     },
     {
       "id": "p_electric_motor",
       "name": "Electric Motor",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 4500,
+      "rp_multiplier": 200
     },
     {
       "id": "p_ferroaluminium_magnet",
       "name": "Ferroaluminium Magnet",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 8500,
+      "rp_multiplier": 120
     },
     {
       "id": "p_present_box",
       "name": "Present Box",
       "type": "item",
-      "price": 0,
+      "price": 174,
       "rp_multiplier": 1
     },
     {
       "id": "p_silicon",
       "name": "Silicon",
       "type": "item",
-      "price": 0,
+      "price": 50,
       "rp_multiplier": 1
     },
     {
       "id": "p_logic_plate",
       "name": "Logic Plate",
       "type": "item",
-      "price": 0,
+      "price": 65,
       "rp_multiplier": 1
     },
     {
       "id": "p_semiconductor",
       "name": "Semiconductor",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 650,
+      "rp_multiplier": 30
     },
     {
       "id": "p_iron_ingot",
       "name": "Iron Ingot",
       "type": "item",
-      "price": 0,
+      "price": 65.54,
       "rp_multiplier": 1
     },
     {
       "id": "p_zinc",
       "name": "Zinc",
       "type": "item",
-      "price": 0,
+      "price": 20,
       "rp_multiplier": 1
     },
     {
       "id": "p_gold_wire",
       "name": "Gold Wire",
       "type": "item",
-      "price": 0,
+      "price": 200,
       "rp_multiplier": 1
     },
     {
       "id": "p_8x_microchip",
       "name": "8X Microchip",
       "type": "item",
-      "price": 0,
+      "price": 13200,
       "rp_multiplier": 1
     },
     {
       "id": "p_zirconium_rod",
       "name": "Zirconium Rod",
       "type": "item",
-      "price": 0,
+      "price": 180,
       "rp_multiplier": 1
     },
     {
       "id": "p_enriched_uo2_pellets",
       "name": "Enriched Uo2 Pellets",
       "type": "item",
-      "price": 0,
+      "price": 256,
       "rp_multiplier": 1
     },
     {
       "id": "p_standard_fuel_rod",
       "name": "Standard Fuel Rod",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 150000,
+      "rp_multiplier": 100
     },
     {
       "id": "p_boron",
@@ -500,344 +500,344 @@
       "id": "p_control_rod",
       "name": "Control Rod",
       "type": "item",
-      "price": 0,
+      "price": 150000,
       "rp_multiplier": 1
     },
     {
       "id": "p_plutonium_oxide_pellets",
       "name": "Plutonium Oxide Pellets",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 1250,
+      "rp_multiplier": 0
     },
     {
       "id": "p_yellowcake",
       "name": "Yellowcake",
       "type": "item",
       "price": 0,
-      "rp_multiplier": 1
+      "rp_multiplier": 5
     },
     {
       "id": "p_mox_fuel_rod",
       "name": "MOX Fuel Rod",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 1000000,
+      "rp_multiplier": 100
     },
     {
       "id": "p_low_enrichment_fuel_rod",
       "name": "Low Enrichment Fuel Rod",
       "type": "item",
-      "price": 0,
+      "price": 20000,
       "rp_multiplier": 1
     },
     {
       "id": "p_iron_mix",
       "name": "Iron Mix",
       "type": "item",
-      "price": 0,
+      "price": 10,
       "rp_multiplier": 1
     },
     {
       "id": "p_iron_powder",
       "name": "Iron Powder",
       "type": "item",
-      "price": 0,
+      "price": 15,
       "rp_multiplier": 1
     },
     {
       "id": "p_copper_powder",
       "name": "Copper Powder",
       "type": "item",
-      "price": 0,
+      "price": 7,
       "rp_multiplier": 1
     },
     {
       "id": "p_copper_mix",
       "name": "Copper Mix",
       "type": "item",
-      "price": 0,
+      "price": 3,
       "rp_multiplier": 1
     },
     {
       "id": "p_oak_log",
       "name": "Oak Log",
       "type": "item",
-      "price": 0,
+      "price": 5.8,
       "rp_multiplier": 1
     },
     {
       "id": "p_coke_fuel",
       "name": "Coke Fuel",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 18,
+      "rp_multiplier": 9
     },
     {
       "id": "p_crushed_bauxite",
       "name": "Crushed Bauxite",
       "type": "item",
-      "price": 0,
+      "price": 75,
       "rp_multiplier": 1
     },
     {
       "id": "p_alumina",
       "name": "Alumina",
       "type": "item",
-      "price": 0,
+      "price": 100,
       "rp_multiplier": 1
     },
     {
       "id": "p_rock",
       "name": "Rock",
       "type": "item",
-      "price": 0,
+      "price": 4,
       "rp_multiplier": 1
     },
     {
       "id": "p_gold_ingot",
       "name": "Gold Ingot",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 4250,
+      "rp_multiplier": 70
     },
     {
       "id": "p_molten_purple_gold",
       "name": "Molten Purple Gold",
-      "type": "item",
-      "price": 0,
+      "type": "fluid",
+      "price": 580,
       "rp_multiplier": 1
     },
     {
       "id": "p_molten_ferroaluminium_alloy",
       "name": "Molten Ferroaluminium Alloy",
-      "type": "item",
-      "price": 0,
+      "type": "fluid",
+      "price": 1100,
       "rp_multiplier": 1
     },
     {
       "id": "p_copper_ingot",
       "name": "Copper Ingot",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 26.68,
+      "rp_multiplier": 1.5
     },
     {
       "id": "p_liquid_brass",
       "name": "Liquid Brass",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 30,
+      "rp_multiplier": 0
     },
     {
       "id": "p_liquid_copper",
       "name": "Liquid Copper",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 7.54,
+      "rp_multiplier": 0
     },
     {
       "id": "p_liquid_iron",
       "name": "Liquid Iron",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 23.2,
+      "rp_multiplier": 0
     },
     {
       "id": "p_sulfur",
       "name": "Sulfur",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 30,
+      "rp_multiplier": 12
     },
     {
       "id": "p_liquid_sulfur",
       "name": "Liquid Sulfur",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 12,
+      "rp_multiplier": 0
     },
     {
       "id": "p_8_karat_gold",
       "name": "8 Karat Gold",
       "type": "item",
-      "price": 0,
+      "price": 160,
       "rp_multiplier": 1
     },
     {
       "id": "p_liquid_gold",
       "name": "Liquid Gold",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 1000,
+      "rp_multiplier": 0
     },
     {
       "id": "p_10_karat_gold",
       "name": "10 Karat Gold",
       "type": "item",
-      "price": 0,
+      "price": 300,
       "rp_multiplier": 1
     },
     {
       "id": "p_12_karat_gold",
       "name": "12 Karat Gold",
       "type": "item",
-      "price": 0,
+      "price": 500,
       "rp_multiplier": 1
     },
     {
       "id": "p_18_karat_gold",
       "name": "18 Karat Gold",
       "type": "item",
-      "price": 0,
+      "price": 800,
       "rp_multiplier": 1
     },
     {
       "id": "p_24_karat_gold",
       "name": "24 Karat Gold",
       "type": "item",
-      "price": 0,
+      "price": 1200,
       "rp_multiplier": 1
     },
     {
       "id": "p_alumina_dust",
       "name": "Alumina Dust",
       "type": "item",
-      "price": 0,
+      "price": 90,
       "rp_multiplier": 1
     },
     {
       "id": "p_liquid_aluminium",
       "name": "Liquid Aluminium",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 200,
+      "rp_multiplier": 0
     },
     {
       "id": "p_liquid_glass",
       "name": "Liquid Glass",
-      "type": "item",
-      "price": 0,
+      "type": "fluid",
+      "price": 10,
       "rp_multiplier": 1
     },
     {
       "id": "p_treated_raw_iron",
       "name": "Treated Raw Iron",
       "type": "item",
-      "price": 0,
+      "price": 8,
       "rp_multiplier": 1
     },
     {
       "id": "p_treated_raw_copper",
       "name": "Treated Raw Copper",
       "type": "item",
-      "price": 0,
+      "price": 6,
       "rp_multiplier": 1
     },
     {
       "id": "p_raw_lead",
       "name": "Raw Lead",
       "type": "item",
-      "price": 0,
+      "price": 10,
       "rp_multiplier": 1
     },
     {
       "id": "p_liquid_lead",
       "name": "Liquid Lead",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 5,
+      "rp_multiplier": 0
     },
     {
       "id": "p_rawmix",
       "name": "Rawmix",
       "type": "item",
-      "price": 0,
+      "price": 2,
       "rp_multiplier": 1
     },
     {
       "id": "p_cement",
       "name": "Cement",
       "type": "item",
-      "price": 0,
+      "price": 30,
       "rp_multiplier": 1
     },
     {
       "id": "p_clay_brick",
       "name": "Clay Brick",
       "type": "item",
-      "price": 0,
+      "price": 28,
       "rp_multiplier": 1
     },
     {
       "id": "p_brick",
       "name": "Brick",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 50,
+      "rp_multiplier": 2
     },
     {
       "id": "p_naphtha",
       "name": "Naphtha",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 15.6,
+      "rp_multiplier": 0.1
     },
     {
       "id": "p_heavy_oil",
       "name": "Heavy Oil",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 5,
+      "rp_multiplier": 0.2
     },
     {
       "id": "p_sulfur_trioxide",
       "name": "Sulfur Trioxide",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 2.5,
+      "rp_multiplier": 0
     },
     {
       "id": "p_distilled_water",
       "name": "Distilled Water",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 1,
+      "rp_multiplier": 0.3
     },
     {
       "id": "p_gasoline",
       "name": "Gasoline",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 40.6,
+      "rp_multiplier": 5
     },
     {
       "id": "p_ethanol",
       "name": "Ethanol",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 5.8,
+      "rp_multiplier": 2
     },
     {
       "id": "p_gasolinee10",
       "name": "Gasolinee10",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 57,
+      "rp_multiplier": 13
     },
     {
       "id": "p_tetraethyllead",
       "name": "Tetraethyllead",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 21,
+      "rp_multiplier": 7
     },
     {
       "id": "p_leaded_gasoline",
       "name": "Leaded Gasoline",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 112,
+      "rp_multiplier": 23
     },
     {
       "id": "p_microchip_scrap",
@@ -850,246 +850,246 @@
       "id": "p_dirty_lithium_sulfate",
       "name": "Dirty Lithium Sulfate",
       "type": "item",
-      "price": 0,
+      "price": 60,
       "rp_multiplier": 1
     },
     {
       "id": "p_lithium_sulfate",
       "name": "Lithium Sulfate",
       "type": "item",
-      "price": 0,
+      "price": 100,
       "rp_multiplier": 1
     },
     {
       "id": "p_sodium_carbonate",
       "name": "Sodium Carbonate",
       "type": "item",
-      "price": 0,
+      "price": 8,
       "rp_multiplier": 1
     },
     {
       "id": "p_table_salt",
       "name": "Table Salt",
       "type": "item",
-      "price": 0,
+      "price": 4,
       "rp_multiplier": 1
     },
     {
       "id": "p_raw_zinc",
       "name": "Raw Zinc",
       "type": "item",
-      "price": 0,
+      "price": 5,
       "rp_multiplier": 1
     },
     {
       "id": "p_zinc_sulfate",
       "name": "Zinc Sulfate",
       "type": "item",
-      "price": 0,
+      "price": 10,
       "rp_multiplier": 1
     },
     {
       "id": "p_chlorine",
       "name": "Chlorine",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 0.2,
+      "rp_multiplier": 0.5
     },
     {
       "id": "p_hydrogen",
       "name": "Hydrogen",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 0.2,
+      "rp_multiplier": 0.5
     },
     {
       "id": "p_galvanized_steel",
       "name": "Galvanized Steel",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 123,
+      "rp_multiplier": 33
     },
     {
       "id": "p_lead_ingot",
       "name": "Lead Ingot",
       "type": "item",
-      "price": 0,
+      "price": 25,
       "rp_multiplier": 1
     },
     {
       "id": "p_powdered_tungsten",
       "name": "Powdered Tungsten",
       "type": "item",
-      "price": 0,
+      "price": 150,
       "rp_multiplier": 1
     },
     {
       "id": "p_powdered_tungsten_carbide",
       "name": "Powdered Tungsten Carbide",
       "type": "item",
-      "price": 0,
+      "price": 210,
       "rp_multiplier": 1
     },
     {
       "id": "p_filtered_water",
       "name": "Filtered Water",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 0.55,
+      "rp_multiplier": 0.2
     },
     {
       "id": "p_treated_rock",
       "name": "Treated Rock",
       "type": "item",
-      "price": 0,
+      "price": 15,
       "rp_multiplier": 1
     },
     {
       "id": "p_raw_zirconium",
       "name": "Raw Zirconium",
       "type": "item",
-      "price": 0,
+      "price": 32,
       "rp_multiplier": 1
     },
     {
       "id": "p_zirconium_chloride",
       "name": "Zirconium Chloride",
       "type": "item",
-      "price": 0,
+      "price": 30,
       "rp_multiplier": 1
     },
     {
       "id": "p_zirconium_dioxide",
       "name": "Zirconium Dioxide",
       "type": "item",
-      "price": 0,
+      "price": 45,
       "rp_multiplier": 1
     },
     {
       "id": "p_deep_earth_fragment",
       "name": "Deep Earth Fragment",
       "type": "item",
-      "price": 0,
+      "price": 200,
       "rp_multiplier": 1
     },
     {
       "id": "p_hydrofluoric_acid",
       "name": "Hydrofluoric Acid",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 600,
+      "rp_multiplier": 13
     },
     {
       "id": "p_water_free_gas",
       "name": "Water Free Gas",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 0.14,
+      "rp_multiplier": 0
     },
     {
       "id": "p_hot_crude_oil",
       "name": "Hot Crude Oil",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 0.14,
+      "rp_multiplier": 0
     },
     {
       "id": "p_meg",
       "name": "Meg",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 2.9,
+      "rp_multiplier": 0.2
     },
     {
       "id": "p_pta",
       "name": "Pta",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 2.9,
+      "rp_multiplier": 0.2
     },
     {
       "id": "p_rich_soil",
       "name": "Rich Soil",
       "type": "item",
-      "price": 0,
+      "price": 4,
       "rp_multiplier": 1
     },
     {
       "id": "p_medium_earth_fragment",
       "name": "Medium Earth Fragment",
       "type": "item",
-      "price": 0,
+      "price": 120,
       "rp_multiplier": 1
     },
     {
       "id": "p_concentrated_salt_solution",
       "name": "Concentrated Salt Solution",
-      "type": "item",
-      "price": 0,
+      "type": "fluid",
+      "price": 2,
       "rp_multiplier": 1
     },
     {
       "id": "p_nitrogen",
       "name": "Nitrogen",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 0.15,
+      "rp_multiplier": 0
     },
     {
       "id": "p_oxygen",
       "name": "Oxygen",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 0.1,
+      "rp_multiplier": 0.5
     },
     {
       "id": "p_argon",
       "name": "Argon",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 2,
+      "rp_multiplier": 0
     },
     {
       "id": "p_plastic_bottle",
       "name": "Plastic Bottle",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 72.5,
+      "rp_multiplier": 30
     },
     {
       "id": "p_hardened_plastic_pellets",
       "name": "Hardened Plastic Pellets",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 2.5,
+      "rp_multiplier": 10
     },
     {
       "id": "p_ferroaluminium_alloy_ingot",
       "name": "Ferroaluminium Alloy Ingot",
       "type": "item",
-      "price": 0,
+      "price": 2500,
       "rp_multiplier": 1
     },
     {
       "id": "p_purple_gold_ingot",
       "name": "Purple Gold Ingot",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 20000,
+      "rp_multiplier": 100
     },
     {
       "id": "p_glass",
       "name": "Glass",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 80,
+      "rp_multiplier": 14
     },
     {
       "id": "p_brass_ingot",
       "name": "Brass Ingot",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 80,
+      "rp_multiplier": 35
     },
     {
       "id": "p_mixed_uranium_oxides",
@@ -1101,9 +1101,9 @@
     {
       "id": "p_ammonia",
       "name": "Ammonia",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 1,
+      "rp_multiplier": 15
     },
     {
       "id": "p_mixed_fissile_nitrates",
@@ -1123,105 +1123,105 @@
       "id": "p_fission_byproducts",
       "name": "Fission Byproducts",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": -5000000,
+      "rp_multiplier": 0
     },
     {
       "id": "p_tributyl_phosphate",
       "name": "Tributyl Phosphate",
-      "type": "item",
+      "type": "fluid",
       "price": 0,
-      "rp_multiplier": 1
+      "rp_multiplier": 0
     },
     {
       "id": "p_refined_gas",
       "name": "Refined Gas",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 0.29,
+      "rp_multiplier": 0.01
     },
     {
       "id": "p_ethylene",
       "name": "Ethylene",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 14.5,
+      "rp_multiplier": 0.2
     },
     {
       "id": "p_hydrogen_sulfide",
       "name": "Hydrogen Sulfide",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 8,
+      "rp_multiplier": 0
     },
     {
       "id": "p_sulfur_dioxide",
       "name": "Sulfur Dioxide",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 2,
+      "rp_multiplier": 0
     },
     {
       "id": "p_light_oil",
       "name": "Light Oil",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 7,
+      "rp_multiplier": 0.1
     },
     {
       "id": "p_water_bottle",
       "name": "Water Bottle",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 174,
+      "rp_multiplier": 20
     },
     {
       "id": "p_cheap_water_bottle",
       "name": "Cheap Water Bottle",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 130.5,
+      "rp_multiplier": 5
     },
     {
       "id": "p_residue_bottle",
       "name": "Residue Bottle",
       "type": "item",
       "price": 0,
-      "rp_multiplier": 1
+      "rp_multiplier": 0
     },
     {
       "id": "p_refined_diesel",
       "name": "Refined Diesel",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 40.6,
+      "rp_multiplier": 3
     },
     {
       "id": "p_refined_diesel_bottle",
       "name": "Refined Diesel Bottle",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 449.5,
+      "rp_multiplier": 15
     },
     {
       "id": "p_oil_bottle",
       "name": "Oil Bottle",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 208.8,
+      "rp_multiplier": 20
     },
     {
       "id": "p_unenriched_uf6_gas",
       "name": "Unenriched Uf6 Gas",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 30,
+      "rp_multiplier": 0
     },
     {
       "id": "p_sodium_hydroxide_solution",
       "name": "Sodium Hydroxide Solution",
-      "type": "item",
-      "price": 0,
+      "type": "fluid",
+      "price": 10,
       "rp_multiplier": 1
     },
     {
@@ -1234,9 +1234,9 @@
     {
       "id": "p_slightly_enriched_uf6_gas",
       "name": "Slightly Enriched Uf6 Gas",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 45,
+      "rp_multiplier": 0
     },
     {
       "id": "p_impure_boron",
@@ -1248,233 +1248,233 @@
     {
       "id": "p_boric_acid",
       "name": "Boric Acid",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 1500,
+      "rp_multiplier": 12
     },
     {
       "id": "p_shallow_earth_fragment",
       "name": "Shallow Earth Fragment",
       "type": "item",
-      "price": 0,
+      "price": 30,
       "rp_multiplier": 1
     },
     {
       "id": "p_phosphorus_oxychloride",
       "name": "Phosphorus Oxychloride",
-      "type": "item",
+      "type": "fluid",
       "price": 0,
-      "rp_multiplier": 1
+      "rp_multiplier": 0
     },
     {
       "id": "p_enriched_uf6_gas",
       "name": "Enriched Uf6 Gas",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 150,
+      "rp_multiplier": 0
     },
     {
       "id": "p_aggregate",
       "name": "Aggregate",
       "type": "item",
-      "price": 0,
+      "price": 14.59,
       "rp_multiplier": 1
     },
     {
       "id": "p_wet_concrete",
       "name": "Wet Concrete",
       "type": "item",
-      "price": 0,
+      "price": 120,
       "rp_multiplier": 1
     },
     {
       "id": "p_concrete_block",
       "name": "Concrete Block",
       "type": "item",
-      "price": 0,
+      "price": 150,
       "rp_multiplier": 1
     },
     {
       "id": "p_reinforced_concrete_block",
       "name": "Reinforced Concrete Block",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 630,
+      "rp_multiplier": 4
     },
     {
       "id": "p_crude_diesel",
       "name": "Crude Diesel",
-      "type": "item",
-      "price": 0,
+      "type": "fluid",
+      "price": 13.05,
       "rp_multiplier": 1
     },
     {
       "id": "p_lng",
       "name": "Lng",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 160,
+      "rp_multiplier": 2
     },
     {
       "id": "p_paraxylene",
       "name": "Paraxylene",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 14.5,
+      "rp_multiplier": 0.2
     },
     {
       "id": "p_condensate",
       "name": "Condensate",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 0.1,
+      "rp_multiplier": 0
     },
     {
       "id": "p_contaminated_water",
       "name": "Contaminated Water",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": -241,
+      "rp_multiplier": 0
     },
     {
       "id": "p_iron_plate",
       "name": "Iron Plate",
       "type": "item",
-      "price": 0,
+      "price": 70.18,
       "rp_multiplier": 1
     },
     {
       "id": "p_cut_oak_log",
       "name": "Cut Oak Log",
       "type": "item",
-      "price": 0,
+      "price": 3.48,
       "rp_multiplier": 1
     },
     {
       "id": "p_chunk_plank",
       "name": "Chunk Plank",
       "type": "item",
-      "price": 0,
+      "price": 3.5,
       "rp_multiplier": 1
     },
     {
       "id": "p_copper_drill_head",
       "name": "Copper Drill Head",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 20000,
+      "rp_multiplier": 25
     },
     {
       "id": "p_iron_drill_head",
       "name": "Iron Drill Head",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 145000,
+      "rp_multiplier": 30
     },
     {
       "id": "p_steel_drill_head",
       "name": "Steel Drill Head",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 190000,
+      "rp_multiplier": 125
     },
     {
       "id": "p_tungsten_carbide_plate",
       "name": "Tungsten Carbide Plate",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 600,
+      "rp_multiplier": 70
     },
     {
       "id": "p_tungsten_carbide_drill_head",
       "name": "Tungsten Carbide Drill Head",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 800000,
+      "rp_multiplier": 225
     },
     {
       "id": "p_steel_coil",
       "name": "Steel Coil",
       "type": "item",
-      "price": 0,
+      "price": 75,
       "rp_multiplier": 1
     },
     {
       "id": "p_plank^2",
       "name": "Plank^2",
       "type": "item",
-      "price": 0,
+      "price": 40.6,
       "rp_multiplier": 1
     },
     {
       "id": "p_iron_plate^2",
       "name": "Iron Plate^2",
       "type": "item",
-      "price": 0,
+      "price": 295.8,
       "rp_multiplier": 1
     },
     {
       "id": "p_poor_quality_diesel",
       "name": "Poor Quality Diesel",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 21.75,
+      "rp_multiplier": 1.5
     },
     {
       "id": "p_diesel",
       "name": "Diesel",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": 30.45,
+      "rp_multiplier": 2
     },
     {
       "id": "p_depleted_uf6_waste",
       "name": "Depleted Uf6 Waste",
-      "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "type": "fluid",
+      "price": -250,
+      "rp_multiplier": 0
     },
     {
       "id": "p_raw_uranium",
       "name": "Raw Uranium",
       "type": "item",
-      "price": 0,
+      "price": 54,
       "rp_multiplier": 1
     },
     {
       "id": "p_spent_fuel",
       "name": "Spent Fuel",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": -1000000,
+      "rp_multiplier": 0
     },
     {
       "id": "p_exhaust",
       "name": "Exhaust",
       "type": "fluid",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": -0.5,
+      "rp_multiplier": 0
     },
     {
       "id": "p_high_pressure_steam",
       "name": "High Pressure Steam",
       "type": "fluid",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 0.03,
+      "rp_multiplier": 0
     },
     {
       "id": "p_spent_mox_fuel",
       "name": "Spent MOX Fuel",
       "type": "item",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": -1000000,
+      "rp_multiplier": 0
     },
     {
       "id": "p_low_pressure_steam",
       "name": "Low Pressure Steam",
       "type": "fluid",
-      "price": 0,
-      "rp_multiplier": 1
+      "price": 0.03,
+      "rp_multiplier": 0
     },
     {
       "id": "p_##x_microchip",
