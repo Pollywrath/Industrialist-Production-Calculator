@@ -1,138 +1,174 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
+import { getProduct } from '../data/dataLoader';
+import { getProductName, formatQuantity, formatCycleTime, formatPowerConsumption } from '../utils/variableHandler';
 
-// Layout constants
 const RECT_HEIGHT = 44;
 const RECT_GAP = 8;
-const TOP_PADDING = 60;
+const TOP_PADDING = 165;
 const BOTTOM_PADDING = 20;
 const SIDE_PADDING = 10;
-const COLUMN_GAP = 16;
-const RECT_MIN_WIDTH = 70;
-const RECT_MAX_WIDTH = 140;
-const MIN_BOX_WIDTH = 180;
+const COLUMN_GAP = 20;
+const MIN_WIDTH = 320;
 
 const CustomNode = ({ data, id }) => {
-  const leftHandles = data.leftHandles || 0;
-  const rightHandles = data.rightHandles || 0;
-  const maxHandles = Math.max(leftHandles, rightHandles, 1);
+  const { recipe, machine, onInputClick, onOutputClick, isTarget } = data;
+  
+  if (!recipe || !machine || !recipe.inputs || !recipe.outputs) {
+    console.error('CustomNode: Invalid data', { data, id });
+    return null;
+  }
+  
+  const leftCount = recipe.inputs.length;
+  const rightCount = recipe.outputs.length;
+  const maxCount = Math.max(leftCount, rightCount, 1);
   
   // Calculate dimensions
-  const height = TOP_PADDING + (maxHandles * RECT_HEIGHT) + ((maxHandles - 1) * RECT_GAP) + BOTTOM_PADDING;
-  const titleWidth = (data.label?.length || 5) * 8 + 60;
-  const hasLeft = leftHandles > 0;
-  const hasRight = rightHandles > 0;
+  const estimateTextWidth = (text) => text.length * 8 + 6;
   
-  const width = hasLeft && hasRight
-    ? Math.max(titleWidth, RECT_MIN_WIDTH * 2 + COLUMN_GAP + SIDE_PADDING * 2, MIN_BOX_WIDTH)
-    : Math.max(titleWidth, RECT_MIN_WIDTH + SIDE_PADDING * 2, MIN_BOX_WIDTH);
+  const getMaxWidth = (items) => {
+    if (!items?.length) return 80;
+    return Math.max(80, ...items.map(item => {
+      const name = getProductName(item.product_id, getProduct);
+      const qty = formatQuantity(item.quantity);
+      return estimateTextWidth(`${qty}x ${name}`);
+    }));
+  };
 
-  // Generate vertical positions for rectangles (centered)
+  const leftWidth = leftCount > 0 ? getMaxWidth(recipe.inputs) : 0;
+  const rightWidth = rightCount > 0 ? getMaxWidth(recipe.outputs) : 0;
+  
+  const hasLeft = leftCount > 0;
+  const hasRight = rightCount > 0;
+  const contentWidth = hasLeft && hasRight 
+    ? leftWidth + rightWidth + COLUMN_GAP + SIDE_PADDING * 2
+    : (hasLeft ? leftWidth : rightWidth) + SIDE_PADDING * 2;
+  
+  const width = Math.max(contentWidth, MIN_WIDTH);
+  const height = TOP_PADDING + (maxCount * RECT_HEIGHT) + ((maxCount - 1) * RECT_GAP) + BOTTOM_PADDING;
+
+  // Generate positions
   const getRectPositions = (count) => {
     if (count === 0) return [];
     const totalHeight = count * RECT_HEIGHT + (count - 1) * RECT_GAP;
     const availableHeight = height - TOP_PADDING - BOTTOM_PADDING;
-    const offset = (availableHeight - totalHeight) / 2;
-    return Array.from({ length: count }, (_, i) => TOP_PADDING + offset + i * (RECT_HEIGHT + RECT_GAP));
+    const offset = Math.max((availableHeight - totalHeight) / 2, 0);
+    return Array.from({ length: count }, (_, i) => 
+      TOP_PADDING + offset + i * (RECT_HEIGHT + RECT_GAP)
+    );
   };
 
-  const leftPositions = getRectPositions(leftHandles);
-  const rightPositions = getRectPositions(rightHandles);
-  
-  // Handle positions aligned with rectangle centers
-  const getHandlePositions = (positions) => positions.map(p => ((p + RECT_HEIGHT / 2) / height) * 100);
-  
-  const leftHandlePos = getHandlePositions(leftPositions);
-  const rightHandlePos = getHandlePositions(rightPositions);
-
-  const rectMaxWidth = hasLeft && hasRight
-    ? Math.min((width - SIDE_PADDING * 2 - COLUMN_GAP) / 2, RECT_MAX_WIDTH)
-    : Math.min(width - SIDE_PADDING * 2, RECT_MAX_WIDTH);
+  const leftPositions = getRectPositions(leftCount);
+  const rightPositions = getRectPositions(rightCount);
+  const getHandlePositions = (positions) => 
+    positions.map(p => ((p + RECT_HEIGHT / 2) / height) * 100);
 
   return (
-    <div
-      style={{
-        padding: '15px 20px',
-        borderRadius: '12px',
-        background: '#1a1a1a',
-        border: '2px solid #d4a637',
-        color: '#f5d56a',
-        width: `${width}px`,
-        height: `${height}px`,
-        fontWeight: '500',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)',
-        position: 'relative',
-      }}
-    >
-      {/* Title */}
-      <div style={{
-        textAlign: 'center',
-        marginBottom: '20px',
-        paddingBottom: '10px',
-        fontSize: '16px',
-        fontWeight: '600',
-        borderBottom: '1px solid #d4a63755',
-      }}>
-        {data.label}
+    <div className={`custom-node ${isTarget ? 'target' : ''}`} style={{ width, height }}>
+      <div className="node-recipe-name" title={recipe.name}>
+        {recipe.name}
       </div>
 
-      {/* Left rectangles and handles */}
-      {leftPositions.map((pos, i) => (
-        <React.Fragment key={`left-${i}`}>
-          <NodeRect side="left" index={i} position={pos} maxWidth={rectMaxWidth} isOnly={!hasRight} />
-          <NodeHandle side="left" index={i} position={leftHandlePos[i]} />
-        </React.Fragment>
-      ))}
+      <div className="node-stats-row">
+        <div className="node-stats">
+          <div className="node-stat-row">
+            <span className="node-stat-label">Cycle:</span> {formatCycleTime(recipe.cycle_time)}
+          </div>
+          <div className="node-stat-row">
+            <span className="node-stat-label">Power:</span> {formatPowerConsumption(recipe.power_consumption)}
+          </div>
+          <div className="node-stat-row">
+            <span className="node-stat-label">Pollution:</span> {typeof recipe.pollution === 'number' ? `${recipe.pollution}%/hr` : recipe.pollution}
+          </div>
+        </div>
 
-      {/* Right rectangles and handles */}
-      {rightPositions.map((pos, i) => (
-        <React.Fragment key={`right-${i}`}>
-          <NodeRect side="right" index={i} position={pos} maxWidth={rectMaxWidth} isOnly={!hasLeft} />
-          <NodeHandle side="right" index={i} position={rightHandlePos[i]} />
-        </React.Fragment>
-      ))}
+        <div className="node-machine-info">
+          <div className="node-machine-name" title={machine.name}>
+            {machine.name}
+          </div>
+          <div className="node-machine-count">0</div>
+        </div>
+      </div>
+
+      {/* Inputs */}
+      {leftPositions.map((pos, i) => {
+        const input = recipe.inputs[i];
+        if (!input) return null;
+        return (
+          <React.Fragment key={`left-${i}`}>
+            <NodeRect 
+              side="left" 
+              index={i} 
+              position={pos} 
+              width={leftWidth}
+              isOnly={!hasRight}
+              productId={input.product_id}
+              quantity={input.quantity}
+              onClick={onInputClick}
+              nodeId={id}
+            />
+            <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} />
+          </React.Fragment>
+        );
+      })}
+
+      {/* Outputs */}
+      {rightPositions.map((pos, i) => {
+        const output = recipe.outputs[i];
+        if (!output) return null;
+        return (
+          <React.Fragment key={`right-${i}`}>
+            <NodeRect 
+              side="right" 
+              index={i} 
+              position={pos} 
+              width={rightWidth}
+              isOnly={!hasLeft}
+              productId={output.product_id}
+              quantity={output.quantity}
+              onClick={onOutputClick}
+              nodeId={id}
+            />
+            <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} />
+          </React.Fragment>
+        );
+      })}
     </div>
   );
 };
 
-// Rectangle component
-const NodeRect = ({ side, index, position, maxWidth, isOnly }) => {
+const NodeRect = ({ side, index, position, width, isOnly, productId, quantity, onClick, nodeId }) => {
   const isLeft = side === 'left';
-  const colors = {
-    left: { bg: '#1a3a2a', border: '#22c55e', text: '#86efac' },
-    right: { bg: '#3a1a1a', border: '#ef4444', text: '#fca5a5' },
+  const productName = getProductName(productId, getProduct);
+  const displayQuantity = formatQuantity(quantity);
+  
+  const handleClick = (e) => {
+    if (onClick) {
+      e.stopPropagation();
+      onClick(productId, nodeId, index);
+    }
   };
-  const color = colors[side];
+
+  const style = {
+    left: isOnly ? '50%' : (isLeft ? `${SIDE_PADDING}px` : undefined),
+    right: !isOnly && !isLeft ? `${SIDE_PADDING}px` : undefined,
+    transform: isOnly ? 'translateX(-50%)' : undefined,
+    top: `${position}px`,
+    width: `${width}px`,
+  };
 
   return (
     <div
-      style={{
-        position: 'absolute',
-        left: isOnly ? '50%' : (isLeft ? `${SIDE_PADDING}px` : undefined),
-        right: !isOnly && !isLeft ? `${SIDE_PADDING}px` : undefined,
-        transform: isOnly ? 'translateX(-50%)' : undefined,
-        top: `${position}px`,
-        minWidth: `${RECT_MIN_WIDTH}px`,
-        maxWidth: `${maxWidth}px`,
-        background: color.bg,
-        border: `2px solid ${color.border}`,
-        borderRadius: '6px',
-        padding: '10px 8px',
-        color: color.text,
-        fontSize: '13px',
-        textAlign: 'center',
-        fontWeight: '500',
-        whiteSpace: 'nowrap',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-      }}
+      onClick={handleClick}
+      title={`${displayQuantity}x ${productName}`}
+      className={`node-rect ${isLeft ? 'input' : 'output'} ${onClick ? 'clickable' : ''}`}
+      style={style}
     >
-      {isLeft ? 'Left' : 'Right'} {index + 1}
+      {displayQuantity}x {productName}
     </div>
   );
 };
 
-// Handle component
 const NodeHandle = ({ side, index, position }) => {
   const isLeft = side === 'left';
   return (

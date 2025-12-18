@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -13,82 +13,475 @@ import '@xyflow/react/dist/style.css';
 
 import CustomNode from './components/CustomNode';
 import CustomEdge from './components/CustomEdge';
+import { 
+  products, machines, recipes, 
+  getMachine, getProduct, getRecipesProducingProduct,
+  updateProducts, updateMachines, updateRecipes,
+  saveCanvasState, loadCanvasState, restoreDefaults
+} from './data/dataLoader';
+import { getProductName, formatIngredient, filterVariableProducts, formatPrice, formatRPMultiplier } from './utils/variableHandler';
 
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 
-// Shared button styles
-const btnBase = {
-  padding: '12px 24px',
-  border: 'none',
-  borderRadius: '8px',
-  cursor: 'pointer',
-  fontWeight: '600',
-  fontSize: '14px',
-  boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
+// Get all recipes that use a product as input
+const getRecipesUsingProduct = (productId) => {
+  return recipes.filter(recipe => 
+    recipe.inputs.some(input => input.product_id === productId)
+  );
 };
-
-const btnPrimary = { ...btnBase, background: '#d4a637', color: '#0a0a0a' };
-const btnSecondary = { ...btnBase, background: '#1a1a1a', color: '#d4a637', border: '2px solid #d4a637' };
 
 function App() {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [nodeId, setNodeId] = useState(0);
-  const [showModal, setShowModal] = useState(false);
-  const [leftHandles, setLeftHandles] = useState(1);
-  const [rightHandles, setRightHandles] = useState(1);
+  const [showRecipeSelector, setShowRecipeSelector] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('name_asc');
+  const [filterType, setFilterType] = useState('all');
+  const [recipeFilter, setRecipeFilter] = useState('all');
+  const [autoConnectTarget, setAutoConnectTarget] = useState(null);
+  const [targetProducts, setTargetProducts] = useState([]);
+  const [showTargetsModal, setShowTargetsModal] = useState(false);
+  const [targetIdCounter, setTargetIdCounter] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [selectorOpenedFrom, setSelectorOpenedFrom] = useState('button');
   const reactFlowWrapper = useRef(null);
+  const fileInputRef = useRef(null);
+
+  // Load canvas state on mount
+  useEffect(() => {
+    const savedState = loadCanvasState();
+    if (savedState?.nodes) {
+      const restoredNodes = savedState.nodes.map(node => ({
+        ...node,
+        data: {
+          ...node.data,
+          onInputClick: openRecipeSelectorForInput,
+          onOutputClick: openRecipeSelectorForOutput,
+        }
+      }));
+      
+      setNodes(restoredNodes);
+      setEdges(savedState.edges || []);
+      setTargetProducts(savedState.targetProducts || []);
+      setNodeId(savedState.nodeId || 0);
+      setTargetIdCounter(savedState.targetIdCounter || 0);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Save canvas state whenever it changes
+  useEffect(() => {
+    saveCanvasState(nodes, edges, targetProducts, nodeId, targetIdCounter);
+  }, [nodes, edges, targetProducts, nodeId, targetIdCounter]);
 
   const onConnect = useCallback((params) => {
+    const sourceNode = nodes.find(n => n.id === params.source);
+    const targetNode = nodes.find(n => n.id === params.target);
+    
+    if (!sourceNode || !targetNode) return;
+    
+    const sourceHandleIndex = parseInt(params.sourceHandle.split('-')[1]);
+    const targetHandleIndex = parseInt(params.targetHandle.split('-')[1]);
+    
+    const sourceProductId = sourceNode.data.recipe.outputs[sourceHandleIndex]?.product_id;
+    const targetProductId = targetNode.data.recipe.inputs[targetHandleIndex]?.product_id;
+    
+    if (sourceProductId !== targetProductId) return;
+    
     setEdges((eds) => addEdge({ ...params, type: 'custom', animated: false }, eds));
-  }, [setEdges]);
+  }, [setEdges, nodes]);
 
-  const addNode = useCallback(() => setShowModal(true), []);
+  const openRecipeSelector = useCallback(() => {
+    setShowRecipeSelector(true);
+    setSelectedProduct(null);
+    setSearchTerm('');
+    setAutoConnectTarget(null);
+    setSelectorOpenedFrom('button');
+    setRecipeFilter('all');
+  }, []);
 
-  const createNode = useCallback(() => {
-    if (leftHandles === 0 && rightHandles === 0) {
-      alert('At least one side must have nodes!');
+  const openRecipeSelectorForInput = useCallback((productId, nodeId, inputIndex) => {
+    const product = getProduct(productId);
+    if (product) {
+      setShowRecipeSelector(true);
+      setSelectedProduct(product);
+      setSearchTerm('');
+      setAutoConnectTarget({ nodeId, inputIndex, productId });
+      setSelectorOpenedFrom('rectangle');
+      setRecipeFilter('producers');
+    }
+  }, []);
+
+  const openRecipeSelectorForOutput = useCallback((productId, nodeId, outputIndex) => {
+    const product = getProduct(productId);
+    if (product) {
+      setShowRecipeSelector(true);
+      setSelectedProduct(product);
+      setSearchTerm('');
+      setAutoConnectTarget({ nodeId, outputIndex, productId, isOutput: true });
+      setSelectorOpenedFrom('rectangle');
+      setRecipeFilter('consumers');
+    }
+  }, []);
+
+  const createRecipeBox = useCallback((recipe) => {
+    const machine = getMachine(recipe.machine_id);
+    if (!machine) {
+      alert('Error: Machine not found for this recipe');
+      return;
+    }
+    
+    if (!recipe.inputs || !recipe.outputs) {
+      alert('Error: Recipe is missing inputs or outputs data');
+      return;
+    }
+    
+    const newNodeId = `node-${nodeId}`;
+    
+    let position;
+    if (autoConnectTarget) {
+      const targetNode = nodes.find(n => n.id === autoConnectTarget.nodeId);
+      if (targetNode) {
+        const xOffset = autoConnectTarget.isOutput ? 400 : -400;
+        position = { x: targetNode.position.x + xOffset, y: targetNode.position.y };
+      } else {
+        position = { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 };
+      }
+    } else {
+      position = { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 };
+    }
+
+    const newNode = {
+      id: newNodeId,
+      type: 'custom',
+      position,
+      data: { 
+        recipe,
+        machine,
+        leftHandles: recipe.inputs.length,
+        rightHandles: recipe.outputs.length,
+        onInputClick: openRecipeSelectorForInput,
+        onOutputClick: openRecipeSelectorForOutput,
+        isTarget: false,
+      },
+      sourcePosition: 'right',
+      targetPosition: 'left',
+    };
+    
+    setNodes((nds) => [...nds, newNode]);
+
+    // Auto-connect if opened from rectangle
+    if (autoConnectTarget) {
+      setTimeout(() => {
+        if (autoConnectTarget.isOutput) {
+          const inputIndex = recipe.inputs.findIndex(
+            input => input.product_id === autoConnectTarget.productId
+          );
+
+          if (inputIndex !== -1 && autoConnectTarget.outputIndex !== undefined) {
+            const newEdge = {
+              source: autoConnectTarget.nodeId,
+              sourceHandle: `right-${autoConnectTarget.outputIndex}`,
+              target: newNodeId,
+              targetHandle: `left-${inputIndex}`,
+              type: 'custom',
+              animated: false,
+            };
+            setEdges((eds) => addEdge(newEdge, eds));
+          }
+        } else {
+          const outputIndex = recipe.outputs.findIndex(
+            output => output.product_id === autoConnectTarget.productId
+          );
+
+          if (outputIndex !== -1 && autoConnectTarget.inputIndex !== undefined) {
+            const newEdge = {
+              source: newNodeId,
+              sourceHandle: `right-${outputIndex}`,
+              target: autoConnectTarget.nodeId,
+              targetHandle: `left-${autoConnectTarget.inputIndex}`,
+              type: 'custom',
+              animated: false,
+            };
+            setEdges((eds) => addEdge(newEdge, eds));
+          }
+        }
+      }, 50);
+    }
+
+    setNodeId((id) => id + 1);
+    setShowRecipeSelector(false);
+    setSelectedProduct(null);
+    setSearchTerm('');
+    setAutoConnectTarget(null);
+    setSelectorOpenedFrom('button');
+    setRecipeFilter('all');
+  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, autoConnectTarget]);
+
+  const deleteRecipeBoxAndTarget = useCallback((boxId) => {
+    setNodes((nds) => nds.filter((n) => n.id !== boxId));
+    setEdges((eds) => eds.filter((e) => e.source !== boxId && e.target !== boxId));
+    setTargetProducts(prev => prev.filter(t => t.recipeBoxId !== boxId));
+  }, [setNodes, setEdges]);
+
+  const toggleTargetStatus = useCallback((node) => {
+    const existingTarget = targetProducts.find(t => t.recipeBoxId === node.id);
+    
+    if (existingTarget) {
+      setTargetProducts(prev => prev.filter(t => t.recipeBoxId !== node.id));
+      setNodes((nds) => nds.map(n => 
+        n.id === node.id ? { ...n, data: { ...n.data, isTarget: false } } : n
+      ));
+    } else {
+      if (node.data?.recipe?.outputs && node.data.recipe.outputs.length > 0) {
+        const newTarget = {
+          id: `target_${targetIdCounter}`,
+          recipeBoxId: node.id,
+          productId: node.data.recipe.outputs[0].product_id,
+          desiredAmount: 0,
+        };
+        setTargetProducts(prev => [...prev, newTarget]);
+        setTargetIdCounter(prev => prev + 1);
+        
+        setNodes((nds) => nds.map(n => 
+          n.id === node.id ? { ...n, data: { ...n.data, isTarget: true } } : n
+        ));
+      }
+    }
+  }, [targetProducts, targetIdCounter, setNodes]);
+
+  const onNodeClick = useCallback((event, node) => {
+    if (event.shiftKey && !event.ctrlKey && !event.altKey) {
+      toggleTargetStatus(node);
       return;
     }
 
-    setNodes((nds) => [...nds, {
-      id: `node-${nodeId}`,
-      type: 'custom',
-      position: { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 },
-      data: { label: `Box ${nodeId + 1}`, leftHandles, rightHandles },
-      sourcePosition: 'right',
-      targetPosition: 'left',
-    }]);
-    setNodeId((id) => id + 1);
-    setShowModal(false);
-    setLeftHandles(1);
-    setRightHandles(1);
-  }, [nodeId, leftHandles, rightHandles, setNodes]);
-
-  const onNodeClick = useCallback((event, node) => {
     if (event.ctrlKey && event.altKey) {
-      setNodes((nds) => nds.filter((n) => n.id !== node.id));
-      setEdges((eds) => eds.filter((e) => e.source !== node.id && e.target !== node.id));
+      deleteRecipeBoxAndTarget(node.id);
     }
-  }, [setNodes, setEdges]);
+  }, [toggleTargetStatus, deleteRecipeBoxAndTarget]);
 
   const clearAll = useCallback(() => {
     setNodes([]);
     setEdges([]);
     setNodeId(0);
+    setTargetProducts([]);
+    setTargetIdCounter(0);
   }, [setNodes, setEdges]);
 
-  const closeModal = () => {
-    setShowModal(false);
-    setLeftHandles(1);
-    setRightHandles(1);
+  const removeTargetStatus = useCallback((targetId) => {
+    const target = targetProducts.find(t => t.id === targetId);
+    if (target) {
+      setTargetProducts(prev => prev.filter(t => t.id !== targetId));
+      setNodes((nds) => nds.map(n => 
+        n.id === target.recipeBoxId ? { ...n, data: { ...n.data, isTarget: false } } : n
+      ));
+    }
+  }, [targetProducts, setNodes]);
+
+  const updateTargetAmount = useCallback((targetId, amount) => {
+    setTargetProducts(prev => prev.map(t => 
+      t.id === targetId ? { ...t, desiredAmount: amount } : t
+    ));
+  }, []);
+
+  const handleImport = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const processImport = useCallback((event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const imported = JSON.parse(e.target.result);
+        
+        const productMap = new Map();
+        if (imported.products) {
+          const filteredProducts = filterVariableProducts(imported.products);
+          filteredProducts.forEach(p => productMap.set(p.id, p));
+        }
+        const uniqueProducts = Array.from(productMap.values());
+
+        const machineIds = new Set();
+        const duplicateMachines = [];
+        if (imported.machines) {
+          imported.machines.forEach(m => {
+            if (machineIds.has(m.id)) {
+              duplicateMachines.push(m.id);
+            }
+            machineIds.add(m.id);
+          });
+        }
+
+        if (duplicateMachines.length > 0) {
+          alert(`Import failed: Duplicate machine IDs found: ${duplicateMachines.join(', ')}`);
+          return;
+        }
+
+        const importedMachineIds = new Set(imported.machines?.map(m => m.id) || []);
+        const cleanedRecipes = (imported.recipes || []).filter(r => importedMachineIds.has(r.machine_id));
+
+        const currentProducts = [...products];
+        uniqueProducts.forEach(newProduct => {
+          const existingIndex = currentProducts.findIndex(p => p.id === newProduct.id);
+          if (existingIndex >= 0) {
+            currentProducts[existingIndex] = newProduct;
+          } else {
+            currentProducts.push(newProduct);
+          }
+        });
+        updateProducts(currentProducts);
+
+        if (imported.machines && imported.machines.length > 0) {
+          const currentMachines = [...machines];
+          const currentRecipes = [...recipes];
+          
+          const importedMachineIdSet = new Set(imported.machines.map(m => m.id));
+          const recipesWithoutImportedMachines = currentRecipes.filter(
+            r => !importedMachineIdSet.has(r.machine_id)
+          );
+
+          imported.machines.forEach(newMachine => {
+            const existingIndex = currentMachines.findIndex(m => m.id === newMachine.id);
+            if (existingIndex >= 0) {
+              currentMachines[existingIndex] = newMachine;
+            } else {
+              currentMachines.push(newMachine);
+            }
+          });
+
+          const finalRecipes = [...recipesWithoutImportedMachines, ...cleanedRecipes];
+
+          updateMachines(currentMachines);
+          updateRecipes(finalRecipes);
+        }
+
+        if (imported.canvas) {
+          const clearCanvas = window.confirm('Clear current canvas and load imported layout?');
+          if (clearCanvas) {
+            const restoredNodes = (imported.canvas.nodes || []).map(node => ({
+              ...node,
+              data: {
+                ...node.data,
+                onInputClick: openRecipeSelectorForInput,
+                onOutputClick: openRecipeSelectorForOutput,
+              }
+            }));
+            
+            setNodes(restoredNodes);
+            setEdges(imported.canvas.edges || []);
+            setTargetProducts(imported.canvas.targetProducts || []);
+            setNodeId(imported.canvas.nodeId || 0);
+            setTargetIdCounter(imported.canvas.targetIdCounter || 0);
+          }
+        }
+
+        alert('Import successful!');
+        window.location.reload();
+      } catch (error) {
+        alert(`Import failed: ${error.message}`);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  }, [setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput]);
+
+  const handleExport = useCallback(() => {
+    const exportData = {
+      products: [...products],
+      machines: [...machines],
+      recipes: [...recipes],
+      canvas: { nodes, edges, targetProducts, nodeId, targetIdCounter },
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `industrialist-export-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [nodes, edges, targetProducts, nodeId, targetIdCounter]);
+
+  const handleRestoreDefaults = useCallback(() => {
+    if (window.confirm('Restore all data to defaults? This will clear the canvas and reset all products, machines, and recipes.')) {
+      restoreDefaults();
+      clearAll();
+      window.location.reload();
+    }
+  }, [clearAll]);
+
+  const closeSelector = () => {
+    setShowRecipeSelector(false);
+    setSelectedProduct(null);
+    setSearchTerm('');
+    setSortBy('name_asc');
+    setFilterType('all');
+    setRecipeFilter('all');
+    setAutoConnectTarget(null);
+    setSelectorOpenedFrom('button');
   };
 
-  const invalid = leftHandles === 0 && rightHandles === 0;
+  const filteredProducts = products
+    .filter(p => {
+      if (!p.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      if (filterType !== 'all' && p.type !== filterType) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
+      if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
+      if (sortBy === 'price_asc') {
+        const priceA = a.price === 'Variable' ? Infinity : a.price;
+        const priceB = b.price === 'Variable' ? Infinity : b.price;
+        return priceA - priceB;
+      }
+      if (sortBy === 'price_desc') {
+        const priceA = a.price === 'Variable' ? -Infinity : a.price;
+        const priceB = b.price === 'Variable' ? -Infinity : b.price;
+        return priceB - priceA;
+      }
+      if (sortBy === 'rp_asc') {
+        const rpA = a.rp_multiplier === 'Variable' ? Infinity : a.rp_multiplier;
+        const rpB = b.rp_multiplier === 'Variable' ? Infinity : b.rp_multiplier;
+        return rpA - rpB;
+      }
+      if (sortBy === 'rp_desc') {
+        const rpA = a.rp_multiplier === 'Variable' ? -Infinity : a.rp_multiplier;
+        const rpB = b.rp_multiplier === 'Variable' ? -Infinity : b.rp_multiplier;
+        return rpB - rpA;
+      }
+      return 0;
+    });
+
+  const getAvailableRecipes = () => {
+    if (!selectedProduct) return [];
+    
+    try {
+      const producers = getRecipesProducingProduct(selectedProduct.id);
+      const consumers = getRecipesUsingProduct(selectedProduct.id);
+      
+      if (recipeFilter === 'producers') return producers;
+      if (recipeFilter === 'consumers') return consumers;
+      
+      const allRecipes = [...producers, ...consumers];
+      return Array.from(new Map(allRecipes.map(r => [r.id, r])).values());
+    } catch (error) {
+      console.error('Error getting available recipes:', error);
+      return [];
+    }
+  };
+
+  const availableRecipes = getAvailableRecipes();
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: '#0a0a0a' }}>
+    <div style={{ width: '100vw', height: '100vh' }}>
       <ReactFlow
         ref={reactFlowWrapper}
         nodes={nodes}
@@ -100,136 +493,206 @@ function App() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        style={{ background: '#0a0a0a' }}
       >
         <Background color="#333" gap={16} size={1} />
-        <Controls style={{ button: { background: '#1a1a1a', color: '#d4a637', border: '1px solid #d4a637' } }} />
-        <MiniMap nodeColor="#d4a637" maskColor="rgba(10, 10, 10, 0.8)" style={{ background: '#1a1a1a', border: '1px solid #d4a637' }} />
+        <Controls />
+        <MiniMap nodeColor="#d4a637" maskColor="rgba(10, 10, 10, 0.8)" />
 
-        {showModal && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: 'rgba(0, 0, 0, 0.7)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
-            }}
-            onClick={closeModal}
-          >
-            <div
-              style={{
-                background: '#1a1a1a',
-                border: '2px solid #d4a637',
-                borderRadius: '12px',
-                padding: '30px',
-                minWidth: '300px',
-                boxShadow: '0 8px 16px rgba(0, 0, 0, 0.5)',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 style={{ color: '#d4a637', marginBottom: '20px', textAlign: 'center' }}>Configure New Box</h2>
-              
-              <InputField label="Left Nodes:" value={leftHandles} onChange={setLeftHandles} />
-              <InputField label="Right Nodes:" value={rightHandles} onChange={setRightHandles} />
-
-              {invalid && (
-                <div style={{
-                  marginBottom: '20px',
-                  padding: '10px',
-                  background: '#3a1a1a',
-                  border: '1px solid #ef4444',
-                  borderRadius: '6px',
-                  color: '#fca5a5',
-                  fontSize: '13px',
-                  textAlign: 'center',
-                }}>
-                  ⚠️ At least one side must have nodes
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <HoverButton
-                  onClick={createNode}
-                  disabled={invalid}
-                  style={{
-                    ...btnPrimary,
-                    flex: 1,
-                    background: invalid ? '#555' : '#d4a637',
-                    cursor: invalid ? 'not-allowed' : 'pointer',
-                    opacity: invalid ? 0.5 : 1,
-                  }}
-                  hoverStyle={{ background: '#f5d56a' }}
-                >
-                  Create Box
-                </HoverButton>
-                <HoverButton
-                  onClick={closeModal}
-                  style={{ ...btnSecondary, flex: 1 }}
-                  hoverStyle={{ background: '#d4a637', color: '#0a0a0a' }}
-                >
-                  Cancel
-                </HoverButton>
-              </div>
-            </div>
+        <Panel position="top-left" style={{ margin: '10px' }}>
+          <div className="flex-col">
+            <button onClick={openRecipeSelector} className="btn btn-primary">
+              + Select Recipe
+            </button>
+            <button onClick={() => setShowTargetsModal(true)} className="btn btn-secondary">
+              View Targets ({targetProducts.length})
+            </button>
           </div>
-        )}
-        
-        <Panel position="top-left" style={{ margin: 10 }}>
-          <div style={{ display: 'flex', gap: '10px', flexDirection: 'column' }}>
-            <HoverButton onClick={addNode} style={btnPrimary} hoverStyle={{ background: '#f5d56a' }}>
-              + Add Box
-            </HoverButton>
-            <HoverButton onClick={clearAll} style={btnSecondary} hoverStyle={{ background: '#d4a637', color: '#0a0a0a' }}>
-              Clear All
-            </HoverButton>
+        </Panel>
+
+        <Panel position="top-right" style={{ margin: '10px' }}>
+          <div className={`menu-container ${menuOpen ? '' : 'closed'}`}>
+            <button onClick={() => setMenuOpen(!menuOpen)} className="btn btn-secondary btn-menu-toggle">
+              {menuOpen ? '>' : '<'}
+            </button>
+
+            <div className="menu-buttons">
+              <button onClick={clearAll} className="btn btn-secondary">Clear All</button>
+              <button onClick={handleImport} className="btn btn-secondary">Import JSON</button>
+              <button onClick={handleExport} className="btn btn-secondary">Export JSON</button>
+              <button onClick={handleRestoreDefaults} className="btn btn-secondary">Restore Defaults</button>
+            </div>
           </div>
         </Panel>
       </ReactFlow>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        style={{ display: 'none' }}
+        onChange={processImport}
+      />
+
+      {/* Recipe Selection Modal */}
+      {showRecipeSelector && (
+        <div className="modal-overlay" onClick={closeSelector}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">
+              {selectedProduct ? `Recipes for ${selectedProduct.name}` : 'Select Product'}
+            </h2>
+
+            {!selectedProduct ? (
+              <>
+                <div className="mb-lg flex-col">
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="input"
+                  />
+                  
+                  <div className="flex-row">
+                    <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="select">
+                      <option value="all">All Types</option>
+                      <option value="item">Items Only</option>
+                      <option value="fluid">Fluids Only</option>
+                    </select>
+
+                    <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="select">
+                      <option value="name_asc">Name ↑ (A-Z)</option>
+                      <option value="name_desc">Name ↓ (Z-A)</option>
+                      <option value="price_asc">Price ↑ (Low-High)</option>
+                      <option value="price_desc">Price ↓ (High-Low)</option>
+                      <option value="rp_asc">RP Mult ↑ (Low-High)</option>
+                      <option value="rp_desc">RP Mult ↓ (High-Low)</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="modal-content" style={{ maxHeight: '400px' }}>
+                  <div className="product-table-header">
+                    <div>Product</div>
+                    <div className="text-right">Price</div>
+                    <div className="text-right">RP Mult</div>
+                  </div>
+
+                  {filteredProducts.map(product => (
+                    <div key={product.id} onClick={() => setSelectedProduct(product)} className="product-row">
+                      <div>
+                        <div className="product-name">{product.name}</div>
+                        <div className="product-type">{product.type === 'item' ? '📦 Item' : '💧 Fluid'}</div>
+                      </div>
+                      <div className="text-right" style={{ alignSelf: 'center' }}>
+                        {product.price === 'Variable' ? 'Variable' : `${product.price}`}
+                      </div>
+                      <div className="text-right" style={{ alignSelf: 'center' }}>
+                        {product.rp_multiplier === 'Variable' ? 'Variable' : `${product.rp_multiplier.toFixed(1)}x`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                {selectorOpenedFrom === 'button' && (
+                  <button onClick={() => setSelectedProduct(null)} className="btn btn-secondary btn-back">
+                    ← Back to Products
+                  </button>
+                )}
+
+                <div className="mb-lg">
+                  <select value={recipeFilter} onChange={(e) => setRecipeFilter(e.target.value)} className="select">
+                    <option value="all">All Recipes</option>
+                    <option value="producers">Producers (Outputs {selectedProduct.name})</option>
+                    <option value="consumers">Consumers (Uses {selectedProduct.name})</option>
+                  </select>
+                </div>
+
+                <div className="modal-content flex-col" style={{ maxHeight: '400px' }}>
+                  {availableRecipes.length === 0 ? (
+                    <div className="empty-state">No recipes found for this filter</div>
+                  ) : (
+                    availableRecipes.map(recipe => {
+                      const machine = getMachine(recipe.machine_id);
+                      if (!machine || !recipe.inputs || !recipe.outputs) return null;
+                      
+                      return (
+                        <div key={recipe.id} onClick={() => createRecipeBox(recipe)} className="recipe-card">
+                          <div className="recipe-machine">{machine.name}</div>
+                          <div className="recipe-details">
+                            <span className="recipe-label-input">Inputs: </span>
+                            <span>{recipe.inputs.map(input => formatIngredient(input, getProduct)).join(', ')}</span>
+                          </div>
+                          <div className="recipe-details">
+                            <span className="recipe-label-output">Outputs: </span>
+                            <span>{recipe.outputs.map(output => formatIngredient(output, getProduct)).join(', ')}</span>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+
+            <button onClick={closeSelector} className="btn btn-secondary" style={{ marginTop: '20px' }}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Target Products Modal */}
+      {showTargetsModal && (
+        <div className="modal-overlay" onClick={() => setShowTargetsModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">Target Products</h2>
+
+            <div className="modal-content flex-col" style={{ maxHeight: '500px', marginBottom: '20px' }}>
+              {targetProducts.length === 0 ? (
+                <div className="empty-state">
+                  No target products yet. Shift+Click a recipe box to mark it as a target.
+                </div>
+              ) : (
+                targetProducts.map(target => {
+                  const productName = getProductName(target.productId, getProduct);
+                  return (
+                    <div key={target.id} className="target-card">
+                      <div className="flex-1">
+                        <div className="target-product-name">{productName}</div>
+                        <div className="target-box-id">Box ID: {target.recipeBoxId}</div>
+                      </div>
+
+                      <div className="target-input-group">
+                        <label className="target-label">Target:</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={target.desiredAmount}
+                          onChange={(e) => updateTargetAmount(target.id, parseFloat(e.target.value) || 0)}
+                          className="input input-small"
+                        />
+                        <span className="target-label">/s</span>
+                      </div>
+
+                      <button onClick={() => removeTargetStatus(target.id)} className="btn btn-delete">
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <button onClick={() => setShowTargetsModal(false)} className="btn btn-secondary">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
-// Reusable input field component
-const InputField = ({ label, value, onChange }) => (
-  <div style={{ marginBottom: '20px' }}>
-    <label style={{ color: '#f5d56a', display: 'block', marginBottom: '8px' }}>{label}</label>
-    <input
-      type="number"
-      min="0"
-      max="10"
-      value={value}
-      onChange={(e) => onChange(Math.min(10, Math.max(0, parseInt(e.target.value) || 0)))}
-      style={{
-        width: '100%',
-        padding: '10px',
-        background: '#0a0a0a',
-        border: '2px solid #d4a637',
-        borderRadius: '6px',
-        color: '#f5d56a',
-        fontSize: '16px',
-      }}
-    />
-  </div>
-);
-
-// Button with hover effect
-const HoverButton = ({ children, onClick, disabled, style, hoverStyle }) => {
-  const [isHovered, setIsHovered] = useState(false);
-  
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={isHovered && !disabled ? { ...style, ...hoverStyle } : style}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {children}
-    </button>
-  );
-};
 
 export default App;

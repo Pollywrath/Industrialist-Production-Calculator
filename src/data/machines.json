@@ -1,0 +1,547 @@
+[
+  {
+      "id": "m_advanced_coal_drill",
+      "name": "Advanced Coal Drill",
+      "cost": 1000
+    },
+    {
+      "id": "m_advanced_copper_drill",
+      "name": "Advanced Copper Drill",
+      "cost": 520
+    },
+    {
+      "id": "m_coal_drill",
+      "name": "Coal Drill",
+      "cost": 50
+    },
+    {
+      "id": "m_copper_drill",
+      "name": "Copper Drill",
+      "cost": 190
+    },
+    {
+      "id": "m_industrial_drill",
+      "name": "Industrial Drill",
+      "cost": 100000
+    },
+    {
+      "id": "m_iron_drill",
+      "name": "Iron Drill",
+      "cost": 350
+    },
+    {
+      "id": "m_lithium_ore_drill",
+      "name": "Lithium Ore Drill",
+      "cost": 250000
+    },
+    {
+      "id": "m_quarry",
+      "name": "Quarry",
+      "cost": 1500
+    },
+    {
+      "id": "m_sand_excavator",
+      "name": "Sand Excavator",
+      "cost": 10000
+    },
+    {
+      "id": "m_soil_excavator",
+      "name": "Soil Excavator",
+      "cost": 250000
+    },
+    {
+      "id": "m_air_separation_unit",
+      "name": "Air Separation Unit",
+      "cost": 1500000
+    },
+    {
+      "id": "m_large_pumpjack",
+      "name": "Large Pumpjack",
+      "cost": 120000
+    },
+    {
+      "id": "m_lithium_brine_extractor",
+      "name": "Lithium Brine Extractor",
+      "cost": 100000
+    },
+    {
+      "id": "m_natural_gas_well",
+      "name": "Natural Gas Well",
+      "cost": 60000
+    },
+    {
+      "id": "m_oil_fracking_tower",
+      "name": "Oil Fracking Tower",
+      "cost": 500000
+    },
+    {
+      "id": "m_oil_rig",
+      "name": "Oil Rig",
+      "cost": 1200
+    },
+    {
+      "id": "m_water_pump",
+      "name": "Water Pump",
+      "cost": 60
+    },
+    {
+      "id": "m_water_pump2",
+      "name": "Water Pump2",
+      "cost": 6000
+    },
+    {
+      "id": "m_advanced_assembler",
+      "name": "Advanced Assembler",
+      "cost": 150000
+    },
+    {
+      "id": "m_craft_assembler",
+      "name": "Craft Assembler",
+      "cost": 1000
+    },
+    {
+      "id": "m_precision_assembler",
+      "name": "Precision Assembler",
+      "cost": 1000000
+    },
+    {
+      "id": "m_blast_furnace",
+      "name": "Blast Furnace",
+      "cost": 60000
+    },
+    {
+      "id": "m_alloyer",
+      "name": "Alloyer",
+      "cost": 999999
+    },
+    {
+      "id": "m_blast_furnace_mk2",
+      "name": "Blast Furnace MK2",
+      "cost": 5000000
+    },
+    {
+      "id": "m_battery_charger",
+      "name": "Battery Charger",
+      "cost": 100000
+    },
+    {
+      "id": "m_electric_furnace",
+      "name": "Electric Furnace",
+      "cost": 190
+    },
+    {
+      "id": "m_industrial_electric_furnace",
+      "name": "Industrial Electric Furnace",
+      "cost": 1000000
+    },
+    {
+      "id": "m_industrial_kiln",
+      "name": "Industrial Kiln",
+      "cost": 7500
+    },
+    {
+      "id": "m_kiln",
+      "name": "Kiln",
+      "cost": 3200
+    },
+    {
+      "id": "m_chemical_reactor",
+      "name": "Chemical Reactor",
+      "cost": 750000
+    },
+    {
+      "id": "m_condenser",
+      "name": "Condenser",
+      "cost": 75000
+    },
+    {
+      "id": "m_liquid_boiler",
+      "name": "Liquid Boiler",
+      "cost": 900
+    },
+    {
+      "id": "m_paper_mill",
+      "name": "Paper Mill",
+      "cost": 80000
+    },
+    {
+      "id": "m_plastic_production_facility",
+      "name": "Plastic Production Facility",
+      "cost": 100000
+    },
+    {
+      "id": "m_pressurized_water_filter",
+      "name": "Pressurized Water Filter",
+      "cost": 350000
+    },
+    {
+      "id": "m_vaporizer",
+      "name": "Vaporizer",
+      "cost": 10000
+    },
+    {
+      "id": "m_foundry",
+      "name": "Foundry",
+      "cost": 2000000
+    },
+    {
+      "id": "m_industrial_plastic_molder",
+      "name": "Industrial Plastic Molder",
+      "cost": 200000
+    },
+    {
+      "id": "m_ingot_molder",
+      "name": "Ingot Molder",
+      "cost": 150
+    },
+    {
+      "id": "m_plastic_molding_machine",
+      "name": "Plastic Molding Machine",
+      "cost": 100000
+    },
+    {
+      "id": "m_advanced_oxidation_plant",
+      "name": "Advanced Oxidation Plant",
+      "cost": 2000000
+    },
+    {
+      "id": "m_atmospheric_distillation_plant",
+      "name": "Atmospheric Distillation Plant",
+      "cost": 1000000
+    },
+    {
+      "id": "m_bottling_plant",
+      "name": "Bottling Plant",
+      "cost": 100000
+    },
+    {
+      "id": "m_chemical_plant",
+      "name": "Chemical Plant",
+      "cost": 2340000
+    },
+    {
+      "id": "m_coal_liquefaction_plant",
+      "name": "Coal Liquefaction Plant",
+      "cost": 750000
+    },
+    {
+      "id": "m_concrete_plant",
+      "name": "Concrete Plant",
+      "cost": 2000
+    },
+    {
+      "id": "m_electrolysis_plant",
+      "name": "Electrolysis Plant",
+      "cost": 650000
+    },
+    {
+      "id": "m_filtration_plant",
+      "name": "Filtration Plant",
+      "cost": 20000
+    },
+    {
+      "id": "m_lng_plant",
+      "name": "LNG Plant",
+      "cost": 1250000
+    },
+    {
+      "id": "m_oxidation_plant",
+      "name": "Oxidation Plant",
+      "cost": 200000
+    },
+    {
+      "id": "m_steam_cracking_plant",
+      "name": "Steam Cracking Plant",
+      "cost": 150000
+    },
+    {
+      "id": "m_water_treatment_plant",
+      "name": "Water Treatment Plant",
+      "cost": 700001
+    },
+    {
+      "id": "m_grinder",
+      "name": "Grinder",
+      "cost": 10000
+    },
+    {
+      "id": "m_grinder_mk2",
+      "name": "Grinder MK2",
+      "cost": 125000
+    },
+    {
+      "id": "m_industrial_roller",
+      "name": "Industrial Roller",
+      "cost": 150000
+    },
+    {
+      "id": "m_industrial_sawmill",
+      "name": "Industrial Sawmill",
+      "cost": 75000
+    },
+    {
+      "id": "m_lathe",
+      "name": "Lathe",
+      "cost": 5000000
+    },
+    {
+      "id": "m_press",
+      "name": "Press",
+      "cost": 409
+    },
+    {
+      "id": "m_press_mk2",
+      "name": "Press MK2",
+      "cost": 333333
+    },
+    {
+      "id": "m_raw_mill",
+      "name": "Raw Mill",
+      "cost": 1250
+    },
+    {
+      "id": "m_roller",
+      "name": "Roller",
+      "cost": 411
+    },
+    {
+      "id": "m_roller_mk2",
+      "name": "Roller MK2",
+      "cost": 150000
+    },
+    {
+      "id": "m_sawmill",
+      "name": "Sawmill",
+      "cost": 800
+    },
+    {
+      "id": "m_trommel",
+      "name": "Trommel",
+      "cost": 1000000
+    },
+    {
+      "id": "m_diesel_refinery",
+      "name": "Diesel Refinery",
+      "cost": 1000
+    },
+    {
+      "id": "m_gas_refinery",
+      "name": "Gas Refinery",
+      "cost": 175000
+    },
+    {
+      "id": "m_gold_acid_refinery",
+      "name": "Gold Acid Refinery",
+      "cost": 1000000
+    },
+    {
+      "id": "m_industrial_diesel_refinery",
+      "name": "Industrial Diesel Refinery",
+      "cost": 150000
+    },
+    {
+      "id": "m_plastic_refinery",
+      "name": "Plastic Refinery",
+      "cost": 100000
+    },
+    {
+      "id": "m_advanced_oil_separator",
+      "name": "Advanced Oil Separator",
+      "cost": 1250000
+    },
+    {
+      "id": "m_crude_oil_separator",
+      "name": "Crude Oil Separator",
+      "cost": 1500
+    },
+    {
+      "id": "m_gas_centrifuge",
+      "name": "Gas Centrifuge",
+      "cost": 3000000
+    },
+    {
+      "id": "m_industrial_oil_separator",
+      "name": "Industrial Oil Separator",
+      "cost": 150000
+    },
+    {
+      "id": "m_ore_enrichment_facility",
+      "name": "Ore Enrichment Facility",
+      "cost": 4000000
+    },
+    {
+      "id": "m_coal_power_plant",
+      "name": "Coal Power Plant",
+      "cost": 10001984
+    },
+    {
+      "id": "m_exhaust_stack",
+      "name": "Exhaust Stack",
+      "cost": 220000
+    },
+    {
+      "id": "m_heat_exchanger",
+      "name": "Heat Exchanger",
+      "cost": 2718281
+    },
+    {
+      "id": "m_nuclear_power_plant",
+      "name": "Nuclear Power Plant",
+      "cost": 200000000
+    },
+    {
+      "id": "m_polisher",
+      "name": "Polisher",
+      "cost": 1200000
+    },
+    {
+      "id": "m_steam_condenser",
+      "name": "Steam Condenser",
+      "cost": 2400000
+    },
+    {
+      "id": "m_vertical_heat_exchanger",
+      "name": "Vertical Heat Exchanger",
+      "cost": 2718281
+    },
+    {
+      "id": "m_coal_generator",
+      "name": "Coal Generator",
+      "cost": 160
+    },
+    {
+      "id": "m_compact_coal_power_plant",
+      "name": "Compact Coal Power Plant",
+      "cost": 550
+    },
+    {
+      "id": "m_diesel_generator",
+      "name": "Diesel Generator",
+      "cost": 4500
+    },
+    {
+      "id": "m_electric_water_heater",
+      "name": "Electric Water Heater",
+      "cost": 100020
+    },
+    {
+      "id": "m_firebox",
+      "name": "Firebox",
+      "cost": 550
+    },
+    {
+      "id": "m_gas_burner",
+      "name": "Gas Burner",
+      "cost": 100000
+    },
+    {
+      "id": "m_gasoline_generator",
+      "name": "Gasoline Generator",
+      "cost": 900
+    },
+    {
+      "id": "m_industrial_firebox",
+      "name": "Industrial Firebox",
+      "cost": 250000
+    },
+    {
+      "id": "m_large_diesel_engine",
+      "name": "Large Diesel Engine",
+      "cost": 100000
+    },
+    {
+      "id": "m_large_turbine",
+      "name": "Large Turbine",
+      "cost": 4000
+    },
+    {
+      "id": "m_boiler",
+      "name": "Boiler",
+      "cost": 900
+    },
+    {
+      "id": "m_tree_farm_controller",
+      "name": "Tree Farm Controller",
+      "cost": 750
+    },
+    {
+      "id": "m_tree",
+      "name": "Tree",
+      "cost": 80
+    },
+    {
+      "id": "m_tree_harvester",
+      "name": "Tree Harvester",
+      "cost": 650
+    },
+    {
+      "id": "m_tree_farm_sprinkler",
+      "name": "Tree Farm Sprinkler",
+      "cost": 200
+    },
+    {
+      "id": "m_tree_farm_water_tank",
+      "name": "Tree Farm Water Tank",
+      "cost": 500
+    },
+    {
+      "id": "m_tree_farm_output",
+      "name": "Tree Farm Output",
+      "cost": 200
+    },
+    {
+      "id": "m_tree_farm",
+      "name": "Tree Farm",
+      "cost": "Variable"
+    },
+    {
+      "id": "m_turbine_input",
+      "name": "Turbine Input",
+      "cost": 150000
+    },
+    {
+      "id": "m_high_pressure_turbine",
+      "name": "High Pressure Turbine",
+      "cost": 1000000
+    },
+    {
+      "id": "m_intermediate_pressure_turbine",
+      "name": "Intermediate Pressure Turbine",
+      "cost": 500000
+    },
+    {
+      "id": "m_low_pressure_turbine",
+      "name": "Low Pressure Turbine",
+      "cost": 1000000
+    },
+    {
+      "id": "m_turbine_generator",
+      "name": "Turbine Generator",
+      "cost": 5000000
+    },
+    {
+      "id": "m_turbine_output",
+      "name": "Turbine Output",
+      "cost": 150000
+    },
+    {
+      "id": "m_modular_turbine",
+      "name": "Modular Turbine",
+      "cost": "Variable"
+    },
+    {
+      "id": "m_scrubber",
+      "name": "Scrubber",
+      "cost": 30000
+    },
+    {
+      "id": "m_logic_assembler",
+      "name": "Logic Assembler",
+      "cost": 25000000
+    },
+    {
+      "id": "m_mineshaft_drill",
+      "name": "Mineshaft Drill",
+      "cost": 1100000
+    }
+]
