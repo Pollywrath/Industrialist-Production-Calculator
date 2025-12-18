@@ -1,135 +1,234 @@
-# Industrialist Production Line Planner 🎯
+# Industrialist Production Calculator
 
-A production line planning and computation tool for the game **Industrialist**. Visualize and design your factory layouts using an interactive node-based flow editor with a dark mode theme and yellow/mustard accents.
+A visual production planning tool for the Industrialist game. Create interactive flowcharts of your production chains, calculate required machines, and optimize your factory layouts.
 
-## 🛠️ Tech Stack
+## Features
 
-- **React** 18.3.1 - UI library
-- **Vite** 6.1.7 - Build tool and dev server
-- **@xyflow/react** 12.3.4 - Node-based graph editor
-- **JavaScript (ES6+)** - Modern JavaScript features
+- **Visual Recipe Planning**: Drag-and-drop interface for building production chains
+- **Smart Connections**: Automatically connect compatible inputs and outputs
+- **Target Production**: Set production goals and calculate required machines
+- **Custom Data**: Import/export custom recipes, products, and machines
+- **Persistent Storage**: Your work is automatically saved in browser storage
+- **Variable Support**: Handle recipes with variable inputs/outputs/cycle times
 
-## 🚀 Installation & Setup
+## Local Installation
 
 ### Prerequisites
 - Node.js (v16 or higher)
 - npm or yarn
 
-### Local Installation
+### Setup
 
 ```bash
-# 1. Clone or create project directory
-mkdir industrialist-planner
+# Clone the repository
+git clone <repository-url>
 cd industrialist-planner
 
-# 2. Create all project files
-# (Copy all files: package.json, index.html, vite.config.js, and src/ folder)
-
-# 3. Install dependencies
+# Install dependencies
 npm install
 
-# 4. Run development server
+# Start development server
 npm run dev
+
+# Build for production
+npm run build
 ```
 
-Visit `http://localhost:5173` to start using the planner!
+The app will be available at `http://localhost:5173`
 
-## ✨ Current Features
+## Usage Guide
 
-- ✅ **Add Boxes** - Click "+ Add Box" to create new nodes with configurable inputs/outputs
-- ✅ **Move Boxes** - Drag boxes anywhere on the canvas to arrange your layout
-- ✅ **Connect Nodes** - Drag from right side (outputs) to left side (inputs) to represent connections
-- ✅ **Delete Boxes** - Hold `Ctrl+Alt` and click to delete boxes
-- ✅ **Animated Flow Lines** - Dashed lines animate toward the target to visualize flow direction
-- ✅ **Configurable I/O** - Each box can have 0-10 input nodes (left, green) and output nodes (right, red)
-- ✅ **Clear All** - Reset the canvas to start fresh
-- ✅ **Dark Theme** - Professional dark mode with yellow/mustard accents
+### Basic Controls
 
-## 🎯 Planned Features
+- **Add Recipe**: Click "+ Select Recipe" to browse and add recipe nodes
+- **Connect Nodes**: Drag from output (red) to input (green) handles
+- **Set Target**: `Shift + Click` a node to mark it as a target product
+- **Delete Node**: `Ctrl + Alt + Click` a node to remove it
+- **Pan Canvas**: Click and drag on empty space
+- **Zoom**: Mouse wheel or pinch gesture
 
-### Machine & Recipe System
-- **Machine Boxes** - Boxes will represent machines executing specific recipes
-- **Recipe Database** - Store and select from available recipes for each machine
-- **Input/Output Products** - Left nodes (green) will represent input products, right nodes (red) will represent output products
+### Target Products
 
-### Production Computation Engine
-- **Simple Demand Calculation** - Automatically compute the number of machines needed to satisfy a demand per second by dividing total demand by output capability
-- **Complex Graph Solver** - For interconnected production chains, use linear programming and optimization algorithms to solve for optimal machine counts
-- **Real-time Throughput Analysis** - Calculate and display throughput rates across the entire production network
+1. `Shift + Click` any recipe node to set it as a target
+2. Click "View Targets" to manage target production rates
+3. Enter desired output per second
+4. (Machine count calculation coming in future updates)
 
-### Enhanced Visualization
-- **Bottleneck Detection** - Highlight machines that are limiting production
+## Customizing Data
 
-### Factory Management
-- **Save/Load Layouts** - Persist production line designs
-- **Export/Import** - Share factory layouts with other players
-- **Production Templates** - Pre-built common production chains
+### Adding New Recipes via Import
 
-## 📁 Project Structure
+Create a JSON file with your custom data:
+
+```json
+{
+  "products": [
+    {
+      "id": "p_custom_item",
+      "name": "Custom Item",
+      "type": "item",
+      "price": 100,
+      "rp_multiplier": 1.5
+    }
+  ],
+  "machines": [
+    {
+      "id": "m_custom_machine",
+      "name": "Custom Machine"
+    }
+  ],
+  "recipes": [
+    {
+      "id": "r_custom_recipe",
+      "name": "Make Custom Item",
+      "machine_id": "m_custom_machine",
+      "cycle_time": 5,
+      "power_consumption": 1000,
+      "pollution": 10,
+      "inputs": [
+        {
+          "product_id": "p_iron_ore",
+          "quantity": 2
+        }
+      ],
+      "outputs": [
+        {
+          "product_id": "p_custom_item",
+          "quantity": 1
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Import Steps:**
+1. Click the menu toggle (`<`) in the top-right corner
+2. Click "Import JSON"
+3. Select your JSON file
+4. Choose whether to clear the current canvas or keep it
+
+**Notes:**
+- Products: If `id` matches existing product, it will be replaced; otherwise added
+- Machines: Must have unique IDs (import fails if duplicates found)
+- Recipes: All recipes using imported machine IDs are replaced
+- Variable values: Use `"Variable"` for flexible quantities/times
+
+### Exporting Your Work
+
+1. Click the menu toggle (`<`)
+2. Click "Export JSON"
+3. Saves current canvas layout + all data
+
+This exports everything: products, machines, recipes, and your current canvas state.
+
+## Customizing Appearance
+
+All visual styling is controlled via CSS variables in `src/index.css`. Edit the `:root` section:
+
+### Colors
+
+```css
+:root {
+  /* Primary theme color (gold) */
+  --color-primary: #d4a637;
+  --color-primary-hover: #f5d56a;
+  
+  /* Background colors */
+  --bg-main: #0a0a0a;
+  --bg-secondary: #1a1a1a;
+  
+  /* Text colors */
+  --text-primary: #f5d56a;
+  --text-secondary: #999;
+  
+  /* Input (green) / Output (red) colors */
+  --input-bg: #1a3a2a;
+  --input-border: #22c55e;
+  --input-text: #86efac;
+  --output-bg: #3a1a1a;
+  --output-border: #ef4444;
+  --output-text: #fca5a5;
+}
+```
+
+### Typography
+
+```css
+:root {
+  /* Font sizes */
+  --font-size-xs: 11px;
+  --font-size-sm: 13px;
+  --font-size-base: 14px;
+  --font-size-md: 15px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+}
+```
+
+Change the font family in the `body` selector:
+
+```css
+body {
+  font-family: 'Your Font', -apple-system, sans-serif;
+}
+```
+
+### Spacing & Layout
+
+```css
+:root {
+  /* Spacing scale */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 15px;
+  --spacing-xl: 20px;
+  
+  /* Border radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+```
+
+## Data Management
+
+### Storage Location
+
+All data is stored in browser `localStorage`:
+- `industrialist_products` - Product definitions
+- `industrialist_machines` - Machine types  
+- `industrialist_recipes` - Recipe data
+- `industrialist_canvas_state` - Current canvas layout
+
+### Restoring Defaults
+
+Click "Restore Defaults" in the menu to reset all data to original values. **This clears your canvas and any custom data.**
+
+## Project Structure
 
 ```
 industrialist-planner/
-├── package.json              # Dependencies and scripts
-├── vite.config.js           # Vite configuration
-├── index.html               # Entry HTML
 ├── src/
-│   ├── main.jsx            # React entry point
-│   ├── App.jsx             # Main application
-│   ├── index.css           # Global styles
-│   └── components/
-│       ├── CustomNode.jsx  # Box node component
-│       └── CustomEdge.jsx  # Connection edge component
-└── README.md
+│   ├── components/
+│   │   ├── CustomNode.jsx    # Recipe node rendering
+│   │   └── CustomEdge.jsx    # Connection lines
+│   ├── data/
+│   │   ├── dataLoader.js     # Data management & storage
+│   │   ├── products.json     # Default products
+│   │   ├── machines.json     # Default machines
+│   │   └── recipes.json      # Default recipes
+│   ├── utils/
+│   │   └── variableHandler.js # Variable value formatting
+│   ├── App.jsx               # Main application
+│   ├── index.css             # Global styles
+│   └── main.jsx              # Entry point
+├── index.html
+└── package.json
 ```
 
-## 📦 Dependencies
+## License
 
-- `react` v18.3.1 - UI library
-- `react-dom` v18.3.1 - React DOM renderer
-- `@xyflow/react` v12.3.4 - Node graph editor
-- `vite` v6.1.7 - Build tool
-
-## 📧 Scripts
-
-```bash
-npm run dev      # Start development server (localhost:5173)
-npm run build    # Build for production
-npm run preview  # Preview production build
-```
-
-## 💡 Usage Guide
-
-### Creating a Layout
-
-1. Click **"+ Add Box"** to create a new box
-2. Configure the number of input nodes (left, green) and output nodes (right, red)
-3. Drag boxes to position them on your layout
-4. Connect outputs to inputs by dragging from red nodes to green nodes
-5. Use **Ctrl+Alt+Click** to delete boxes
-6. Use **Clear All** to reset the entire canvas
-
-### Understanding Connections
-
-- **Left nodes (Green)** - Will represent input products (planned)
-- **Right nodes (Red)** - Will represent output products (planned)
-- **Animated lines** - Show flow direction from one box to another
-
-## 🚀 Development Roadmap
-
-The modular structure is ready for adding production planning features:
-
-1. **Recipe System** - Database of recipes with input/output ratios
-2. **Machine Assignment** - Assign recipes to boxes
-3. **Demand Calculator** - Simple division-based machine count optimization
-4. **Linear Programming Solver** - For complex production chains
-5. **Throughput Metrics** - Real-time calculation and bottleneck analysis
-6. **Save/Load System** - Persist factory layouts
-7. **Production Templates** - Pre-built common production chains
-
-## 📄 License
-
-MIT
-
-## 🎮 About the Game
-
-**Industrialist** is a factory-building game on Roblox created by MamyTema. Inspired by games like Factorio and Mindustry, it challenges players to design and optimize production lines using a variety of machines and products. Players can choose from numerous products to manufacture and different machines to produce them, creating complex and efficient factory layouts.
+MIT License - see [LICENSE](LICENSE) file for details
