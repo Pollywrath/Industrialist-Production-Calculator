@@ -1,141 +1,129 @@
-// Unified handling for all "Variable" values in the Industrialist app
-
 /**
- * Check if a value is considered "variable"
+ * Unified handling for "Variable" values throughout the app
+ * Used when exact quantities are not yet calculated (e.g., unconfigured drill)
  */
-export const isVariable = (value) => {
-  if (value === 'Variable' || value === 'variable') return true;
-  if (typeof value === 'string' && value.toLowerCase().includes('variable')) return true;
-  return false;
-};
+
+// Check if value is "Variable" (case-insensitive)
+const isVariable = (value) => 
+  value === 'Variable' || 
+  (typeof value === 'string' && value.toLowerCase().includes('variable'));
+
+// Check if product ID is the special variable product placeholder
+const isVariableProduct = (productId) => productId === 'p_variableproduct';
 
 /**
- * Check if a product ID is the special variable product
- */
-export const isVariableProduct = (productId) => {
-  return productId === 'p_variableproduct';
-};
-
-/**
- * Get product name with special handling for variable products
+ * Get product name with fallback for variable products
  */
 export const getProductName = (productId, getProductFn) => {
-  if (isVariableProduct(productId)) {
-    return 'Variable Product';
-  }
+  if (isVariableProduct(productId)) return 'Variable Product';
   const product = getProductFn(productId);
   return product ? product.name : 'Unknown Product';
 };
 
 /**
- * Format quantity with special handling for variable quantities
+ * Format quantity for display - handles numbers and "Variable"
  */
 export const formatQuantity = (quantity) => {
-  if (isVariable(quantity)) {
-    return 'Variable';
-  }
-  if (typeof quantity === 'number') {
-    return quantity.toString();
-  }
-  return quantity;
+  if (isVariable(quantity)) return 'Variable';
+  return typeof quantity === 'number' ? quantity.toString() : quantity;
 };
 
 /**
- * Format cycle time with special handling
+ * Format cycle time - add seconds unit if numeric
+ * Converts to m:s format if >= 60 seconds
  */
 export const formatCycleTime = (cycleTime) => {
-  if (isVariable(cycleTime)) {
-    return 'Variable';
-  }
+  if (isVariable(cycleTime)) return 'Variable';
+  
   if (typeof cycleTime === 'number') {
-    return `${cycleTime}s`;
+    if (cycleTime >= 60) {
+      const minutes = Math.floor(cycleTime / 60);
+      const seconds = cycleTime % 60;
+      return `${minutes}m ${seconds.toFixed(1)}s`;
+    }
+    return `${cycleTime.toFixed(1)}s`;
   }
   return cycleTime;
 };
 
 /**
- * Format power consumption with MF/s units and metric conversion
- * Handles:
- * - Single values (normal recipes)
- * - Objects with drilling/idle values (mineshaft drill)
- * - Objects with max/average values (logic assembler)
- * 1 MMF = 1,000,000 MF
+ * Format power consumption - handles:
+ * - Single values (basic recipes)
+ * - Drilling/Idle objects (mineshaft drill)
+ * - Max/Average objects (logic assembler)
  */
 export const formatPowerConsumption = (power) => {
-  if (isVariable(power)) {
-    return 'Variable';
+  if (isVariable(power)) return 'Variable';
+  
+  // Handle dual power values with different keys - return formatted object
+  if (typeof power === 'object' && power !== null) {
+    if ('drilling' in power && 'idle' in power) {
+      return { 
+        drilling: formatSinglePower(power.drilling), 
+        idle: formatSinglePower(power.idle) 
+      };
+    }
+    if ('max' in power && 'average' in power) {
+      return { 
+        max: formatSinglePower(power.max), 
+        average: formatSinglePower(power.average) 
+      };
+    }
   }
   
-  // Handle mineshaft drill with drilling/idle power
-  if (typeof power === 'object' && power !== null && 'drilling' in power && 'idle' in power) {
-    const drillingFormatted = formatSinglePower(power.drilling);
-    const idleFormatted = formatSinglePower(power.idle);
-    return { drilling: drillingFormatted, idle: idleFormatted };
-  }
-  
-  // Handle logic assembler with max/average power
-  if (typeof power === 'object' && power !== null && 'max' in power && 'average' in power) {
-    const maxFormatted = formatSinglePower(power.max);
-    const avgFormatted = formatSinglePower(power.average);
-    return { max: maxFormatted, average: avgFormatted };
-  }
-  
-  // Handle single power value
   return formatSinglePower(power);
 };
 
 /**
- * Helper function to format a single power value
+ * Convert single power value to metric notation (MMF/s, kMF/s, or MF/s)
  */
 const formatSinglePower = (power) => {
-  if (typeof power === 'string' && power.includes('Energy')) {
-    return power;
-  }
   if (typeof power === 'number') {
-    // Convert to metric notation if >= 1 million
-    if (power >= 1000000) {
-      const mmf = power / 1000000;
-      return `${mmf.toFixed(2)}MMF/s`;
-    }
-    // Convert to k notation if >= 1000
-    if (power >= 1000) {
-      const kmf = power / 1000;
-      return `${kmf.toFixed(2)}kMF/s`;
-    }
-    return `${power}MF/s`;
+    if (power >= 1000000) return `${(power / 1000000).toFixed(2)}MMF/s`;
+    if (power >= 1000) return `${(power / 1000).toFixed(2)}kMF/s`;
+    return `${power.toFixed(2)}MF/s`;
   }
   return power;
 };
 
 /**
- * Format price with special handling for variable prices
+ * Format pollution - ensure it displays as percentage per hour
+ */
+export const formatPollution = (pollution) => {
+  if (isVariable(pollution)) return 'Variable';
+  
+  if (typeof pollution === 'number') {
+    return `${pollution}%/hr`;
+  }
+  
+  if (typeof pollution === 'string') {
+    // If it already has the format, return as-is
+    if (pollution.includes('%')) return pollution;
+    // Otherwise add the format
+    return `${pollution}%/hr`;
+  }
+  
+  return pollution;
+};
+
+/**
+ * Format price with dollar sign
  */
 export const formatPrice = (price) => {
-  if (isVariable(price)) {
-    return 'Variable';
-  }
-  if (typeof price === 'number') {
-    return `$${price}`;
-  }
-  return price;
+  if (isVariable(price)) return 'Variable';
+  return typeof price === 'number' ? `$${price}` : price;
 };
 
 /**
- * Format RP multiplier with special handling for variable values
+ * Format RP multiplier with 'x' suffix
  */
 export const formatRPMultiplier = (rpMultiplier) => {
-  if (isVariable(rpMultiplier)) {
-    return 'Variable';
-  }
-  if (typeof rpMultiplier === 'number') {
-    return `${rpMultiplier.toFixed(1)}x`;
-  }
-  return rpMultiplier;
+  if (isVariable(rpMultiplier)) return 'Variable';
+  return typeof rpMultiplier === 'number' ? `${rpMultiplier.toFixed(1)}x` : rpMultiplier;
 };
 
 /**
- * Format input/output for display in recipe lists
- * Returns a string like "5x Water" or "Variable x Variable Product"
+ * Format ingredient for recipe display (e.g., "5x Water")
  */
 export const formatIngredient = (ingredient, getProductFn) => {
   const quantity = formatQuantity(ingredient.quantity);
@@ -144,64 +132,17 @@ export const formatIngredient = (ingredient, getProductFn) => {
 };
 
 /**
- * Check if a recipe has any variable components
+ * Filter out variable product placeholders from import/export
+ * Prevents dummy data from being saved to files
  */
-export const hasVariableComponents = (recipe) => {
-  // Check cycle time
-  if (isVariable(recipe.cycle_time)) return true;
-  
-  // Check power consumption (handle all three cases: single, drilling/idle, max/average)
-  if (typeof recipe.power_consumption === 'object' && recipe.power_consumption !== null) {
-    if (('drilling' in recipe.power_consumption && 'idle' in recipe.power_consumption) ||
-        ('max' in recipe.power_consumption && 'average' in recipe.power_consumption)) {
-      // Mineshaft drill or logic assembler
-      const power = recipe.power_consumption;
-      if ('drilling' in power) {
-        if (isVariable(power.drilling) || isVariable(power.idle)) return true;
-      }
-      if ('max' in power) {
-        if (isVariable(power.max) || isVariable(power.average)) return true;
-      }
-    }
-  } else if (isVariable(recipe.power_consumption)) {
-    return true;
-  }
-  
-  // Check inputs
-  if (recipe.inputs.some(input => 
-    isVariable(input.quantity) || isVariableProduct(input.product_id)
-  )) return true;
-  
-  // Check outputs
-  if (recipe.outputs.some(output => 
-    isVariable(output.quantity) || isVariableProduct(output.product_id)
-  )) return true;
-  
-  return false;
-};
+export const filterVariableProducts = (products) => 
+  products.filter(p => !isVariableProduct(p.id));
 
 /**
- * Filter out variable products from a product list
- * Used during import/export to exclude special placeholders
- */
-export const filterVariableProducts = (products) => {
-  return products.filter(p => !isVariableProduct(p.id));
-};
-
-/**
- * Get display color for variable items (for UI consistency)
- */
-export const getVariableColor = () => '#fbbf24'; // amber-400
-
-/**
- * Check if two product IDs match, considering variable products
- * Variable products can connect to anything (wildcard)
+ * Check if two product IDs match
+ * Variable products can connect to anything (wildcards)
  */
 export const productsMatch = (productId1, productId2) => {
-  // If either is variable, they match
-  if (isVariableProduct(productId1) || isVariableProduct(productId2)) {
-    return true;
-  }
-  // Otherwise, they must be identical
+  if (isVariableProduct(productId1) || isVariableProduct(productId2)) return true;
   return productId1 === productId2;
 };

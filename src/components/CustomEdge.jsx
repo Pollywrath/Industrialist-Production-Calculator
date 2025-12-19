@@ -1,6 +1,10 @@
 import React from 'react';
 import { getBezierPath } from '@xyflow/react';
 
+/**
+ * Custom edge renderer - creates smooth bezier curves between nodes
+ * with animated dashed styling
+ */
 const CustomEdge = ({
   id,
   sourceX,

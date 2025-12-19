@@ -1,29 +1,37 @@
-// Logic Assembler configurations and calculations
-// Place in: src/data/logicAssembler.js
+/**
+ * Logic Assembler configurations and calculations
+ * Handles 48 microchip stages (8 outer × 6 inner), cycle times, and material requirements
+ */
 
-// Constants
+// Stage configuration
 const STEPS_PER_STAGE = 4;
 const MIN_STEP_TIME = 4; // seconds
 const MAX_STEP_TIME = 36; // seconds
-const AVG_STEP_TIME = 20; // seconds
-const AVG_STEP_TIME_WITH_OIL = 4; // seconds (divided by 5)
+const AVG_STEP_TIME = 20; // seconds (without machine oil)
+const AVG_STEP_TIME_WITH_OIL = 4; // seconds (20s ÷ 5 = 4s)
 const POWER_STORAGE_REQUIREMENT = 500000; // 500kMF per step
 const MACHINE_OIL_RATE = 0.3; // Machine Oil/s when enabled
-const BASE_POWER = 3; // 3 MMF/s base power (not used in calculation, just info)
 const BASE_CYCLE_TIME = 10; // Base 10 seconds added to all cycles
 
 /**
  * Generate all 48 microchip stages
  * Returns array of { outerStage, innerStage, name, productId }
+ * 
+ * Stages are: 1x2, 1x4, 1x8, 1x16, 1x32, 1x64,
+ *             2x2, 2x4, 2x8, ..., 8x64
  */
 export const generateMicrochipStages = () => {
   const stages = [];
   
   for (let outer = 1; outer <= 8; outer++) {
     for (let innerPower = 1; innerPower <= 6; innerPower++) {
-      const inner = Math.pow(2, innerPower); // 2^n
-      const name = outer === 1 ? `${inner}x Microchip` : `${outer}x${inner}x Microchip`;
-      const productId = outer === 1 ? `p_${inner}x_microchip` : `p_${outer}x${inner}x_microchip`;
+      const inner = Math.pow(2, innerPower); // 2^n: 2, 4, 8, 16, 32, 64
+      const name = outer === 1 
+        ? `${inner}x Microchip` 
+        : `${outer}x${inner}x Microchip`;
+      const productId = outer === 1 
+        ? `p_${inner}x_microchip` 
+        : `p_${outer}x${inner}x_microchip`;
       
       stages.push({
         outerStage: outer,
@@ -50,7 +58,14 @@ export const getMicrochipStage = (productId) => {
 
 /**
  * Calculate logic assembler metrics for a given microchip stage
- * Returns: { outerStage, innerStage, totalSteps, avgStepTime, cycleTime, inputs, outputs, avgPowerConsumption, maxPowerConsumption }
+ * 
+ * Formula for total stages:
+ * totalStages = log2(innerStage) + (outerStage - 1) × 6
+ * 
+ * Example: 2x4x Microchip
+ *   - log2(4) = 2
+ *   - (2 - 1) × 6 = 6
+ *   - Total: 2 + 6 = 8 stages
  */
 export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled, tickCircuitDelay = 0) => {
   const stage = getMicrochipStage(productId);
@@ -59,20 +74,22 @@ export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled, tic
   const outerStage = stage.outerStage;
   const innerStage = stage.innerStage;
   
-  // Calculate total stages using the formula:
-  // totalStages = log2(innerStage) + (outerStage - 1) * 6
-  const innerPower = Math.log2(innerStage); // log2(2)=1, log2(4)=2, ..., log2(64)=6
+  // Calculate total stages using the formula
+  const innerPower = Math.log2(innerStage);
   const totalStages = innerPower + (outerStage - 1) * 6;
   
-  const totalSteps = STEPS_PER_STAGE * totalStages; // 4 steps per stage
+  // Each stage has 4 steps
+  const totalSteps = STEPS_PER_STAGE * totalStages;
+  
+  // Step time varies based on machine oil
   const avgStepTime = machineOilEnabled ? AVG_STEP_TIME_WITH_OIL : AVG_STEP_TIME;
   
   // Cycle time formula: totalStages × 4 × (avgStepTime + tickCircuitDelay/30) + 10
-  // tickCircuitDelay is in ticks, and 1 tick = 1/30s
+  // tickCircuitDelay is in ticks; 1 tick = 1/30 second
   const tickCircuitDelayInSeconds = tickCircuitDelay / 30;
   const cycleTime = totalStages * STEPS_PER_STAGE * (avgStepTime + tickCircuitDelayInSeconds) + BASE_CYCLE_TIME;
   
-  // Calculate material requirements (multiply base materials by total stages)
+  // Material requirements scale with total stages
   const BASE_MATERIALS = {
     logic_plates: 3,
     copper_wires: 12,
@@ -85,7 +102,7 @@ export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled, tic
   const semiconductors = BASE_MATERIALS.semiconductors * totalStages;
   const goldWires = BASE_MATERIALS.gold_wires * totalStages;
   
-  // Inputs are quantities consumed per cycle (not rates per second)
+  // Inputs are quantities consumed per cycle
   const inputs = [
     { product_id: 'p_logic_plate', quantity: logicPlates },
     { product_id: 'p_copper_wire', quantity: copperWires },
@@ -93,8 +110,7 @@ export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled, tic
     { product_id: 'p_gold_wire', quantity: goldWires },
   ];
   
-  // Add machine oil if enabled
-  // Machine oil is consumed at 0.3/s continuously, so multiply by cycle time
+  // Add machine oil if enabled: 0.3/s × cycle time
   if (machineOilEnabled) {
     inputs.push({ 
       product_id: 'p_machine_oil', 
@@ -107,13 +123,12 @@ export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled, tic
     { product_id: productId, quantity: 1 }
   ];
   
-  // Average power consumption = 500kMF / avgStepTime (MF/s)
-  const avgPowerConsumption = POWER_STORAGE_REQUIREMENT / avgStepTime; // MF/s
+  // Average power = 500kMF ÷ avgStepTime (MF/s)
+  const avgPowerConsumption = POWER_STORAGE_REQUIREMENT / avgStepTime;
   
-  // Max power consumption = 500kMF / quickestStepTime
-  // Quickest step time: 4s without machine oil, 0.8s with machine oil
+  // Max power = 500kMF ÷ quickestStepTime
   const quickestStepTime = machineOilEnabled ? 0.8 : 4;
-  const maxPowerConsumption = POWER_STORAGE_REQUIREMENT / quickestStepTime; // MF/s
+  const maxPowerConsumption = POWER_STORAGE_REQUIREMENT / quickestStepTime;
   
   return {
     outerStage,
@@ -121,7 +136,7 @@ export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled, tic
     totalStages,
     totalSteps,
     avgStepTime,
-    cycleTime, // Total time to produce 1 microchip
+    cycleTime,
     inputs,
     outputs,
     avgPowerConsumption, // in MF/s
@@ -134,7 +149,7 @@ export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled, tic
 };
 
 /**
- * Build inputs array for logic assembler
+ * Build inputs array for logic assembler with calculated quantities
  */
 export const buildLogicAssemblerInputs = (productId, machineOilEnabled) => {
   const metrics = calculateLogicAssemblerMetrics(productId, machineOilEnabled, 0);
@@ -151,7 +166,7 @@ export const buildLogicAssemblerInputs = (productId, machineOilEnabled) => {
 };
 
 /**
- * Build outputs array for logic assembler
+ * Build outputs array for logic assembler with calculated quantities
  */
 export const buildLogicAssemblerOutputs = (productId, machineOilEnabled) => {
   const metrics = calculateLogicAssemblerMetrics(productId, machineOilEnabled, 0);
@@ -162,7 +177,7 @@ export const buildLogicAssemblerOutputs = (productId, machineOilEnabled) => {
   return metrics.outputs;
 };
 
-// Default logic assembler recipe (all variable)
+// Default logic assembler recipe template (all values variable until configured)
 export const DEFAULT_LOGIC_ASSEMBLER_RECIPE = {
   id: 'r_logic_assembler',
   name: 'Logic Assembler',

@@ -1,5 +1,7 @@
-// Mineshaft Drill depth configurations with calculation logic
-// Place in: src/data/mineshaftDrill.js
+/**
+ * Mineshaft Drill depth configurations and calculation logic
+ * Handles drill head deterioration, consumable usage, and output calculations
+ */
 
 export const DRILL_HEADS = [
   { id: 'copper', name: 'Copper Drill Head', product_id: 'p_copper_drill_head' },
@@ -16,7 +18,7 @@ export const CONSUMABLES = [
   { id: 'sulfuric_acid', name: 'Sulfuric Acid', product_id: 'p_sulfuric_acid' }
 ];
 
-// Consumable usage rates (per second during drilling only)
+// Consumable usage rates (per second during active drilling only)
 const CONSUMABLE_RATES = {
   water: 10,
   acetic_acid: 3,
@@ -24,13 +26,16 @@ const CONSUMABLE_RATES = {
   sulfuric_acid: 1,
 };
 
-export const MACHINE_OIL_RATE = 2; // Machine Oil/s (constant - used during drilling AND traveling)
 const REPLACEMENT_TIME = 12; // Seconds to replace drill head
 const POWER_DRILLING = 3.1; // MMF/s when drilling
 const POWER_TRAVELING = 0.1; // MMF/s when traveling/replacing
 const POLLUTION_RATE = 0.02; // %/h constant pollution
+const MACHINE_OIL_RATE = 2; // Machine Oil/s (used during drilling AND traveling)
 
-// Depth outputs - quantities represent output per second during active drilling
+/**
+ * Depth outputs: each depth level has specific ore/material outputs
+ * Quantities represent output per second during active drilling
+ */
 export const DEPTH_OUTPUTS = {
   100: [
     { product_id: 'p_sand', quantity: 3 },
@@ -261,9 +266,11 @@ export const DEPTH_OUTPUTS = {
   ]
 };
 
-// Get all available depths
+// Get all available depths sorted numerically
 export const getAvailableDepths = () => {
-  return Object.keys(DEPTH_OUTPUTS).map(d => parseInt(d)).sort((a, b) => a - b);
+  return Object.keys(DEPTH_OUTPUTS)
+    .map(d => parseInt(d))
+    .sort((a, b) => a - b);
 };
 
 // ============================================================
@@ -271,7 +278,9 @@ export const getAvailableDepths = () => {
 // ============================================================
 
 /**
- * Calculate drill head deterioration multiplier based on material and depth
+ * Calculate drill head deterioration rate based on material and depth
+ * Different drill heads have different deterioration curves
+ * Copper deteriorates fastest, Tungsten-Carbide slowest
  */
 const getDrillHeadMultiplier = (drillHeadId, depth) => {
   // Special case: depth 100 uses depth 300 for multiplier calculation
@@ -292,7 +301,9 @@ const getDrillHeadMultiplier = (drillHeadId, depth) => {
 };
 
 /**
- * Calculate acid/consumable multiplier based on type and depth
+ * Calculate consumable usage multiplier based on type and depth
+ * Different consumables have different effectiveness curves
+ * More consumable usage = slower deterioration
  */
 const getAcidMultiplier = (consumableId, depth) => {
   // Special case: depth 100 uses depth 300 for multiplier calculation
@@ -319,8 +330,13 @@ const getAcidMultiplier = (consumableId, depth) => {
 };
 
 /**
- * Calculate drill cycle metrics
- * Returns: { deteriorationRate, lifeTime, replacementTime, travelTime, totalCycleTime, dutyCycle, drillingPower, idlePower, pollution }
+ * Calculate complete drill cycle metrics
+ * Returns all data needed to determine inputs, outputs, and power consumption
+ * 
+ * Cycle breakdown:
+ * - Drilling: drill head deteriorates until it breaks
+ * - Replacement: 12 seconds to swap drill head
+ * - Travel: ascend to surface, then return to depth
  */
 export const calculateDrillMetrics = (drillHeadId, consumableId, machineOilEnabled, depth) => {
   if (!drillHeadId || !depth) {
@@ -329,35 +345,35 @@ export const calculateDrillMetrics = (drillHeadId, consumableId, machineOilEnabl
 
   const drillHeadMulti = getDrillHeadMultiplier(drillHeadId, depth);
   const acidMulti = getAcidMultiplier(consumableId || 'none', depth);
-  const oilMultiplier = machineOilEnabled ? 1.1 : 1;
+  const oilMultiplier = machineOilEnabled ? 1.1 : 1; // Oil provides 10% bonus
   
-  // Deterioration rate (%/s)
+  // Base deterioration: 0.5%/s × material factor × consumable factor × oil bonus
   const deteriorationRate = 0.5 * drillHeadMulti * acidMulti * oilMultiplier;
   
-  // Life time (drilling time until drill head breaks) - ceiling (rounded up)
-  const lifeTime = Math.ceil(100 / deteriorationRate); // seconds
+  // Life time until drill breaks (time spent drilling) - rounded up
+  const lifeTime = Math.ceil(100 / deteriorationRate);
   
-  // Replacement time (fixed)
-  const replacementTime = REPLACEMENT_TIME; // 12 seconds
+  // Fixed replacement time
+  const replacementTime = REPLACEMENT_TIME;
   
-  // Travel speed (m/s)
+  // Travel speed: 50 m/s base, 100 m/s with oil
   const travelSpeed = machineOilEnabled ? 100 : 50;
   
-  // Travel time (to surface and back to target depth)
-  const travelTime = (2 * depth) / travelSpeed; // seconds
+  // Return trip: down to depth + back to surface
+  const travelTime = (2 * depth) / travelSpeed;
   
-  // Total cycle time
+  // Complete cycle time
   const totalCycleTime = lifeTime + replacementTime + travelTime;
   
-  // Duty cycle (fraction of time spent drilling and producing)
+  // Efficiency: what fraction of time is spent actually drilling
   const dutyCycle = lifeTime / totalCycleTime;
   
-  // Power consumption (return both values separately, not averaged)
-  const drillingPower = POWER_DRILLING; // 3.1 MMF/s
-  const idlePower = POWER_TRAVELING; // 0.1 MMF/s
+  // Power consumption (separate values, not averaged)
+  const drillingPower = POWER_DRILLING;
+  const idlePower = POWER_TRAVELING;
   
-  // Pollution (constant)
-  const pollution = POLLUTION_RATE; // 0.02%/h
+  // Pollution (constant, not affected by depth)
+  const pollution = POLLUTION_RATE;
   
   return {
     deteriorationRate,
@@ -373,16 +389,15 @@ export const calculateDrillMetrics = (drillHeadId, consumableId, machineOilEnabl
 };
 
 /**
- * Build inputs array with calculated quantities
+ * Build inputs array with calculated quantities for drill
+ * Includes: drill head consumption, consumable usage, machine oil
  */
 export const buildDrillInputs = (drillHeadId, consumableId, machineOilEnabled, depth) => {
   const inputs = [];
-  
-  // Calculate metrics
   const metrics = calculateDrillMetrics(drillHeadId, consumableId, machineOilEnabled, depth);
   
   if (!metrics) {
-    // Not enough info to calculate - return variable inputs
+    // Not enough info - return variable inputs
     if (drillHeadId) {
       const drillHead = DRILL_HEADS.find(d => d.id === drillHeadId);
       if (drillHead) {
@@ -404,13 +419,11 @@ export const buildDrillInputs = (drillHeadId, consumableId, machineOilEnabled, d
     return inputs;
   }
   
-  // Calculate actual quantities
-  
-  // 1. Drill head consumption: 1 drill head consumed per full cycle
+  // 1. Drill head consumption: 1 per full cycle, averaged over time
   if (drillHeadId) {
     const drillHead = DRILL_HEADS.find(d => d.id === drillHeadId);
     if (drillHead) {
-      const drillHeadRate = 1 / metrics.totalCycleTime; // drill heads per second (averaged)
+      const drillHeadRate = 1 / metrics.totalCycleTime;
       inputs.push({ 
         product_id: drillHead.product_id, 
         quantity: parseFloat(drillHeadRate.toFixed(6))
@@ -418,12 +431,12 @@ export const buildDrillInputs = (drillHeadId, consumableId, machineOilEnabled, d
     }
   }
   
-  // 2. Consumable usage (only consumed during active drilling, so affected by duty cycle)
+  // 2. Consumable usage: only consumed while drilling, multiply by duty cycle
   if (consumableId && consumableId !== 'none') {
     const consumable = CONSUMABLES.find(c => c.id === consumableId);
     if (consumable && consumable.product_id) {
       const baseRate = CONSUMABLE_RATES[consumableId] || 0;
-      const effectiveRate = baseRate * metrics.dutyCycle; // Average rate over full cycle
+      const effectiveRate = baseRate * metrics.dutyCycle;
       inputs.push({ 
         product_id: consumable.product_id, 
         quantity: parseFloat(effectiveRate.toFixed(6))
@@ -431,11 +444,11 @@ export const buildDrillInputs = (drillHeadId, consumableId, machineOilEnabled, d
     }
   }
   
-  // 3. Machine oil (used CONSTANTLY during drilling AND traveling - NOT affected by duty cycle)
+  // 3. Machine oil: constant usage during drilling AND traveling
   if (machineOilEnabled) {
     inputs.push({ 
       product_id: 'p_machine_oil', 
-      quantity: MACHINE_OIL_RATE // Constant 2/s
+      quantity: MACHINE_OIL_RATE
     });
   }
   
@@ -443,7 +456,8 @@ export const buildDrillInputs = (drillHeadId, consumableId, machineOilEnabled, d
 };
 
 /**
- * Build outputs array with calculated quantities
+ * Build outputs array with calculated quantities for drill
+ * Uses base depth outputs, scaled by duty cycle and oil bonus
  */
 export const buildDrillOutputs = (drillHeadId, consumableId, machineOilEnabled, depth) => {
   if (!depth) return [];
@@ -454,20 +468,18 @@ export const buildDrillOutputs = (drillHeadId, consumableId, machineOilEnabled, 
   const metrics = calculateDrillMetrics(drillHeadId, consumableId, machineOilEnabled, depth);
   
   if (!metrics) {
-    // Return variable outputs if we can't calculate
+    // Return variable outputs if metrics unavailable
     return baseOutputs.map(output => ({
       ...output,
       quantity: 'Variable'
     }));
   }
   
-  // Calculate effective output rates
-  // Machine oil provides 10% bonus to outputs
+  // Machine oil provides 10% output bonus
   const oilBonus = machineOilEnabled ? 1.1 : 1;
   
+  // Effective output rate = base rate × bonus × duty cycle (averaged over full cycle)
   return baseOutputs.map(output => {
-    // Base quantity is output/s during active drilling
-    // Average over full cycle (drilling + replacement + travel time)
     const effectiveRate = output.quantity * oilBonus * metrics.dutyCycle;
     return {
       product_id: output.product_id,
@@ -476,12 +488,12 @@ export const buildDrillOutputs = (drillHeadId, consumableId, machineOilEnabled, 
   });
 };
 
-// Default mineshaft drill recipe (all variable)
+// Default mineshaft drill recipe template (all values variable until configured)
 export const DEFAULT_DRILL_RECIPE = {
   id: 'r_mineshaft_drill',
   name: 'Mineshaft Drill',
   machine_id: 'm_mineshaft_drill',
-  cycle_time: 1, // Always 1 second for mineshaft drill
+  cycle_time: 1,
   power_consumption: 'Variable',
   pollution: 'Variable',
   inputs: [

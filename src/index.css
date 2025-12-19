@@ -5,7 +5,8 @@
 }
 
 /* ============================================================
-   THEME VARIABLES - Modify these to change the entire app
+   THEME VARIABLES
+   Modify these to change the entire app's appearance
    ============================================================ */
 :root {
   /* Primary Colors */
@@ -21,12 +22,13 @@
   
   /* Text Colors */
   --text-primary: #f5d56a;
-  --text-secondary: #999;
-  --text-muted: #aaa;
+  --text-secondary: #999999;
+  --text-muted: #aaaaaa;
+  --stat-value: #e0e0e0;
   
   /* Border Colors */
   --border-primary: #d4a637;
-  --border-light: #333;
+  --border-light: #333333;
   --border-divider: #d4a63755;
   
   /* Input/Output Colors */
@@ -46,7 +48,7 @@
   /* Node Styling */
   --node-bg: #1a1a1a;
   --node-border: #d4a637;
-  --node-target-bg: #2a2a1a;
+  --node-target-bg: #2d2416;
   --node-target-border: #f5d56a;
   
   /* Spacing */
@@ -98,7 +100,7 @@ body {
 }
 
 /* ============================================================
-   SCROLLBAR
+   SCROLLBAR STYLING
    ============================================================ */
 ::-webkit-scrollbar {
   width: 8px;
@@ -181,7 +183,7 @@ body {
 }
 
 /* ============================================================
-   MODAL
+   MODALS
    ============================================================ */
 .modal-overlay {
   position: fixed;
@@ -220,9 +222,10 @@ body {
 }
 
 /* ============================================================
-   FORMS
+   FORM ELEMENTS
    ============================================================ */
-.input, .select {
+.input, 
+.select {
   width: 100%;
   padding: 10px;
   background: var(--bg-main);
@@ -424,7 +427,7 @@ body {
 }
 
 .node-stat-row {
-  color: var(--text-muted);
+  color: var(--stat-value);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -449,10 +452,11 @@ body {
   font-weight: 600;
   font-size: var(--font-size-sm);
   margin-bottom: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
   max-width: 100%;
+  text-align: right;
 }
 
 .node-machine-count {
@@ -490,6 +494,18 @@ body {
 
 .node-rect.clickable {
   cursor: pointer;
+}
+
+/* ============================================================
+   RECTANGLE CONTAINER
+   ============================================================ */
+.node-rectangles-container {
+  border: 2px dashed rgba(212, 166, 55, 0.5);
+  background: rgba(212, 166, 55, 0.05);
+  margin-top: 10px;
+  margin-left: 10px;
+  margin-right: 10px;
+  margin-bottom: 10px;
 }
 
 /* ============================================================
@@ -560,6 +576,9 @@ body {
   flex: 1;
 }
 
+/* ============================================================
+   MENU CONTAINER
+   ============================================================ */
 .menu-container {
   display: flex;
   align-items: flex-start;
@@ -582,10 +601,10 @@ body {
 }
 
 /* ============================================================
-   DRILL SETTINGS STYLES
+   DRILL/ASSEMBLER SETTINGS STYLES
    ============================================================ */
 
-/* Drill Settings Button (on recipe node) */
+/* Settings button on recipe node */
 .drill-settings-button {
   position: absolute;
   top: 10px;
@@ -609,7 +628,7 @@ body {
   transform: scale(1.1);
 }
 
-/* Drill Settings Overlay */
+/* Settings overlay background */
 .drill-settings-overlay {
   position: fixed;
   inset: 0;
@@ -620,7 +639,7 @@ body {
   z-index: 2000;
 }
 
-/* Drill Settings Bubble */
+/* Settings modal bubble */
 .drill-settings-bubble {
   background: var(--bg-secondary);
   border: 2px solid var(--border-primary);
@@ -687,4 +706,59 @@ body {
 
 .drill-settings-buttons .btn {
   flex: 1;
+}
+
+/* ============================================================
+   THEME EDITOR STYLES
+   ============================================================ */
+.theme-group {
+  margin-bottom: 25px;
+}
+
+.theme-group-title {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--border-divider);
+}
+
+.theme-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.theme-color-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.theme-color-label {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+}
+
+.theme-color-inputs {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.theme-color-picker {
+  width: 50px;
+  height: 35px;
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.theme-color-text {
+  flex: 1;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: monospace;
 }
