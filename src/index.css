@@ -789,3 +789,54 @@ body {
   font-size: 12px;
   font-family: monospace;
 }
+
+/* ============================================================
+   STATS PANEL - Add this to the end of your index.css file
+   ============================================================ */
+
+.stats-panel {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  box-shadow: var(--shadow-md);
+  min-width: 280px;
+}
+
+.stats-title {
+  color: var(--color-primary);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  margin-bottom: var(--spacing-md);
+  text-align: center;
+  border-bottom: 2px solid var(--border-divider);
+  padding-bottom: var(--spacing-sm);
+}
+
+.stats-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-sm);
+  background: var(--bg-main);
+  border-radius: var(--radius-sm);
+}
+
+.stat-label {
+  color: var(--text-primary);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+}
+
+.stat-value {
+  color: var(--stat-value);
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  text-align: right;
+}

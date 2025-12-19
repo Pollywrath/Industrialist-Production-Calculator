@@ -116,6 +116,93 @@ function App() {
     saveCanvasState(nodes, edges, targetProducts, nodeId, targetIdCounter);
   }, [nodes, edges, targetProducts, nodeId, targetIdCounter]);
 
+  // Calculate total stats from all recipe boxes
+  const calculateTotalStats = useCallback(() => {
+    let totalPower = 0;
+    let totalPollution = 0;
+    let totalModelCount = 0;
+    let totalProfit = 0;
+
+    nodes.forEach(node => {
+      const recipe = node.data?.recipe;
+      if (!recipe) return;
+
+      // Power consumption
+      const power = recipe.power_consumption;
+      let powerValue = 0;
+      if (typeof power === 'number') {
+        powerValue = power;
+        totalPower += power;
+      } else if (typeof power === 'object' && power !== null) {
+        // For drill: use average of drilling and idle
+        if ('drilling' in power && 'idle' in power) {
+          powerValue = (power.drilling + power.idle) / 2;
+          totalPower += powerValue;
+        }
+        // For logic assembler: use average
+        else if ('average' in power) {
+          powerValue = power.average;
+          totalPower += powerValue;
+        }
+      }
+
+      // Pollution
+      const pollution = recipe.pollution;
+      if (typeof pollution === 'number') {
+        totalPollution += pollution;
+      }
+
+      // Model count per recipe
+      // Formula: roundup(machine_count) + roundup(machine_count * power/1500000) + roundup(machine_count * (inputs + outputs) * 2)
+      const machineCount = 1; // Default to 1 since computation isn't implemented yet
+      const inputOutputCount = (recipe.inputs?.length || 0) + (recipe.outputs?.length || 0);
+      
+      const recipeModelCount = 
+        Math.ceil(machineCount) + 
+        Math.ceil(machineCount * powerValue / 1500000) + 
+        Math.ceil(machineCount * inputOutputCount * 2);
+      
+      totalModelCount += recipeModelCount;
+
+      // Profit calculation
+      // Output value - Input value
+      let outputValue = 0;
+      let inputValue = 0;
+
+      recipe.outputs?.forEach(output => {
+        const product = getProduct(output.product_id);
+        if (product && typeof product.price === 'number' && typeof output.quantity === 'number') {
+          outputValue += product.price * output.quantity;
+        }
+      });
+
+      recipe.inputs?.forEach(input => {
+        const product = getProduct(input.product_id);
+        if (product && typeof product.price === 'number' && typeof input.quantity === 'number') {
+          inputValue += product.price * input.quantity;
+        }
+      });
+
+      totalProfit += (outputValue - inputValue);
+    });
+
+    return {
+      totalPower,
+      totalPollution,
+      totalModelCount,
+      totalProfit
+    };
+  }, [nodes]);
+
+  const stats = calculateTotalStats();
+
+  // Format power consumption for display
+  const formatPowerDisplay = (power) => {
+    if (power >= 1000000) return `${(power / 1000000).toFixed(2)} MMF/s`;
+    if (power >= 1000) return `${(power / 1000).toFixed(2)} kMF/s`;
+    return `${power.toFixed(2)} MF/s`;
+  };
+
   // Update node data while preserving identity
   const updateNodeData = (nodeId, updater) => {
     setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: updater(n.data) } : n));
@@ -360,6 +447,11 @@ function App() {
     }
   }, [toggleTargetStatus, deleteRecipeBoxAndTarget]);
 
+  // Compute machines - placeholder for future implementation
+  const handleCompute = useCallback(() => {
+    alert('Computation to come soon!');
+  }, []);
+
   // Get filtered recipe list based on selected product
   const getAvailableRecipes = () => {
     if (!selectedProduct) return [];
@@ -554,17 +646,50 @@ function App() {
           maskColor={getComputedStyle(document.documentElement).getPropertyValue('--bg-overlay').trim()}
         />
         
+        {/* Stats Panel and Action Buttons - Left Side */}
         <Panel position="top-left" style={{ margin: '10px' }}>
-          <div className="flex-col">
-            <button onClick={openRecipeSelector} className="btn btn-primary">
-              + Select Recipe
-            </button>
-            <button onClick={() => setShowTargetsModal(true)} className="btn btn-secondary">
-              View Targets ({targetProducts.length})
-            </button>
+          <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
+            {/* Stats Panel */}
+            <div className="stats-panel">
+              <h3 className="stats-title">Factory Statistics</h3>
+              <div className="stats-grid">
+                <div className="stat-item">
+                  <div className="stat-label">Total Power:</div>
+                  <div className="stat-value">{formatPowerDisplay(stats.totalPower)}</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-label">Total Pollution:</div>
+                  <div className="stat-value">{stats.totalPollution.toFixed(2)}%/hr</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-label">Total Model Count:</div>
+                  <div className="stat-value">{stats.totalModelCount.toFixed(0)}</div>
+                </div>
+                <div className="stat-item">
+                  <div className="stat-label">Total Profit:</div>
+                  <div className="stat-value" style={{ color: stats.totalProfit >= 0 ? '#86efac' : '#fca5a5' }}>
+                    ${stats.totalProfit.toFixed(2)}/s
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex-col">
+              <button onClick={openRecipeSelector} className="btn btn-primary">
+                + Select Recipe
+              </button>
+              <button onClick={() => setShowTargetsModal(true)} className="btn btn-secondary">
+                View Targets ({targetProducts.length})
+              </button>
+              <button onClick={handleCompute} className="btn btn-secondary">
+                Compute Machines
+              </button>
+            </div>
           </div>
         </Panel>
 
+        {/* Menu - Right Side */}
         <Panel position="top-right" style={{ margin: '10px' }}>
           <div className={`menu-container ${menuOpen ? '' : 'closed'}`}>
             <button 
