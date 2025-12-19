@@ -176,6 +176,12 @@ body {
   min-width: auto;
 }
 
+/* Make menu buttons narrower and taller */
+.menu-buttons .btn-secondary {
+  padding: 16px 16px;
+  min-width: 120px;
+}
+
 .btn-back {
   padding: 8px 16px;
   font-size: var(--font-size-sm);
@@ -526,6 +532,14 @@ body {
   border: 1px solid var(--border-primary);
 }
 
+.react-flow__panel.top.right:has(.menu-container.closed) {
+  pointer-events: none;
+}
+
+.react-flow__panel.top.right:has(.menu-container.closed) .btn-menu-toggle {
+  pointer-events: auto;
+}
+
 /* ============================================================
    EDGE ANIMATION
    ============================================================ */
@@ -587,7 +601,15 @@ body {
 }
 
 .menu-container.closed {
-  transform: translateX(calc(100% - 56px));
+  transform: translateX(calc(100% - 56px)); /* Show 30px bump of buttons */
+}
+
+.menu-container.closed .menu-buttons {
+  pointer-events: none;
+}
+
+.menu-container.closed .btn-menu-toggle {
+  pointer-events: auto;
 }
 
 .menu-buttons {
@@ -596,8 +618,13 @@ body {
   gap: 10px;
 }
 
-.menu-container.closed .menu-buttons {
+/* Make the panel not block canvas when menu is closed */
+.react-flow__panel.top.right:has(.menu-container.closed) {
   pointer-events: none;
+}
+
+.react-flow__panel.top.right:has(.menu-container.closed) .btn-menu-toggle {
+  pointer-events: auto;
 }
 
 /* ============================================================

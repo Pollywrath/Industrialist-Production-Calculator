@@ -42,7 +42,7 @@ const THEME_PRESETS = [
   {
     id: 'dracula',
     name: 'Dracula',
-    description: 'Dark purple theme with vibrant accents',
+    description: 'Grimace Shake',
     theme: {
       colorPrimary: '#bd93f9',
       colorPrimaryHover: '#d6acff',
@@ -144,7 +144,7 @@ const THEME_PRESETS = [
   {
     id: 'solarized-light',
     name: 'Solarized Light',
-    description: 'Precision light theme with soft tones',
+    description: 'For those who want to burn their eyes out',
     theme: {
       colorPrimary: '#268bd2',
       colorPrimaryHover: '#2aa198',
@@ -246,7 +246,7 @@ const THEME_PRESETS = [
   {
     id: 'sunset',
     name: 'Sunset Orange',
-    description: 'Warm sunset-inspired theme',
+    description: 'Warm sunset-inspired theme, steampunk-esque',
     theme: {
       colorPrimary: '#ff8c42',
       colorPrimaryHover: '#ffaa6f',

@@ -547,7 +547,12 @@ function App() {
       >
         <Background color="#333" gap={16} size={1} />
         <Controls />
-        <MiniMap nodeColor="#d4a637" maskColor="rgba(10, 10, 10, 0.8)" />
+        <MiniMap 
+          nodeColor={(node) => {
+            return getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
+          }}
+          maskColor={getComputedStyle(document.documentElement).getPropertyValue('--bg-overlay').trim()}
+        />
         
         <Panel position="top-left" style={{ margin: '10px' }}>
           <div className="flex-col">
