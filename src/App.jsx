@@ -624,25 +624,30 @@ function App() {
       const producers = getRecipesProducingProductFiltered(selectedProduct.id);
       const consumers = getRecipesUsingProduct(selectedProduct.id);
       
-      // Include drill recipe if applicable
-      let drillRecipes = [];
-      if (canDrillUseProduct(selectedProduct.id)) {
-        drillRecipes = [DEFAULT_DRILL_RECIPE];
-      }
+      // Check if product is drill input or output
+      const isDrillInput = canDrillUseProduct(selectedProduct.id);
+      const isDrillOutput = Object.values(DEPTH_OUTPUTS).some(outputs => 
+        outputs.some(o => o.product_id === selectedProduct.id)
+      );
       
-      // Include logic assembler recipe if applicable
-      let assemblerRecipes = [];
-      if (canLogicAssemblerUseProduct(selectedProduct.id)) {
-        assemblerRecipes = [DEFAULT_LOGIC_ASSEMBLER_RECIPE];
-      }
+      // Check if product is logic assembler input or output
+      const isAssemblerInput = ['p_logic_plate', 'p_copper_wire', 'p_semiconductor', 'p_gold_wire', 'p_machine_oil'].includes(selectedProduct.id);
+      const isAssemblerOutput = MICROCHIP_STAGES.some(stage => stage.productId === selectedProduct.id);
       
       if (recipeFilter === 'producers') {
-        return [...producers, ...(drillRecipes.length > 0 ? drillRecipes : []), ...(assemblerRecipes.length > 0 ? assemblerRecipes : [])];
+        const drillRecipes = isDrillOutput ? [DEFAULT_DRILL_RECIPE] : [];
+        const assemblerRecipes = isAssemblerOutput ? [DEFAULT_LOGIC_ASSEMBLER_RECIPE] : [];
+        return [...producers, ...drillRecipes, ...assemblerRecipes];
       }
       if (recipeFilter === 'consumers') {
-        return [...consumers, ...(drillRecipes.length > 0 ? drillRecipes : []), ...(assemblerRecipes.length > 0 ? assemblerRecipes : [])];
+        const drillRecipes = isDrillInput ? [DEFAULT_DRILL_RECIPE] : [];
+        const assemblerRecipes = isAssemblerInput ? [DEFAULT_LOGIC_ASSEMBLER_RECIPE] : [];
+        return [...consumers, ...drillRecipes, ...assemblerRecipes];
       }
       
+      // For "all" filter, include if it's either input or output
+      const drillRecipes = (isDrillInput || isDrillOutput) ? [DEFAULT_DRILL_RECIPE] : [];
+      const assemblerRecipes = (isAssemblerInput || isAssemblerOutput) ? [DEFAULT_LOGIC_ASSEMBLER_RECIPE] : [];
       const allRecipes = [...producers, ...consumers, ...drillRecipes, ...assemblerRecipes];
       return Array.from(new Map(allRecipes.map(r => [r.id, r])).values());
     } catch (error) {
