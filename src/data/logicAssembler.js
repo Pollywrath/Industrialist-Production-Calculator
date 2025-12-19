@@ -12,17 +12,6 @@ const MACHINE_OIL_RATE = 0.3; // Machine Oil/s when enabled
 const BASE_POWER = 3; // 3 MMF/s base power (not used in calculation, just info)
 const BASE_CYCLE_TIME = 10; // Base 10 seconds added to all cycles
 
-// Tick circuit delay per action (adjustable - currently set to 0)
-export const TICK_CIRCUIT_DELAY = 0;
-
-// Base materials per stage (for outer stage = 1)
-const BASE_MATERIALS = {
-  logic_plates: 3,
-  copper_wires: 12,
-  semiconductors: 3,
-  gold_wires: 6,
-};
-
 /**
  * Generate all 48 microchip stages
  * Returns array of { outerStage, innerStage, name, productId }
@@ -61,9 +50,9 @@ export const getMicrochipStage = (productId) => {
 
 /**
  * Calculate logic assembler metrics for a given microchip stage
- * Returns: { outerStage, innerStage, totalSteps, avgStepTime, cycleTime, inputs, outputs, avgPowerConsumption }
+ * Returns: { outerStage, innerStage, totalSteps, avgStepTime, cycleTime, inputs, outputs, avgPowerConsumption, maxPowerConsumption }
  */
-export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled) => {
+export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled, tickCircuitDelay = 0) => {
   const stage = getMicrochipStage(productId);
   if (!stage) return null;
   
@@ -78,10 +67,19 @@ export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled) => 
   const totalSteps = STEPS_PER_STAGE * totalStages; // 4 steps per stage
   const avgStepTime = machineOilEnabled ? AVG_STEP_TIME_WITH_OIL : AVG_STEP_TIME;
   
-  // Cycle time formula: totalStages × 4 × (avgStepTime + tickCircuitDelay) + 10
-  const cycleTime = totalStages * STEPS_PER_STAGE * (avgStepTime + TICK_CIRCUIT_DELAY) + BASE_CYCLE_TIME;
+  // Cycle time formula: totalStages × 4 × (avgStepTime + tickCircuitDelay/30) + 10
+  // tickCircuitDelay is in ticks, and 1 tick = 1/30s
+  const tickCircuitDelayInSeconds = tickCircuitDelay / 30;
+  const cycleTime = totalStages * STEPS_PER_STAGE * (avgStepTime + tickCircuitDelayInSeconds) + BASE_CYCLE_TIME;
   
   // Calculate material requirements (multiply base materials by total stages)
+  const BASE_MATERIALS = {
+    logic_plates: 3,
+    copper_wires: 12,
+    semiconductors: 3,
+    gold_wires: 6,
+  };
+  
   const logicPlates = BASE_MATERIALS.logic_plates * totalStages;
   const copperWires = BASE_MATERIALS.copper_wires * totalStages;
   const semiconductors = BASE_MATERIALS.semiconductors * totalStages;
@@ -112,6 +110,11 @@ export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled) => 
   // Average power consumption = 500kMF / avgStepTime (MF/s)
   const avgPowerConsumption = POWER_STORAGE_REQUIREMENT / avgStepTime; // MF/s
   
+  // Max power consumption = 500kMF / quickestStepTime
+  // Quickest step time: 4s without machine oil, 0.8s with machine oil
+  const quickestStepTime = machineOilEnabled ? 0.8 : 4;
+  const maxPowerConsumption = POWER_STORAGE_REQUIREMENT / quickestStepTime; // MF/s
+  
   return {
     outerStage,
     innerStage: stage.innerStage,
@@ -122,6 +125,7 @@ export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled) => 
     inputs,
     outputs,
     avgPowerConsumption, // in MF/s
+    maxPowerConsumption, // in MF/s
     logicPlates,
     copperWires,
     semiconductors,
@@ -133,7 +137,7 @@ export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled) => 
  * Build inputs array for logic assembler
  */
 export const buildLogicAssemblerInputs = (productId, machineOilEnabled) => {
-  const metrics = calculateLogicAssemblerMetrics(productId, machineOilEnabled);
+  const metrics = calculateLogicAssemblerMetrics(productId, machineOilEnabled, 0);
   if (!metrics) {
     return [
       { product_id: 'p_logic_plate', quantity: 'Variable' },
@@ -150,7 +154,7 @@ export const buildLogicAssemblerInputs = (productId, machineOilEnabled) => {
  * Build outputs array for logic assembler
  */
 export const buildLogicAssemblerOutputs = (productId, machineOilEnabled) => {
-  const metrics = calculateLogicAssemblerMetrics(productId, machineOilEnabled);
+  const metrics = calculateLogicAssemblerMetrics(productId, machineOilEnabled, 0);
   if (!metrics) {
     return [{ product_id: 'p_variableproduct', quantity: 'Variable' }];
   }

@@ -54,6 +54,11 @@ const getRecipesProducingProductFiltered = (productId) => {
   });
 };
 
+// Get all recipes for a specific machine
+const getRecipesForMachine = (machineId) => {
+  return recipes.filter(recipe => recipe.machine_id === machineId);
+};
+
 // Check if drill recipe can use this product
 const canDrillUseProduct = (productId) => {
   // Check if it's in any drill head, consumable, or machine oil
@@ -87,6 +92,8 @@ function App() {
   const [nodeId, setNodeId] = useState(0);
   const [showRecipeSelector, setShowRecipeSelector] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [selectedMachine, setSelectedMachine] = useState(null);
+  const [selectorMode, setSelectorMode] = useState('product'); // 'product' or 'machine'
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name_asc');
   const [filterType, setFilterType] = useState('all');
@@ -149,6 +156,8 @@ function App() {
   const openRecipeSelector = useCallback(() => {
     setShowRecipeSelector(true);
     setSelectedProduct(null);
+    setSelectedMachine(null);
+    setSelectorMode('product');
     setSearchTerm('');
     setAutoConnectTarget(null);
     setSelectorOpenedFrom('button');
@@ -160,6 +169,8 @@ function App() {
     if (product) {
       setShowRecipeSelector(true);
       setSelectedProduct(product);
+      setSelectedMachine(null);
+      setSelectorMode('product');
       setSearchTerm('');
       setAutoConnectTarget({ nodeId, inputIndex, productId });
       setSelectorOpenedFrom('rectangle');
@@ -172,6 +183,8 @@ function App() {
     if (product) {
       setShowRecipeSelector(true);
       setSelectedProduct(product);
+      setSelectedMachine(null);
+      setSelectorMode('product');
       setSearchTerm('');
       setAutoConnectTarget({ nodeId, outputIndex, productId, isOutput: true });
       setSelectorOpenedFrom('rectangle');
@@ -230,9 +243,20 @@ function App() {
   }, [setNodes, setEdges, nodes]);
 
   const handleLogicAssemblerSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
+    // Reconstruct targetMicrochip product ID from outer and inner stages
+    const getTargetMicrochip = () => {
+      if (!settings.outerStage || !settings.innerStage) return '';
+      if (settings.outerStage === 1) {
+        return `p_${settings.innerStage}x_microchip`;
+      }
+      return `p_${settings.outerStage}x${settings.innerStage}x_microchip`;
+    };
+    
+    const targetMicrochip = getTargetMicrochip();
+    
     // Calculate metrics if we have enough info
-    const metrics = settings.targetMicrochip 
-      ? calculateLogicAssemblerMetrics(settings.targetMicrochip, settings.machineOil)
+    const metrics = targetMicrochip 
+      ? calculateLogicAssemblerMetrics(targetMicrochip, settings.machineOil, settings.tickCircuitDelay)
       : null;
     
     setNodes((nds) => nds.map(node => {
@@ -252,7 +276,10 @@ function App() {
               outputs: outputs.length > 0 ? outputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
               assemblerSettings: settings,
               cycle_time: metrics ? metrics.cycleTime : 'Variable', // Total cycle time to produce 1 chip
-              power_consumption: metrics ? metrics.avgPowerConsumption : 'Variable',
+              power_consumption: metrics ? { 
+                max: metrics.maxPowerConsumption,
+                average: metrics.avgPowerConsumption
+              } : 'Variable',
             },
             leftHandles: Math.max(inputs.length, 1),
             rightHandles: Math.max(outputs.length, 1),
@@ -370,6 +397,8 @@ function App() {
     setNodeId((id) => id + 1);
     setShowRecipeSelector(false);
     setSelectedProduct(null);
+    setSelectedMachine(null);
+    setSelectorMode('product');
     setSearchTerm('');
     setAutoConnectTarget(null);
     setSelectorOpenedFrom('button');
@@ -577,6 +606,8 @@ function App() {
   const closeSelector = () => {
     setShowRecipeSelector(false);
     setSelectedProduct(null);
+    setSelectedMachine(null);
+    setSelectorMode('product');
     setSearchTerm('');
     setSortBy('name_asc');
     setFilterType('all');
@@ -617,6 +648,16 @@ function App() {
       return 0;
     });
 
+  const filteredMachines = machines
+    .filter(m => {
+      // Check if machine name matches search
+      if (!m.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+      // Include special machines (drill, assembler) or machines with recipes
+      if (m.id === 'm_mineshaft_drill' || m.id === 'm_logic_assembler') return true;
+      return getRecipesForMachine(m.id).length > 0;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
   const getAvailableRecipes = () => {
     if (!selectedProduct) return [];
     
@@ -656,7 +697,26 @@ function App() {
     }
   };
 
-  const availableRecipes = getAvailableRecipes();
+  const getMachineRecipes = () => {
+    if (!selectedMachine) return [];
+    return getRecipesForMachine(selectedMachine.id);
+  };
+
+  const handleMachineSelect = (machine) => {
+    // Check if this is mineshaft drill or logic assembler - if so, create box directly
+    if (machine.id === 'm_mineshaft_drill') {
+      createRecipeBox(DEFAULT_DRILL_RECIPE);
+      return;
+    }
+    if (machine.id === 'm_logic_assembler') {
+      createRecipeBox(DEFAULT_LOGIC_ASSEMBLER_RECIPE);
+      return;
+    }
+    // Otherwise, show recipes for this machine
+    setSelectedMachine(machine);
+  };
+
+  const availableRecipes = selectorMode === 'product' ? getAvailableRecipes() : getMachineRecipes();
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
@@ -716,80 +776,149 @@ function App() {
         <div className="modal-overlay" onClick={closeSelector}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2 className="modal-title">
-              {selectedProduct ? `Recipes for ${selectedProduct.name}` : 'Select Product'}
+              {selectedProduct ? `Recipes for ${selectedProduct.name}` : selectedMachine ? `Recipes for ${selectedMachine.name}` : 'Select Product or Machine'}
             </h2>
 
-            {!selectedProduct ? (
+            {!selectedProduct && !selectedMachine ? (
               <>
-                <div className="mb-lg flex-col">
-                  <input
-                    type="text"
-                    placeholder="Search products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="input"
-                  />
-                  
-                  <div className="flex-row">
-                    <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="select">
-                      <option value="all">All Types</option>
-                      <option value="item">Items Only</option>
-                      <option value="fluid">Fluids Only</option>
-                    </select>
-
-                    <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="select">
-                      <option value="name_asc">Name ↑ (A-Z)</option>
-                      <option value="name_desc">Name ↓ (Z-A)</option>
-                      <option value="price_asc">Price ↑ (Low-High)</option>
-                      <option value="price_desc">Price ↓ (High-Low)</option>
-                      <option value="rp_asc">RP Mult ↑ (Low-High)</option>
-                      <option value="rp_desc">RP Mult ↓ (High-Low)</option>
-                    </select>
+                <div className="mb-lg">
+                  <div className="flex-row" style={{ gap: '10px', marginBottom: '15px' }}>
+                    <button 
+                      onClick={() => setSelectorMode('product')} 
+                      className={`btn ${selectorMode === 'product' ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ flex: 1 }}
+                    >
+                      By Products
+                    </button>
+                    <button 
+                      onClick={() => setSelectorMode('machine')} 
+                      className={`btn ${selectorMode === 'machine' ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ flex: 1 }}
+                    >
+                      By Machines
+                    </button>
                   </div>
                 </div>
-                
-                <div className="modal-content" style={{ maxHeight: '400px' }}>
-                  <div className="product-table-header">
-                    <div>Product</div>
-                    <div className="text-right">Price</div>
-                    <div className="text-right">RP Mult</div>
-                  </div>
 
-                  {filteredProducts.map(product => (
-                    <div key={product.id} onClick={() => setSelectedProduct(product)} className="product-row">
-                      <div>
-                        <div className="product-name">{product.name}</div>
-                        <div className="product-type">{product.type === 'item' ? '📦 Item' : '💧 Fluid'}</div>
-                      </div>
-                      <div className="text-right" style={{ alignSelf: 'center' }}>
-                        {product.price === 'Variable' ? 'Variable' : `${product.price}`}
-                      </div>
-                      <div className="text-right" style={{ alignSelf: 'center' }}>
-                        {product.rp_multiplier === 'Variable' ? 'Variable' : `${product.rp_multiplier.toFixed(1)}x`}
+                {selectorMode === 'product' ? (
+                  <>
+                    <div className="mb-lg flex-col">
+                      <input
+                        type="text"
+                        placeholder="Search products..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="input"
+                      />
+                      
+                      <div className="flex-row">
+                        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="select">
+                          <option value="all">All Types</option>
+                          <option value="item">Items Only</option>
+                          <option value="fluid">Fluids Only</option>
+                        </select>
+
+                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="select">
+                          <option value="name_asc">Name ↑ (A-Z)</option>
+                          <option value="name_desc">Name ↓ (Z-A)</option>
+                          <option value="price_asc">Price ↑ (Low-High)</option>
+                          <option value="price_desc">Price ↓ (High-Low)</option>
+                          <option value="rp_asc">RP Mult ↑ (Low-High)</option>
+                          <option value="rp_desc">RP Mult ↓ (High-Low)</option>
+                        </select>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    
+                    <div className="modal-content" style={{ maxHeight: '400px' }}>
+                      <div className="product-table-header">
+                        <div>Product</div>
+                        <div className="text-right">Price</div>
+                        <div className="text-right">RP Mult</div>
+                      </div>
+
+                      {filteredProducts.map(product => (
+                        <div key={product.id} onClick={() => setSelectedProduct(product)} className="product-row">
+                          <div>
+                            <div className="product-name">{product.name}</div>
+                            <div className="product-type">{product.type === 'item' ? '📦 Item' : '💧 Fluid'}</div>
+                          </div>
+                          <div className="text-right" style={{ alignSelf: 'center' }}>
+                            {product.price === 'Variable' ? 'Variable' : `${product.price}`}
+                          </div>
+                          <div className="text-right" style={{ alignSelf: 'center' }}>
+                            {product.rp_multiplier === 'Variable' ? 'Variable' : `${product.rp_multiplier.toFixed(1)}x`}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="mb-lg">
+                      <input
+                        type="text"
+                        placeholder="Search machines..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="input"
+                      />
+                    </div>
+
+                    <div className="modal-content flex-col" style={{ maxHeight: '400px' }}>
+                      {filteredMachines.length === 0 ? (
+                        <div className="empty-state">No machines found</div>
+                      ) : (
+                        filteredMachines.map(machine => {
+                          const recipeCount = getRecipesForMachine(machine.id).length;
+                          return (
+                            <div 
+                              key={machine.id} 
+                              onClick={() => handleMachineSelect(machine)}
+                              className="recipe-card"
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <div className="recipe-machine">{machine.name}</div>
+                              <div className="recipe-details" style={{ color: '#999' }}>
+                                {machine.id === 'm_mineshaft_drill' || machine.id === 'm_logic_assembler' 
+                                  ? 'Click to create box' 
+                                  : `${recipeCount} recipe${recipeCount !== 1 ? 's' : ''}`
+                                }
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </>
+                )}
               </>
             ) : (
               <>
                 {selectorOpenedFrom === 'button' && (
-                  <button onClick={() => setSelectedProduct(null)} className="btn btn-secondary btn-back">
-                    ← Back to Products
+                  <button 
+                    onClick={() => {
+                      setSelectedProduct(null);
+                      setSelectedMachine(null);
+                    }} 
+                    className="btn btn-secondary btn-back"
+                  >
+                    ← Back
                   </button>
                 )}
 
-                <div className="mb-lg">
-                  <select value={recipeFilter} onChange={(e) => setRecipeFilter(e.target.value)} className="select">
-                    <option value="all">All Recipes</option>
-                    <option value="producers">Producers (Outputs {selectedProduct.name})</option>
-                    <option value="consumers">Consumers (Uses {selectedProduct.name})</option>
-                  </select>
-                </div>
+                {selectedProduct && (
+                  <div className="mb-lg">
+                    <select value={recipeFilter} onChange={(e) => setRecipeFilter(e.target.value)} className="select">
+                      <option value="all">All Recipes</option>
+                      <option value="producers">Producers (Outputs {selectedProduct.name})</option>
+                      <option value="consumers">Consumers (Uses {selectedProduct.name})</option>
+                    </select>
+                  </div>
+                )}
 
                 <div className="modal-content flex-col" style={{ maxHeight: '400px' }}>
                   {availableRecipes.length === 0 ? (
-                    <div className="empty-state">No recipes found for this filter</div>
+                    <div className="empty-state">No recipes found</div>
                   ) : (
                     availableRecipes.map(recipe => {
                       const machine = getMachine(recipe.machine_id);

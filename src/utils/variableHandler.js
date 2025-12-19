@@ -55,7 +55,10 @@ export const formatCycleTime = (cycleTime) => {
 
 /**
  * Format power consumption with MF/s units and metric conversion
- * Handles both single values and objects with drilling/idle values (for mineshaft drill)
+ * Handles:
+ * - Single values (normal recipes)
+ * - Objects with drilling/idle values (mineshaft drill)
+ * - Objects with max/average values (logic assembler)
  * 1 MMF = 1,000,000 MF
  */
 export const formatPowerConsumption = (power) => {
@@ -63,11 +66,18 @@ export const formatPowerConsumption = (power) => {
     return 'Variable';
   }
   
-  // Handle mineshaft drill with drilling/idle power (object)
+  // Handle mineshaft drill with drilling/idle power
   if (typeof power === 'object' && power !== null && 'drilling' in power && 'idle' in power) {
     const drillingFormatted = formatSinglePower(power.drilling);
     const idleFormatted = formatSinglePower(power.idle);
     return { drilling: drillingFormatted, idle: idleFormatted };
+  }
+  
+  // Handle logic assembler with max/average power
+  if (typeof power === 'object' && power !== null && 'max' in power && 'average' in power) {
+    const maxFormatted = formatSinglePower(power.max);
+    const avgFormatted = formatSinglePower(power.average);
+    return { max: maxFormatted, average: avgFormatted };
   }
   
   // Handle single power value
@@ -140,9 +150,19 @@ export const hasVariableComponents = (recipe) => {
   // Check cycle time
   if (isVariable(recipe.cycle_time)) return true;
   
-  // Check power consumption (handle both single value and object)
+  // Check power consumption (handle all three cases: single, drilling/idle, max/average)
   if (typeof recipe.power_consumption === 'object' && recipe.power_consumption !== null) {
-    if (isVariable(recipe.power_consumption.drilling) || isVariable(recipe.power_consumption.idle)) return true;
+    if (('drilling' in recipe.power_consumption && 'idle' in recipe.power_consumption) ||
+        ('max' in recipe.power_consumption && 'average' in recipe.power_consumption)) {
+      // Mineshaft drill or logic assembler
+      const power = recipe.power_consumption;
+      if ('drilling' in power) {
+        if (isVariable(power.drilling) || isVariable(power.idle)) return true;
+      }
+      if ('max' in power) {
+        if (isVariable(power.max) || isVariable(power.average)) return true;
+      }
+    }
   } else if (isVariable(recipe.power_consumption)) {
     return true;
   }

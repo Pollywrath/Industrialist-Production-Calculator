@@ -10,6 +10,8 @@ import {
   buildDrillOutputs,
   calculateDrillMetrics
 } from '../data/mineshaftDrill';
+import { getProductName } from '../utils/variableHandler';
+import { getProduct } from '../data/dataLoader';
 
 const DrillSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) => {
   const [drillHead, setDrillHead] = useState(currentSettings?.drillHead || '');
@@ -24,6 +26,10 @@ const DrillSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) =
     ? calculateDrillMetrics(drillHead, consumable, machineOil, parseInt(depth))
     : null;
 
+  // Get inputs and outputs for display
+  const inputs = buildDrillInputs(drillHead, consumable, machineOil, depth ? parseInt(depth) : null);
+  const outputs = buildDrillOutputs(drillHead, consumable, machineOil, depth ? parseInt(depth) : null);
+
   const handleApply = () => {
     const settings = {
       drillHead,
@@ -31,10 +37,6 @@ const DrillSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) =
       machineOil,
       depth: depth ? parseInt(depth) : null
     };
-
-    // Build recipe inputs/outputs based on settings (now with depth parameter)
-    const inputs = buildDrillInputs(drillHead, consumable, machineOil, depth ? parseInt(depth) : null);
-    const outputs = depth ? buildDrillOutputs(drillHead, consumable, machineOil, parseInt(depth)) : [];
 
     onSettingsChange(nodeId, settings, inputs, outputs);
     onClose();
@@ -125,21 +127,57 @@ const DrillSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) =
               borderRadius: '8px',
               fontSize: '13px'
             }}>
-              <div style={{ color: '#f5d56a', fontWeight: 600, marginBottom: '8px' }}>
+              <div style={{ color: '#f5d56a', fontWeight: 600, marginBottom: '12px' }}>
                 Calculated Metrics:
               </div>
-              <div style={{ color: '#999', lineHeight: '1.6' }}>
+
+              {/* One column for metrics */}
+              <div style={{ color: '#999', lineHeight: '1.6', marginBottom: '12px' }}>
                 <div>Deterioration: {metrics.deteriorationRate.toFixed(4)}%/s</div>
                 <div>Life Time (Drilling): {metrics.lifeTime.toFixed(2)}s</div>
                 <div>Replacement Time: {metrics.replacementTime.toFixed(2)}s</div>
                 <div>Travel Time: {metrics.travelTime.toFixed(2)}s</div>
                 <div>Total Cycle: {metrics.totalCycleTime.toFixed(2)}s</div>
                 <div>Efficiency: {(metrics.dutyCycle * 100).toFixed(1)}%</div>
-                <div style={{ marginTop: '8px', borderTop: '1px solid rgba(212, 166, 55, 0.3)', paddingTop: '8px' }}>
-                  <div>Power (Drilling): {metrics.drillingPower} MMF/s</div>
-                  <div>Power (Idle): {metrics.idlePower} MMF/s</div>
-                  <div>Pollution: {metrics.pollution}%/h</div>
-                </div>
+              </div>
+
+              {/* Two-column layout: Inputs (left) and Outputs (right) side by side */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', borderTop: '1px solid rgba(212, 166, 55, 0.3)', paddingTop: '12px' }}>
+                {/* Inputs Column */}
+                {inputs.length > 0 && (
+                  <div>
+                    <div style={{ color: '#86efac', fontWeight: 600, marginBottom: '8px', fontSize: '12px' }}>
+                      Inputs:
+                    </div>
+                    <div style={{ color: '#999', lineHeight: '1.5', fontSize: '12px' }}>
+                      {inputs.map((input, idx) => {
+                        const productName = getProductName(input.product_id, getProduct);
+                        const displayQty = typeof input.quantity === 'number' ? input.quantity.toFixed(4) : input.quantity;
+                        return (
+                          <div key={idx}>{displayQty}x {productName}</div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Outputs Column */}
+                {outputs.length > 0 && (
+                  <div>
+                    <div style={{ color: '#fca5a5', fontWeight: 600, marginBottom: '8px', fontSize: '12px' }}>
+                      Outputs:
+                    </div>
+                    <div style={{ color: '#999', lineHeight: '1.5', fontSize: '12px' }}>
+                      {outputs.map((output, idx) => {
+                        const productName = getProductName(output.product_id, getProduct);
+                        const displayQty = typeof output.quantity === 'number' ? output.quantity.toFixed(4) : output.quantity;
+                        return (
+                          <div key={idx}>{displayQty}x {productName}</div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -27,9 +27,11 @@ const CustomNode = ({ data, id }) => {
   const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
   const isLogicAssembler = recipe.isLogicAssembler || recipe.id === 'r_logic_assembler';
   
-  // Format power consumption (handle both single value and drilling/idle object)
+  // Format power consumption (handle single value, drilling/idle object for drill, or max/average object for assembler)
   const powerConsumption = formatPowerConsumption(recipe.power_consumption);
-  const hasDualPower = typeof powerConsumption === 'object' && powerConsumption !== null && 'drilling' in powerConsumption;
+  const hasDualPower = typeof powerConsumption === 'object' && powerConsumption !== null && 
+    (('drilling' in powerConsumption && 'idle' in powerConsumption) || 
+     ('max' in powerConsumption && 'average' in powerConsumption));
   
   // Use appropriate top padding based on power display
   const TOP_PADDING = hasDualPower ? TOP_PADDING_DUAL_POWER : TOP_PADDING_NORMAL;
@@ -136,12 +138,25 @@ const CustomNode = ({ data, id }) => {
             </div>
             {hasDualPower ? (
               <>
-                <div className="node-stat-row">
-                  <span className="node-stat-label">Power (Drilling):</span> {powerConsumption.drilling}
-                </div>
-                <div className="node-stat-row">
-                  <span className="node-stat-label">Power (Idle):</span> {powerConsumption.idle}
-                </div>
+                {('drilling' in powerConsumption && 'idle' in powerConsumption) ? (
+                  <>
+                    <div className="node-stat-row">
+                      <span className="node-stat-label">Power (Drilling):</span> {powerConsumption.drilling}
+                    </div>
+                    <div className="node-stat-row">
+                      <span className="node-stat-label">Power (Idle):</span> {powerConsumption.idle}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="node-stat-row">
+                      <span className="node-stat-label">Power (Max):</span> {powerConsumption.max}
+                    </div>
+                    <div className="node-stat-row">
+                      <span className="node-stat-label">Power (Avg):</span> {powerConsumption.average}
+                    </div>
+                  </>
+                )}
               </>
             ) : (
               <div className="node-stat-row">

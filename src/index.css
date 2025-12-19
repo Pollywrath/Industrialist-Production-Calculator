@@ -583,7 +583,6 @@ body {
 
 /* ============================================================
    DRILL SETTINGS STYLES
-   Add these to your existing index.css file
    ============================================================ */
 
 /* Drill Settings Button (on recipe node) */
@@ -627,7 +626,7 @@ body {
   border: 2px solid var(--border-primary);
   border-radius: var(--radius-lg);
   padding: var(--spacing-xl);
-  width: 400px;
+  width: 600px;
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
