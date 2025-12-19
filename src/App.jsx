@@ -20,15 +20,65 @@ import {
   saveCanvasState, loadCanvasState, restoreDefaults
 } from './data/dataLoader';
 import { getProductName, formatIngredient, filterVariableProducts, formatPrice, formatRPMultiplier } from './utils/variableHandler';
+import { DEFAULT_DRILL_RECIPE, DEPTH_OUTPUTS, calculateDrillMetrics } from './data/mineshaftDrill';
+import { DEFAULT_LOGIC_ASSEMBLER_RECIPE, MICROCHIP_STAGES, calculateLogicAssemblerMetrics } from './data/logicAssembler';
 
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 
 // Get all recipes that use a product as input
 const getRecipesUsingProduct = (productId) => {
-  return recipes.filter(recipe => 
-    recipe.inputs.some(input => input.product_id === productId)
-  );
+  return recipes.filter(recipe => {
+    // Exclude special machine placeholder recipes
+    if (recipe.id === 'r_mineshaft_drill_01' || recipe.id === 'r_logic_assembler_01') {
+      return false;
+    }
+    
+    return recipe.inputs.some(input => 
+      input.product_id === productId && input.product_id !== 'p_variableproduct'
+    );
+  });
+};
+
+// Get all recipes that produce a product as output
+const getRecipesProducingProductFiltered = (productId) => {
+  return recipes.filter(recipe => {
+    // Exclude special machine placeholder recipes
+    if (recipe.id === 'r_mineshaft_drill_01' || recipe.id === 'r_logic_assembler_01') {
+      return false;
+    }
+    
+    return recipe.outputs.some(output => 
+      output.product_id === productId && output.product_id !== 'p_variableproduct'
+    );
+  });
+};
+
+// Check if drill recipe can use this product
+const canDrillUseProduct = (productId) => {
+  // Check if it's in any drill head, consumable, or machine oil
+  const drillInputs = ['p_copper_drill_head', 'p_iron_drill_head', 'p_steel_drill_head', 
+    'p_tungsten_carbide_drill_head', 'p_water', 'p_acetic_acid', 
+    'p_hydrochloric_acid', 'p_sulfuric_acid', 'p_machine_oil'];
+  
+  if (drillInputs.includes(productId)) return true;
+  
+  // Check if it's in any depth output
+  for (const outputs of Object.values(DEPTH_OUTPUTS)) {
+    if (outputs.some(o => o.product_id === productId)) return true;
+  }
+  
+  return false;
+};
+
+// Check if logic assembler can use this product
+const canLogicAssemblerUseProduct = (productId) => {
+  // Check if it's an input material
+  const assemblerInputs = ['p_logic_plate', 'p_copper_wire', 'p_semiconductor', 'p_gold_wire', 'p_machine_oil'];
+  if (assemblerInputs.includes(productId)) return true;
+  
+  // Check if it's any microchip output
+  return MICROCHIP_STAGES.some(stage => stage.productId === productId);
 };
 
 function App() {
@@ -60,6 +110,8 @@ function App() {
           ...node.data,
           onInputClick: openRecipeSelectorForInput,
           onOutputClick: openRecipeSelectorForOutput,
+          onDrillSettingsChange: handleDrillSettingsChange,
+          onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange,
         }
       }));
       
@@ -127,6 +179,107 @@ function App() {
     }
   }, []);
 
+  const handleDrillSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
+    // Calculate metrics if we have enough info
+    const metrics = settings.drillHead && settings.depth 
+      ? calculateDrillMetrics(settings.drillHead, settings.consumable, settings.machineOil, settings.depth)
+      : null;
+    
+    setNodes((nds) => nds.map(node => {
+      if (node.id === nodeId) {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            recipe: {
+              ...node.data.recipe,
+              inputs: inputs.length > 0 ? inputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
+              outputs: outputs.length > 0 ? outputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
+              drillSettings: settings,
+              cycle_time: 1, // Always 1 second for mineshaft drill
+              power_consumption: metrics ? { 
+                drilling: metrics.drillingPower * 1000000, // Convert MMF/s to MF/s
+                idle: metrics.idlePower * 1000000 // Convert MMF/s to MF/s
+              } : 'Variable',
+              pollution: metrics ? metrics.pollution : 'Variable',
+            },
+            leftHandles: Math.max(inputs.length, 1),
+            rightHandles: Math.max(outputs.length, 1),
+          }
+        };
+      }
+      return node;
+    }));
+    
+    // Remove edges that are no longer valid
+    setEdges((eds) => eds.filter(edge => {
+      if (edge.source === nodeId || edge.target === nodeId) {
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node) return false;
+        
+        if (edge.source === nodeId) {
+          const handleIndex = parseInt(edge.sourceHandle.split('-')[1]);
+          return handleIndex < outputs.length;
+        } else {
+          const handleIndex = parseInt(edge.targetHandle.split('-')[1]);
+          return handleIndex < inputs.length;
+        }
+      }
+      return true;
+    }));
+  }, [setNodes, setEdges, nodes]);
+
+  const handleLogicAssemblerSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
+    // Calculate metrics if we have enough info
+    const metrics = settings.targetMicrochip 
+      ? calculateLogicAssemblerMetrics(settings.targetMicrochip, settings.machineOil)
+      : null;
+    
+    setNodes((nds) => nds.map(node => {
+      if (node.id === nodeId) {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            recipe: {
+              ...node.data.recipe,
+              inputs: inputs.length > 0 ? inputs : [
+                { product_id: 'p_logic_plate', quantity: 'Variable' },
+                { product_id: 'p_copper_wire', quantity: 'Variable' },
+                { product_id: 'p_semiconductor', quantity: 'Variable' },
+                { product_id: 'p_gold_wire', quantity: 'Variable' },
+              ],
+              outputs: outputs.length > 0 ? outputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
+              assemblerSettings: settings,
+              cycle_time: metrics ? metrics.cycleTime : 'Variable', // Total cycle time to produce 1 chip
+              power_consumption: metrics ? metrics.avgPowerConsumption : 'Variable',
+            },
+            leftHandles: Math.max(inputs.length, 1),
+            rightHandles: Math.max(outputs.length, 1),
+          }
+        };
+      }
+      return node;
+    }));
+    
+    // Remove edges that are no longer valid
+    setEdges((eds) => eds.filter(edge => {
+      if (edge.source === nodeId || edge.target === nodeId) {
+        const node = nodes.find(n => n.id === nodeId);
+        if (!node) return false;
+        
+        if (edge.source === nodeId) {
+          const handleIndex = parseInt(edge.sourceHandle.split('-')[1]);
+          return handleIndex < outputs.length;
+        } else {
+          const handleIndex = parseInt(edge.targetHandle.split('-')[1]);
+          return handleIndex < inputs.length;
+        }
+      }
+      return true;
+    }));
+  }, [setNodes, setEdges, nodes]);
+
   const createRecipeBox = useCallback((recipe) => {
     const machine = getMachine(recipe.machine_id);
     if (!machine) {
@@ -165,6 +318,8 @@ function App() {
         rightHandles: recipe.outputs.length,
         onInputClick: openRecipeSelectorForInput,
         onOutputClick: openRecipeSelectorForOutput,
+        onDrillSettingsChange: handleDrillSettingsChange,
+        onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange,
         isTarget: false,
       },
       sourcePosition: 'right',
@@ -219,7 +374,7 @@ function App() {
     setAutoConnectTarget(null);
     setSelectorOpenedFrom('button');
     setRecipeFilter('all');
-  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, autoConnectTarget]);
+  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, autoConnectTarget]);
 
   const deleteRecipeBoxAndTarget = useCallback((boxId) => {
     setNodes((nds) => nds.filter((n) => n.id !== boxId));
@@ -371,6 +526,8 @@ function App() {
                 ...node.data,
                 onInputClick: openRecipeSelectorForInput,
                 onOutputClick: openRecipeSelectorForOutput,
+                onDrillSettingsChange: handleDrillSettingsChange,
+                onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange,
               }
             }));
             
@@ -390,7 +547,7 @@ function App() {
     };
     reader.readAsText(file);
     event.target.value = '';
-  }, [setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput]);
+  }, [setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange]);
 
   const handleExport = useCallback(() => {
     const exportData = {
@@ -464,13 +621,29 @@ function App() {
     if (!selectedProduct) return [];
     
     try {
-      const producers = getRecipesProducingProduct(selectedProduct.id);
+      const producers = getRecipesProducingProductFiltered(selectedProduct.id);
       const consumers = getRecipesUsingProduct(selectedProduct.id);
       
-      if (recipeFilter === 'producers') return producers;
-      if (recipeFilter === 'consumers') return consumers;
+      // Include drill recipe if applicable
+      let drillRecipes = [];
+      if (canDrillUseProduct(selectedProduct.id)) {
+        drillRecipes = [DEFAULT_DRILL_RECIPE];
+      }
       
-      const allRecipes = [...producers, ...consumers];
+      // Include logic assembler recipe if applicable
+      let assemblerRecipes = [];
+      if (canLogicAssemblerUseProduct(selectedProduct.id)) {
+        assemblerRecipes = [DEFAULT_LOGIC_ASSEMBLER_RECIPE];
+      }
+      
+      if (recipeFilter === 'producers') {
+        return [...producers, ...(drillRecipes.length > 0 ? drillRecipes : []), ...(assemblerRecipes.length > 0 ? assemblerRecipes : [])];
+      }
+      if (recipeFilter === 'consumers') {
+        return [...consumers, ...(drillRecipes.length > 0 ? drillRecipes : []), ...(assemblerRecipes.length > 0 ? assemblerRecipes : [])];
+      }
+      
+      const allRecipes = [...producers, ...consumers, ...drillRecipes, ...assemblerRecipes];
       return Array.from(new Map(allRecipes.map(r => [r.id, r])).values());
     } catch (error) {
       console.error('Error getting available recipes:', error);

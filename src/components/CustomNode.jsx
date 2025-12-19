@@ -1,23 +1,38 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { getProduct } from '../data/dataLoader';
 import { getProductName, formatQuantity, formatCycleTime, formatPowerConsumption } from '../utils/variableHandler';
+import DrillSettings from './DrillSettings';
+import LogicAssemblerSettings from './LogicAssemblerSettings';
 
 const RECT_HEIGHT = 44;
 const RECT_GAP = 8;
-const TOP_PADDING = 165;
+const TOP_PADDING_NORMAL = 165;
+const TOP_PADDING_DUAL_POWER = 180; // Extra space for dual power display
 const BOTTOM_PADDING = 20;
 const SIDE_PADDING = 10;
 const COLUMN_GAP = 20;
 const MIN_WIDTH = 320;
 
 const CustomNode = ({ data, id }) => {
-  const { recipe, machine, onInputClick, onOutputClick, isTarget } = data;
+  const { recipe, machine, onInputClick, onOutputClick, isTarget, onDrillSettingsChange, onLogicAssemblerSettingsChange } = data;
+  const [showDrillSettings, setShowDrillSettings] = useState(false);
+  const [showAssemblerSettings, setShowAssemblerSettings] = useState(false);
   
   if (!recipe || !machine || !recipe.inputs || !recipe.outputs) {
     console.error('CustomNode: Invalid data', { data, id });
     return null;
   }
+  
+  const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
+  const isLogicAssembler = recipe.isLogicAssembler || recipe.id === 'r_logic_assembler';
+  
+  // Format power consumption (handle both single value and drilling/idle object)
+  const powerConsumption = formatPowerConsumption(recipe.power_consumption);
+  const hasDualPower = typeof powerConsumption === 'object' && powerConsumption !== null && 'drilling' in powerConsumption;
+  
+  // Use appropriate top padding based on power display
+  const TOP_PADDING = hasDualPower ? TOP_PADDING_DUAL_POWER : TOP_PADDING_NORMAL;
   
   const leftCount = recipe.inputs.length;
   const rightCount = recipe.outputs.length;
@@ -63,77 +78,154 @@ const CustomNode = ({ data, id }) => {
   const getHandlePositions = (positions) => 
     positions.map(p => ((p + RECT_HEIGHT / 2) / height) * 100);
 
+  const handleDrillSettingsClick = (e) => {
+    e.stopPropagation();
+    setShowDrillSettings(true);
+  };
+
+  const handleAssemblerSettingsClick = (e) => {
+    e.stopPropagation();
+    setShowAssemblerSettings(true);
+  };
+
+  const handleDrillSettingsChange = (nodeId, settings, inputs, outputs) => {
+    if (onDrillSettingsChange) {
+      onDrillSettingsChange(nodeId, settings, inputs, outputs);
+    }
+  };
+
+  const handleLogicAssemblerSettingsChange = (nodeId, settings, inputs, outputs) => {
+    if (onLogicAssemblerSettingsChange) {
+      onLogicAssemblerSettingsChange(nodeId, settings, inputs, outputs);
+    }
+  };
+
   return (
-    <div className={`custom-node ${isTarget ? 'target' : ''}`} style={{ width, height }}>
-      <div className="node-recipe-name" title={recipe.name}>
-        {recipe.name}
-      </div>
+    <>
+      <div className={`custom-node ${isTarget ? 'target' : ''}`} style={{ width, height }}>
+        {/* Settings button for mineshaft drill */}
+        {isMineshaftDrill && (
+          <button
+            onClick={handleDrillSettingsClick}
+            className="drill-settings-button"
+            title="Configure Drill Settings"
+          >
+            ⚙️
+          </button>
+        )}
 
-      <div className="node-stats-row">
-        <div className="node-stats">
-          <div className="node-stat-row">
-            <span className="node-stat-label">Cycle:</span> {formatCycleTime(recipe.cycle_time)}
+        {/* Settings button for logic assembler */}
+        {isLogicAssembler && (
+          <button
+            onClick={handleAssemblerSettingsClick}
+            className="drill-settings-button"
+            title="Configure Logic Assembler Settings"
+          >
+            ⚙️
+          </button>
+        )}
+
+        <div className="node-recipe-name" title={recipe.name}>
+          {recipe.name}
+        </div>
+
+        <div className="node-stats-row">
+          <div className="node-stats">
+            <div className="node-stat-row">
+              <span className="node-stat-label">Cycle:</span> {formatCycleTime(recipe.cycle_time)}
+            </div>
+            {hasDualPower ? (
+              <>
+                <div className="node-stat-row">
+                  <span className="node-stat-label">Power (Drilling):</span> {powerConsumption.drilling}
+                </div>
+                <div className="node-stat-row">
+                  <span className="node-stat-label">Power (Idle):</span> {powerConsumption.idle}
+                </div>
+              </>
+            ) : (
+              <div className="node-stat-row">
+                <span className="node-stat-label">Power:</span> {powerConsumption}
+              </div>
+            )}
+            <div className="node-stat-row">
+              <span className="node-stat-label">Pollution:</span> {typeof recipe.pollution === 'number' ? `${recipe.pollution}%/hr` : recipe.pollution}
+            </div>
           </div>
-          <div className="node-stat-row">
-            <span className="node-stat-label">Power:</span> {formatPowerConsumption(recipe.power_consumption)}
-          </div>
-          <div className="node-stat-row">
-            <span className="node-stat-label">Pollution:</span> {typeof recipe.pollution === 'number' ? `${recipe.pollution}%/hr` : recipe.pollution}
+
+          <div className="node-machine-info">
+            <div className="node-machine-name" title={machine.name}>
+              {machine.name}
+            </div>
+            <div className="node-machine-count">0</div>
           </div>
         </div>
 
-        <div className="node-machine-info">
-          <div className="node-machine-name" title={machine.name}>
-            {machine.name}
-          </div>
-          <div className="node-machine-count">0</div>
-        </div>
+        {/* Inputs */}
+        {leftPositions.map((pos, i) => {
+          const input = recipe.inputs[i];
+          if (!input) return null;
+          return (
+            <React.Fragment key={`left-${i}`}>
+              <NodeRect 
+                side="left" 
+                index={i} 
+                position={pos} 
+                width={leftWidth}
+                isOnly={!hasRight}
+                productId={input.product_id}
+                quantity={input.quantity}
+                onClick={onInputClick}
+                nodeId={id}
+              />
+              <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} />
+            </React.Fragment>
+          );
+        })}
+
+        {/* Outputs */}
+        {rightPositions.map((pos, i) => {
+          const output = recipe.outputs[i];
+          if (!output) return null;
+          return (
+            <React.Fragment key={`right-${i}`}>
+              <NodeRect 
+                side="right" 
+                index={i} 
+                position={pos} 
+                width={rightWidth}
+                isOnly={!hasLeft}
+                productId={output.product_id}
+                quantity={output.quantity}
+                onClick={onOutputClick}
+                nodeId={id}
+              />
+              <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} />
+            </React.Fragment>
+          );
+        })}
       </div>
 
-      {/* Inputs */}
-      {leftPositions.map((pos, i) => {
-        const input = recipe.inputs[i];
-        if (!input) return null;
-        return (
-          <React.Fragment key={`left-${i}`}>
-            <NodeRect 
-              side="left" 
-              index={i} 
-              position={pos} 
-              width={leftWidth}
-              isOnly={!hasRight}
-              productId={input.product_id}
-              quantity={input.quantity}
-              onClick={onInputClick}
-              nodeId={id}
-            />
-            <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} />
-          </React.Fragment>
-        );
-      })}
+      {/* Drill Settings Modal */}
+      {showDrillSettings && (
+        <DrillSettings
+          nodeId={id}
+          currentSettings={recipe.drillSettings || {}}
+          onSettingsChange={handleDrillSettingsChange}
+          onClose={() => setShowDrillSettings(false)}
+        />
+      )}
 
-      {/* Outputs */}
-      {rightPositions.map((pos, i) => {
-        const output = recipe.outputs[i];
-        if (!output) return null;
-        return (
-          <React.Fragment key={`right-${i}`}>
-            <NodeRect 
-              side="right" 
-              index={i} 
-              position={pos} 
-              width={rightWidth}
-              isOnly={!hasLeft}
-              productId={output.product_id}
-              quantity={output.quantity}
-              onClick={onOutputClick}
-              nodeId={id}
-            />
-            <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} />
-          </React.Fragment>
-        );
-      })}
-    </div>
+      {/* Logic Assembler Settings Modal */}
+      {showAssemblerSettings && (
+        <LogicAssemblerSettings
+          nodeId={id}
+          currentSettings={recipe.assemblerSettings || {}}
+          onSettingsChange={handleLogicAssemblerSettingsChange}
+          onClose={() => setShowAssemblerSettings(false)}
+        />
+      )}
+    </>
   );
 };
 

@@ -55,12 +55,29 @@ export const formatCycleTime = (cycleTime) => {
 
 /**
  * Format power consumption with MF/s units and metric conversion
+ * Handles both single values and objects with drilling/idle values (for mineshaft drill)
  * 1 MMF = 1,000,000 MF
  */
 export const formatPowerConsumption = (power) => {
   if (isVariable(power)) {
     return 'Variable';
   }
+  
+  // Handle mineshaft drill with drilling/idle power (object)
+  if (typeof power === 'object' && power !== null && 'drilling' in power && 'idle' in power) {
+    const drillingFormatted = formatSinglePower(power.drilling);
+    const idleFormatted = formatSinglePower(power.idle);
+    return { drilling: drillingFormatted, idle: idleFormatted };
+  }
+  
+  // Handle single power value
+  return formatSinglePower(power);
+};
+
+/**
+ * Helper function to format a single power value
+ */
+const formatSinglePower = (power) => {
   if (typeof power === 'string' && power.includes('Energy')) {
     return power;
   }
@@ -123,8 +140,12 @@ export const hasVariableComponents = (recipe) => {
   // Check cycle time
   if (isVariable(recipe.cycle_time)) return true;
   
-  // Check power consumption
-  if (isVariable(recipe.power_consumption)) return true;
+  // Check power consumption (handle both single value and object)
+  if (typeof recipe.power_consumption === 'object' && recipe.power_consumption !== null) {
+    if (isVariable(recipe.power_consumption.drilling) || isVariable(recipe.power_consumption.idle)) return true;
+  } else if (isVariable(recipe.power_consumption)) {
+    return true;
+  }
   
   // Check inputs
   if (recipe.inputs.some(input => 
