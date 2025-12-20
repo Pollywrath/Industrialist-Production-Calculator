@@ -16,6 +16,14 @@ import {
   getProductName, formatIngredient, filterVariableProducts, formatPollution
 } from './utils/variableHandler';
 import { 
+  calculateOutputTemperature, 
+  isTemperatureProduct,
+  getDefaultTemperatureSettings,
+  DEFAULT_WATER_TEMPERATURE,
+  DEFAULT_BOILER_INPUT_TEMPERATURE,
+  HEAT_SOURCES
+} from './utils/temperatureHandler';
+import { 
   DEFAULT_DRILL_RECIPE, DEPTH_OUTPUTS, calculateDrillMetrics 
 } from './data/mineshaftDrill';
 import { 
@@ -57,26 +65,133 @@ const canLogicAssemblerUseProduct = (productId) =>
   ['p_logic_plate', 'p_copper_wire', 'p_semiconductor', 'p_gold_wire', 'p_machine_oil'].includes(productId) || 
   MICROCHIP_STAGES.some(s => s.productId === productId);
 
+/**
+ * Helper function to initialize temperature data for recipe outputs
+ * Called when a recipe box is first created
+ */
+const initializeRecipeTemperatures = (recipe, machineId) => {
+  const heatSource = HEAT_SOURCES[machineId];
+  
+  if (!heatSource) {
+    // Not a heat source, return recipe as-is
+    return recipe;
+  }
+
+  // Get default settings for configurable machines
+  const defaultSettings = getDefaultTemperatureSettings(machineId);
+  
+  // Calculate output temperature
+  const isBoiler = heatSource.type === 'boiler';
+  const inputTemp = isBoiler ? DEFAULT_BOILER_INPUT_TEMPERATURE : DEFAULT_WATER_TEMPERATURE;
+  
+  const outputTemp = calculateOutputTemperature(
+    machineId, 
+    defaultSettings,
+    inputTemp,
+    null
+  );
+
+  // Apply temperature to outputs
+  const updatedOutputs = applyTemperatureToOutputs(recipe.outputs, outputTemp, isBoiler, heatSource, inputTemp);
+
+  return {
+    ...recipe,
+    outputs: updatedOutputs,
+    temperatureSettings: defaultSettings
+  };
+};
+
+/**
+ * Apply temperature to recipe outputs based on machine type
+ * UNIFIED LOGIC for setting output temperatures and quantities
+ */
+const applyTemperatureToOutputs = (outputs, temperature, isBoiler, heatSource, inputTemp = DEFAULT_WATER_TEMPERATURE) => {
+  const minSteamTemp = heatSource?.minSteamTemp || 100;
+  
+  return outputs.map(output => {
+    if (isBoiler) {
+      // Boiler: only steam output gets temperature
+      if (output.product_id === 'p_steam') {
+        // For boiler, use the higher of calculated temp or first input temp (pass-through)
+        const finalTemp = Math.max(temperature, inputTemp);
+        
+        // Preserve original quantity (stored when quantity was first set to 0)
+        const originalQuantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
+        
+        // Check if temperature is below minimum threshold - if so, no steam is produced
+        if (finalTemp < minSteamTemp) {
+          return {
+            ...output,
+            temperature: finalTemp,
+            quantity: 0, // No steam below minimum temperature
+            originalQuantity: originalQuantity // Store original for restoration
+          };
+        }
+        // Temperature is sufficient - restore original quantity
+        return {
+          ...output,
+          temperature: finalTemp,
+          quantity: originalQuantity, // Restore original quantity
+          originalQuantity: originalQuantity // Keep tracking original
+        };
+      }
+      return output; // Water output has no temperature
+    }
+    
+    // For all other heat sources: use the higher of calculated temp or input temp (pass-through)
+    if (isTemperatureProduct(output.product_id)) {
+      const finalTemp = Math.max(temperature, inputTemp);
+      return {
+        ...output,
+        temperature: finalTemp
+      };
+    }
+    return output;
+  });
+};
+
 function App() {
   // Canvas state
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, onEdgesChangeBase] = useEdgesState([]);
   const [nodeId, setNodeId] = useState(0);
+
+  // Wrap onEdgesChange to detect deletions and trigger temperature recalculation
+  const onEdgesChange = useCallback((changes) => {
+    // Check if any edges are being removed
+    const hasRemovals = changes.some(change => change.type === 'remove');
+    
+    // Apply the changes
+    onEdgesChangeBase(changes);
+    
+    // If edges were removed, recalculate temperatures after state update
+    if (hasRemovals) {
+      setTimeout(() => {
+        setNodes(currentNodes => {
+          setEdges(currentEdges => {
+            recalculateAllTemperatures(currentNodes, currentEdges);
+            return currentEdges;
+          });
+          return currentNodes;
+        });
+      }, 0);
+    }
+  }, [onEdgesChangeBase, setEdges, setNodes]);
 
   // Recipe selector modal
   const [showRecipeSelector, setShowRecipeSelector] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
-  const [selectorMode, setSelectorMode] = useState('product'); // 'product' or 'machine'
-  const [selectorOpenedFrom, setSelectorOpenedFrom] = useState('button'); // 'button' or 'rectangle'
+  const [selectorMode, setSelectorMode] = useState('product');
+  const [selectorOpenedFrom, setSelectorOpenedFrom] = useState('button');
 
   // Recipe filtering and sorting
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name_asc');
   const [filterType, setFilterType] = useState('all');
-  const [recipeFilter, setRecipeFilter] = useState('all'); // 'all', 'producers', 'consumers'
+  const [recipeFilter, setRecipeFilter] = useState('all');
 
-  // Auto-connect feature: when clicking input/output, connect new recipe box
+  // Auto-connect feature
   const [autoConnectTarget, setAutoConnectTarget] = useState(null);
 
   // Target products for production goals
@@ -97,9 +212,9 @@ function App() {
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [globalPollution, setGlobalPollution] = useState(0);
   const [pollutionInputFocused, setPollutionInputFocused] = useState(false);
-  const [soldProducts, setSoldProducts] = useState({}); // Track which excess products are being sold
-  const [displayMode, setDisplayMode] = useState('perSecond'); // 'perSecond' or 'perCycle'
-  const [machineDisplayMode, setMachineDisplayMode] = useState('perMachine'); // 'perMachine' or 'total'
+  const [soldProducts, setSoldProducts] = useState({});
+  const [displayMode, setDisplayMode] = useState('perSecond');
+  const [machineDisplayMode, setMachineDisplayMode] = useState('perMachine');
   const reactFlowWrapper = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -112,25 +227,43 @@ function App() {
   useEffect(() => {
     const savedState = loadCanvasState();
     if (savedState?.nodes) {
-      const restoredNodes = savedState.nodes.map(node => ({
-        ...node,
-        data: {
-          ...node.data,
-          machineCount: node.data.machineCount ?? 0, // Default to 0 if not present
-          displayMode: displayMode,
-          machineDisplayMode: machineDisplayMode,
-          onInputClick: openRecipeSelectorForInput,
-          onOutputClick: openRecipeSelectorForOutput,
-          onDrillSettingsChange: handleDrillSettingsChange,
-          onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange,
+      const restoredNodes = savedState.nodes.map(node => {
+        // Initialize temperature for any heat source machines that don't have it
+        const machine = getMachine(node.data?.recipe?.machine_id);
+        let recipe = node.data?.recipe;
+        
+        if (machine && recipe && !recipe.outputs?.some(o => o.temperature !== undefined)) {
+          recipe = initializeRecipeTemperatures(recipe, machine.id);
         }
-      }));
+        
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            recipe,
+            machineCount: node.data.machineCount ?? 0,
+            displayMode: displayMode,
+            machineDisplayMode: machineDisplayMode,
+            onInputClick: openRecipeSelectorForInput,
+            onOutputClick: openRecipeSelectorForOutput,
+            onDrillSettingsChange: handleDrillSettingsChange,
+            onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange,
+            onTemperatureSettingsChange: handleTemperatureSettingsChange,
+            onBoilerSettingsChange: handleBoilerSettingsChange,
+          }
+        };
+      });
       setNodes(restoredNodes);
       setEdges(savedState.edges || []);
       setTargetProducts(savedState.targetProducts || []);
       setSoldProducts(savedState.soldProducts || {});
       setNodeId(savedState.nodeId || 0);
       setTargetIdCounter(savedState.targetIdCounter || 0);
+      
+      // After loading, recalculate all temperatures based on connections
+      setTimeout(() => {
+        recalculateAllTemperatures(restoredNodes, savedState.edges || []);
+      }, 100);
     }
   }, []);
 
@@ -173,14 +306,13 @@ function App() {
 
       const machineCount = node.data?.machineCount || 0;
 
-      // Power consumption - use max power for both drill and assembler
+      // Power consumption
       const power = recipe.power_consumption;
       let powerValue = 0;
       if (typeof power === 'number') {
         powerValue = power;
         totalPower += power * machineCount;
       } else if (typeof power === 'object' && power !== null) {
-        // For both drill and assembler: use max power
         if ('max' in power) {
           powerValue = power.max;
           totalPower += powerValue * machineCount;
@@ -194,7 +326,6 @@ function App() {
       }
 
       // Model count per recipe
-      // Formula: roundup(machine_count) + roundup(machine_count * power/1500000) + roundup(machine_count) * (inputs + outputs) * 2
       const inputOutputCount = (recipe.inputs?.length || 0) + (recipe.outputs?.length || 0);
       
       const recipeModelCount = 
@@ -214,8 +345,7 @@ function App() {
 
   const stats = calculateTotalStats();
 
-  // Solve production network - only recompute when nodes or edges change
-  // Memoized to avoid expensive recalculation on every render
+  // Solve production network
   const productionSolution = useMemo(() => {
     return solveProductionNetwork(nodes, edges);
   }, [nodes, edges]);
@@ -231,7 +361,6 @@ function App() {
   // Add isSold property to excess products
   const excessProducts = useMemo(() => {
     return excessProductsRaw.map(item => {
-      // Auto-sell if price > 0 and not explicitly unchecked
       const shouldAutoSell = typeof item.product.price === 'number' && item.product.price > 0;
       const explicitlySold = soldProducts[item.productId];
       
@@ -242,7 +371,7 @@ function App() {
     });
   }, [excessProductsRaw, soldProducts]);
 
-  // Calculate total profit from sold excess products only
+  // Calculate total profit from sold excess products
   const totalProfit = useMemo(() => {
     let profit = 0;
     excessProducts.forEach(item => {
@@ -255,8 +384,8 @@ function App() {
 
   // Calculate machine counts and costs
   const machineStats = useMemo(() => {
-    const machineCounts = {}; // machineId -> total count (rounded up per recipe)
-    const machineCosts = {}; // machineId -> cost
+    const machineCounts = {};
+    const machineCosts = {};
 
     nodes.forEach(node => {
       const machine = node.data?.machine;
@@ -265,7 +394,7 @@ function App() {
       if (!machine) return;
 
       const machineId = machine.id;
-      const roundedCount = Math.ceil(machineCount); // Round up per recipe
+      const roundedCount = Math.ceil(machineCount);
 
       if (!machineCounts[machineId]) {
         machineCounts[machineId] = 0;
@@ -275,7 +404,6 @@ function App() {
       machineCounts[machineId] += roundedCount;
     });
 
-    // Create array of machine stats
     const stats = Object.keys(machineCounts).map(machineId => {
       const machine = machines.find(m => m.id === machineId);
       const count = machineCounts[machineId];
@@ -296,15 +424,14 @@ function App() {
     return { stats, totalCost };
   }, [nodes, machines]);
 
-  // Smart number formatting - only show decimals when needed (max 4 places)
+  // Smart number formatting
   const smartFormat = (num) => {
     if (typeof num !== 'number') return num;
-    // Round to 4 decimals and remove trailing zeros
     const rounded = Math.round(num * 10000) / 10000;
     return rounded.toString();
   };
 
-  // Metric formatting for large numbers (1000+)
+  // Metric formatting for large numbers
   const metricFormat = (num) => {
     if (typeof num !== 'number') return num;
     
@@ -319,37 +446,33 @@ function App() {
     return smartFormat(num);
   };
 
-  // Check if current theme is Forest (for easter egg)
+  // Check if current theme is Forest
   const isForestTheme = () => {
     const primaryColor = getComputedStyle(document.documentElement)
       .getPropertyValue('--color-primary')
       .trim()
       .toLowerCase();
-    return primaryColor === '#5fb573'; // Forest theme primary color
+    return primaryColor === '#5fb573';
   };
 
   const statisticsTitle = isForestTheme() ? "Plant Statistics" : "Plan Statistics";
 
-  // Auto-increment global pollution based on total pollution per hour
+  // Auto-increment global pollution
   useEffect(() => {
     const interval = setInterval(() => {
-      // Only increment if input is not focused
       if (pollutionInputFocused) return;
       
-      // Increment by pollution per second (totalPollution / 3600)
       const pollutionPerSecond = stats.totalPollution / 3600;
       setGlobalPollution(prev => {
-        // Only increment if prev is a valid number
         if (typeof prev === 'number' && !isNaN(prev) && isFinite(prev)) {
-          // Round to 4 decimal places to avoid floating point errors
           return parseFloat((prev + pollutionPerSecond).toFixed(4));
         }
         return prev;
       });
-    }, 1000); // Run every second
+    }, 1000);
 
     return () => clearInterval(interval);
-  }, [stats.totalPollution, pollutionInputFocused]); // Depend on both totalPollution and focus state
+  }, [stats.totalPollution, pollutionInputFocused]);
 
   // Format power consumption for display
   const formatPowerDisplay = (power) => {
@@ -363,6 +486,125 @@ function App() {
     setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: updater(n.data) } : n));
   };
 
+  /**
+   * UNIFIED TEMPERATURE RECALCULATION
+   * Recalculates temperatures for ALL heat source nodes based on their connections
+   * Handles both additive sources (geothermal) and boilers
+   * Iterates until stable to handle chaining
+   */
+  const recalculateAllTemperatures = useCallback((currentNodes, currentEdges) => {
+    setNodes(nds => {
+      let updatedNodes = currentNodes || [...nds];
+      let hasChanges = true;
+      let iterations = 0;
+      const maxIterations = 20;
+      
+      // Keep iterating until no more changes (handles chaining)
+      while (hasChanges && iterations < maxIterations) {
+        hasChanges = false;
+        iterations++;
+        
+        updatedNodes = updatedNodes.map(targetNode => {
+          const machine = getMachine(targetNode.data?.recipe?.machine_id);
+          if (!machine) return targetNode;
+          
+          const heatSource = HEAT_SOURCES[machine.id];
+          if (!heatSource) return targetNode;
+          
+          const isAdditive = heatSource.type === 'additive';
+          const isBoiler = heatSource.type === 'boiler';
+          
+          // Only recalculate for additive sources and boilers
+          if (!isAdditive && !isBoiler) return targetNode;
+          
+          // Find edges connected to this node's inputs
+          const connectedEdges = currentEdges.filter(e => e.target === targetNode.id);
+          
+          let inputTemp = DEFAULT_WATER_TEMPERATURE;
+          let secondInputTemp = null;
+          
+          if (isBoiler) {
+            // Boiler: get temperature from SECOND input (index 1)
+            const secondInputEdge = connectedEdges.find(e => {
+              const targetInputIndex = parseInt(e.targetHandle.split('-')[1]);
+              return targetInputIndex === 1;
+            });
+            
+            if (secondInputEdge) {
+              const sourceNode = updatedNodes.find(n => n.id === secondInputEdge.source);
+              if (sourceNode) {
+                const sourceOutputIndex = parseInt(secondInputEdge.sourceHandle.split('-')[1]);
+                const sourceOutput = sourceNode.data?.recipe?.outputs?.[sourceOutputIndex];
+                if (sourceOutput && isTemperatureProduct(sourceOutput.product_id)) {
+                  secondInputTemp = sourceOutput.temperature || DEFAULT_BOILER_INPUT_TEMPERATURE;
+                }
+              }
+            } else {
+              secondInputTemp = DEFAULT_BOILER_INPUT_TEMPERATURE;
+            }
+          } else {
+            // Additive (geothermal): get temperature from first input
+            if (connectedEdges.length > 0) {
+              const firstInputEdge = connectedEdges[0];
+              const sourceNode = updatedNodes.find(n => n.id === firstInputEdge.source);
+              if (sourceNode) {
+                const sourceOutputIndex = parseInt(firstInputEdge.sourceHandle.split('-')[1]);
+                const sourceOutput = sourceNode.data?.recipe?.outputs?.[sourceOutputIndex];
+                if (sourceOutput && isTemperatureProduct(sourceOutput.product_id)) {
+                  inputTemp = sourceOutput.temperature || DEFAULT_WATER_TEMPERATURE;
+                }
+              }
+            }
+          }
+          
+          // Recalculate this node's output temperature
+          const newTemp = calculateOutputTemperature(
+            machine.id,
+            targetNode.data.recipe.temperatureSettings || {},
+            inputTemp,
+            null,
+            secondInputTemp
+          );
+          
+          // Check if temperature actually changed
+          const currentTemp = targetNode.data.recipe.outputs.find(o => 
+            isTemperatureProduct(o.product_id) && o.temperature !== undefined
+          )?.temperature;
+          
+          if (currentTemp !== undefined && Math.abs(newTemp - currentTemp) < 0.01) {
+            return targetNode;
+          }
+          
+          // Temperature changed - update and flag for another iteration
+          hasChanges = true;
+          
+          // Apply temperature to outputs using unified logic
+          // Pass through input temp for non-boiler machines, first input temp for boilers
+          const updatedOutputs = applyTemperatureToOutputs(
+            targetNode.data.recipe.outputs,
+            newTemp,
+            isBoiler,
+            heatSource,
+            inputTemp
+          );
+          
+          return {
+            ...targetNode,
+            data: {
+              ...targetNode.data,
+              recipe: {
+                ...targetNode.data.recipe,
+                outputs: updatedOutputs
+              }
+            }
+          };
+        });
+      }
+      
+      return updatedNodes;
+    });
+  }, [setNodes]);
+
   // Validate edge connections by product ID
   const onConnect = useCallback((params) => {
     const sourceNode = nodes.find(n => n.id === params.source);
@@ -373,8 +615,13 @@ function App() {
     const targetProductId = targetNode.data.recipe.inputs[parseInt(params.targetHandle.split('-')[1])]?.product_id;
     if (sourceProductId !== targetProductId) return;
 
-    setEdges((eds) => addEdge({ ...params, type: 'custom', animated: false }, eds));
-  }, [setEdges, nodes]);
+    setEdges((eds) => {
+      const newEdges = addEdge({ ...params, type: 'custom', animated: false }, eds);
+      // Recalculate temperatures after connection is made
+      setTimeout(() => recalculateAllTemperatures(nodes, newEdges), 0);
+      return newEdges;
+    });
+  }, [setEdges, nodes, recalculateAllTemperatures]);
 
   // Reset recipe selector to initial state
   const resetSelector = () => {
@@ -397,7 +644,7 @@ function App() {
     setSelectorOpenedFrom('button');
   }, []);
 
-  // Open recipe selector for product input - shows producer recipes
+  // Open recipe selector for product input
   const openRecipeSelectorForInput = useCallback((productId, nodeId, inputIndex) => {
     const product = getProduct(productId);
     if (product) {
@@ -409,7 +656,7 @@ function App() {
     }
   }, []);
 
-  // Open recipe selector for product output - shows consumer recipes
+  // Open recipe selector for product output
   const openRecipeSelectorForOutput = useCallback((productId, nodeId, outputIndex) => {
     const product = getProduct(productId);
     if (product) {
@@ -447,7 +694,7 @@ function App() {
       rightHandles: Math.max(outputs.length, 1),
     }));
 
-    // Remove edges connected to deleted input/output slots
+    // Remove edges connected to deleted slots
     setEdges((eds) => eds.filter(edge => {
       if (edge.source === nodeId || edge.target === nodeId) {
         const handleIndex = parseInt((edge.source === nodeId ? edge.sourceHandle : edge.targetHandle).split('-')[1]);
@@ -494,7 +741,7 @@ function App() {
       rightHandles: Math.max(outputs.length, 1),
     }));
 
-    // Remove edges connected to deleted input/output slots
+    // Remove edges connected to deleted slots
     setEdges((eds) => eds.filter(edge => {
       if (edge.source === nodeId || edge.target === nodeId) {
         const handleIndex = parseInt((edge.source === nodeId ? edge.sourceHandle : edge.targetHandle).split('-')[1]);
@@ -504,13 +751,91 @@ function App() {
     }));
   }, [setEdges]);
 
-  // Create a new recipe box on canvas, optionally auto-connecting to existing box
+  // Update temperature settings for machines that produce heated water/steam
+  const handleTemperatureSettingsChange = useCallback((nodeId, settings, outputs, powerConsumption) => {
+    updateNodeData(nodeId, data => ({
+      ...data,
+      recipe: {
+        ...data.recipe,
+        outputs: outputs,
+        temperatureSettings: settings,
+        power_consumption: powerConsumption !== null && powerConsumption !== undefined 
+          ? powerConsumption 
+          : data.recipe.power_consumption
+      }
+    }));
+    
+    // Recalculate downstream temperatures after updating this node
+    setTimeout(() => {
+      setNodes(currentNodes => {
+        setEdges(currentEdges => {
+          recalculateAllTemperatures(currentNodes, currentEdges);
+          return currentEdges;
+        });
+        return currentNodes;
+      });
+    }, 0);
+  }, [setNodes, setEdges, recalculateAllTemperatures]);
+
+  // Update boiler settings (heat loss)
+  const handleBoilerSettingsChange = useCallback((nodeId, settings) => {
+    updateNodeData(nodeId, data => {
+      const machine = getMachine(data.recipe.machine_id);
+      const heatSource = HEAT_SOURCES[machine?.id];
+      
+      if (!heatSource || heatSource.type !== 'boiler') return data;
+      
+      // Calculate new output temperature with updated heat loss
+      const outputTemp = calculateOutputTemperature(
+        machine.id,
+        settings,
+        DEFAULT_BOILER_INPUT_TEMPERATURE,
+        null,
+        DEFAULT_BOILER_INPUT_TEMPERATURE
+      );
+      
+      // Apply temperature to outputs using unified logic
+      // For initial settings, use default input temp
+      const updatedOutputs = applyTemperatureToOutputs(
+        data.recipe.outputs,
+        outputTemp,
+        true,
+        heatSource,
+        DEFAULT_BOILER_INPUT_TEMPERATURE
+      );
+      
+      return {
+        ...data,
+        recipe: {
+          ...data.recipe,
+          outputs: updatedOutputs,
+          temperatureSettings: settings
+        }
+      };
+    });
+    
+    // Recalculate downstream temperatures after updating this node
+    setTimeout(() => {
+      setNodes(currentNodes => {
+        setEdges(currentEdges => {
+          recalculateAllTemperatures(currentNodes, currentEdges);
+          return currentEdges;
+        });
+        return currentNodes;
+      });
+    }, 0);
+  }, [setNodes, setEdges, recalculateAllTemperatures]);
+
+  // Create a new recipe box on canvas
   const createRecipeBox = useCallback((recipe) => {
     const machine = getMachine(recipe.machine_id);
     if (!machine || !recipe.inputs || !recipe.outputs) {
       alert('Error: Invalid machine or recipe data');
       return;
     }
+
+    // Initialize temperature data for heat source machines
+    const recipeWithTemp = initializeRecipeTemperatures(recipe, machine.id);
 
     const newNodeId = `node-${nodeId}`;
     const targetNode = autoConnectTarget ? nodes.find(n => n.id === autoConnectTarget.nodeId) : null;
@@ -529,50 +854,63 @@ function App() {
       type: 'custom',
       position,
       data: {
-        recipe, machine,
-        machineCount: 0, // Default machine count
+        recipe: recipeWithTemp,
+        machine,
+        machineCount: 0,
         displayMode: displayMode,
         machineDisplayMode: machineDisplayMode,
-        leftHandles: recipe.inputs.length,
-        rightHandles: recipe.outputs.length,
+        leftHandles: recipeWithTemp.inputs.length,
+        rightHandles: recipeWithTemp.outputs.length,
         onInputClick: openRecipeSelectorForInput,
         onOutputClick: openRecipeSelectorForOutput,
         onDrillSettingsChange: handleDrillSettingsChange,
         onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange,
+        onTemperatureSettingsChange: handleTemperatureSettingsChange,
+        onBoilerSettingsChange: handleBoilerSettingsChange,
         isTarget: false,
       },
       sourcePosition: 'right',
       targetPosition: 'left',
     };
 
-    setNodes((nds) => [...nds, newNode]);
+    setNodes((nds) => {
+      const updatedNodes = [...nds, newNode];
+      
+      // Auto-connect edge if opened from input/output click
+      if (autoConnectTarget) {
+        setTimeout(() => {
+          const searchKey = autoConnectTarget.isOutput ? 'inputs' : 'outputs';
+          const index = recipeWithTemp[searchKey].findIndex(item => item.product_id === autoConnectTarget.productId);
 
-    // Auto-connect edge if opened from input/output click
-    if (autoConnectTarget) {
-      setTimeout(() => {
-        const searchKey = autoConnectTarget.isOutput ? 'inputs' : 'outputs';
-        const index = recipe[searchKey].findIndex(item => item.product_id === autoConnectTarget.productId);
+          if (index !== -1) {
+            const sourceHandleIndex = autoConnectTarget.isOutput ? autoConnectTarget.outputIndex : index;
+            const targetHandleIndex = autoConnectTarget.isOutput ? index : autoConnectTarget.inputIndex;
 
-        if (index !== -1) {
-          const sourceHandleIndex = autoConnectTarget.isOutput ? autoConnectTarget.outputIndex : index;
-          const targetHandleIndex = autoConnectTarget.isOutput ? index : autoConnectTarget.inputIndex;
-
-          const newEdge = {
-            source: autoConnectTarget.isOutput ? autoConnectTarget.nodeId : newNodeId,
-            sourceHandle: `right-${sourceHandleIndex}`,
-            target: autoConnectTarget.isOutput ? newNodeId : autoConnectTarget.nodeId,
-            targetHandle: `left-${targetHandleIndex}`,
-            type: 'custom',
-            animated: false,
-          };
-          setEdges((eds) => addEdge(newEdge, eds));
-        }
-      }, 50);
-    }
+            const newEdge = {
+              source: autoConnectTarget.isOutput ? autoConnectTarget.nodeId : newNodeId,
+              sourceHandle: `right-${sourceHandleIndex}`,
+              target: autoConnectTarget.isOutput ? newNodeId : autoConnectTarget.nodeId,
+              targetHandle: `left-${targetHandleIndex}`,
+              type: 'custom',
+              animated: false,
+            };
+            
+            setEdges((eds) => {
+              const updatedEdges = addEdge(newEdge, eds);
+              // Recalculate temperatures after auto-connecting
+              setTimeout(() => recalculateAllTemperatures(updatedNodes, updatedEdges), 0);
+              return updatedEdges;
+            });
+          }
+        }, 50);
+      }
+      
+      return updatedNodes;
+    });
 
     setNodeId((id) => id + 1);
     resetSelector();
-  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, autoConnectTarget, displayMode, machineDisplayMode]);
+  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange, autoConnectTarget, displayMode, machineDisplayMode, recalculateAllTemperatures]);
 
   // Delete recipe box and its associated target
   const deleteRecipeBoxAndTarget = useCallback((boxId) => {
@@ -581,7 +919,7 @@ function App() {
     setTargetProducts(prev => prev.filter(t => t.recipeBoxId !== boxId));
   }, [setNodes, setEdges]);
 
-  // Toggle target status on a recipe box (Shift+Click)
+  // Toggle target status on a recipe box
   const toggleTargetStatus = useCallback((node) => {
     const existingTarget = targetProducts.find(t => t.recipeBoxId === node.id);
     if (existingTarget) {
@@ -599,7 +937,7 @@ function App() {
     }
   }, [targetProducts, targetIdCounter]);
 
-  // Node interactions: Shift+Click = toggle target, Ctrl+Alt+Click = delete
+  // Node interactions
   const onNodeClick = useCallback((event, node) => {
     if (event.shiftKey && !event.ctrlKey && !event.altKey) {
       toggleTargetStatus(node);
@@ -635,7 +973,7 @@ function App() {
     setEditingMachineCount('');
   }, [editingNodeId, editingMachineCount]);
 
-  // Compute machines - placeholder for future implementation
+  // Compute machines
   const handleCompute = useCallback(() => {
     alert('Computation to come soon!');
   }, []);
@@ -643,15 +981,12 @@ function App() {
   // Handle extended panel toggle with animation
   const handleExtendedPanelToggle = useCallback(() => {
     if (extendedPanelOpen) {
-      // Start closing animation
       setExtendedPanelClosing(true);
-      // Wait for animation to complete before removing from DOM
       setTimeout(() => {
         setExtendedPanelOpen(false);
         setExtendedPanelClosing(false);
-      }, 300); // Match animation duration
+      }, 300);
     } else {
-      // Open immediately
       setExtendedPanelOpen(true);
     }
   }, [extendedPanelOpen]);
@@ -697,7 +1032,7 @@ function App() {
       try {
         const imported = JSON.parse(e.target.result);
         
-        // Merge products (newer data overwrites old)
+        // Merge products
         const productMap = new Map((imported.products || []).map(p => [p.id, p]));
         const uniqueProducts = Array.from(productMap.values());
         const machineIds = new Set(imported.machines?.map(m => m.id) || []);
@@ -734,13 +1069,15 @@ function App() {
             ...node,
             data: { 
               ...node.data,
-              machineCount: node.data.machineCount ?? 0, // Default to 0 if not present
+              machineCount: node.data.machineCount ?? 0,
               displayMode: displayMode,
               machineDisplayMode: machineDisplayMode,
               onInputClick: openRecipeSelectorForInput, 
               onOutputClick: openRecipeSelectorForOutput, 
               onDrillSettingsChange: handleDrillSettingsChange, 
-              onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange 
+              onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange,
+              onTemperatureSettingsChange: handleTemperatureSettingsChange,
+              onBoilerSettingsChange: handleBoilerSettingsChange
             }
           }));
           setNodes(restoredNodes);
@@ -759,7 +1096,7 @@ function App() {
     };
     reader.readAsText(file);
     event.target.value = '';
-  }, [setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, displayMode, machineDisplayMode]);
+  }, [setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange, displayMode, machineDisplayMode]);
 
   // Export canvas to JSON
   const handleExport = useCallback(() => {
@@ -813,7 +1150,7 @@ function App() {
       return (b.rp_multiplier === 'Variable' ? -Infinity : b.rp_multiplier) - (a.rp_multiplier === 'Variable' ? -Infinity : a.rp_multiplier);
     });
 
-  // Filter machines (exclude empty ones)
+  // Filter machines
   const filteredMachines = machines
     .filter(m => 
       m.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
@@ -821,7 +1158,7 @@ function App() {
     )
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  // Handle machine selection - special machines bypass recipe list
+  // Handle machine selection
   const handleMachineSelect = (machine) => {
     if (machine.id === 'm_mineshaft_drill') createRecipeBox(DEFAULT_DRILL_RECIPE);
     else if (machine.id === 'm_logic_assembler') createRecipeBox(DEFAULT_LOGIC_ASSEMBLER_RECIPE);
@@ -990,8 +1327,6 @@ function App() {
                           setPollutionInputFocused(false);
                           const val = e.target.value;
                           const num = parseFloat(val);
-                          // Validate: if it's a valid number, keep it; otherwise reset to 0
-                          // Round to 4 decimal places
                           if (!isNaN(num) && isFinite(num)) {
                             setGlobalPollution(parseFloat(num.toFixed(4)));
                           } else {
@@ -1000,7 +1335,6 @@ function App() {
                         }}
                         onChange={(e) => {
                           const val = e.target.value;
-                          // Allow typing anything, validate on blur
                           setGlobalPollution(val);
                         }}
                         className="input"
@@ -1493,7 +1827,7 @@ function App() {
                             </div>
                           </div>
                           <div className="text-right" style={{ alignSelf: 'center' }}>
-                            {product.price === 'Variable' ? 'Variable' : `$${metricFormat(product.price)}`}
+                            {product.price === 'Variable' ? 'Variable' : `${metricFormat(product.price)}`}
                           </div>
                           <div className="text-right" style={{ alignSelf: 'center' }}>
                             {product.rp_multiplier === 'Variable' 

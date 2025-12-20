@@ -5352,13 +5352,13 @@
       "id": "r_water_treatment_plant_01",
       "name": "Makes Distilled Water",
       "machine_id": "m_water_treatment_plant",
-      "cycle_time": 1,
+      "cycle_time": "Variable",
       "power_consumption": 2000000,
       "pollution": 0,
       "inputs": [
         {
           "product_id": "p_water",
-          "quantity": "Variable"
+          "quantity": "64"
         },
         {
           "product_id": "p_steam",
@@ -5368,7 +5368,7 @@
       "outputs": [
         {
           "product_id": "p_distilled_water",
-          "quantity": "Variable"
+          "quantity": 64
         }
       ]
     },
@@ -5376,13 +5376,13 @@
       "id": "r_water_treatment_plant_02",
       "name": "Makes Distilled Water",
       "machine_id": "m_water_treatment_plant",
-      "cycle_time": 1,
+      "cycle_time": "Variable",
       "power_consumption": 2000000,
       "pollution": 0,
       "inputs": [
         {
           "product_id": "p_condensate",
-          "quantity": "Variable"
+          "quantity": 64
         },
         {
           "product_id": "p_steam",
@@ -5392,7 +5392,7 @@
       "outputs": [
         {
           "product_id": "p_distilled_water",
-          "quantity": "Variable"
+          "quantity": 64
         }
       ]
     },
@@ -5400,13 +5400,13 @@
       "id": "r_water_treatment_plant_03",
       "name": "Makes Distilled Water",
       "machine_id": "m_water_treatment_plant",
-      "cycle_time": 1,
+      "cycle_time": "Variable",
       "power_consumption": 2000000,
       "pollution": 0,
       "inputs": [
         {
           "product_id": "p_contaminated_water",
-          "quantity": "Variable"
+          "quantity": 64
         },
         {
           "product_id": "p_steam",
@@ -5416,7 +5416,7 @@
       "outputs": [
         {
           "product_id": "p_distilled_water",
-          "quantity": "Variable"
+          "quantity": 64
         }
       ]
     },

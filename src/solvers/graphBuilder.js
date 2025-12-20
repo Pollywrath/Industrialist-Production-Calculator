@@ -5,6 +5,7 @@
  * - Nodes represent recipe boxes with their production/consumption rates
  * - Edges represent material connections between boxes
  * - Products are aggregated across all producers/consumers
+ * - Temperature data is tracked for water and steam products
  */
 
 /**
@@ -52,8 +53,8 @@ export const buildProductionGraph = (nodes, edges) => {
       isSpecialRecipe,
       isMineshaftDrill,
       isLogicAssembler,
-      inputs: [],   // { productId, quantity, rate, index }
-      outputs: []   // { productId, quantity, rate, index }
+      inputs: [],   // { productId, quantity, rate, index, temperature }
+      outputs: []   // { productId, quantity, rate, index, temperature }
     };
 
     // Process inputs (consumption)
@@ -81,7 +82,8 @@ export const buildProductionGraph = (nodes, edges) => {
         quantity,
         rate,
         index,
-        connectedRate: 0 // Will be filled by edge analysis
+        connectedRate: 0, // Will be filled by edge analysis
+        temperature: null // Will be filled by connected outputs
       });
 
       // Track this node as a consumer of this product
@@ -124,7 +126,8 @@ export const buildProductionGraph = (nodes, edges) => {
         quantity,
         rate,
         index,
-        connectedRate: 0 // Will be filled by edge analysis
+        connectedRate: 0, // Will be filled by edge analysis
+        temperature: output.temperature || null // Include temperature if present
       });
 
       // Track this node as a producer of this product
@@ -145,7 +148,7 @@ export const buildProductionGraph = (nodes, edges) => {
     graph.nodes[nodeId] = graphNode;
   });
 
-  // Step 2: Process edges to determine connection flows
+  // Step 2: Process edges to determine connection flows and temperature transfer
   edges.forEach(edge => {
     const sourceNodeId = edge.source;
     const targetNodeId = edge.target;
@@ -165,6 +168,11 @@ export const buildProductionGraph = (nodes, edges) => {
 
     const productId = sourceOutput.productId;
 
+    // Transfer temperature from output to input
+    if (sourceOutput.temperature !== undefined && sourceOutput.temperature !== null) {
+      targetInput.temperature = sourceOutput.temperature;
+    }
+
     // Create connection record
     const connection = {
       id: edge.id,
@@ -175,7 +183,8 @@ export const buildProductionGraph = (nodes, edges) => {
       productId,
       sourceRate: sourceOutput.rate,  // How much source produces (per second)
       targetRate: targetInput.rate,   // How much target needs (per second)
-      flowRate: 0                      // Actual flow (calculated later)
+      flowRate: 0,                     // Actual flow (calculated later)
+      temperature: sourceOutput.temperature || null // Track temperature in connection
     };
 
     graph.connections.push(connection);

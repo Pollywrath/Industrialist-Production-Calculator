@@ -5,8 +5,17 @@ import {
   getProductName, formatQuantity, formatCycleTime, 
   formatPowerConsumption, formatPollution
 } from '../utils/variableHandler';
+import { 
+  isTemperatureProduct, 
+  formatTemperature,
+  needsTemperatureConfig,
+  needsBoilerConfig,
+  HEAT_SOURCES 
+} from '../utils/temperatureHandler';
 import DrillSettings from './DrillSettings';
 import LogicAssemblerSettings from './LogicAssemblerSettings';
+import TemperatureSettings from './TemperatureSettings';
+import BoilerSettings from './BoilerSettings';
 
 // Layout constants - used to calculate node dimensions based on input/output count
 const RECT_HEIGHT = 44;
@@ -19,11 +28,13 @@ const MIN_WIDTH = 320;
 const CustomNode = ({ data, id }) => {
   const { 
     recipe, machine, machineCount, displayMode, machineDisplayMode, onInputClick, onOutputClick, isTarget, 
-    onDrillSettingsChange, onLogicAssemblerSettingsChange 
+    onDrillSettingsChange, onLogicAssemblerSettingsChange, onTemperatureSettingsChange, onBoilerSettingsChange 
   } = data;
   
   const [showDrillSettings, setShowDrillSettings] = useState(false);
   const [showAssemblerSettings, setShowAssemblerSettings] = useState(false);
+  const [showTemperatureSettings, setShowTemperatureSettings] = useState(false);
+  const [showBoilerSettings, setShowBoilerSettings] = useState(false);
   
   if (!recipe || !machine || !recipe.inputs || !recipe.outputs) {
     console.error('CustomNode: Invalid data', { data, id });
@@ -33,6 +44,12 @@ const CustomNode = ({ data, id }) => {
   const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
   const isLogicAssembler = recipe.isLogicAssembler || recipe.id === 'r_logic_assembler';
   const isSpecialRecipe = isMineshaftDrill || isLogicAssembler;
+  const hasTemperatureConfig = needsTemperatureConfig(machine.id);
+  const hasBoilerConfig = needsBoilerConfig(machine.id);
+  
+  // Check if this machine is a heat source and what type it outputs
+  const heatSource = HEAT_SOURCES[machine.id];
+  const isElectricWaterHeater = machine.id === 'm_electric_water_heater';
   
   // Get cycle time - don't convert Variable to 1s unless it's a special recipe
   let cycleTime = recipe.cycle_time;
@@ -45,6 +62,45 @@ const CustomNode = ({ data, id }) => {
     // Special recipes can use 1 as they handle their own rates
     cycleTime = 1;
   }
+
+  // Collect temperature data for display - ONLY outputs for heat sources
+  const temperatureData = {
+    outputs: []
+  };
+
+  if (heatSource) {
+    // For heat sources, only show output temperatures
+    // Determine what type this heat source outputs
+    let outputsWater = false;
+    let outputsSteam = false;
+    
+    // Check output products to determine type
+    recipe.outputs?.forEach((output) => {
+      if (['p_water', 'p_filtered_water', 'p_distilled_water'].includes(output.product_id)) {
+        outputsWater = true;
+      } else if (['p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam'].includes(output.product_id)) {
+        outputsSteam = true;
+      }
+    });
+    
+    // Now collect only the relevant output temperatures
+    recipe.outputs?.forEach((output, index) => {
+      if (isTemperatureProduct(output.product_id) && output.temperature !== null && output.temperature !== undefined) {
+        const isWater = ['p_water', 'p_filtered_water', 'p_distilled_water'].includes(output.product_id);
+        const isSteam = ['p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam'].includes(output.product_id);
+        
+        // Only include if it matches the output type of this machine
+        if ((isWater && outputsWater) || (isSteam && outputsSteam)) {
+          temperatureData.outputs.push({
+            temp: output.temperature,
+            index
+          });
+        }
+      }
+    });
+  }
+
+  const hasTemperatureData = temperatureData.outputs.length > 0;
 
   // Smart number formatting - only show decimals when needed (max 4 places)
   const smartFormat = (num) => {
@@ -178,6 +234,29 @@ const CustomNode = ({ data, id }) => {
   return (
     <>
       <div className={`custom-node ${isTarget ? 'target' : ''}`} style={{ width, height }}>
+        {/* Temperature Display Box - Always top left */}
+        {hasTemperatureData && (
+          <div style={{
+            position: 'absolute',
+            top: '10px',
+            left: '10px',
+            background: 'var(--bg-secondary)',
+            border: '2px solid var(--border-primary)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '4px 8px',
+            fontSize: '11px',
+            fontWeight: 700,
+            color: 'var(--output-text)',
+            zIndex: 5
+          }}>
+            {temperatureData.outputs.map((item, idx) => (
+              <div key={`output-${idx}`}>
+                {formatTemperature(item.temp)}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Settings button for special machines */}
         {isMineshaftDrill && (
           <button 
@@ -195,6 +274,25 @@ const CustomNode = ({ data, id }) => {
             title="Configure Assembler"
           >
             ⚙️
+          </button>
+        )}
+        {hasTemperatureConfig && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); setShowTemperatureSettings(true); }} 
+            className="drill-settings-button" 
+            title="Configure Temperature"
+          >
+            🌡️
+          </button>
+        )}
+        {hasBoilerConfig && (
+          <button 
+            onClick={(e) => { e.stopPropagation(); setShowBoilerSettings(true); }} 
+            className="drill-settings-button" 
+            title="Configure Boiler"
+            style={{ right: '10px' }}
+          >
+            🔧
           </button>
         )}
 
@@ -313,6 +411,24 @@ const CustomNode = ({ data, id }) => {
           currentSettings={recipe.assemblerSettings || {}} 
           onSettingsChange={onLogicAssemblerSettingsChange} 
           onClose={() => setShowAssemblerSettings(false)} 
+        />
+      )}
+      {showTemperatureSettings && (
+        <TemperatureSettings 
+          nodeId={id} 
+          machineId={machine.id}
+          currentSettings={recipe.temperatureSettings || {}} 
+          recipe={recipe}
+          onSettingsChange={onTemperatureSettingsChange} 
+          onClose={() => setShowTemperatureSettings(false)} 
+        />
+      )}
+      {showBoilerSettings && (
+        <BoilerSettings 
+          nodeId={id} 
+          currentSettings={recipe.temperatureSettings || {}} 
+          onSettingsChange={onBoilerSettingsChange} 
+          onClose={() => setShowBoilerSettings(false)} 
         />
       )}
     </>
