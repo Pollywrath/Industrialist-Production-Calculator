@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   ReactFlow, Background, Controls, MiniMap, addEdge,
   useNodesState, useEdgesState, Panel,
@@ -22,6 +22,12 @@ import {
   DEFAULT_LOGIC_ASSEMBLER_RECIPE, MICROCHIP_STAGES, 
   calculateLogicAssemblerMetrics 
 } from './data/logicAssembler';
+import { 
+  solveProductionNetwork, 
+  getExcessProducts,
+  getDeficientProducts,
+  calculateSoldProductsProfit 
+} from './solvers/productionSolver';
 
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
@@ -78,9 +84,22 @@ function App() {
   const [showTargetsModal, setShowTargetsModal] = useState(false);
   const [targetIdCounter, setTargetIdCounter] = useState(0);
 
+  // Machine count editor
+  const [showMachineCountEditor, setShowMachineCountEditor] = useState(false);
+  const [editingNodeId, setEditingNodeId] = useState(null);
+  const [editingMachineCount, setEditingMachineCount] = useState('');
+
   // UI state
   const [menuOpen, setMenuOpen] = useState(false);
   const [showThemeEditor, setShowThemeEditor] = useState(false);
+  const [extendedPanelOpen, setExtendedPanelOpen] = useState(false);
+  const [extendedPanelClosing, setExtendedPanelClosing] = useState(false);
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
+  const [globalPollution, setGlobalPollution] = useState(0);
+  const [pollutionInputFocused, setPollutionInputFocused] = useState(false);
+  const [soldProducts, setSoldProducts] = useState({}); // Track which excess products are being sold
+  const [displayMode, setDisplayMode] = useState('perSecond'); // 'perSecond' or 'perCycle'
+  const [machineDisplayMode, setMachineDisplayMode] = useState('perMachine'); // 'perMachine' or 'total'
   const reactFlowWrapper = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -97,6 +116,9 @@ function App() {
         ...node,
         data: {
           ...node.data,
+          machineCount: node.data.machineCount ?? 0, // Default to 0 if not present
+          displayMode: displayMode,
+          machineDisplayMode: machineDisplayMode,
           onInputClick: openRecipeSelectorForInput,
           onOutputClick: openRecipeSelectorForOutput,
           onDrillSettingsChange: handleDrillSettingsChange,
@@ -106,95 +128,233 @@ function App() {
       setNodes(restoredNodes);
       setEdges(savedState.edges || []);
       setTargetProducts(savedState.targetProducts || []);
+      setSoldProducts(savedState.soldProducts || {});
       setNodeId(savedState.nodeId || 0);
       setTargetIdCounter(savedState.targetIdCounter || 0);
     }
   }, []);
 
+  // Update all nodes when displayMode changes
+  useEffect(() => {
+    setNodes(nds => nds.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        displayMode: displayMode
+      }
+    })));
+  }, [displayMode, setNodes]);
+
+  // Update all nodes when machineDisplayMode changes
+  useEffect(() => {
+    setNodes(nds => nds.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        machineDisplayMode: machineDisplayMode
+      }
+    })));
+  }, [machineDisplayMode, setNodes]);
+
   // Auto-save canvas state on any change
   useEffect(() => {
-    saveCanvasState(nodes, edges, targetProducts, nodeId, targetIdCounter);
-  }, [nodes, edges, targetProducts, nodeId, targetIdCounter]);
+    saveCanvasState(nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts);
+  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts]);
 
   // Calculate total stats from all recipe boxes
   const calculateTotalStats = useCallback(() => {
     let totalPower = 0;
     let totalPollution = 0;
     let totalModelCount = 0;
-    let totalProfit = 0;
 
     nodes.forEach(node => {
       const recipe = node.data?.recipe;
       if (!recipe) return;
+
+      const machineCount = node.data?.machineCount || 0;
 
       // Power consumption
       const power = recipe.power_consumption;
       let powerValue = 0;
       if (typeof power === 'number') {
         powerValue = power;
-        totalPower += power;
+        totalPower += power * machineCount;
       } else if (typeof power === 'object' && power !== null) {
         // For drill: use average of drilling and idle
         if ('drilling' in power && 'idle' in power) {
           powerValue = (power.drilling + power.idle) / 2;
-          totalPower += powerValue;
+          totalPower += powerValue * machineCount;
         }
         // For logic assembler: use average
         else if ('average' in power) {
           powerValue = power.average;
-          totalPower += powerValue;
+          totalPower += powerValue * machineCount;
         }
       }
 
       // Pollution
       const pollution = recipe.pollution;
       if (typeof pollution === 'number') {
-        totalPollution += pollution;
+        totalPollution += pollution * machineCount;
       }
 
       // Model count per recipe
-      // Formula: roundup(machine_count) + roundup(machine_count * power/1500000) + roundup(machine_count * (inputs + outputs) * 2)
-      const machineCount = 1; // Default to 1 since computation isn't implemented yet
+      // Formula: roundup(machine_count) + roundup(machine_count * power/1500000) + roundup(machine_count) * (inputs + outputs) * 2
       const inputOutputCount = (recipe.inputs?.length || 0) + (recipe.outputs?.length || 0);
       
       const recipeModelCount = 
         Math.ceil(machineCount) + 
         Math.ceil(machineCount * powerValue / 1500000) + 
-        Math.ceil(machineCount * inputOutputCount * 2);
+        Math.ceil(machineCount) * inputOutputCount * 2;
       
       totalModelCount += recipeModelCount;
-
-      // Profit calculation
-      // Output value - Input value
-      let outputValue = 0;
-      let inputValue = 0;
-
-      recipe.outputs?.forEach(output => {
-        const product = getProduct(output.product_id);
-        if (product && typeof product.price === 'number' && typeof output.quantity === 'number') {
-          outputValue += product.price * output.quantity;
-        }
-      });
-
-      recipe.inputs?.forEach(input => {
-        const product = getProduct(input.product_id);
-        if (product && typeof product.price === 'number' && typeof input.quantity === 'number') {
-          inputValue += product.price * input.quantity;
-        }
-      });
-
-      totalProfit += (outputValue - inputValue);
     });
 
     return {
       totalPower,
       totalPollution,
-      totalModelCount,
-      totalProfit
+      totalModelCount
     };
   }, [nodes]);
 
   const stats = calculateTotalStats();
+
+  // Solve production network - only recompute when nodes or edges change
+  // Memoized to avoid expensive recalculation on every render
+  const productionSolution = useMemo(() => {
+    return solveProductionNetwork(nodes, edges);
+  }, [nodes, edges]);
+
+  const excessProductsRaw = useMemo(() => {
+    return getExcessProducts(productionSolution);
+  }, [productionSolution]);
+
+  const deficientProducts = useMemo(() => {
+    return getDeficientProducts(productionSolution);
+  }, [productionSolution]);
+
+  // Add isSold property to excess products
+  const excessProducts = useMemo(() => {
+    return excessProductsRaw.map(item => {
+      // Auto-sell if price > 0 and not explicitly unchecked
+      const shouldAutoSell = typeof item.product.price === 'number' && item.product.price > 0;
+      const explicitlySold = soldProducts[item.productId];
+      
+      return {
+        ...item,
+        isSold: explicitlySold !== undefined ? explicitlySold : shouldAutoSell
+      };
+    });
+  }, [excessProductsRaw, soldProducts]);
+
+  // Calculate total profit from sold excess products only
+  const totalProfit = useMemo(() => {
+    let profit = 0;
+    excessProducts.forEach(item => {
+      if (item.isSold && typeof item.product.price === 'number') {
+        profit += item.product.price * item.excessRate;
+      }
+    });
+    return profit;
+  }, [excessProducts]);
+
+  // Calculate machine counts and costs
+  const machineStats = useMemo(() => {
+    const machineCounts = {}; // machineId -> total count (rounded up per recipe)
+    const machineCosts = {}; // machineId -> cost
+
+    nodes.forEach(node => {
+      const machine = node.data?.machine;
+      const machineCount = node.data?.machineCount || 0;
+      
+      if (!machine) return;
+
+      const machineId = machine.id;
+      const roundedCount = Math.ceil(machineCount); // Round up per recipe
+
+      if (!machineCounts[machineId]) {
+        machineCounts[machineId] = 0;
+        machineCosts[machineId] = typeof machine.cost === 'number' ? machine.cost : 0;
+      }
+
+      machineCounts[machineId] += roundedCount;
+    });
+
+    // Create array of machine stats
+    const stats = Object.keys(machineCounts).map(machineId => {
+      const machine = machines.find(m => m.id === machineId);
+      const count = machineCounts[machineId];
+      const cost = machineCosts[machineId];
+      const totalCost = count * cost;
+
+      return {
+        machineId,
+        machine,
+        count,
+        cost,
+        totalCost
+      };
+    }).sort((a, b) => a.machine.name.localeCompare(b.machine.name));
+
+    const totalCost = stats.reduce((sum, stat) => sum + stat.totalCost, 0);
+
+    return { stats, totalCost };
+  }, [nodes, machines]);
+
+  // Smart number formatting - only show decimals when needed (max 4 places)
+  const smartFormat = (num) => {
+    if (typeof num !== 'number') return num;
+    // Round to 4 decimals and remove trailing zeros
+    const rounded = Math.round(num * 10000) / 10000;
+    return rounded.toString();
+  };
+
+  // Metric formatting for large numbers (1000+)
+  const metricFormat = (num) => {
+    if (typeof num !== 'number') return num;
+    
+    if (num >= 1000000000) {
+      return smartFormat(num / 1000000000) + 'B';
+    } else if (num >= 1000000) {
+      return smartFormat(num / 1000000) + 'M';
+    } else if (num >= 1000) {
+      return smartFormat(num / 1000) + 'k';
+    }
+    
+    return smartFormat(num);
+  };
+
+  // Check if current theme is Forest (for easter egg)
+  const isForestTheme = () => {
+    const primaryColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--color-primary')
+      .trim()
+      .toLowerCase();
+    return primaryColor === '#5fb573'; // Forest theme primary color
+  };
+
+  const statisticsTitle = isForestTheme() ? "Plant Statistics" : "Plan Statistics";
+
+  // Auto-increment global pollution based on total pollution per hour
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Only increment if input is not focused
+      if (pollutionInputFocused) return;
+      
+      // Increment by pollution per second (totalPollution / 3600)
+      const pollutionPerSecond = stats.totalPollution / 3600;
+      setGlobalPollution(prev => {
+        // Only increment if prev is a valid number
+        if (typeof prev === 'number' && !isNaN(prev) && isFinite(prev)) {
+          // Round to 4 decimal places to avoid floating point errors
+          return parseFloat((prev + pollutionPerSecond).toFixed(4));
+        }
+        return prev;
+      });
+    }, 1000); // Run every second
+
+    return () => clearInterval(interval);
+  }, [stats.totalPollution, pollutionInputFocused]); // Depend on both totalPollution and focus state
 
   // Format power consumption for display
   const formatPowerDisplay = (power) => {
@@ -372,6 +532,9 @@ function App() {
       position,
       data: {
         recipe, machine,
+        machineCount: 0, // Default machine count
+        displayMode: displayMode,
+        machineDisplayMode: machineDisplayMode,
         leftHandles: recipe.inputs.length,
         rightHandles: recipe.outputs.length,
         onInputClick: openRecipeSelectorForInput,
@@ -411,7 +574,7 @@ function App() {
 
     setNodeId((id) => id + 1);
     resetSelector();
-  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, autoConnectTarget]);
+  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, autoConnectTarget, displayMode, machineDisplayMode]);
 
   // Delete recipe box and its associated target
   const deleteRecipeBoxAndTarget = useCallback((boxId) => {
@@ -447,10 +610,53 @@ function App() {
     }
   }, [toggleTargetStatus, deleteRecipeBoxAndTarget]);
 
+  // Double-click to edit machine count
+  const onNodeDoubleClick = useCallback((event, node) => {
+    event.stopPropagation();
+    setEditingNodeId(node.id);
+    setEditingMachineCount(String(node.data?.machineCount ?? 0));
+    setShowMachineCountEditor(true);
+  }, []);
+
+  // Update machine count for a node
+  const handleMachineCountUpdate = useCallback(() => {
+    const value = parseFloat(editingMachineCount);
+    
+    if (isNaN(value) || value < 0) {
+      alert('Machine count must be a non-negative number');
+      return;
+    }
+
+    updateNodeData(editingNodeId, data => ({
+      ...data,
+      machineCount: value
+    }));
+
+    setShowMachineCountEditor(false);
+    setEditingNodeId(null);
+    setEditingMachineCount('');
+  }, [editingNodeId, editingMachineCount]);
+
   // Compute machines - placeholder for future implementation
   const handleCompute = useCallback(() => {
     alert('Computation to come soon!');
   }, []);
+
+  // Handle extended panel toggle with animation
+  const handleExtendedPanelToggle = useCallback(() => {
+    if (extendedPanelOpen) {
+      // Start closing animation
+      setExtendedPanelClosing(true);
+      // Wait for animation to complete before removing from DOM
+      setTimeout(() => {
+        setExtendedPanelOpen(false);
+        setExtendedPanelClosing(false);
+      }, 300); // Match animation duration
+    } else {
+      // Open immediately
+      setExtendedPanelOpen(true);
+    }
+  }, [extendedPanelOpen]);
 
   // Get filtered recipe list based on selected product
   const getAvailableRecipes = () => {
@@ -529,7 +735,10 @@ function App() {
           const restoredNodes = (imported.canvas.nodes || []).map(node => ({
             ...node,
             data: { 
-              ...node.data, 
+              ...node.data,
+              machineCount: node.data.machineCount ?? 0, // Default to 0 if not present
+              displayMode: displayMode,
+              machineDisplayMode: machineDisplayMode,
               onInputClick: openRecipeSelectorForInput, 
               onOutputClick: openRecipeSelectorForOutput, 
               onDrillSettingsChange: handleDrillSettingsChange, 
@@ -539,6 +748,7 @@ function App() {
           setNodes(restoredNodes);
           setEdges(imported.canvas.edges || []);
           setTargetProducts(imported.canvas.targetProducts || []);
+          setSoldProducts(imported.canvas.soldProducts || {});
           setNodeId(imported.canvas.nodeId || 0);
           setTargetIdCounter(imported.canvas.targetIdCounter || 0);
         }
@@ -551,7 +761,7 @@ function App() {
     };
     reader.readAsText(file);
     event.target.value = '';
-  }, [setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange]);
+  }, [setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, displayMode, machineDisplayMode]);
 
   // Export canvas to JSON
   const handleExport = useCallback(() => {
@@ -561,7 +771,7 @@ function App() {
           products, 
           machines, 
           recipes, 
-          canvas: { nodes, edges, targetProducts, nodeId, targetIdCounter } 
+          canvas: { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts } 
         }, 
         null, 
         2
@@ -574,7 +784,7 @@ function App() {
     a.download = `industrialist-export-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [nodes, edges, targetProducts, nodeId, targetIdCounter]);
+  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts]);
 
   // Reset to default game data
   const handleRestoreDefaults = useCallback(() => {
@@ -585,6 +795,7 @@ function App() {
       setNodeId(0);
       setTargetProducts([]);
       setTargetIdCounter(0);
+      setSoldProducts({});
       window.location.reload();
     }
   }, [setNodes, setEdges]);
@@ -632,13 +843,14 @@ function App() {
         onNodesChange={onNodesChange} 
         onEdgesChange={onEdgesChange} 
         onConnect={onConnect} 
-        onNodeClick={onNodeClick} 
+        onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
         nodeTypes={nodeTypes} 
         edgeTypes={edgeTypes} 
         fitView
       >
         <Background color="#333" gap={16} size={1} />
-        <Controls />
+        <Controls className={(extendedPanelOpen || extendedPanelClosing) && !leftPanelCollapsed ? 'controls-shifted' : ''} />
         <MiniMap 
           nodeColor={(node) => {
             return getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
@@ -648,43 +860,451 @@ function App() {
         
         {/* Stats Panel and Action Buttons - Left Side */}
         <Panel position="top-left" style={{ margin: '10px' }}>
-          <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
-            {/* Stats Panel */}
-            <div className="stats-panel">
-              <h3 className="stats-title">Factory Statistics</h3>
-              <div className="stats-grid">
-                <div className="stat-item">
-                  <div className="stat-label">Total Power:</div>
-                  <div className="stat-value">{formatPowerDisplay(stats.totalPower)}</div>
+          <div className={`left-panel-container ${leftPanelCollapsed ? 'collapsed' : ''}`}>
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
+                {/* Stats Panel */}
+                <div className="stats-panel">
+                  <h3 className="stats-title">{statisticsTitle}</h3>
+                  <div className="stats-grid">
+                    <div className="stat-item">
+                      <div className="stat-label">Total Power:</div>
+                      <div className="stat-value">{formatPowerDisplay(stats.totalPower)}</div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-label">Total Pollution:</div>
+                      <div className="stat-value">{stats.totalPollution.toFixed(2)}%/hr</div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-label">Total Minimum Model Count:</div>
+                      <div className="stat-value">{stats.totalModelCount.toFixed(0)}</div>
+                    </div>
+                    <div className="stat-item">
+                      <div className="stat-label">Total Profit:</div>
+                      <div className="stat-value" style={{ color: totalProfit >= 0 ? '#86efac' : '#fca5a5' }}>
+                        ${metricFormat(totalProfit)}/s
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="stat-item">
-                  <div className="stat-label">Total Pollution:</div>
-                  <div className="stat-value">{stats.totalPollution.toFixed(2)}%/hr</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-label">Total Model Count:</div>
-                  <div className="stat-value">{stats.totalModelCount.toFixed(0)}</div>
-                </div>
-                <div className="stat-item">
-                  <div className="stat-label">Total Profit:</div>
-                  <div className="stat-value" style={{ color: stats.totalProfit >= 0 ? '#86efac' : '#fca5a5' }}>
-                    ${stats.totalProfit.toFixed(2)}/s
+
+                {/* Action Buttons */}
+                <div className="flex-col action-buttons-container">
+                  <button onClick={openRecipeSelector} className="btn btn-primary">
+                    + Select Recipe
+                  </button>
+                  <button onClick={() => setShowTargetsModal(true)} className="btn btn-secondary">
+                    View Targets ({targetProducts.length})
+                  </button>
+                  <button onClick={handleCompute} className="btn btn-secondary">
+                    Compute Machines
+                  </button>
+                  
+                  {/* Extended Panel and Collapse Toggle Buttons */}
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                      onClick={() => setExtendedPanelOpen(!extendedPanelOpen)} 
+                      className="btn btn-secondary btn-square"
+                      title={extendedPanelOpen ? "Close more statistics" : "Open more statistics"}
+                    >
+                      {extendedPanelOpen ? '↓' : '↑'}
+                    </button>
+                    <button 
+                      onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)} 
+                      className="btn btn-secondary btn-square btn-panel-toggle"
+                      title={leftPanelCollapsed ? "Show left panel" : "Hide left panel"}
+                    >
+                      {leftPanelCollapsed ? '→' : '←'}
+                    </button>
                   </div>
                 </div>
               </div>
-            </div>
+              
+              {/* More Statistics Panel */}
+              {(extendedPanelOpen || extendedPanelClosing) && (
+                <div className={`extended-panel ${extendedPanelClosing ? 'closing' : ''}`}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    padding: '15px',
+                    borderBottom: '2px solid var(--border-divider)',
+                    position: 'sticky',
+                    top: 0,
+                    background: 'var(--bg-secondary)',
+                    zIndex: 1
+                  }}>
+                    <h3 style={{
+                      color: 'var(--color-primary)',
+                      fontSize: 'var(--font-size-md)',
+                      fontWeight: 700,
+                      margin: 0
+                    }}>
+                      More Statistics
+                    </h3>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button 
+                        onClick={() => setDisplayMode(prev => prev === 'perSecond' ? 'perCycle' : 'perSecond')}
+                        className="btn btn-secondary"
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: 'var(--font-size-base)',
+                          minWidth: 'auto'
+                        }}
+                        title={displayMode === 'perSecond' ? 'Switch to per-cycle display' : 'Switch to per-second display'}
+                      >
+                        {displayMode === 'perSecond' ? 'Per Second' : 'Per Cycle'}
+                      </button>
+                      <button 
+                        onClick={() => setMachineDisplayMode(prev => prev === 'perMachine' ? 'total' : 'perMachine')}
+                        className="btn btn-secondary"
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: 'var(--font-size-base)',
+                          minWidth: 'auto'
+                        }}
+                        title={machineDisplayMode === 'perMachine' ? 'Switch to total display' : 'Switch to per-machine display'}
+                      >
+                        {machineDisplayMode === 'perMachine' ? 'Per Machine' : 'Total'}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="extended-panel-content" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', paddingBottom: '120px' }}>
+                    {/* Global Pollution Input */}
+                    <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <label 
+                        htmlFor="global-pollution" 
+                        style={{ 
+                          color: 'var(--text-primary)', 
+                          fontSize: 'var(--font-size-base)', 
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        Global Pollution (%):
+                      </label>
+                      <input 
+                        id="global-pollution"
+                        type="text" 
+                        value={globalPollution} 
+                        onFocus={() => setPollutionInputFocused(true)}
+                        onBlur={(e) => {
+                          setPollutionInputFocused(false);
+                          const val = e.target.value;
+                          const num = parseFloat(val);
+                          // Validate: if it's a valid number, keep it; otherwise reset to 0
+                          // Round to 4 decimal places
+                          if (!isNaN(num) && isFinite(num)) {
+                            setGlobalPollution(parseFloat(num.toFixed(4)));
+                          } else {
+                            setGlobalPollution(0);
+                          }
+                        }}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          // Allow typing anything, validate on blur
+                          setGlobalPollution(val);
+                        }}
+                        className="input"
+                        placeholder="Enter global pollution"
+                        style={{ 
+                          flex: 1,
+                          textAlign: 'left'
+                        }}
+                      />
+                    </div>
 
-            {/* Action Buttons */}
-            <div className="flex-col">
-              <button onClick={openRecipeSelector} className="btn btn-primary">
-                + Select Recipe
-              </button>
-              <button onClick={() => setShowTargetsModal(true)} className="btn btn-secondary">
-                View Targets ({targetProducts.length})
-              </button>
-              <button onClick={handleCompute} className="btn btn-secondary">
-                Compute Machines
-              </button>
+                    {/* Excess Products Table */}
+                    <div style={{ marginTop: '30px' }}>
+                      <h4 style={{ 
+                        color: 'var(--text-primary)', 
+                        fontSize: 'var(--font-size-base)', 
+                        fontWeight: 600,
+                        marginBottom: '12px'
+                      }}>
+                        Excess Products:
+                      </h4>
+                      {excessProducts.length === 0 ? (
+                        <div style={{ 
+                          color: 'var(--text-secondary)', 
+                          fontSize: 'var(--font-size-sm)',
+                          padding: '15px',
+                          textAlign: 'center',
+                          background: 'var(--bg-main)',
+                          borderRadius: 'var(--radius-sm)'
+                        }}>
+                          No excess products. All outputs are consumed by connected inputs.
+                        </div>
+                      ) : (
+                        <div style={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '8px' 
+                        }}>
+                          {excessProducts.map(item => (
+                            <div 
+                              key={item.productId}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '10px 12px',
+                                background: 'var(--bg-main)',
+                                borderRadius: 'var(--radius-sm)',
+                                border: item.isSold ? '2px solid var(--color-primary)' : '2px solid var(--border-light)'
+                              }}
+                            >
+                              <div style={{ flex: 1 }}>
+                                <div style={{ 
+                                  color: 'var(--text-primary)', 
+                                  fontSize: 'var(--font-size-sm)',
+                                  fontWeight: 600 
+                                }}>
+                                  {item.product.name}
+                                </div>
+                                <div style={{ 
+                                  color: 'var(--text-secondary)', 
+                                  fontSize: 'var(--font-size-xs)',
+                                  marginTop: '2px'
+                                }}>
+                                  {metricFormat(item.excessRate)}/s
+                                </div>
+                              </div>
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '10px' 
+                              }}>
+                                {typeof item.product.price === 'number' && (
+                                  <div style={{ 
+                                    color: item.isSold ? 'var(--color-primary)' : 'var(--text-muted)',
+                                    fontSize: 'var(--font-size-sm)',
+                                    fontWeight: 600
+                                  }}>
+                                    ${metricFormat(item.product.price * item.excessRate)}/s
+                                  </div>
+                                )}
+                                <label style={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: '6px',
+                                  cursor: 'pointer',
+                                  color: 'var(--text-primary)',
+                                  fontSize: 'var(--font-size-sm)'
+                                }}>
+                                  <input 
+                                    type="checkbox"
+                                    checked={item.isSold}
+                                    onChange={(e) => {
+                                      setSoldProducts(prev => ({
+                                        ...prev,
+                                        [item.productId]: e.target.checked
+                                      }));
+                                    }}
+                                    style={{
+                                      width: '18px',
+                                      height: '18px',
+                                      cursor: 'pointer',
+                                      accentColor: 'var(--color-primary)'
+                                    }}
+                                  />
+                                  Sell
+                                </label>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Deficient Products Table */}
+                    <div style={{ marginTop: '30px' }}>
+                      <h4 style={{ 
+                        color: 'var(--text-primary)', 
+                        fontSize: 'var(--font-size-base)', 
+                        fontWeight: 600,
+                        marginBottom: '12px'
+                      }}>
+                        Deficient Products:
+                      </h4>
+                      {deficientProducts.length === 0 ? (
+                        <div style={{ 
+                          color: 'var(--text-secondary)', 
+                          fontSize: 'var(--font-size-sm)',
+                          padding: '15px',
+                          textAlign: 'center',
+                          background: 'var(--bg-main)',
+                          borderRadius: 'var(--radius-sm)'
+                        }}>
+                          No deficient products. All inputs are fully supplied by connected outputs.
+                        </div>
+                      ) : (
+                        <div style={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: '8px' 
+                        }}>
+                          {deficientProducts.map(item => (
+                            <div 
+                              key={item.productId}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '10px 12px',
+                                background: 'var(--bg-main)',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '2px solid #fca5a5'
+                              }}
+                            >
+                              <div style={{ flex: 1 }}>
+                                <div style={{ 
+                                  color: 'var(--text-primary)', 
+                                  fontSize: 'var(--font-size-sm)',
+                                  fontWeight: 600 
+                                }}>
+                                  {item.product.name}
+                                </div>
+                                <div style={{ 
+                                  color: '#fca5a5', 
+                                  fontSize: 'var(--font-size-xs)',
+                                  marginTop: '2px'
+                                }}>
+                                  Shortage: {metricFormat(item.deficiencyRate)}/s
+                                </div>
+                              </div>
+                              <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '10px' 
+                              }}>
+                                <div style={{ 
+                                  color: '#fca5a5',
+                                  fontSize: 'var(--font-size-xs)',
+                                  fontWeight: 600,
+                                  textAlign: 'right'
+                                }}>
+                                  {item.affectedNodes.length} node{item.affectedNodes.length !== 1 ? 's' : ''} affected
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Machine Costs Table */}
+                    <div style={{ marginTop: '30px' }}>
+                      <h4 style={{ 
+                        color: 'var(--text-primary)', 
+                        fontSize: 'var(--font-size-base)', 
+                        fontWeight: 600,
+                        marginBottom: '12px'
+                      }}>
+                        Machine Costs:
+                      </h4>
+                      {machineStats.stats.length === 0 ? (
+                        <div style={{ 
+                          color: 'var(--text-secondary)', 
+                          fontSize: 'var(--font-size-sm)',
+                          padding: '15px',
+                          textAlign: 'center',
+                          background: 'var(--bg-main)',
+                          borderRadius: 'var(--radius-sm)'
+                        }}>
+                          No machines on canvas.
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: '8px',
+                            marginBottom: '15px'
+                          }}>
+                            {machineStats.stats.map(stat => (
+                              <div 
+                                key={stat.machineId}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  padding: '10px 12px',
+                                  background: 'var(--bg-main)',
+                                  borderRadius: 'var(--radius-sm)',
+                                  border: '2px solid var(--border-light)'
+                                }}
+                              >
+                                <div style={{ flex: 1 }}>
+                                  <div style={{ 
+                                    color: 'var(--text-primary)', 
+                                    fontSize: 'var(--font-size-sm)',
+                                    fontWeight: 600 
+                                  }}>
+                                    {stat.machine.name}
+                                  </div>
+                                  <div style={{ 
+                                    color: 'var(--text-secondary)', 
+                                    fontSize: 'var(--font-size-xs)',
+                                    marginTop: '2px'
+                                  }}>
+                                    Count: {stat.count} × ${metricFormat(stat.cost)}
+                                  </div>
+                                </div>
+                                <div style={{ 
+                                  color: 'var(--color-primary)',
+                                  fontSize: 'var(--font-size-sm)',
+                                  fontWeight: 600
+                                }}>
+                                  ${metricFormat(stat.totalCost)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Total Cost */}
+                          <div style={{
+                            padding: '12px',
+                            background: 'var(--bg-main)',
+                            borderRadius: 'var(--radius-sm)',
+                            border: '2px solid var(--color-primary)'
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              marginBottom: '8px'
+                            }}>
+                              <div style={{ 
+                                color: 'var(--text-primary)', 
+                                fontSize: 'var(--font-size-base)',
+                                fontWeight: 700 
+                              }}>
+                                Total Cost:
+                              </div>
+                              <div style={{ 
+                                color: 'var(--color-primary)',
+                                fontSize: 'var(--font-size-md)',
+                                fontWeight: 700
+                              }}>
+                                ${metricFormat(machineStats.totalCost)}
+                              </div>
+                            </div>
+                            <div style={{ 
+                              color: 'var(--text-muted)', 
+                              fontSize: 'var(--font-size-xs)',
+                              fontStyle: 'italic',
+                              textAlign: 'center'
+                            }}>
+                              For machines only. Poles and pipes not accounted for.
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </Panel>
@@ -700,7 +1320,7 @@ function App() {
             </button>
             <div className="menu-buttons">
               <button 
-                onClick={() => { setNodes([]); setEdges([]); setNodeId(0); setTargetProducts([]); setTargetIdCounter(0); }} 
+                onClick={() => { setNodes([]); setEdges([]); setNodeId(0); setTargetProducts([]); setTargetIdCounter(0); setSoldProducts({}); }} 
                 className="btn btn-secondary"
               >
                 Clear All
@@ -732,6 +1352,66 @@ function App() {
         style={{ display: 'none' }} 
         onChange={processImport} 
       />
+
+      {/* Machine Count Editor Modal */}
+      {showMachineCountEditor && (
+        <div className="modal-overlay" onClick={() => setShowMachineCountEditor(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '400px' }}>
+            <h2 className="modal-title">Edit Machine Count</h2>
+            <div style={{ marginBottom: '20px' }}>
+              <label 
+                style={{ 
+                  display: 'block',
+                  color: 'var(--text-primary)', 
+                  fontSize: 'var(--font-size-base)', 
+                  fontWeight: 600,
+                  marginBottom: '10px'
+                }}
+              >
+                Machine Count:
+              </label>
+              <input 
+                type="number"
+                min="0"
+                step="0.1"
+                value={editingMachineCount}
+                onChange={(e) => setEditingMachineCount(e.target.value)}
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleMachineCountUpdate();
+                  }
+                }}
+                className="input"
+                placeholder="Enter machine count"
+                autoFocus
+              />
+              <p style={{ 
+                marginTop: '8px', 
+                fontSize: 'var(--font-size-sm)', 
+                color: 'var(--text-secondary)' 
+              }}>
+                Must be a non-negative number (can be decimal)
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button 
+                onClick={() => setShowMachineCountEditor(false)} 
+                className="btn btn-secondary"
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleMachineCountUpdate} 
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Recipe Selector Modal */}
       {showRecipeSelector && (

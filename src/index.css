@@ -257,6 +257,19 @@ body {
   font-size: var(--font-size-base);
 }
 
+/* Hide number input spinners/arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+
 /* ============================================================
    PRODUCT LIST
    ============================================================ */
@@ -591,7 +604,7 @@ body {
 }
 
 /* ============================================================
-   MENU CONTAINER
+   MENU CONTAINER (Right Side)
    ============================================================ */
 .menu-container {
   display: flex;
@@ -624,6 +637,63 @@ body {
 }
 
 .react-flow__panel.top.right:has(.menu-container.closed) .btn-menu-toggle {
+  pointer-events: auto;
+}
+
+/* ============================================================
+   LEFT PANEL CONTAINER (Stats + Buttons)
+   ============================================================ */
+.left-panel-container {
+  display: flex;
+  align-items: flex-start;
+  transition: transform 0.3s ease-in-out;
+}
+
+.left-panel-container.collapsed {
+  /* Slide left, leaving only the toggle button visible (80px wide) */
+  transform: translateX(calc(-100% + 90px));
+}
+
+.left-panel-container.collapsed > div > div:first-child {
+  pointer-events: none;
+}
+
+.left-panel-container.collapsed .btn-panel-toggle {
+  pointer-events: auto;
+}
+
+/* Action buttons stay at screen edge when panel collapses */
+.action-buttons-container {
+  transition: transform 0.3s ease-in-out;
+}
+
+.left-panel-container.collapsed .action-buttons-container {
+  /* Counter-transform to keep buttons visible */
+  transform: translateX(90px);
+}
+
+/* Arrow buttons container - positioned further left by default */
+.action-buttons-container > div:last-child {
+  transform: translateX(-95px);
+  transition: transform 0.3s ease-in-out;
+}
+
+/* When panel is open (not collapsed), align arrow buttons with other buttons */
+.left-panel-container:not(.collapsed) .action-buttons-container > div:last-child {
+  transform: translateX(0);
+}
+
+.left-panel-container.collapsed .action-buttons-container > button:not(.btn-panel-toggle) {
+  pointer-events: auto;
+}
+
+/* Make the left panel not block canvas when collapsed */
+.react-flow__panel.top.left:has(.left-panel-container.collapsed) {
+  pointer-events: none;
+}
+
+.react-flow__panel.top.left:has(.left-panel-container.collapsed) .btn-panel-toggle,
+.react-flow__panel.top.left:has(.left-panel-container.collapsed) .action-buttons-container > button {
   pointer-events: auto;
 }
 
@@ -791,52 +861,150 @@ body {
 }
 
 /* ============================================================
-   STATS PANEL - Add this to the end of your index.css file
+   STATS PANEL - More compact version
    ============================================================ */
 
 .stats-panel {
   background: var(--bg-secondary);
   border: 2px solid var(--border-primary);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  padding: 10px 15px; /* Reduced from 15px */
   box-shadow: var(--shadow-md);
   min-width: 280px;
 }
 
 .stats-title {
   color: var(--color-primary);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md); /* Reduced from lg */
   font-weight: 700;
-  margin-bottom: var(--spacing-md);
+  margin-bottom: 8px; /* Reduced from 12px */
   text-align: center;
   border-bottom: 2px solid var(--border-divider);
-  padding-bottom: var(--spacing-sm);
+  padding-bottom: 6px; /* Reduced from 8px */
 }
 
 .stats-grid {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: 8px; /* Reduced from 12px */
 }
 
 .stat-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-sm);
+  padding: 6px; /* Reduced from 8px */
   background: var(--bg-main);
   border-radius: var(--radius-sm);
 }
 
 .stat-label {
   color: var(--text-primary);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs); /* Reduced from sm */
   font-weight: 600;
 }
 
 .stat-value {
   color: var(--stat-value);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm); /* Reduced from base */
   font-weight: 700;
   text-align: right;
+}
+
+/* ============================================================
+   EXTENDED PANEL
+   ============================================================ */
+
+.extended-panel {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  margin-top: 0px;
+  width: 380px; /* Match stats panel width */
+  height: calc(100vh); /* Extend to bottom of screen */
+  overflow-y: auto;
+  box-shadow: var(--shadow-md);
+  animation: slideUp 0.3s ease-out;
+  z-index: 1; /* Below controls */
+}
+
+.extended-panel.closing {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+
+.extended-panel-title {
+  color: var(--color-primary);
+  font-size: var(--font-size-md); /* Match stats panel title size */
+  font-weight: 700;
+  padding: 15px;
+  text-align: center;
+  border-bottom: 2px solid var(--border-divider);
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+  z-index: 1;
+}
+
+.extended-panel-content {
+  padding: 15px;
+}
+
+/* ============================================================
+   SQUARE BUTTON FOR EXTENDED PANEL TOGGLE
+   ============================================================ */
+
+.btn-square {
+  padding: 8px !important;
+  min-width: auto !important;
+  width: 85px !important; /* Square dimensions */
+  height: 42px !important;
+  font-size: var(--font-size-2xl);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Panel toggle button - stays visible when collapsed */
+.btn-panel-toggle {
+  position: relative;
+  z-index: 10;
+}
+
+/* ============================================================
+   CONTROLS SHIFT WHEN EXTENDED PANEL IS OPEN
+   ============================================================ */
+
+.react-flow__controls {
+  transition: left 0.3s ease-out;
+  /* Default position - don't shift for left panel collapse */
+  z-index: 10; /* Above extended panel */
+}
+
+.react-flow__controls.controls-shifted {
+  left: 385px !important; /* Move right, past the extended panel */
+  transition: left 0.3s ease-out;
+  z-index: 10; /* Above extended panel */
 }

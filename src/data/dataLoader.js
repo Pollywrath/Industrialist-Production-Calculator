@@ -93,15 +93,16 @@ export const updateRecipes = (newRecipes) => {
 // ============================================================
 
 /**
- * Save canvas state: nodes, edges, target products, and counters
+ * Save canvas state: nodes, edges, target products, sold products, and counters
  */
-export const saveCanvasState = (nodes, edges, targetProducts, nodeId, targetIdCounter) => {
+export const saveCanvasState = (nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts = {}) => {
   saveToStorage(STORAGE_KEYS.CANVAS_STATE, { 
     nodes, 
     edges, 
     targetProducts, 
     nodeId, 
-    targetIdCounter 
+    targetIdCounter,
+    soldProducts
   });
 };
 
