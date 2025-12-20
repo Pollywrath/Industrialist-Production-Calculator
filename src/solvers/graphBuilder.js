@@ -50,6 +50,8 @@ export const buildProductionGraph = (nodes, edges) => {
       machineCount,
       cycleTime,
       isSpecialRecipe,
+      isMineshaftDrill,
+      isLogicAssembler,
       inputs: [],   // { productId, quantity, rate, index }
       outputs: []   // { productId, quantity, rate, index }
     };
@@ -66,9 +68,11 @@ export const buildProductionGraph = (nodes, edges) => {
         return;
       }
 
-      // Rate per second = (quantity per cycle / cycle time) * machine count
-      // For special recipes, quantity is already per second from their settings
-      const rate = isSpecialRecipe 
+      // Rate calculation:
+      // - Drill: quantities are already per-second, just multiply by machine count
+      // - Assembler: quantities are per-cycle, convert to per-second (divide by cycle time)
+      // - Normal recipes: quantities are per-cycle, convert to per-second (divide by cycle time)
+      const rate = isMineshaftDrill 
         ? quantity * machineCount 
         : (quantity / cycleTime) * machineCount;
 
@@ -107,9 +111,11 @@ export const buildProductionGraph = (nodes, edges) => {
         return;
       }
 
-      // Rate per second = (quantity per cycle / cycle time) * machine count
-      // For special recipes, quantity is already per second from their settings
-      const rate = isSpecialRecipe 
+      // Rate calculation:
+      // - Drill: quantities are already per-second, just multiply by machine count
+      // - Assembler: quantities are per-cycle, convert to per-second (divide by cycle time)
+      // - Normal recipes: quantities are per-cycle, convert to per-second (divide by cycle time)
+      const rate = isMineshaftDrill 
         ? quantity * machineCount 
         : (quantity / cycleTime) * machineCount;
 

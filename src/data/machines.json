@@ -543,5 +543,10 @@
       "id": "m_mineshaft_drill",
       "name": "Mineshaft Drill",
       "cost": 1100000
+    },
+    {
+      "id": "m_geothermal_well",
+      "name": "Geothermal Well",
+      "cost": 1500
     }
 ]

@@ -173,21 +173,16 @@ function App() {
 
       const machineCount = node.data?.machineCount || 0;
 
-      // Power consumption
+      // Power consumption - use max power for both drill and assembler
       const power = recipe.power_consumption;
       let powerValue = 0;
       if (typeof power === 'number') {
         powerValue = power;
         totalPower += power * machineCount;
       } else if (typeof power === 'object' && power !== null) {
-        // For drill: use average of drilling and idle
-        if ('drilling' in power && 'idle' in power) {
-          powerValue = (power.drilling + power.idle) / 2;
-          totalPower += powerValue * machineCount;
-        }
-        // For logic assembler: use average
-        else if ('average' in power) {
-          powerValue = power.average;
+        // For both drill and assembler: use max power
+        if ('max' in power) {
+          powerValue = power.max;
           totalPower += powerValue * machineCount;
         }
       }
@@ -441,7 +436,10 @@ function App() {
         drillSettings: settings,
         cycle_time: 1,
         power_consumption: metrics 
-          ? { drilling: metrics.drillingPower * 1000000, idle: metrics.idlePower * 1000000 } 
+          ? { 
+              max: metrics.drillingPower * 1000000, 
+              average: ((metrics.drillingPower * metrics.lifeTime + metrics.idlePower * (metrics.replacementTime + metrics.travelTime)) / metrics.totalCycleTime) * 1000000
+            } 
           : 'Variable',
         pollution: metrics ? metrics.pollution : 'Variable',
       },
@@ -1495,10 +1493,14 @@ function App() {
                             </div>
                           </div>
                           <div className="text-right" style={{ alignSelf: 'center' }}>
-                            {product.price === 'Variable' ? 'Variable' : `${product.price}`}
+                            {product.price === 'Variable' ? 'Variable' : `$${metricFormat(product.price)}`}
                           </div>
                           <div className="text-right" style={{ alignSelf: 'center' }}>
-                            {product.rp_multiplier === 'Variable' ? 'Variable' : `${product.rp_multiplier.toFixed(1)}x`}
+                            {product.rp_multiplier === 'Variable' 
+                              ? 'Variable' 
+                              : product.rp_multiplier >= 1000 
+                                ? `${metricFormat(product.rp_multiplier)}x` 
+                                : `${product.rp_multiplier.toFixed(1)}x`}
                           </div>
                         </div>
                       ))}

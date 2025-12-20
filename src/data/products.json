@@ -1473,336 +1473,336 @@
         "id": "p_2x_microchip",
         "name": "2x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 4000,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_4x_microchip",
         "name": "4x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 8400,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_8x_microchip",
         "name": "8x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 13200,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_16x_microchip",
         "name": "16x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 17600,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_32x_microchip",
         "name": "32x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 22000,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_64x_microchip",
         "name": "64x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 28220,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_2x2x_microchip",
         "name": "2x2x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 38394,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_2x4x_microchip",
         "name": "2x4x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 49586,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_2x8x_microchip",
         "name": "2x8x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 61795,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_2x16x_microchip",
         "name": "2x16x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 72987,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_2x32x_microchip",
         "name": "2x32x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 84179,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_2x64x_microchip",
         "name": "2x64x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 100000,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_3x2x_microchip",
         "name": "3x2x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 121262,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_3x4x_microchip",
         "name": "3x4x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 144650,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_3x8x_microchip",
         "name": "3x8x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 170164,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_3x16x_microchip",
         "name": "3x16x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 193552,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_3x32x_microchip",
         "name": "3x32x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 216940,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_3x64x_microchip",
         "name": "3x64x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 250000,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_4x2x_microchip",
         "name": "4x2x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 267720,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_4x4x_microchip",
         "name": "4x4x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 287210,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_4x8x_microchip",
         "name": "4x8x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 308472,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_4x16x_microchip",
         "name": "4x16x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 327962,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_4x32x_microchip",
         "name": "4x32x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 347452,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_4x64x_microchip",
         "name": "4x64x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 375000,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_5x2x_microchip",
         "name": "5x2x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 463593,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_5x4x_microchip",
         "name": "5x4x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 561042,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_5x8x_microchip",
         "name": "5x8x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 667350,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_5x16x_microchip",
         "name": "5x16x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 764799,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_5x32x_microchip",
         "name": "5x32x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 862248,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_5x64x_microchip",
         "name": "5x64x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 1000000,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_6x2x_microchip",
         "name": "6x2x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 1141748,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_6x4x_microchip",
         "name": "6x4x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 1297666,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_6x8x_microchip",
         "name": "6x8x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 1467758,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_6x16x_microchip",
         "name": "6x16x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 1623676,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_6x32x_microchip",
         "name": "6x32x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 1779594,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_6x64x_microchip",
         "name": "6x64x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 2000000,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_7x2x_microchip",
         "name": "7x2x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 2141748,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_7x4x_microchip",
         "name": "7x4x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 2297666,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_7x8x_microchip",
         "name": "7x8x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 2467758,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_7x16x_microchip",
         "name": "7x16x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 2623676,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_7x32x_microchip",
         "name": "7x32x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 2779594,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_7x64x_microchip",
         "name": "7x64x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 3000000,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_8x2x_microchip",
         "name": "8x2x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 3283492,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_8x4x_microchip",
         "name": "8x4x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 3595328,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_8x8x_microchip",
         "name": "8x8x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 3935512,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_8x16x_microchip",
         "name": "8x16x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 4247348,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_8x32x_microchip",
         "name": "8x32x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 4559184,
         "rp_multiplier": "Variable"
     },
     {
         "id": "p_8x64x_microchip",
         "name": "8x64x Microchip",
         "type": "item",
-        "price": "Variable",
+        "price": 5000000,
         "rp_multiplier": "Variable"
     }
 ]

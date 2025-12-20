@@ -66,12 +66,16 @@ const CustomNode = ({ data, id }) => {
     
     let baseQuantity = quantity;
     
-    // Step 1: Convert to per-second if needed
+    // Step 1: Convert based on display mode
     if (displayMode === 'perSecond') {
-      // For special recipes, quantity is already per second
-      if (!isSpecialRecipe) {
-        baseQuantity = quantity / cycleTime;
-      }
+      // Drill: quantities are per-second, cycle time is 1, so divide by 1 (no change)
+      // Assembler: quantities are per-cycle, so divide by cycle time
+      baseQuantity = quantity / cycleTime;
+    } else {
+      // perCycle mode
+      // Drill: quantities are per-second, cycle time is 1, so multiply by 1 (no change)
+      // Assembler: quantities are already per-cycle, so multiply by 1 (no change)
+      baseQuantity = quantity * cycleTime / cycleTime; // This is just quantity
     }
     
     // Step 2: Multiply by machine count if in 'total' mode

@@ -10109,5 +10109,65 @@
           "quantity": 4
         }
       ]
+    },
+    {
+      "id": "r_geothermal_well_01",
+      "name": "Makes Water",
+      "machine_id": "m_geothermal_well",
+      "cycle_time": 1,
+      "power_consumption": 3000,
+      "pollution": 0,
+      "inputs": [
+        {
+          "product_id": "p_water",
+          "quantity": 9.09
+        }
+      ],
+      "outputs": [
+        {
+          "product_id": "p_water",
+          "quantity": 6.05
+        }
+      ]
+    },
+    {
+      "id": "r_geothermal_well_02",
+      "name": "Makes Filtered Water",
+      "machine_id": "m_geothermal_well",
+      "cycle_time": 1,
+      "power_consumption": 3000,
+      "pollution": 0,
+      "inputs": [
+        {
+          "product_id": "p_filtered_water",
+          "quantity": 9.09
+        }
+      ],
+      "outputs": [
+        {
+          "product_id": "p_filtered_water",
+          "quantity": 6.05
+        }
+      ]
+    },
+    {
+      "id": "r_geothermal_well_03",
+      "name": "Makes Distilled Water",
+      "machine_id": "m_geothermal_well",
+      "cycle_time": 1,
+      "power_consumption": 3000,
+      "pollution": 0,
+      "inputs": [
+        {
+          "product_id": "p_distilled_water",
+          "quantity": 9.09
+        }
+      ],
+      "outputs": [
+        {
+          "product_id": "p_distilled_water",
+          "quantity": 6.05
+        }
+      ]
     }
 ]
