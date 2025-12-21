@@ -21,11 +21,28 @@ export const formatPowerDisplay = (power) => {
   return `${power.toFixed(2)} MF/s`;
 };
 
-export const getRecipesUsingProduct = (productId) => 
-  recipes.filter(r => 
-    !['r_mineshaft_drill_01', 'r_logic_assembler_01'].includes(r.id) && 
-    r.inputs.some(i => i.product_id === productId && i.product_id !== 'p_variableproduct')
-  );
+export const getRecipesUsingProduct = (productId) => {
+  // Import FUEL_PRODUCTS at the top of the file if not already imported
+  const fuelProductIds = ['p_coal', 'p_coke_fuel', 'p_planks', 'p_oak_log'];
+  const fireboxRecipesWithFuel = [
+    'r_industrial_firebox_01', 'r_industrial_firebox_02', 'r_industrial_firebox_03',
+    'r_industrial_firebox_04', 'r_industrial_firebox_05', 'r_industrial_firebox_06'
+  ];
+  
+  return recipes.filter(r => {
+    if (['r_mineshaft_drill_01', 'r_logic_assembler_01'].includes(r.id)) return false;
+    
+    // Check if recipe directly uses this product
+    const directlyUsesProduct = r.inputs.some(i => i.product_id === productId && i.product_id !== 'p_variableproduct');
+    
+    // Check if this is a fuel product and the recipe is a firebox that uses variable fuel
+    const isFuelForFirebox = fuelProductIds.includes(productId) && 
+      fireboxRecipesWithFuel.includes(r.id) &&
+      r.inputs.some(i => i.product_id === 'p_variableproduct');
+    
+    return directlyUsesProduct || isFuelForFirebox;
+  });
+};
 
 export const getRecipesProducingProductFiltered = (productId) => 
   recipes.filter(r => 

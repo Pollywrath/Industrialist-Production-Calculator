@@ -7,6 +7,7 @@ import { hasTempDependentCycle, getTempDependentCycleTime, TEMP_DEPENDENT_MACHIN
 import DrillSettings from './DrillSettings';
 import LogicAssemblerSettings from './LogicAssemblerSettings';
 import TreeFarmSettings from './TreeFarmSettings';
+import IndustrialFireboxSettings from './IndustrialFireboxSettings';
 import TemperatureSettings from './TemperatureSettings';
 import BoilerSettings from './BoilerSettings';
 
@@ -25,11 +26,13 @@ const calculateTextLines = (text, availableWidth, fontSize = 16) => {
 
 const CustomNode = ({ data, id }) => {
   const { recipe, machine, machineCount, displayMode, machineDisplayMode, onInputClick, onOutputClick, isTarget,
-    onDrillSettingsChange, onLogicAssemblerSettingsChange, onTreeFarmSettingsChange, onTemperatureSettingsChange, onBoilerSettingsChange, globalPollution } = data;
+    onDrillSettingsChange, onLogicAssemblerSettingsChange, onTreeFarmSettingsChange, onIndustrialFireboxSettingsChange, 
+    onTemperatureSettingsChange, onBoilerSettingsChange, globalPollution } = data;
   
   const [showDrillSettings, setShowDrillSettings] = useState(false);
   const [showAssemblerSettings, setShowAssemblerSettings] = useState(false);
   const [showTreeFarmSettings, setShowTreeFarmSettings] = useState(false);
+  const [showFireboxSettings, setShowFireboxSettings] = useState(false);
   const [showTemperatureSettings, setShowTemperatureSettings] = useState(false);
   const [showBoilerSettings, setShowBoilerSettings] = useState(false);
   
@@ -42,6 +45,8 @@ const CustomNode = ({ data, id }) => {
   const hasTemperatureConfig = needsTemperatureConfig(machine.id);
   const hasBoilerConfig = needsBoilerConfig(machine.id);
   const heatSource = HEAT_SOURCES[machine.id];
+  const isIndustrialFirebox = machine.id === 'm_industrial_firebox' && 
+  recipe.id !== 'r_industrial_firebox_07'
   
   // Check if this machine has temperature-dependent cycle time
   const isTempDependent = hasTempDependentCycle(machine.id);
@@ -193,6 +198,10 @@ const CustomNode = ({ data, id }) => {
           <button onClick={(e) => { e.stopPropagation(); setShowTreeFarmSettings(true); }} 
             className="drill-settings-button" title="Configure Tree Farm">🌲</button>
         )}
+        {isIndustrialFirebox && (
+          <button onClick={(e) => { e.stopPropagation(); setShowFireboxSettings(true); }} 
+            className="drill-settings-button" title="Configure Firebox">🔥</button>
+        )}
         {hasTemperatureConfig && (
           <button onClick={(e) => { e.stopPropagation(); setShowTemperatureSettings(true); }} 
             className="drill-settings-button" title="Configure Temperature">🌡️</button>
@@ -276,6 +285,11 @@ const CustomNode = ({ data, id }) => {
         <TreeFarmSettings nodeId={id} currentSettings={recipe.treeFarmSettings || {}} 
           globalPollution={globalPollution || 0} onSettingsChange={onTreeFarmSettingsChange} 
           onClose={() => setShowTreeFarmSettings(false)} />
+      )}
+      {showFireboxSettings && (
+        <IndustrialFireboxSettings nodeId={id} currentSettings={recipe.fireboxSettings || {}} 
+          recipe={recipe} onSettingsChange={onIndustrialFireboxSettingsChange} 
+          onClose={() => setShowFireboxSettings(false)} />
       )}
     </>
   );

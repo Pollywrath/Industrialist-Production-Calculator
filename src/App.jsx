@@ -13,6 +13,7 @@ import { hasTempDependentCycle, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getSte
 import { DEFAULT_DRILL_RECIPE, DEPTH_OUTPUTS, calculateDrillMetrics, buildDrillInputs, buildDrillOutputs } from './data/mineshaftDrill';
 import { DEFAULT_LOGIC_ASSEMBLER_RECIPE, MICROCHIP_STAGES, calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from './data/logicAssembler';
 import { DEFAULT_TREE_FARM_RECIPE, calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs } from './data/treeFarm';
+import { FUEL_PRODUCTS, calculateFireboxMetrics, buildFireboxInputs, isIndustrialFireboxRecipe } from './data/industrialFirebox';
 import { solveProductionNetwork, getExcessProducts, getDeficientProducts } from './solvers/productionSolver';
 import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, getRecipesProducingProductFiltered, 
   getRecipesForMachine, canDrillUseProduct, canLogicAssemblerUseProduct, canTreeFarmUseProduct, applyTemperatureToOutputs, 
@@ -70,6 +71,7 @@ function App() {
   const [lastDrillConfig, setLastDrillConfig] = useState(null);
   const [lastAssemblerConfig, setLastAssemblerConfig] = useState(null);
   const [lastTreeFarmConfig, setLastTreeFarmConfig] = useState(null);
+  const [lastFireboxConfig, setLastFireboxConfig] = useState(null);
   const [recipeMachineCounts, setRecipeMachineCounts] = useState({});
   const reactFlowWrapper = useRef(null);
   const fileInputRef = useRef(null);
@@ -93,7 +95,8 @@ function App() {
         return { ...node, data: { ...node.data, recipe, machineCount: node.data.machineCount ?? 1, displayMode, machineDisplayMode,
           onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput, onDrillSettingsChange: handleDrillSettingsChange,
           onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTreeFarmSettingsChange: handleTreeFarmSettingsChange,
-          onTemperatureSettingsChange: handleTemperatureSettingsChange, onBoilerSettingsChange: handleBoilerSettingsChange, globalPollution }};
+          onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange, 
+          onBoilerSettingsChange: handleBoilerSettingsChange, globalPollution }};
       });
       setNodes(restoredNodes);
       setEdges(savedState.edges || []);
@@ -103,6 +106,7 @@ function App() {
       setLastDrillConfig(savedState.lastDrillConfig || null);
       setLastAssemblerConfig(savedState.lastAssemblerConfig || null);
       setLastTreeFarmConfig(savedState.lastTreeFarmConfig || null);
+      setLastFireboxConfig(savedState.lastFireboxConfig || null);
       setNodeId(savedState.nodeId || 0);
       setTargetIdCounter(savedState.targetIdCounter || 0);
     }
@@ -111,15 +115,27 @@ function App() {
   useEffect(() => { setNodes(nds => nds.map(node => ({ ...node, data: { ...node.data, displayMode } }))); }, [displayMode, setNodes]);
   useEffect(() => { setNodes(nds => nds.map(node => ({ ...node, data: { ...node.data, machineDisplayMode } }))); }, [machineDisplayMode, setNodes]);
   useEffect(() => { 
-    const stateToSave = { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig };
+    const stateToSave = { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig };
     localStorage.setItem('industrialist_canvas_state', JSON.stringify(stateToSave));
-  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig]);
+  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig]);
 
   const calculateTotalStats = useCallback(() => {
     let totalPower = 0, totalPollution = 0, totalModelCount = 0;
     nodes.forEach(node => {
       const recipe = node.data?.recipe;
+      const machine = node.data?.machine;
       if (!recipe) return;
+      
+      // Skip industrial firebox in power calculations (uses internal energy system)
+      if (machine?.id === 'm_industrial_firebox') {
+        const machineCount = node.data?.machineCount || 0;
+        const pollution = recipe.pollution;
+        if (typeof pollution === 'number') totalPollution += pollution * machineCount;
+        const inputOutputCount = (recipe.inputs?.length || 0) + (recipe.outputs?.length || 0);
+        totalModelCount += Math.ceil(machineCount) + Math.ceil(machineCount) * inputOutputCount * 2;
+        return;
+      }
+      
       const machineCount = node.data?.machineCount || 0;
       const power = recipe.power_consumption;
       let powerValue = 0;
@@ -318,14 +334,109 @@ function App() {
       }
     }
     
-    let recipeCycleTime = recipe.cycle_time;
+    // Configure special recipes before calculating
+    let configuredRecipe = { ...recipe };
+    const recipeMachine = getMachine(recipe.machine_id);
+    
+    // Handle industrial firebox
+    if (recipeMachine?.id === 'm_industrial_firebox' && isIndustrialFireboxRecipe(recipe.id)) {
+      const fuelProductIds = ['p_coal', 'p_coke_fuel', 'p_planks', 'p_oak_log'];
+      let fuelToUse = lastFireboxConfig?.fuel || 'p_coke_fuel';
+      
+      if (fuelProductIds.includes(autoConnect.productId)) {
+        fuelToUse = autoConnect.productId;
+      }
+      
+      const metrics = calculateFireboxMetrics(recipe.id, fuelToUse);
+      if (metrics) {
+        configuredRecipe = {
+          ...configuredRecipe,
+          inputs: buildFireboxInputs(recipe.inputs, fuelToUse, recipe.id),
+          cycle_time: metrics.cycleTime
+        };
+      }
+    }
+    
+    // Handle mineshaft drill
+    if (recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill') {
+      const defaultDrillHead = lastDrillConfig?.drillHead || 'steel';
+      const defaultConsumable = lastDrillConfig?.consumable || 'hydrochloric_acid';
+      const defaultMachineOil = lastDrillConfig?.machineOil !== undefined ? lastDrillConfig.machineOil : true;
+      
+      const drillHeadIds = ['p_copper_drill_head', 'p_iron_drill_head', 'p_steel_drill_head', 'p_tungsten_carbide_drill_head'];
+      const drillHeadMap = {
+        'p_copper_drill_head': 'copper',
+        'p_iron_drill_head': 'iron',
+        'p_steel_drill_head': 'steel',
+        'p_tungsten_carbide_drill_head': 'tungsten_carbide'
+      };
+      
+      let drillHead = defaultDrillHead;
+      let depth = 100;
+      
+      if (drillHeadIds.includes(autoConnect.productId)) {
+        drillHead = drillHeadMap[autoConnect.productId];
+      } else if (!autoConnect.isOutput) {
+        const bestDepth = findBestDepthForProduct(autoConnect.productId, drillHead, defaultConsumable, defaultMachineOil);
+        if (bestDepth) depth = bestDepth;
+      }
+      
+      const drillInputs = buildDrillInputs(drillHead, defaultConsumable, defaultMachineOil, depth);
+      const drillOutputs = buildDrillOutputs(drillHead, defaultConsumable, defaultMachineOil, depth);
+      
+      configuredRecipe = {
+        ...configuredRecipe,
+        inputs: drillInputs,
+        outputs: drillOutputs,
+        cycle_time: 1
+      };
+    }
+    
+    // Handle logic assembler
+    if (recipe.isLogicAssembler || recipe.id === 'r_logic_assembler') {
+      const defaultOuterStage = lastAssemblerConfig?.outerStage || 1;
+      const defaultInnerStage = lastAssemblerConfig?.innerStage || 2;
+      const defaultMachineOil = lastAssemblerConfig?.machineOil !== undefined ? lastAssemblerConfig.machineOil : true;
+      
+      let targetMicrochip = autoConnect.productId.includes('microchip') 
+        ? autoConnect.productId 
+        : (defaultOuterStage === 1 ? `p_${defaultInnerStage}x_microchip` : `p_${defaultOuterStage}x${defaultInnerStage}x_microchip`);
+      
+      const assemblerInputs = buildLogicAssemblerInputs(targetMicrochip, defaultMachineOil);
+      const assemblerOutputs = buildLogicAssemblerOutputs(targetMicrochip, defaultMachineOil);
+      const metrics = calculateLogicAssemblerMetrics(targetMicrochip, defaultMachineOil, 0);
+      
+      configuredRecipe = {
+        ...configuredRecipe,
+        inputs: assemblerInputs,
+        outputs: assemblerOutputs,
+        cycle_time: metrics ? metrics.cycleTime : 1
+      };
+    }
+    
+    // Handle tree farm
+    if (recipe.isTreeFarm || recipe.id === 'r_tree_farm') {
+      const defaultTrees = lastTreeFarmConfig?.trees || 450;
+      const defaultHarvesters = lastTreeFarmConfig?.harvesters || 20;
+      
+      const treeFarmInputs = buildTreeFarmInputs(24);
+      const treeFarmOutputs = buildTreeFarmOutputs(defaultTrees, defaultHarvesters, globalPollution);
+      
+      configuredRecipe = {
+        ...configuredRecipe,
+        inputs: treeFarmInputs,
+        outputs: treeFarmOutputs,
+        cycle_time: 1
+      };
+    }
+    
+    let recipeCycleTime = configuredRecipe.cycle_time;
     if (typeof recipeCycleTime !== 'number' || recipeCycleTime <= 0) recipeCycleTime = 1;
     
-    const recipeMachine = getMachine(recipe.machine_id);
     if (recipeMachine && hasTempDependentCycle(recipeMachine.id)) {
       const tempInfo = TEMP_DEPENDENT_MACHINES[recipeMachine.id];
-      if (tempInfo?.type === 'steam_input' && (recipeMachine.id !== 'm_steam_cracking_plant' || recipeUsesSteam(recipe))) {
-        const inputTemp = recipe.tempDependentInputTemp ?? DEFAULT_STEAM_TEMPERATURE;
+      if (tempInfo?.type === 'steam_input' && (recipeMachine.id !== 'm_steam_cracking_plant' || recipeUsesSteam(configuredRecipe))) {
+        const inputTemp = configuredRecipe.tempDependentInputTemp ?? DEFAULT_STEAM_TEMPERATURE;
         recipeCycleTime = getTempDependentCycleTime(recipeMachine.id, inputTemp, recipeCycleTime);
       }
     }
@@ -333,11 +444,10 @@ function App() {
     if (autoConnect.isOutput) {
       const targetOutput = targetRecipe.outputs[autoConnect.outputIndex];
       if (targetOutput) {
-        // Use originalQuantity if available (for boilers that output 0 when cold)
         const quantityForCalculation = targetOutput.originalQuantity !== undefined ? targetOutput.originalQuantity : targetOutput.quantity;
         if (typeof quantityForCalculation === 'number') {
           const targetRate = (quantityForCalculation / targetCycleTime) * targetMachineCount;
-          const newInput = recipe.inputs.find(item => item.product_id === autoConnect.productId);
+          const newInput = configuredRecipe.inputs.find(item => item.product_id === autoConnect.productId);
           if (newInput && typeof newInput.quantity === 'number' && newInput.quantity > 0) {
             const newRatePerMachine = newInput.quantity / recipeCycleTime;
             return targetRate / newRatePerMachine;
@@ -348,9 +458,8 @@ function App() {
       const targetInput = targetRecipe.inputs[autoConnect.inputIndex];
       if (targetInput && typeof targetInput.quantity === 'number') {
         const targetRate = (targetInput.quantity / targetCycleTime) * targetMachineCount;
-        const newOutput = recipe.outputs.find(item => item.product_id === autoConnect.productId);
+        const newOutput = configuredRecipe.outputs.find(item => item.product_id === autoConnect.productId);
         if (newOutput) {
-          // Use originalQuantity if available (for boilers that output 0 when cold)
           const quantityForCalculation = newOutput.originalQuantity !== undefined ? newOutput.originalQuantity : newOutput.quantity;
           if (typeof quantityForCalculation === 'number' && quantityForCalculation > 0) {
             const newRatePerMachine = quantityForCalculation / recipeCycleTime;
@@ -361,7 +470,7 @@ function App() {
     }
     
     return 1;
-  }, []);
+  }, [lastFireboxConfig, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, findBestDepthForProduct, globalPollution]);
 
 
   const onConnect = useCallback((params) => {
@@ -463,6 +572,7 @@ function App() {
     });
     
     const metrics = calculateTreeFarmMetrics(settings.trees, settings.harvesters, settings.sprinklers, settings.outputs, settings.controller, globalPollution);
+    
     updateNodeData(nodeId, data => ({
       ...data, recipe: { ...data.recipe, inputs: inputs.length > 0 ? inputs : [{ product_id: 'p_water', quantity: 'Variable' }],
         outputs: outputs.length > 0 ? outputs : [{ product_id: 'p_oak_log', quantity: 'Variable' }], treeFarmSettings: settings, cycle_time: 1,
@@ -476,6 +586,23 @@ function App() {
       return true;
     }));
   }, [setEdges, globalPollution]);
+
+  const handleIndustrialFireboxSettingsChange = useCallback((nodeId, settings, inputs, metrics) => {
+    setLastFireboxConfig({
+      fuel: settings.fuel
+    });
+    
+    updateNodeData(nodeId, data => ({
+      ...data, 
+      recipe: { 
+        ...data.recipe, 
+        inputs,
+        fireboxSettings: settings, 
+        cycle_time: metrics ? metrics.cycleTime : data.recipe.cycle_time,
+        power_consumption: 0 // No power consumption
+      }
+    }));
+  }, []);
 
   const handleTemperatureSettingsChange = useCallback((nodeId, settings, outputs, powerConsumption) => {
     setNodes(nds => nds.map(n => 
@@ -546,8 +673,31 @@ function App() {
       const defaultConsumable = lastDrillConfig?.consumable || 'hydrochloric_acid';
       const defaultMachineOil = lastDrillConfig?.machineOil !== undefined ? lastDrillConfig.machineOil : true;
       
-      if (autoConnectTarget) {
-        if (autoConnectTarget.isOutput) {
+      // Check if the searched product is a drill head
+      const drillHeadIds = ['p_copper_drill_head', 'p_iron_drill_head', 'p_steel_drill_head', 'p_tungsten_carbide_drill_head'];
+      const drillHeadMap = {
+        'p_copper_drill_head': 'copper',
+        'p_iron_drill_head': 'iron',
+        'p_steel_drill_head': 'steel',
+        'p_tungsten_carbide_drill_head': 'tungsten_carbide'
+      };
+      
+      // Get the product ID either from autoConnectTarget or selectedProduct
+      const searchedProductId = autoConnectTarget?.productId || selectedProduct?.id;
+      
+      if (searchedProductId) {
+        // If user searched for a drill head, use that drill head
+        if (drillHeadIds.includes(searchedProductId)) {
+          const lastUsedDepth = nodes.find(n => n.data?.recipe?.drillSettings?.depth)?.data.recipe.drillSettings.depth || 100;
+          drillSettings = {
+            drillHead: drillHeadMap[searchedProductId],
+            consumable: defaultConsumable,
+            machineOil: defaultMachineOil,
+            depth: lastUsedDepth
+          };
+        }
+        // If user is connecting to an output, use last depth
+        else if (autoConnectTarget?.isOutput) {
           const lastUsedDepth = nodes.find(n => n.data?.recipe?.drillSettings?.depth)?.data.recipe.drillSettings.depth || 100;
           drillSettings = {
             drillHead: defaultDrillHead,
@@ -555,9 +705,10 @@ function App() {
             machineOil: defaultMachineOil,
             depth: lastUsedDepth
           };
-        } else {
-          const targetProductId = autoConnectTarget.productId;
-          const bestDepth = findBestDepthForProduct(targetProductId, defaultDrillHead, defaultConsumable, defaultMachineOil);
+        } 
+        // If user searched for an output product, find best depth
+        else {
+          const bestDepth = findBestDepthForProduct(searchedProductId, defaultDrillHead, defaultConsumable, defaultMachineOil);
           
           if (bestDepth) {
             drillSettings = {
@@ -703,13 +854,45 @@ function App() {
         outputs: updatedOutputs
       };
     }
+
+    // Initialize industrial firebox with default fuel (only for recipes with variable fuel input)
+    const hasVariableFuelInput = recipe.inputs?.some(input => input.product_id === 'p_variableproduct');
+    if (machine.id === 'm_industrial_firebox' && isIndustrialFireboxRecipe(recipe.id) && hasVariableFuelInput) {
+      // Check if the searched product is a fuel
+      const fuelProductIds = ['p_coal', 'p_coke_fuel', 'p_planks', 'p_oak_log'];
+      let fuelToUse = lastFireboxConfig?.fuel || 'p_coke_fuel';
+      
+      // Get the product ID either from autoConnectTarget or selectedProduct
+      const searchedProductId = autoConnectTarget?.productId || selectedProduct?.id;
+      
+      // If user searched for a fuel product, use that fuel
+      if (searchedProductId && fuelProductIds.includes(searchedProductId)) {
+        fuelToUse = searchedProductId;
+      }
+      
+      const metrics = calculateFireboxMetrics(recipe.id, fuelToUse);
+      
+      if (metrics) {
+        const fireboxInputs = buildFireboxInputs(recipe.inputs, fuelToUse, recipe.id);
+        const fireboxSettings = { fuel: fuelToUse };
+        
+        recipeWithTemp = {
+          ...recipeWithTemp,
+          inputs: fireboxInputs,
+          fireboxSettings,
+          cycle_time: metrics.cycleTime,
+          power_consumption: 0 // No power consumption
+        };
+      }
+    }
     
     const calculatedMachineCount = recipeMachineCounts[recipe.id] || 1;
     
     const newNode = { id: newNodeId, type: 'custom', position, data: { recipe: recipeWithTemp, machine, machineCount: calculatedMachineCount, displayMode, machineDisplayMode,
       leftHandles: recipeWithTemp.inputs.length, rightHandles: recipeWithTemp.outputs.length, onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput,
       onDrillSettingsChange: handleDrillSettingsChange, onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTreeFarmSettingsChange: handleTreeFarmSettingsChange,
-      onTemperatureSettingsChange: handleTemperatureSettingsChange, onBoilerSettingsChange: handleBoilerSettingsChange, globalPollution, isTarget: false }, sourcePosition: 'right', targetPosition: 'left' };
+      onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange, 
+      onBoilerSettingsChange: handleBoilerSettingsChange, globalPollution, isTarget: false }, sourcePosition: 'right', targetPosition: 'left' };
     
     setNodes((nds) => {
       const updatedNodes = [...nds, newNode];
@@ -731,8 +914,8 @@ function App() {
     setNodeId((id) => id + 1);
     resetSelector();
   }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, 
-    handleTreeFarmSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange, autoConnectTarget, displayMode, machineDisplayMode, lastDrillConfig, 
-    lastAssemblerConfig, lastTreeFarmConfig, findBestDepthForProduct, recipeMachineCounts, globalPollution]);
+    handleTreeFarmSettingsChange, handleIndustrialFireboxSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange, autoConnectTarget, displayMode, 
+    machineDisplayMode, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, findBestDepthForProduct, recipeMachineCounts, globalPollution]);
 
   const deleteRecipeBoxAndTarget = useCallback((boxId) => {
     setNodes((nds) => nds.filter((n) => n.id !== boxId)); setEdges((eds) => eds.filter((e) => e.source !== boxId && e.target !== boxId));
@@ -854,11 +1037,12 @@ function App() {
           const restoredNodes = (imported.canvas.nodes || []).map(node => ({ ...node, data: { ...node.data, machineCount: node.data.machineCount ?? 1, displayMode, machineDisplayMode,
             onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput, onDrillSettingsChange: handleDrillSettingsChange,
             onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTreeFarmSettingsChange: handleTreeFarmSettingsChange, 
-            onTemperatureSettingsChange: handleTemperatureSettingsChange, onBoilerSettingsChange: handleBoilerSettingsChange }}));
+            onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange, 
+            onBoilerSettingsChange: handleBoilerSettingsChange }}));
           setNodes(restoredNodes); setEdges(imported.canvas.edges || []); setTargetProducts(imported.canvas.targetProducts || []);
           setSoldProducts(imported.canvas.soldProducts || {}); setFavoriteRecipes(imported.canvas.favoriteRecipes || []); 
           setLastDrillConfig(imported.canvas.lastDrillConfig || null); setLastAssemblerConfig(imported.canvas.lastAssemblerConfig || null);
-          setLastTreeFarmConfig(imported.canvas.lastTreeFarmConfig || null);
+          setLastTreeFarmConfig(imported.canvas.lastTreeFarmConfig || null); setLastFireboxConfig(imported.canvas.lastFireboxConfig || null);
           setNodeId(imported.canvas.nodeId || 0); setTargetIdCounter(imported.canvas.targetIdCounter || 0);
         }
         alert('Import successful!'); window.location.reload();
@@ -866,16 +1050,16 @@ function App() {
     };
     reader.readAsText(file); event.target.value = '';
   }, [setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, 
-    handleTreeFarmSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange, displayMode, machineDisplayMode]);
+    handleTreeFarmSettingsChange, handleIndustrialFireboxSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange, displayMode, machineDisplayMode]);
 
   const handleExport = useCallback(() => {
-    const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig } }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig } }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `industrialist-export-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
-  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig]);
+  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig]);
 
   const handleRestoreDefaults = useCallback(() => {
     if (window.confirm('Restore all data to defaults? This will clear the canvas and reset all products, machines, and recipes.')) {
-      restoreDefaults(); setNodes([]); setEdges([]); setNodeId(0); setTargetProducts([]); setTargetIdCounter(0); setSoldProducts({}); setFavoriteRecipes([]); setLastDrillConfig(null); setLastAssemblerConfig(null); setLastTreeFarmConfig(null); window.location.reload();
+      restoreDefaults(); setNodes([]); setEdges([]); setNodeId(0); setTargetProducts([]); setTargetIdCounter(0); setSoldProducts({}); setFavoriteRecipes([]); setLastDrillConfig(null); setLastAssemblerConfig(null); setLastTreeFarmConfig(null); setLastFireboxConfig(null); window.location.reload();
     }
   }, [setNodes, setEdges]);
 

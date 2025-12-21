@@ -14,8 +14,9 @@ export const buildProductionGraph = (nodes, edges) => {
     const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
     const isLogicAssembler = recipe.isLogicAssembler || recipe.id === 'r_logic_assembler';
     const isTreeFarm = recipe.isTreeFarm || recipe.id === 'r_tree_farm';
+    const isIndustrialFirebox = machine && machine.id === 'm_industrial_firebox';
     const isTempDependentVariable = machine && hasTempDependentCycle(machine.id);
-    const isSpecialRecipe = isMineshaftDrill || isLogicAssembler || isTreeFarm || isTempDependentVariable;
+    const isSpecialRecipe = isMineshaftDrill || isLogicAssembler || isTreeFarm || isIndustrialFirebox || isTempDependentVariable;
 
     let cycleTime = recipe.cycle_time;
     if (cycleTime === 'Variable' || typeof cycleTime !== 'number' || cycleTime <= 0) {
@@ -59,12 +60,13 @@ export const buildProductionGraph = (nodes, edges) => {
 
       const rate = isMineshaftDrill ? quantity * machineCount : (quantity / cycleTime) * machineCount;
 
-      graphNode.inputs.push({ productId, quantity, rate, index, connectedRate: 0, temperature: null });
+      const actualInputIndex = graphNode.inputs.length;
+      graphNode.inputs.push({ productId, quantity, rate, index: actualInputIndex, connectedRate: 0, temperature: null });
 
       if (!graph.products[productId]) {
         graph.products[productId] = { producers: [], consumers: [], connections: [] };
       }
-      graph.products[productId].consumers.push({ nodeId, inputIndex: index, rate });
+      graph.products[productId].consumers.push({ nodeId, inputIndex: actualInputIndex, rate });
     });
 
     // Water treatment plant uses standard outputs without modification
@@ -72,24 +74,25 @@ export const buildProductionGraph = (nodes, edges) => {
     const outputsToUse = recipe.outputs;
 
     outputsToUse?.forEach((output, index) => {
-      const productId = output.product_id;
-      if (productId === 'p_variableproduct') return;
+    const productId = output.product_id;
+    if (productId === 'p_variableproduct') return;
 
-      const quantity = typeof output.quantity === 'number' ? output.quantity : 0;
-      if (output.quantity === 'Variable' && !isSpecialRecipe) return;
+    const quantity = typeof output.quantity === 'number' ? output.quantity : 0;
+    if (output.quantity === 'Variable' && !isSpecialRecipe) return;
 
-      const rate = isMineshaftDrill ? quantity * machineCount : (quantity / cycleTime) * machineCount;
+    const rate = isMineshaftDrill ? quantity * machineCount : (quantity / cycleTime) * machineCount;
 
-      graphNode.outputs.push({ 
-        productId, quantity, rate, index, connectedRate: 0, 
-        temperature: output.temperature || null 
-      });
-
-      if (!graph.products[productId]) {
-        graph.products[productId] = { producers: [], consumers: [], connections: [] };
-      }
-      graph.products[productId].producers.push({ nodeId, outputIndex: index, rate });
+    const actualOutputIndex = graphNode.outputs.length;
+    graphNode.outputs.push({ 
+      productId, quantity, rate, index: actualOutputIndex, connectedRate: 0, 
+      temperature: output.temperature || null 
     });
+
+    if (!graph.products[productId]) {
+      graph.products[productId] = { producers: [], consumers: [], connections: [] };
+    }
+    graph.products[productId].producers.push({ nodeId, outputIndex: actualOutputIndex, rate });
+  });
 
     graph.nodes[nodeId] = graphNode;
   });

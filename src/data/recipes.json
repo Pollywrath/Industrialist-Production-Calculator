@@ -9643,7 +9643,7 @@
       "name": "Makes Sulfur Dioxide",
       "machine_id": "m_industrial_firebox",
       "cycle_time": "Variable",
-      "power_consumption": "900000 Energy",
+      "power_consumption": 0,
       "pollution": 1.8,
       "inputs": [
         {
@@ -9667,7 +9667,7 @@
       "name": "Makes Boron",
       "machine_id": "m_industrial_firebox",
       "cycle_time": "Variable",
-      "power_consumption": "900000 Energy",
+      "power_consumption": 0,
       "pollution": 1.8,
       "inputs": [
         {
@@ -9691,7 +9691,7 @@
       "name": "Makes Water",
       "machine_id": "m_industrial_firebox",
       "cycle_time": "Variable",
-      "power_consumption": "300000 Energy",
+      "power_consumption": 0,
       "pollution": 1.8,
       "inputs": [
         {
@@ -9715,7 +9715,7 @@
       "name": "Makes Filtered Water",
       "machine_id": "m_industrial_firebox",
       "cycle_time": "Variable",
-      "power_consumption": "300000 Energy",
+      "power_consumption": 0,
       "pollution": 1.8,
       "inputs": [
         {
@@ -9739,7 +9739,7 @@
       "name": "Makes Distilled Water",
       "machine_id": "m_industrial_firebox",
       "cycle_time": "Variable",
-      "power_consumption": "300000 Energy",
+      "power_consumption": 0,
       "pollution": 1.8,
       "inputs": [
         {
@@ -9763,7 +9763,7 @@
       "name": "Makes Water, Table Salt",
       "machine_id": "m_industrial_firebox",
       "cycle_time": "Variable",
-      "power_consumption": "300000 Energy",
+      "power_consumption": 0,
       "pollution": 1.8,
       "inputs": [
         {
@@ -9791,7 +9791,7 @@
       "name": "Makes Sodium Carbonate",
       "machine_id": "m_industrial_firebox",
       "cycle_time": 1,
-      "power_consumption": "16000 Energy",
+      "power_consumption": 0,
       "pollution": 1.8,
       "inputs": [
         {
@@ -9987,26 +9987,6 @@
         {
           "product_id": "p_steam",
           "quantity": 90
-        }
-      ]
-    },
-    {
-      "id": "r_tree_farm_01",
-      "name": "Makes Oak Log",
-      "machine_id": "m_tree_farm",
-      "cycle_time": 11,
-      "power_consumption": 0,
-      "pollution": 0,
-      "inputs": [
-        {
-          "product_id": "p_water",
-          "quantity": "Variable"
-        }
-      ],
-      "outputs": [
-        {
-          "product_id": "p_oak_log",
-          "quantity": "Variable"
         }
       ]
     },
