@@ -44,6 +44,9 @@ export const canLogicAssemblerUseProduct = (productId) =>
   ['p_logic_plate', 'p_copper_wire', 'p_semiconductor', 'p_gold_wire', 'p_machine_oil'].includes(productId) || 
   MICROCHIP_STAGES.some(s => s.productId === productId);
 
+export const canTreeFarmUseProduct = (productId) => 
+  ['p_water', 'p_oak_log'].includes(productId);
+
 export const applyTemperatureToOutputs = (outputs, temperature, isBoiler, heatSource, inputTemp = DEFAULT_WATER_TEMPERATURE) => {
   const minSteamTemp = heatSource?.minSteamTemp || 100;
   

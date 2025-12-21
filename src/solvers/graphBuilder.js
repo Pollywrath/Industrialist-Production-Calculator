@@ -13,8 +13,9 @@ export const buildProductionGraph = (nodes, edges) => {
 
     const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
     const isLogicAssembler = recipe.isLogicAssembler || recipe.id === 'r_logic_assembler';
+    const isTreeFarm = recipe.isTreeFarm || recipe.id === 'r_tree_farm';
     const isTempDependentVariable = machine && hasTempDependentCycle(machine.id);
-    const isSpecialRecipe = isMineshaftDrill || isLogicAssembler || isTempDependentVariable;
+    const isSpecialRecipe = isMineshaftDrill || isLogicAssembler || isTreeFarm || isTempDependentVariable;
 
     let cycleTime = recipe.cycle_time;
     if (cycleTime === 'Variable' || typeof cycleTime !== 'number' || cycleTime <= 0) {

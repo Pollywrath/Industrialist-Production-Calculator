@@ -6,6 +6,7 @@ import { isTemperatureProduct, formatTemperature, needsTemperatureConfig, needsB
 import { hasTempDependentCycle, getTempDependentCycleTime, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getSteamInputIndex } from '../utils/temperatureDependentCycles';
 import DrillSettings from './DrillSettings';
 import LogicAssemblerSettings from './LogicAssemblerSettings';
+import TreeFarmSettings from './TreeFarmSettings';
 import TemperatureSettings from './TemperatureSettings';
 import BoilerSettings from './BoilerSettings';
 
@@ -24,10 +25,11 @@ const calculateTextLines = (text, availableWidth, fontSize = 16) => {
 
 const CustomNode = ({ data, id }) => {
   const { recipe, machine, machineCount, displayMode, machineDisplayMode, onInputClick, onOutputClick, isTarget,
-    onDrillSettingsChange, onLogicAssemblerSettingsChange, onTemperatureSettingsChange, onBoilerSettingsChange } = data;
+    onDrillSettingsChange, onLogicAssemblerSettingsChange, onTreeFarmSettingsChange, onTemperatureSettingsChange, onBoilerSettingsChange, globalPollution } = data;
   
   const [showDrillSettings, setShowDrillSettings] = useState(false);
   const [showAssemblerSettings, setShowAssemblerSettings] = useState(false);
+  const [showTreeFarmSettings, setShowTreeFarmSettings] = useState(false);
   const [showTemperatureSettings, setShowTemperatureSettings] = useState(false);
   const [showBoilerSettings, setShowBoilerSettings] = useState(false);
   
@@ -35,7 +37,8 @@ const CustomNode = ({ data, id }) => {
   
   const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
   const isLogicAssembler = recipe.isLogicAssembler || recipe.id === 'r_logic_assembler';
-  const isSpecialRecipe = isMineshaftDrill || isLogicAssembler;
+  const isTreeFarm = recipe.isTreeFarm || recipe.id === 'r_tree_farm';
+  const isSpecialRecipe = isMineshaftDrill || isLogicAssembler || isTreeFarm;
   const hasTemperatureConfig = needsTemperatureConfig(machine.id);
   const hasBoilerConfig = needsBoilerConfig(machine.id);
   const heatSource = HEAT_SOURCES[machine.id];
@@ -186,6 +189,10 @@ const CustomNode = ({ data, id }) => {
           <button onClick={(e) => { e.stopPropagation(); setShowAssemblerSettings(true); }} 
             className="drill-settings-button" title="Configure Assembler">⚙️</button>
         )}
+        {isTreeFarm && (
+          <button onClick={(e) => { e.stopPropagation(); setShowTreeFarmSettings(true); }} 
+            className="drill-settings-button" title="Configure Tree Farm">🌲</button>
+        )}
         {hasTemperatureConfig && (
           <button onClick={(e) => { e.stopPropagation(); setShowTemperatureSettings(true); }} 
             className="drill-settings-button" title="Configure Temperature">🌡️</button>
@@ -234,7 +241,8 @@ const CustomNode = ({ data, id }) => {
           <React.Fragment key={`left-${i}`}>
             <NodeRect side="left" index={i} position={pos} width={leftWidth} isOnly={!hasRight} 
               input={recipe.inputs[i]} onClick={onInputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
-            <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} />
+            <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} 
+              onClick={onInputClick} nodeId={id} productId={recipe.inputs[i].product_id} />
           </React.Fragment>
         ))}
 
@@ -242,7 +250,8 @@ const CustomNode = ({ data, id }) => {
           <React.Fragment key={`right-${i}`}>
             <NodeRect side="right" index={i} position={pos} width={rightWidth} isOnly={!hasLeft} 
               input={recipe.outputs[i]} onClick={onOutputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
-            <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} />
+            <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} 
+              onClick={onOutputClick} nodeId={id} productId={recipe.outputs[i].product_id} />
           </React.Fragment>
         ))}
       </div>
@@ -262,6 +271,11 @@ const CustomNode = ({ data, id }) => {
       {showBoilerSettings && (
         <BoilerSettings nodeId={id} currentSettings={recipe.temperatureSettings || {}} 
           onSettingsChange={onBoilerSettingsChange} onClose={() => setShowBoilerSettings(false)} />
+      )}
+      {showTreeFarmSettings && (
+        <TreeFarmSettings nodeId={id} currentSettings={recipe.treeFarmSettings || {}} 
+          globalPollution={globalPollution || 0} onSettingsChange={onTreeFarmSettingsChange} 
+          onClose={() => setShowTreeFarmSettings(false)} />
       )}
     </>
   );
@@ -288,7 +302,7 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
   );
 };
 
-const NodeHandle = ({ side, index, position }) => (
+const NodeHandle = ({ side, index, position, onClick, nodeId, productId }) => (
   <Handle
     type={side === 'left' ? 'target' : 'source'}
     position={side === 'left' ? Position.Left : Position.Right}
@@ -296,6 +310,12 @@ const NodeHandle = ({ side, index, position }) => (
     style={{ 
       background: side === 'left' ? '#22c55e' : '#ef4444', 
       width: '12px', height: '12px', border: '2px solid #1a1a1a', top: `${position}%` 
+    }}
+    onClick={(e) => {
+      if (onClick && e.ctrlKey) {
+        e.stopPropagation();
+        onClick(productId, nodeId, index, e);
+      }
     }}
   />
 );
