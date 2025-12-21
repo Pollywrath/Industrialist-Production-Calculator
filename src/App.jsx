@@ -64,7 +64,7 @@ function App() {
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [globalPollution, setGlobalPollution] = useState(0);
   const [pollutionInputFocused, setPollutionInputFocused] = useState(false);
-  const [isPollutionPaused, setIsPollutionPaused] = useState(false);
+  const [isPollutionPaused, setIsPollutionPaused] = useState(true);
   const [soldProducts, setSoldProducts] = useState({});
   const [displayMode, setDisplayMode] = useState('perSecond');
   const [machineDisplayMode, setMachineDisplayMode] = useState('total');
@@ -1313,6 +1313,7 @@ function App() {
               <button onClick={handleExport} className="btn btn-secondary">Export JSON</button>
               <button onClick={handleRestoreDefaults} className="btn btn-secondary">Restore Defaults</button>
               <button onClick={() => setShowThemeEditor(true)} className="btn btn-secondary">Theme Editor</button>
+              <button onClick={() => window.open('https://github.com/Pollywrath/Industrialist-Production-Calculator', '_blank')} className="btn btn-secondary">Source Code</button>
             </div>
           </div>
         </Panel>
