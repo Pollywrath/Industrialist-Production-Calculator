@@ -1,58 +1,42 @@
 import React, { useState } from 'react';
-import { 
-  MICROCHIP_STAGES, calculateLogicAssemblerMetrics, 
-  buildLogicAssemblerInputs, buildLogicAssemblerOutputs 
-} from '../data/logicAssembler';
+import { calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from '../data/logicAssembler';
 
 const outerStages = [1, 2, 3, 4, 5, 6, 7, 8];
 const innerStages = [2, 4, 8, 16, 32, 64];
-const POWER_STORAGE_REQUIREMENT = 500000; // 500kMF per step
+const POWER_STORAGE_REQUIREMENT = 500000;
 
 const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) => {
   const [outerStage, setOuterStage] = useState(currentSettings?.outerStage || '');
   const [innerStage, setInnerStage] = useState(currentSettings?.innerStage || '');
   const [machineOil, setMachineOil] = useState(currentSettings?.machineOil || false);
-  const [tickCircuitDelay, setTickCircuitDelay] = useState(
-    currentSettings?.tickCircuitDelay !== undefined ? currentSettings.tickCircuitDelay : 0
-  );
+  const [tickCircuitDelay, setTickCircuitDelay] = useState(currentSettings?.tickCircuitDelay ?? 0);
 
-  // Build microchip product ID from outer and inner stages
   const getTargetMicrochip = () => {
     if (!outerStage || !innerStage) return '';
-    return outerStage === '1' 
-      ? `p_${innerStage}x_microchip` 
-      : `p_${outerStage}x${innerStage}x_microchip`;
+    return outerStage === '1' ? `p_${innerStage}x_microchip` : `p_${outerStage}x${innerStage}x_microchip`;
   };
 
   const targetMicrochip = getTargetMicrochip();
-  
-  // Recalculate metrics when settings change
-  const metrics = targetMicrochip 
-    ? calculateLogicAssemblerMetrics(targetMicrochip, machineOil, tickCircuitDelay) 
-    : null;
-  
+  const metrics = targetMicrochip ? calculateLogicAssemblerMetrics(targetMicrochip, machineOil, tickCircuitDelay) : null;
   const inputs = buildLogicAssemblerInputs(targetMicrochip, machineOil);
   const outputs = buildLogicAssemblerOutputs(targetMicrochip, machineOil);
-  
-  // Max power is limited by fastest step time (0.8s with oil, 4s without)
-  const maxPower = metrics 
-    ? POWER_STORAGE_REQUIREMENT / (machineOil ? 0.8 : 4) 
-    : null;
+  const maxPower = metrics ? POWER_STORAGE_REQUIREMENT / (machineOil ? 0.8 : 4) : null;
 
-  // Apply settings and close modal
   const handleApply = () => {
-    onSettingsChange(
-      nodeId, 
-      { 
-        outerStage: outerStage ? parseInt(outerStage) : '', 
-        innerStage: innerStage ? parseInt(innerStage) : '', 
-        machineOil, 
-        tickCircuitDelay 
-      }, 
-      inputs, 
-      outputs
-    );
+    onSettingsChange(nodeId, { 
+      outerStage: outerStage ? parseInt(outerStage) : '', 
+      innerStage: innerStage ? parseInt(innerStage) : '', 
+      machineOil, 
+      tickCircuitDelay 
+    }, inputs, outputs);
     onClose();
+  };
+
+  const resetSettings = () => {
+    setOuterStage('');
+    setInnerStage('');
+    setMachineOil(false);
+    setTickCircuitDelay(0);
   };
 
   return (
@@ -61,91 +45,49 @@ const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onC
         <h3 className="drill-settings-title">Logic Assembler Settings</h3>
 
         <div className="drill-settings-content">
-          {/* Microchip stage selector - outer and inner multipliers */}
           <div className="drill-setting-group">
             <label className="drill-setting-label">Target Microchip:</label>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <select 
-                value={outerStage} 
-                onChange={(e) => setOuterStage(e.target.value)} 
-                className="select" 
-                style={{ flex: 1 }}
-              >
+              <select value={outerStage} onChange={(e) => setOuterStage(e.target.value)} 
+                className="select" style={{ flex: 1 }}>
                 <option value="">Outer</option>
-                {outerStages.map(stage => (
-                  <option key={stage} value={stage}>
-                    {stage}x
-                  </option>
-                ))}
+                {outerStages.map(stage => <option key={stage} value={stage}>{stage}x</option>)}
               </select>
-              <select 
-                value={innerStage} 
-                onChange={(e) => setInnerStage(e.target.value)} 
-                className="select" 
-                style={{ flex: 1 }}
-              >
+              <select value={innerStage} onChange={(e) => setInnerStage(e.target.value)} 
+                className="select" style={{ flex: 1 }}>
                 <option value="">Inner</option>
-                {innerStages.map(stage => (
-                  <option key={stage} value={stage}>
-                    {stage}x
-                  </option>
-                ))}
+                {innerStages.map(stage => <option key={stage} value={stage}>{stage}x</option>)}
               </select>
-              <span style={{ color: '#f5d56a', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                Microchip
-              </span>
+              <span style={{ color: '#f5d56a', fontWeight: 600, whiteSpace: 'nowrap' }}>Microchip</span>
             </div>
             {targetMicrochip && (
               <div style={{ fontSize: '12px', color: '#999', marginTop: '4px' }}>
-                {outerStage === '1' 
-                  ? `${innerStage}x Microchip` 
-                  : `${outerStage}x${innerStage}x Microchip`}
+                {outerStage === '1' ? `${innerStage}x Microchip` : `${outerStage}x${innerStage}x Microchip`}
               </div>
             )}
           </div>
 
-          {/* Machine oil toggle - reduces step time by 5x */}
           <div className="drill-setting-group drill-setting-checkbox">
             <label className="drill-setting-label">
-              <input 
-                type="checkbox" 
-                checked={machineOil} 
-                onChange={(e) => setMachineOil(e.target.checked)} 
-                className="drill-checkbox" 
-              />
+              <input type="checkbox" checked={machineOil} onChange={(e) => setMachineOil(e.target.checked)} 
+                className="drill-checkbox" />
               <span>Machine Oil (0.3/s, 5x speed)</span>
             </label>
           </div>
 
-          {/* Tick circuit delay - adds processing time per step */}
           <div className="drill-setting-group">
             <label className="drill-setting-label">Tick Circuit Delay (ticks):</label>
-            <input 
-              type="text" 
-              value={tickCircuitDelay} 
+            <input type="text" value={tickCircuitDelay} 
               onChange={(e) => setTickCircuitDelay(e.target.value === '' ? 0 : parseFloat(e.target.value))} 
-              className="input" 
-              placeholder="0" 
-            />
+              className="input" placeholder="0" />
           </div>
 
-          {/* Display calculated metrics when microchip is selected */}
           {metrics && (
-            <div 
-              className="drill-setting-group" 
-              style={{ 
-                marginTop: '20px', 
-                padding: '12px', 
-                background: 'rgba(212, 166, 55, 0.1)', 
-                borderRadius: '8px', 
-                fontSize: '13px' 
-              }}
-            >
-              <div style={{ color: '#f5d56a', fontWeight: 600, marginBottom: '12px' }}>
-                Calculated Metrics:
-              </div>
-
-              {/* Stage and step breakdown */}
+            <div className="drill-setting-group" style={{ 
+              marginTop: '20px', padding: '12px', background: 'rgba(212, 166, 55, 0.1)', 
+              borderRadius: '8px', fontSize: '13px' 
+            }}>
+              <div style={{ color: '#f5d56a', fontWeight: 600, marginBottom: '12px' }}>Calculated Metrics:</div>
               <div style={{ color: '#999', lineHeight: '1.6', marginBottom: '12px' }}>
                 <div>Total Stages: {metrics.totalStages}</div>
                 <div>Total Steps: {metrics.totalSteps}</div>
@@ -153,33 +95,16 @@ const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onC
                 <div>Cycle Time: {metrics.cycleTime.toFixed(2)}s</div>
               </div>
 
-              {/* Power consumption - max and average */}
-              <div 
-                style={{ 
-                  borderTop: '1px solid rgba(212, 166, 55, 0.3)', 
-                  paddingTop: '10px', 
-                  marginBottom: '10px' 
-                }}
-              >
-                <div style={{ color: '#f5d56a', fontWeight: 600, marginBottom: '6px' }}>
-                  Power Consumption:
-                </div>
+              <div style={{ borderTop: '1px solid rgba(212, 166, 55, 0.3)', paddingTop: '10px', marginBottom: '10px' }}>
+                <div style={{ color: '#f5d56a', fontWeight: 600, marginBottom: '6px' }}>Power Consumption:</div>
                 <div style={{ color: '#999', lineHeight: '1.6', paddingLeft: '10px' }}>
                   <div>Max: {(maxPower / 1000).toFixed(2)} kMF/s</div>
                   <div>Avg: {(metrics.avgPowerConsumption / 1000).toFixed(2)} kMF/s</div>
                 </div>
               </div>
 
-              {/* Material requirements per cycle */}
-              <div 
-                style={{ 
-                  borderTop: '1px solid rgba(212, 166, 55, 0.3)', 
-                  paddingTop: '10px' 
-                }}
-              >
-                <div style={{ color: '#86efac', fontWeight: 600, marginBottom: '6px' }}>
-                  Materials per Cycle:
-                </div>
+              <div style={{ borderTop: '1px solid rgba(212, 166, 55, 0.3)', paddingTop: '10px' }}>
+                <div style={{ color: '#86efac', fontWeight: 600, marginBottom: '6px' }}>Materials per Cycle:</div>
                 <div style={{ color: '#999', lineHeight: '1.5', fontSize: '12px', paddingLeft: '10px' }}>
                   <div>Logic Plates: {metrics.logicPlates}</div>
                   <div>Copper Wires: {metrics.copperWires}</div>
@@ -192,20 +117,8 @@ const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onC
         </div>
 
         <div className="drill-settings-buttons">
-          <button 
-            onClick={() => { 
-              setOuterStage(''); 
-              setInnerStage(''); 
-              setMachineOil(false); 
-              setTickCircuitDelay(0); 
-            }} 
-            className="btn btn-secondary"
-          >
-            Reset
-          </button>
-          <button onClick={handleApply} className="btn btn-primary">
-            Apply
-          </button>
+          <button onClick={resetSettings} className="btn btn-secondary">Reset</button>
+          <button onClick={handleApply} className="btn btn-primary">Apply</button>
         </div>
       </div>
     </div>

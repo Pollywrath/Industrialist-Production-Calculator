@@ -1,25 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  HEAT_SOURCES, 
-  calculateOutputTemperature,
-  getPowerConsumptionForTemperature,
-  formatTemperature 
-} from '../utils/temperatureHandler';
+import { HEAT_SOURCES, calculateOutputTemperature, getPowerConsumptionForTemperature, formatTemperature } from '../utils/temperatureHandler';
 
 const TemperatureSettings = ({ nodeId, machineId, currentSettings, recipe, onSettingsChange, onClose }) => {
   const heatSource = HEAT_SOURCES[machineId];
-  const [temperature, setTemperature] = useState(
-    currentSettings?.temperature || (heatSource?.tempOptions?.[0]?.temp || 120)
-  );
+  const [temperature, setTemperature] = useState(currentSettings?.temperature || heatSource?.tempOptions?.[0]?.temp || 120);
 
-  if (!heatSource || heatSource.type !== 'configurable') {
-    return null;
-  }
+  if (!heatSource || heatSource.type !== 'configurable') return null;
 
-  // Get power consumption for selected temperature
   const powerConsumption = getPowerConsumptionForTemperature(machineId, temperature);
-
-  // Format power for display
   const formatPower = (power) => {
     if (!power) return 'N/A';
     if (power >= 1000000) return `${(power / 1000000).toFixed(1)} MMF/s`;
@@ -29,17 +17,10 @@ const TemperatureSettings = ({ nodeId, machineId, currentSettings, recipe, onSet
 
   const handleApply = () => {
     const settings = { temperature };
-    
-    // Calculate new output temperatures for all temperature-sensitive outputs
-    const updatedOutputs = recipe.outputs.map(output => {
-      const temp = calculateOutputTemperature(machineId, settings);
-      return {
-        ...output,
-        temperature: temp
-      };
-    });
-    
-    // Pass both outputs and power consumption
+    const updatedOutputs = recipe.outputs.map(output => ({
+      ...output,
+      temperature: calculateOutputTemperature(machineId, settings)
+    }));
     onSettingsChange(nodeId, settings, updatedOutputs, powerConsumption);
     onClose();
   };
@@ -52,11 +33,7 @@ const TemperatureSettings = ({ nodeId, machineId, currentSettings, recipe, onSet
         <div className="drill-settings-content">
           <div className="drill-setting-group">
             <label className="drill-setting-label">Output Temperature:</label>
-            <select 
-              value={temperature} 
-              onChange={(e) => setTemperature(parseInt(e.target.value))} 
-              className="select"
-            >
+            <select value={temperature} onChange={(e) => setTemperature(parseInt(e.target.value))} className="select">
               {heatSource.tempOptions.map(option => (
                 <option key={option.temp} value={option.temp}>
                   {formatTemperature(option.temp)} - {formatPower(option.power)}
@@ -65,20 +42,11 @@ const TemperatureSettings = ({ nodeId, machineId, currentSettings, recipe, onSet
             </select>
           </div>
 
-          {/* Preview calculated temperature and power */}
-          <div 
-            className="drill-setting-group" 
-            style={{ 
-              marginTop: '20px', 
-              padding: '12px', 
-              background: 'rgba(212, 166, 55, 0.1)', 
-              borderRadius: '8px', 
-              fontSize: '13px' 
-            }}
-          >
-            <div style={{ color: '#f5d56a', fontWeight: 600, marginBottom: '8px' }}>
-              Preview:
-            </div>
+          <div className="drill-setting-group" style={{ 
+            marginTop: '20px', padding: '12px', background: 'rgba(212, 166, 55, 0.1)', 
+            borderRadius: '8px', fontSize: '13px' 
+          }}>
+            <div style={{ color: '#f5d56a', fontWeight: 600, marginBottom: '8px' }}>Preview:</div>
             <div style={{ color: '#999', lineHeight: '1.6' }}>
               <div>Output Temperature: {formatTemperature(temperature)}</div>
               <div>Power Consumption: {formatPower(powerConsumption)}</div>
@@ -87,12 +55,8 @@ const TemperatureSettings = ({ nodeId, machineId, currentSettings, recipe, onSet
         </div>
 
         <div className="drill-settings-buttons">
-          <button onClick={onClose} className="btn btn-secondary">
-            Cancel
-          </button>
-          <button onClick={handleApply} className="btn btn-primary">
-            Apply
-          </button>
+          <button onClick={onClose} className="btn btn-secondary">Cancel</button>
+          <button onClick={handleApply} className="btn btn-primary">Apply</button>
         </div>
       </div>
     </div>

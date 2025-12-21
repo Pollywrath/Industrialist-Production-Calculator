@@ -63,7 +63,7 @@
       "id": "r_industrial_drill_01",
       "name": "Extracts Raw Copper",
       "machine_id": "m_industrial_drill",
-      "cycle_time": "Variable",
+      "cycle_time": 8,
       "power_consumption": 0,
       "pollution": 0,
       "inputs": [
@@ -83,7 +83,7 @@
       "id": "r_industrial_drill_02",
       "name": "Extracts Raw Iron",
       "machine_id": "m_industrial_drill",
-      "cycle_time": "Variable",
+      "cycle_time": 8,
       "power_consumption": 0,
       "pollution": 0,
       "inputs": [
@@ -103,7 +103,7 @@
       "id": "r_industrial_drill_03",
       "name": "Extracts Bauxite Residue",
       "machine_id": "m_industrial_drill",
-      "cycle_time": "Variable",
+      "cycle_time": 8,
       "power_consumption": 0,
       "pollution": 0,
       "inputs": [
@@ -1884,7 +1884,7 @@
       "id": "r_alloyer_01",
       "name": "Makes Molten Purple Gold",
       "machine_id": "m_alloyer",
-      "cycle_time": "Variable",
+      "cycle_time": 20,
       "power_consumption": 150000,
       "pollution": 0.324,
       "inputs": [
@@ -1912,7 +1912,7 @@
       "id": "r_alloyer_02",
       "name": "Makes Molten Ferroaluminium Alloy",
       "machine_id": "m_alloyer",
-      "cycle_time": "Variable",
+      "cycle_time": 20,
       "power_consumption": 150000,
       "pollution": 0.324,
       "inputs": [
@@ -1940,7 +1940,7 @@
       "id": "r_alloyer_03",
       "name": "Makes Liquid Brass",
       "machine_id": "m_alloyer",
-      "cycle_time": "Variable",
+      "cycle_time": 20,
       "power_consumption": 150000,
       "pollution": 0.324,
       "inputs": [
@@ -4632,7 +4632,7 @@
       "id": "r_coal_liquefaction_plant_01",
       "name": "Makes Residue, Heavy Oil, Light Oil",
       "machine_id": "m_coal_liquefaction_plant",
-      "cycle_time": "Variable",
+      "cycle_time": 40,
       "power_consumption": 1000000,
       "pollution": 6.48,
       "inputs": [
@@ -5212,7 +5212,7 @@
       "id": "r_steam_cracking_plant_01",
       "name": "Makes Paraxylene, Ethylene",
       "machine_id": "m_steam_cracking_plant",
-      "cycle_time": "Variable",
+      "cycle_time": 21.67507568,
       "power_consumption": 60000,
       "pollution": 0.432,
       "inputs": [
@@ -5240,7 +5240,7 @@
       "id": "r_steam_cracking_plant_02",
       "name": "Makes Crude Diesel, Residue",
       "machine_id": "m_steam_cracking_plant",
-      "cycle_time": "Variable",
+      "cycle_time": 21.67507568,
       "power_consumption": 60000,
       "pollution": 0.432,
       "inputs": [
@@ -5268,7 +5268,7 @@
       "id": "r_steam_cracking_plant_03",
       "name": "Makes Light Oil, Residue",
       "machine_id": "m_steam_cracking_plant",
-      "cycle_time": "Variable",
+      "cycle_time": 21.67507568,
       "power_consumption": 60000,
       "pollution": 0.432,
       "inputs": [
@@ -5352,13 +5352,13 @@
       "id": "r_water_treatment_plant_01",
       "name": "Makes Distilled Water",
       "machine_id": "m_water_treatment_plant",
-      "cycle_time": "Variable",
+      "cycle_time": 3.6363636363636363636363,
       "power_consumption": 2000000,
       "pollution": 0,
       "inputs": [
         {
           "product_id": "p_water",
-          "quantity": "64"
+          "quantity": 64
         },
         {
           "product_id": "p_steam",
@@ -5376,7 +5376,7 @@
       "id": "r_water_treatment_plant_02",
       "name": "Makes Distilled Water",
       "machine_id": "m_water_treatment_plant",
-      "cycle_time": "Variable",
+      "cycle_time": 3.6363636363636363636363,
       "power_consumption": 2000000,
       "pollution": 0,
       "inputs": [
@@ -5400,7 +5400,7 @@
       "id": "r_water_treatment_plant_03",
       "name": "Makes Distilled Water",
       "machine_id": "m_water_treatment_plant",
-      "cycle_time": "Variable",
+      "cycle_time": 3.6363636363636363636363,
       "power_consumption": 2000000,
       "pollution": 0,
       "inputs": [
@@ -6872,7 +6872,7 @@
       "outputs": [
         {
           "product_id": "p_steel_drill_head",
-          "quantity": 0
+          "quantity": 1
         }
       ]
     },

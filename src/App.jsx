@@ -1,210 +1,45 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import {
-  ReactFlow, Background, Controls, MiniMap, addEdge,
-  useNodesState, useEdgesState, Panel,
-} from '@xyflow/react';
+import { ReactFlow, Background, Controls, MiniMap, addEdge, useNodesState, useEdgesState, Panel } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import CustomNode from './components/CustomNode';
 import CustomEdge from './components/CustomEdge';
 import ThemeEditor, { applyTheme, loadTheme } from './components/ThemeEditor';
-import { 
-  products, machines, recipes, getMachine, getProduct, 
-  getRecipesProducingProduct, updateProducts, updateMachines, 
-  updateRecipes, saveCanvasState, loadCanvasState, restoreDefaults 
-} from './data/dataLoader';
-import { 
-  getProductName, formatIngredient, filterVariableProducts, formatPollution
-} from './utils/variableHandler';
-import { 
-  calculateOutputTemperature, 
-  isTemperatureProduct,
-  getDefaultTemperatureSettings,
-  DEFAULT_WATER_TEMPERATURE,
-  DEFAULT_BOILER_INPUT_TEMPERATURE,
-  HEAT_SOURCES
-} from './utils/temperatureHandler';
-import { 
-  DEFAULT_DRILL_RECIPE, DEPTH_OUTPUTS, calculateDrillMetrics 
-} from './data/mineshaftDrill';
-import { 
-  DEFAULT_LOGIC_ASSEMBLER_RECIPE, MICROCHIP_STAGES, 
-  calculateLogicAssemblerMetrics 
-} from './data/logicAssembler';
-import { 
-  solveProductionNetwork, 
-  getExcessProducts,
-  getDeficientProducts,
-  calculateSoldProductsProfit 
-} from './solvers/productionSolver';
+import { products, machines, recipes, getMachine, getProduct, updateProducts, updateMachines, 
+  updateRecipes, saveCanvasState, loadCanvasState, restoreDefaults } from './data/dataLoader';
+import { getProductName, formatIngredient } from './utils/variableHandler';
+import { calculateOutputTemperature, isTemperatureProduct, HEAT_SOURCES, DEFAULT_BOILER_INPUT_TEMPERATURE, 
+  DEFAULT_WATER_TEMPERATURE, DEFAULT_STEAM_TEMPERATURE } from './utils/temperatureHandler';
+import { hasTempDependentCycle, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getSteamInputIndex, getTempDependentCycleTime } from './utils/temperatureDependentCycles';
+import { DEFAULT_DRILL_RECIPE, DEPTH_OUTPUTS, calculateDrillMetrics, buildDrillInputs, buildDrillOutputs } from './data/mineshaftDrill';
+import { DEFAULT_LOGIC_ASSEMBLER_RECIPE, MICROCHIP_STAGES, calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from './data/logicAssembler';
+import { solveProductionNetwork, getExcessProducts, getDeficientProducts } from './solvers/productionSolver';
+import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, getRecipesProducingProductFiltered, 
+  getRecipesForMachine, canDrillUseProduct, canLogicAssemblerUseProduct, applyTemperatureToOutputs, 
+  initializeRecipeTemperatures } from './utils/appUtilities';
 
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 
-// Recipe filters: exclude special machines (drill, assembler) from regular recipe lists
-const getRecipesUsingProduct = (productId) => 
-  recipes.filter(r => 
-    !['r_mineshaft_drill_01', 'r_logic_assembler_01'].includes(r.id) && 
-    r.inputs.some(i => i.product_id === productId && i.product_id !== 'p_variableproduct')
-  );
-
-const getRecipesProducingProductFiltered = (productId) => 
-  recipes.filter(r => 
-    !['r_mineshaft_drill_01', 'r_logic_assembler_01'].includes(r.id) && 
-    r.outputs.some(o => o.product_id === productId && o.product_id !== 'p_variableproduct')
-  );
-
-const getRecipesForMachine = (machineId) => 
-  recipes.filter(r => r.machine_id === machineId);
-
-// Check product compatibility with special machines
-const canDrillUseProduct = (productId) => 
-  ['p_copper_drill_head', 'p_iron_drill_head', 'p_steel_drill_head', 'p_tungsten_carbide_drill_head', 'p_water', 'p_acetic_acid', 'p_hydrochloric_acid', 'p_sulfuric_acid', 'p_machine_oil'].includes(productId) || 
-  Object.values(DEPTH_OUTPUTS).some(outputs => outputs.some(o => o.product_id === productId));
-
-const canLogicAssemblerUseProduct = (productId) => 
-  ['p_logic_plate', 'p_copper_wire', 'p_semiconductor', 'p_gold_wire', 'p_machine_oil'].includes(productId) || 
-  MICROCHIP_STAGES.some(s => s.productId === productId);
-
-/**
- * Helper function to initialize temperature data for recipe outputs
- * Called when a recipe box is first created
- */
-const initializeRecipeTemperatures = (recipe, machineId) => {
-  const heatSource = HEAT_SOURCES[machineId];
-  
-  if (!heatSource) {
-    // Not a heat source, return recipe as-is
-    return recipe;
-  }
-
-  // Get default settings for configurable machines
-  const defaultSettings = getDefaultTemperatureSettings(machineId);
-  
-  // Calculate output temperature
-  const isBoiler = heatSource.type === 'boiler';
-  const inputTemp = isBoiler ? DEFAULT_BOILER_INPUT_TEMPERATURE : DEFAULT_WATER_TEMPERATURE;
-  
-  const outputTemp = calculateOutputTemperature(
-    machineId, 
-    defaultSettings,
-    inputTemp,
-    null
-  );
-
-  // Apply temperature to outputs
-  const updatedOutputs = applyTemperatureToOutputs(recipe.outputs, outputTemp, isBoiler, heatSource, inputTemp);
-
-  return {
-    ...recipe,
-    outputs: updatedOutputs,
-    temperatureSettings: defaultSettings
-  };
-};
-
-/**
- * Apply temperature to recipe outputs based on machine type
- * UNIFIED LOGIC for setting output temperatures and quantities
- */
-const applyTemperatureToOutputs = (outputs, temperature, isBoiler, heatSource, inputTemp = DEFAULT_WATER_TEMPERATURE) => {
-  const minSteamTemp = heatSource?.minSteamTemp || 100;
-  
-  return outputs.map(output => {
-    if (isBoiler) {
-      // Boiler: only steam output gets temperature
-      if (output.product_id === 'p_steam') {
-        // For boiler, use the higher of calculated temp or first input temp (pass-through)
-        const finalTemp = Math.max(temperature, inputTemp);
-        
-        // Preserve original quantity (stored when quantity was first set to 0)
-        const originalQuantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
-        
-        // Check if temperature is below minimum threshold - if so, no steam is produced
-        if (finalTemp < minSteamTemp) {
-          return {
-            ...output,
-            temperature: finalTemp,
-            quantity: 0, // No steam below minimum temperature
-            originalQuantity: originalQuantity // Store original for restoration
-          };
-        }
-        // Temperature is sufficient - restore original quantity
-        return {
-          ...output,
-          temperature: finalTemp,
-          quantity: originalQuantity, // Restore original quantity
-          originalQuantity: originalQuantity // Keep tracking original
-        };
-      }
-      return output; // Water output has no temperature
-    }
-    
-    // For all other heat sources: use the higher of calculated temp or input temp (pass-through)
-    if (isTemperatureProduct(output.product_id)) {
-      const finalTemp = Math.max(temperature, inputTemp);
-      return {
-        ...output,
-        temperature: finalTemp
-      };
-    }
-    return output;
-  });
-};
-
 function App() {
-  // Canvas state
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChangeBase] = useEdgesState([]);
   const [nodeId, setNodeId] = useState(0);
-
-  // Wrap onEdgesChange to detect deletions and trigger temperature recalculation
-  const onEdgesChange = useCallback((changes) => {
-    // Check if any edges are being removed
-    const hasRemovals = changes.some(change => change.type === 'remove');
-    
-    // Apply the changes
-    onEdgesChangeBase(changes);
-    
-    // If edges were removed, recalculate temperatures after state update
-    if (hasRemovals) {
-      setTimeout(() => {
-        setNodes(currentNodes => {
-          setEdges(currentEdges => {
-            recalculateAllTemperatures(currentNodes, currentEdges);
-            return currentEdges;
-          });
-          return currentNodes;
-        });
-      }, 0);
-    }
-  }, [onEdgesChangeBase, setEdges, setNodes]);
-
-  // Recipe selector modal
   const [showRecipeSelector, setShowRecipeSelector] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [selectedMachine, setSelectedMachine] = useState(null);
   const [selectorMode, setSelectorMode] = useState('product');
   const [selectorOpenedFrom, setSelectorOpenedFrom] = useState('button');
-
-  // Recipe filtering and sorting
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name_asc');
   const [filterType, setFilterType] = useState('all');
   const [recipeFilter, setRecipeFilter] = useState('all');
-
-  // Auto-connect feature
   const [autoConnectTarget, setAutoConnectTarget] = useState(null);
-
-  // Target products for production goals
   const [targetProducts, setTargetProducts] = useState([]);
   const [showTargetsModal, setShowTargetsModal] = useState(false);
   const [targetIdCounter, setTargetIdCounter] = useState(0);
-
-  // Machine count editor
   const [showMachineCountEditor, setShowMachineCountEditor] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState(null);
   const [editingMachineCount, setEditingMachineCount] = useState('');
-
-  // UI state
   const [menuOpen, setMenuOpen] = useState(false);
   const [showThemeEditor, setShowThemeEditor] = useState(false);
   const [extendedPanelOpen, setExtendedPanelOpen] = useState(false);
@@ -214,1233 +49,763 @@ function App() {
   const [pollutionInputFocused, setPollutionInputFocused] = useState(false);
   const [soldProducts, setSoldProducts] = useState({});
   const [displayMode, setDisplayMode] = useState('perSecond');
-  const [machineDisplayMode, setMachineDisplayMode] = useState('perMachine');
+  const [machineDisplayMode, setMachineDisplayMode] = useState('total');
+  const [favoriteRecipes, setFavoriteRecipes] = useState([]);
+  const [lastDrillConfig, setLastDrillConfig] = useState(null);
+  const [lastAssemblerConfig, setLastAssemblerConfig] = useState(null);
+  const [recipeMachineCounts, setRecipeMachineCounts] = useState({});
   const reactFlowWrapper = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Load theme on mount
-  useEffect(() => {
-    applyTheme(loadTheme());
-  }, []);
+  const isForestTheme = () => getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim().toLowerCase() === '#5fb573';
+  const statisticsTitle = isForestTheme() ? "Plant Statistics" : "Plan Statistics";
 
-  // Load canvas state on mount
+  const onEdgesChange = useCallback((changes) => {
+    onEdgesChangeBase(changes);
+  }, [onEdgesChangeBase]);
+
+  useEffect(() => { applyTheme(loadTheme()); }, []);
+
   useEffect(() => {
     const savedState = loadCanvasState();
     if (savedState?.nodes) {
       const restoredNodes = savedState.nodes.map(node => {
-        // Initialize temperature for any heat source machines that don't have it
         const machine = getMachine(node.data?.recipe?.machine_id);
         let recipe = node.data?.recipe;
-        
-        if (machine && recipe && !recipe.outputs?.some(o => o.temperature !== undefined)) {
-          recipe = initializeRecipeTemperatures(recipe, machine.id);
-        }
-        
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            recipe,
-            machineCount: node.data.machineCount ?? 0,
-            displayMode: displayMode,
-            machineDisplayMode: machineDisplayMode,
-            onInputClick: openRecipeSelectorForInput,
-            onOutputClick: openRecipeSelectorForOutput,
-            onDrillSettingsChange: handleDrillSettingsChange,
-            onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange,
-            onTemperatureSettingsChange: handleTemperatureSettingsChange,
-            onBoilerSettingsChange: handleBoilerSettingsChange,
-          }
-        };
+        if (machine && recipe && !recipe.outputs?.some(o => o.temperature !== undefined)) recipe = initializeRecipeTemperatures(recipe, machine.id);
+        return { ...node, data: { ...node.data, recipe, machineCount: node.data.machineCount ?? 1, displayMode, machineDisplayMode,
+          onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput, onDrillSettingsChange: handleDrillSettingsChange,
+          onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange,
+          onBoilerSettingsChange: handleBoilerSettingsChange }};
       });
       setNodes(restoredNodes);
       setEdges(savedState.edges || []);
       setTargetProducts(savedState.targetProducts || []);
       setSoldProducts(savedState.soldProducts || {});
+      setFavoriteRecipes(savedState.favoriteRecipes || []);
+      setLastDrillConfig(savedState.lastDrillConfig || null);
+      setLastAssemblerConfig(savedState.lastAssemblerConfig || null);
       setNodeId(savedState.nodeId || 0);
       setTargetIdCounter(savedState.targetIdCounter || 0);
-      
-      // After loading, recalculate all temperatures based on connections
-      setTimeout(() => {
-        recalculateAllTemperatures(restoredNodes, savedState.edges || []);
-      }, 100);
     }
   }, []);
 
-  // Update all nodes when displayMode changes
-  useEffect(() => {
-    setNodes(nds => nds.map(node => ({
-      ...node,
-      data: {
-        ...node.data,
-        displayMode: displayMode
-      }
-    })));
-  }, [displayMode, setNodes]);
+  useEffect(() => { setNodes(nds => nds.map(node => ({ ...node, data: { ...node.data, displayMode } }))); }, [displayMode, setNodes]);
+  useEffect(() => { setNodes(nds => nds.map(node => ({ ...node, data: { ...node.data, machineDisplayMode } }))); }, [machineDisplayMode, setNodes]);
+  useEffect(() => { 
+    const stateToSave = { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig };
+    localStorage.setItem('industrialist_canvas_state', JSON.stringify(stateToSave));
+  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig]);
 
-  // Update all nodes when machineDisplayMode changes
-  useEffect(() => {
-    setNodes(nds => nds.map(node => ({
-      ...node,
-      data: {
-        ...node.data,
-        machineDisplayMode: machineDisplayMode
-      }
-    })));
-  }, [machineDisplayMode, setNodes]);
-
-  // Auto-save canvas state on any change
-  useEffect(() => {
-    saveCanvasState(nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts);
-  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts]);
-
-  // Calculate total stats from all recipe boxes
   const calculateTotalStats = useCallback(() => {
-    let totalPower = 0;
-    let totalPollution = 0;
-    let totalModelCount = 0;
-
+    let totalPower = 0, totalPollution = 0, totalModelCount = 0;
     nodes.forEach(node => {
       const recipe = node.data?.recipe;
       if (!recipe) return;
-
       const machineCount = node.data?.machineCount || 0;
-
-      // Power consumption
       const power = recipe.power_consumption;
       let powerValue = 0;
-      if (typeof power === 'number') {
-        powerValue = power;
-        totalPower += power * machineCount;
-      } else if (typeof power === 'object' && power !== null) {
-        if ('max' in power) {
-          powerValue = power.max;
-          totalPower += powerValue * machineCount;
-        }
-      }
-
-      // Pollution
+      if (typeof power === 'number') { powerValue = power; totalPower += power * machineCount; }
+      else if (typeof power === 'object' && power !== null && 'max' in power) { powerValue = power.max; totalPower += powerValue * machineCount; }
       const pollution = recipe.pollution;
-      if (typeof pollution === 'number') {
-        totalPollution += pollution * machineCount;
-      }
-
-      // Model count per recipe
+      if (typeof pollution === 'number') totalPollution += pollution * machineCount;
       const inputOutputCount = (recipe.inputs?.length || 0) + (recipe.outputs?.length || 0);
-      
-      const recipeModelCount = 
-        Math.ceil(machineCount) + 
-        Math.ceil(machineCount * powerValue / 1500000) + 
-        Math.ceil(machineCount) * inputOutputCount * 2;
-      
-      totalModelCount += recipeModelCount;
+      totalModelCount += Math.ceil(machineCount) + Math.ceil(machineCount * powerValue / 1500000) + Math.ceil(machineCount) * inputOutputCount * 2;
     });
-
-    return {
-      totalPower,
-      totalPollution,
-      totalModelCount
-    };
+    return { totalPower, totalPollution, totalModelCount };
   }, [nodes]);
 
   const stats = calculateTotalStats();
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (pollutionInputFocused) return;
+      const pollutionPerSecond = stats.totalPollution / 3600;
+      setGlobalPollution(prev => (typeof prev === 'number' && !isNaN(prev) && isFinite(prev)) ? parseFloat((prev + pollutionPerSecond).toFixed(4)) : prev);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [stats.totalPollution, pollutionInputFocused]);
 
-  // Solve production network
-  const productionSolution = useMemo(() => {
-    return solveProductionNetwork(nodes, edges);
-  }, [nodes, edges]);
-
-  const excessProductsRaw = useMemo(() => {
-    return getExcessProducts(productionSolution);
-  }, [productionSolution]);
-
-  const deficientProducts = useMemo(() => {
-    return getDeficientProducts(productionSolution);
-  }, [productionSolution]);
-
-  // Add isSold property to excess products
-  const excessProducts = useMemo(() => {
-    return excessProductsRaw.map(item => {
-      const shouldAutoSell = typeof item.product.price === 'number' && item.product.price > 0;
-      const explicitlySold = soldProducts[item.productId];
-      
-      return {
-        ...item,
-        isSold: explicitlySold !== undefined ? explicitlySold : shouldAutoSell
-      };
-    });
-  }, [excessProductsRaw, soldProducts]);
-
-  // Calculate total profit from sold excess products
-  const totalProfit = useMemo(() => {
-    let profit = 0;
-    excessProducts.forEach(item => {
-      if (item.isSold && typeof item.product.price === 'number') {
-        profit += item.product.price * item.excessRate;
-      }
-    });
-    return profit;
-  }, [excessProducts]);
-
-  // Calculate machine counts and costs
+  const productionSolution = useMemo(() => solveProductionNetwork(nodes, edges), [nodes, edges]);
+  const excessProductsRaw = useMemo(() => getExcessProducts(productionSolution), [productionSolution]);
+  const deficientProducts = useMemo(() => getDeficientProducts(productionSolution), [productionSolution]);
+  const excessProducts = useMemo(() => excessProductsRaw.map(item => {
+    const shouldAutoSell = typeof item.product.price === 'number' && item.product.price > 0;
+    const explicitlySold = soldProducts[item.productId];
+    return { ...item, isSold: explicitlySold !== undefined ? explicitlySold : shouldAutoSell };
+  }), [excessProductsRaw, soldProducts]);
+  const totalProfit = useMemo(() => excessProducts.reduce((profit, item) => item.isSold && typeof item.product.price === 'number' ? profit + item.product.price * item.excessRate : profit, 0), [excessProducts]);
   const machineStats = useMemo(() => {
-    const machineCounts = {};
-    const machineCosts = {};
-
+    const machineCounts = {}, machineCosts = {};
     nodes.forEach(node => {
       const machine = node.data?.machine;
       const machineCount = node.data?.machineCount || 0;
-      
       if (!machine) return;
-
       const machineId = machine.id;
       const roundedCount = Math.ceil(machineCount);
-
-      if (!machineCounts[machineId]) {
-        machineCounts[machineId] = 0;
-        machineCosts[machineId] = typeof machine.cost === 'number' ? machine.cost : 0;
-      }
-
+      if (!machineCounts[machineId]) { machineCounts[machineId] = 0; machineCosts[machineId] = typeof machine.cost === 'number' ? machine.cost : 0; }
       machineCounts[machineId] += roundedCount;
     });
-
     const stats = Object.keys(machineCounts).map(machineId => {
       const machine = machines.find(m => m.id === machineId);
       const count = machineCounts[machineId];
       const cost = machineCosts[machineId];
-      const totalCost = count * cost;
-
-      return {
-        machineId,
-        machine,
-        count,
-        cost,
-        totalCost
-      };
+      return { machineId, machine, count, cost, totalCost: count * cost };
     }).sort((a, b) => a.machine.name.localeCompare(b.machine.name));
-
-    const totalCost = stats.reduce((sum, stat) => sum + stat.totalCost, 0);
-
-    return { stats, totalCost };
+    return { stats, totalCost: stats.reduce((sum, stat) => sum + stat.totalCost, 0) };
   }, [nodes, machines]);
 
-  // Smart number formatting
-  const smartFormat = (num) => {
-    if (typeof num !== 'number') return num;
-    const rounded = Math.round(num * 10000) / 10000;
-    return rounded.toString();
-  };
+  const updateNodeData = (nodeId, updater) => setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: updater(n.data) } : n));
 
-  // Metric formatting for large numbers
-  const metricFormat = (num) => {
-    if (typeof num !== 'number') return num;
+  const findBestDepthForProduct = useCallback((productId, drillHead, consumable, machineOil) => {
+    const availableDepths = Object.keys(DEPTH_OUTPUTS).map(d => parseInt(d));
+    let bestDepth = null;
+    let bestRate = 0;
     
-    if (num >= 1000000000) {
-      return smartFormat(num / 1000000000) + 'B';
-    } else if (num >= 1000000) {
-      return smartFormat(num / 1000000) + 'M';
-    } else if (num >= 1000) {
-      return smartFormat(num / 1000) + 'k';
+    availableDepths.forEach(depth => {
+      const outputs = DEPTH_OUTPUTS[depth];
+      const outputForProduct = outputs.find(o => o.product_id === productId);
+      
+      if (outputForProduct) {
+        const metrics = calculateDrillMetrics(drillHead, consumable, machineOil, depth);
+        if (metrics) {
+          const oilBonus = machineOil ? 1.1 : 1;
+          const effectiveRate = outputForProduct.quantity * oilBonus * metrics.dutyCycle;
+          
+          if (effectiveRate > bestRate) {
+            bestRate = effectiveRate;
+            bestDepth = depth;
+          }
+        }
+      }
+    });
+    
+    return bestDepth;
+  }, []);
+
+  const calculateMachineCountForRecipe = useCallback((recipe, targetNode, autoConnect) => {
+    if (!autoConnect || !targetNode) return 1;
+    
+    const targetRecipe = targetNode.data.recipe;
+    const targetMachineCount = targetNode.data.machineCount || 1;
+    const targetMachine = getMachine(targetRecipe.machine_id);
+    
+    let targetCycleTime = targetRecipe.cycle_time;
+    if (typeof targetCycleTime !== 'number' || targetCycleTime <= 0) targetCycleTime = 1;
+    if (targetMachine && hasTempDependentCycle(targetMachine.id)) {
+      const tempInfo = TEMP_DEPENDENT_MACHINES[targetMachine.id];
+      if (tempInfo?.type === 'steam_input' && (targetMachine.id !== 'm_steam_cracking_plant' || recipeUsesSteam(targetRecipe))) {
+        const inputTemp = targetRecipe.tempDependentInputTemp ?? DEFAULT_STEAM_TEMPERATURE;
+        targetCycleTime = getTempDependentCycleTime(targetMachine.id, inputTemp, targetCycleTime);
+      }
     }
     
-    return smartFormat(num);
-  };
-
-  // Check if current theme is Forest
-  const isForestTheme = () => {
-    const primaryColor = getComputedStyle(document.documentElement)
-      .getPropertyValue('--color-primary')
-      .trim()
-      .toLowerCase();
-    return primaryColor === '#5fb573';
-  };
-
-  const statisticsTitle = isForestTheme() ? "Plant Statistics" : "Plan Statistics";
-
-  // Auto-increment global pollution
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (pollutionInputFocused) return;
-      
-      const pollutionPerSecond = stats.totalPollution / 3600;
-      setGlobalPollution(prev => {
-        if (typeof prev === 'number' && !isNaN(prev) && isFinite(prev)) {
-          return parseFloat((prev + pollutionPerSecond).toFixed(4));
-        }
-        return prev;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [stats.totalPollution, pollutionInputFocused]);
-
-  // Format power consumption for display
-  const formatPowerDisplay = (power) => {
-    if (power >= 1000000) return `${(power / 1000000).toFixed(2)} MMF/s`;
-    if (power >= 1000) return `${(power / 1000).toFixed(2)} kMF/s`;
-    return `${power.toFixed(2)} MF/s`;
-  };
-
-  // Update node data while preserving identity
-  const updateNodeData = (nodeId, updater) => {
-    setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: updater(n.data) } : n));
-  };
-
-  /**
-   * UNIFIED TEMPERATURE RECALCULATION
-   * Recalculates temperatures for ALL heat source nodes based on their connections
-   * Handles both additive sources (geothermal) and boilers
-   * Iterates until stable to handle chaining
-   */
-  const recalculateAllTemperatures = useCallback((currentNodes, currentEdges) => {
-    setNodes(nds => {
-      let updatedNodes = currentNodes || [...nds];
-      let hasChanges = true;
-      let iterations = 0;
-      const maxIterations = 20;
-      
-      // Keep iterating until no more changes (handles chaining)
-      while (hasChanges && iterations < maxIterations) {
-        hasChanges = false;
-        iterations++;
-        
-        updatedNodes = updatedNodes.map(targetNode => {
-          const machine = getMachine(targetNode.data?.recipe?.machine_id);
-          if (!machine) return targetNode;
-          
-          const heatSource = HEAT_SOURCES[machine.id];
-          if (!heatSource) return targetNode;
-          
-          const isAdditive = heatSource.type === 'additive';
-          const isBoiler = heatSource.type === 'boiler';
-          
-          // Only recalculate for additive sources and boilers
-          if (!isAdditive && !isBoiler) return targetNode;
-          
-          // Find edges connected to this node's inputs
-          const connectedEdges = currentEdges.filter(e => e.target === targetNode.id);
-          
-          let inputTemp = DEFAULT_WATER_TEMPERATURE;
-          let secondInputTemp = null;
-          
-          if (isBoiler) {
-            // Boiler: get temperature from SECOND input (index 1)
-            const secondInputEdge = connectedEdges.find(e => {
-              const targetInputIndex = parseInt(e.targetHandle.split('-')[1]);
-              return targetInputIndex === 1;
-            });
-            
-            if (secondInputEdge) {
-              const sourceNode = updatedNodes.find(n => n.id === secondInputEdge.source);
-              if (sourceNode) {
-                const sourceOutputIndex = parseInt(secondInputEdge.sourceHandle.split('-')[1]);
-                const sourceOutput = sourceNode.data?.recipe?.outputs?.[sourceOutputIndex];
-                if (sourceOutput && isTemperatureProduct(sourceOutput.product_id)) {
-                  secondInputTemp = sourceOutput.temperature || DEFAULT_BOILER_INPUT_TEMPERATURE;
-                }
-              }
-            } else {
-              secondInputTemp = DEFAULT_BOILER_INPUT_TEMPERATURE;
-            }
-          } else {
-            // Additive (geothermal): get temperature from first input
-            if (connectedEdges.length > 0) {
-              const firstInputEdge = connectedEdges[0];
-              const sourceNode = updatedNodes.find(n => n.id === firstInputEdge.source);
-              if (sourceNode) {
-                const sourceOutputIndex = parseInt(firstInputEdge.sourceHandle.split('-')[1]);
-                const sourceOutput = sourceNode.data?.recipe?.outputs?.[sourceOutputIndex];
-                if (sourceOutput && isTemperatureProduct(sourceOutput.product_id)) {
-                  inputTemp = sourceOutput.temperature || DEFAULT_WATER_TEMPERATURE;
-                }
-              }
-            }
-          }
-          
-          // Recalculate this node's output temperature
-          const newTemp = calculateOutputTemperature(
-            machine.id,
-            targetNode.data.recipe.temperatureSettings || {},
-            inputTemp,
-            null,
-            secondInputTemp
-          );
-          
-          // Check if temperature actually changed
-          const currentTemp = targetNode.data.recipe.outputs.find(o => 
-            isTemperatureProduct(o.product_id) && o.temperature !== undefined
-          )?.temperature;
-          
-          if (currentTemp !== undefined && Math.abs(newTemp - currentTemp) < 0.01) {
-            return targetNode;
-          }
-          
-          // Temperature changed - update and flag for another iteration
-          hasChanges = true;
-          
-          // Apply temperature to outputs using unified logic
-          // Pass through input temp for non-boiler machines, first input temp for boilers
-          const updatedOutputs = applyTemperatureToOutputs(
-            targetNode.data.recipe.outputs,
-            newTemp,
-            isBoiler,
-            heatSource,
-            inputTemp
-          );
-          
-          return {
-            ...targetNode,
-            data: {
-              ...targetNode.data,
-              recipe: {
-                ...targetNode.data.recipe,
-                outputs: updatedOutputs
-              }
-            }
-          };
-        });
+    let recipeCycleTime = recipe.cycle_time;
+    if (typeof recipeCycleTime !== 'number' || recipeCycleTime <= 0) recipeCycleTime = 1;
+    
+    const recipeMachine = getMachine(recipe.machine_id);
+    if (recipeMachine && hasTempDependentCycle(recipeMachine.id)) {
+      const tempInfo = TEMP_DEPENDENT_MACHINES[recipeMachine.id];
+      if (tempInfo?.type === 'steam_input' && (recipeMachine.id !== 'm_steam_cracking_plant' || recipeUsesSteam(recipe))) {
+        const inputTemp = recipe.tempDependentInputTemp ?? DEFAULT_STEAM_TEMPERATURE;
+        recipeCycleTime = getTempDependentCycleTime(recipeMachine.id, inputTemp, recipeCycleTime);
       }
-      
-      return updatedNodes;
-    });
-  }, [setNodes]);
+    }
+    
+    if (autoConnect.isOutput) {
+      const targetOutput = targetRecipe.outputs[autoConnect.outputIndex];
+      if (targetOutput) {
+        // Use originalQuantity if available (for boilers that output 0 when cold)
+        const quantityForCalculation = targetOutput.originalQuantity !== undefined ? targetOutput.originalQuantity : targetOutput.quantity;
+        if (typeof quantityForCalculation === 'number') {
+          const targetRate = (quantityForCalculation / targetCycleTime) * targetMachineCount;
+          const newInput = recipe.inputs.find(item => item.product_id === autoConnect.productId);
+          if (newInput && typeof newInput.quantity === 'number' && newInput.quantity > 0) {
+            const newRatePerMachine = newInput.quantity / recipeCycleTime;
+            return targetRate / newRatePerMachine;
+          }
+        }
+      }
+    } else {
+      const targetInput = targetRecipe.inputs[autoConnect.inputIndex];
+      if (targetInput && typeof targetInput.quantity === 'number') {
+        const targetRate = (targetInput.quantity / targetCycleTime) * targetMachineCount;
+        const newOutput = recipe.outputs.find(item => item.product_id === autoConnect.productId);
+        if (newOutput) {
+          // Use originalQuantity if available (for boilers that output 0 when cold)
+          const quantityForCalculation = newOutput.originalQuantity !== undefined ? newOutput.originalQuantity : newOutput.quantity;
+          if (typeof quantityForCalculation === 'number' && quantityForCalculation > 0) {
+            const newRatePerMachine = quantityForCalculation / recipeCycleTime;
+            return targetRate / newRatePerMachine;
+          }
+        }
+      }
+    }
+    
+    return 1;
+  }, []);
 
-  // Validate edge connections by product ID
+
   const onConnect = useCallback((params) => {
     const sourceNode = nodes.find(n => n.id === params.source);
     const targetNode = nodes.find(n => n.id === params.target);
     if (!sourceNode || !targetNode) return;
-
     const sourceProductId = sourceNode.data.recipe.outputs[parseInt(params.sourceHandle.split('-')[1])]?.product_id;
     const targetProductId = targetNode.data.recipe.inputs[parseInt(params.targetHandle.split('-')[1])]?.product_id;
     if (sourceProductId !== targetProductId) return;
+    setEdges((eds) => addEdge({ ...params, type: 'custom', animated: false }, eds));
+  }, [setEdges, nodes]);
 
-    setEdges((eds) => {
-      const newEdges = addEdge({ ...params, type: 'custom', animated: false }, eds);
-      // Recalculate temperatures after connection is made
-      setTimeout(() => recalculateAllTemperatures(nodes, newEdges), 0);
-      return newEdges;
-    });
-  }, [setEdges, nodes, recalculateAllTemperatures]);
-
-  // Reset recipe selector to initial state
   const resetSelector = () => {
-    setShowRecipeSelector(false);
-    setSelectedProduct(null);
-    setSelectedMachine(null);
-    setSelectorMode('product');
-    setSearchTerm('');
-    setSortBy('name_asc');
-    setFilterType('all');
-    setRecipeFilter('all');
-    setAutoConnectTarget(null);
-    setSelectorOpenedFrom('button');
+    setShowRecipeSelector(false); setSelectedProduct(null); setSelectedMachine(null); setSelectorMode('product');
+    setSearchTerm(''); setSortBy('name_asc'); setFilterType('all'); setRecipeFilter('all'); setAutoConnectTarget(null); setSelectorOpenedFrom('button');
+    setRecipeMachineCounts({});
   };
 
-  // Open recipe selector from main button
-  const openRecipeSelector = useCallback(() => {
-    setShowRecipeSelector(true);
-    setAutoConnectTarget(null);
-    setSelectorOpenedFrom('button');
-  }, []);
-
-  // Open recipe selector for product input
+  const openRecipeSelector = useCallback(() => { setShowRecipeSelector(true); setAutoConnectTarget(null); setSelectorOpenedFrom('button'); }, []);
   const openRecipeSelectorForInput = useCallback((productId, nodeId, inputIndex) => {
     const product = getProduct(productId);
-    if (product) {
-      setShowRecipeSelector(true);
-      setSelectedProduct(product);
-      setAutoConnectTarget({ nodeId, inputIndex, productId });
-      setSelectorOpenedFrom('rectangle');
-      setRecipeFilter('producers');
-    }
+    if (product) { setShowRecipeSelector(true); setSelectedProduct(product); setAutoConnectTarget({ nodeId, inputIndex, productId }); setSelectorOpenedFrom('rectangle'); setRecipeFilter('producers'); }
   }, []);
-
-  // Open recipe selector for product output
   const openRecipeSelectorForOutput = useCallback((productId, nodeId, outputIndex) => {
     const product = getProduct(productId);
-    if (product) {
-      setShowRecipeSelector(true);
-      setSelectedProduct(product);
-      setAutoConnectTarget({ nodeId, outputIndex, productId, isOutput: true });
-      setSelectorOpenedFrom('rectangle');
-      setRecipeFilter('consumers');
-    }
+    if (product) { setShowRecipeSelector(true); setSelectedProduct(product); setAutoConnectTarget({ nodeId, outputIndex, productId, isOutput: true }); setSelectorOpenedFrom('rectangle'); setRecipeFilter('consumers'); }
   }, []);
 
-  // Update drill node inputs/outputs and power metrics
   const handleDrillSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
-    const metrics = settings.drillHead && settings.depth 
-      ? calculateDrillMetrics(settings.drillHead, settings.consumable, settings.machineOil, settings.depth) 
-      : null;
-    
-    updateNodeData(nodeId, data => ({
-      ...data,
-      recipe: {
-        ...data.recipe,
-        inputs: inputs.length > 0 ? inputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
-        outputs: outputs.length > 0 ? outputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
-        drillSettings: settings,
-        cycle_time: 1,
-        power_consumption: metrics 
-          ? { 
-              max: metrics.drillingPower * 1000000, 
-              average: ((metrics.drillingPower * metrics.lifeTime + metrics.idlePower * (metrics.replacementTime + metrics.travelTime)) / metrics.totalCycleTime) * 1000000
-            } 
-          : 'Variable',
-        pollution: metrics ? metrics.pollution : 'Variable',
-      },
-      leftHandles: Math.max(inputs.length, 1),
-      rightHandles: Math.max(outputs.length, 1),
-    }));
-
-    // Remove edges connected to deleted slots
-    setEdges((eds) => eds.filter(edge => {
-      if (edge.source === nodeId || edge.target === nodeId) {
-        const handleIndex = parseInt((edge.source === nodeId ? edge.sourceHandle : edge.targetHandle).split('-')[1]);
-        return edge.source === nodeId ? handleIndex < outputs.length : handleIndex < inputs.length;
-      }
-      return true;
-    }));
-  }, [setEdges]);
-
-  // Update logic assembler node inputs/outputs and power metrics
-  const handleLogicAssemblerSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
-    const getTargetMicrochip = () => {
-      if (!settings.outerStage || !settings.innerStage) return '';
-      return settings.outerStage === 1 
-        ? `p_${settings.innerStage}x_microchip` 
-        : `p_${settings.outerStage}x${settings.innerStage}x_microchip`;
-    };
-    
-    const targetMicrochip = getTargetMicrochip();
-    const metrics = targetMicrochip 
-      ? calculateLogicAssemblerMetrics(targetMicrochip, settings.machineOil, settings.tickCircuitDelay) 
-      : null;
-
-    updateNodeData(nodeId, data => ({
-      ...data,
-      recipe: {
-        ...data.recipe,
-        inputs: inputs.length > 0 
-          ? inputs 
-          : [
-              { product_id: 'p_logic_plate', quantity: 'Variable' },
-              { product_id: 'p_copper_wire', quantity: 'Variable' },
-              { product_id: 'p_semiconductor', quantity: 'Variable' },
-              { product_id: 'p_gold_wire', quantity: 'Variable' },
-            ],
-        outputs: outputs.length > 0 ? outputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
-        assemblerSettings: settings,
-        cycle_time: metrics ? metrics.cycleTime : 'Variable',
-        power_consumption: metrics 
-          ? { max: metrics.maxPowerConsumption, average: metrics.avgPowerConsumption } 
-          : 'Variable',
-      },
-      leftHandles: Math.max(inputs.length, 1),
-      rightHandles: Math.max(outputs.length, 1),
-    }));
-
-    // Remove edges connected to deleted slots
-    setEdges((eds) => eds.filter(edge => {
-      if (edge.source === nodeId || edge.target === nodeId) {
-        const handleIndex = parseInt((edge.source === nodeId ? edge.sourceHandle : edge.targetHandle).split('-')[1]);
-        return edge.source === nodeId ? handleIndex < outputs.length : handleIndex < inputs.length;
-      }
-      return true;
-    }));
-  }, [setEdges]);
-
-  // Update temperature settings for machines that produce heated water/steam
-  const handleTemperatureSettingsChange = useCallback((nodeId, settings, outputs, powerConsumption) => {
-    updateNodeData(nodeId, data => ({
-      ...data,
-      recipe: {
-        ...data.recipe,
-        outputs: outputs,
-        temperatureSettings: settings,
-        power_consumption: powerConsumption !== null && powerConsumption !== undefined 
-          ? powerConsumption 
-          : data.recipe.power_consumption
-      }
-    }));
-    
-    // Recalculate downstream temperatures after updating this node
-    setTimeout(() => {
-      setNodes(currentNodes => {
-        setEdges(currentEdges => {
-          recalculateAllTemperatures(currentNodes, currentEdges);
-          return currentEdges;
-        });
-        return currentNodes;
-      });
-    }, 0);
-  }, [setNodes, setEdges, recalculateAllTemperatures]);
-
-  // Update boiler settings (heat loss)
-  const handleBoilerSettingsChange = useCallback((nodeId, settings) => {
-    updateNodeData(nodeId, data => {
-      const machine = getMachine(data.recipe.machine_id);
-      const heatSource = HEAT_SOURCES[machine?.id];
-      
-      if (!heatSource || heatSource.type !== 'boiler') return data;
-      
-      // Calculate new output temperature with updated heat loss
-      const outputTemp = calculateOutputTemperature(
-        machine.id,
-        settings,
-        DEFAULT_BOILER_INPUT_TEMPERATURE,
-        null,
-        DEFAULT_BOILER_INPUT_TEMPERATURE
-      );
-      
-      // Apply temperature to outputs using unified logic
-      // For initial settings, use default input temp
-      const updatedOutputs = applyTemperatureToOutputs(
-        data.recipe.outputs,
-        outputTemp,
-        true,
-        heatSource,
-        DEFAULT_BOILER_INPUT_TEMPERATURE
-      );
-      
-      return {
-        ...data,
-        recipe: {
-          ...data.recipe,
-          outputs: updatedOutputs,
-          temperatureSettings: settings
-        }
-      };
+    setLastDrillConfig({
+      drillHead: settings.drillHead,
+      consumable: settings.consumable,
+      machineOil: settings.machineOil
     });
     
-    // Recalculate downstream temperatures after updating this node
-    setTimeout(() => {
-      setNodes(currentNodes => {
-        setEdges(currentEdges => {
-          recalculateAllTemperatures(currentNodes, currentEdges);
-          return currentEdges;
-        });
-        return currentNodes;
-      });
-    }, 0);
-  }, [setNodes, setEdges, recalculateAllTemperatures]);
+    const metrics = settings.drillHead && settings.depth ? calculateDrillMetrics(settings.drillHead, settings.consumable, settings.machineOil, settings.depth) : null;
+    updateNodeData(nodeId, data => ({
+      ...data, recipe: { ...data.recipe, inputs: inputs.length > 0 ? inputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
+        outputs: outputs.length > 0 ? outputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }], drillSettings: settings, cycle_time: 1,
+        power_consumption: metrics ? { max: metrics.drillingPower * 1000000, average: ((metrics.drillingPower * metrics.lifeTime + metrics.idlePower * (metrics.replacementTime + metrics.travelTime)) / metrics.totalCycleTime) * 1000000 } : 'Variable',
+        pollution: metrics ? metrics.pollution : 'Variable' }, leftHandles: Math.max(inputs.length, 1), rightHandles: Math.max(outputs.length, 1)
+    }));
+    setEdges((eds) => eds.filter(edge => {
+      if (edge.source === nodeId || edge.target === nodeId) {
+        const handleIndex = parseInt((edge.source === nodeId ? edge.sourceHandle : edge.targetHandle).split('-')[1]);
+        return edge.source === nodeId ? handleIndex < outputs.length : handleIndex < inputs.length;
+      }
+      return true;
+    }));
+  }, [setEdges]);
 
-  // Create a new recipe box on canvas
+  const handleLogicAssemblerSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
+    setLastAssemblerConfig({
+      outerStage: settings.outerStage,
+      innerStage: settings.innerStage,
+      machineOil: settings.machineOil,
+      tickCircuitDelay: settings.tickCircuitDelay
+    });
+    
+    const getTargetMicrochip = () => !settings.outerStage || !settings.innerStage ? '' : settings.outerStage === 1 ? `p_${settings.innerStage}x_microchip` : `p_${settings.outerStage}x${settings.innerStage}x_microchip`;
+    const targetMicrochip = getTargetMicrochip();
+    const metrics = targetMicrochip ? calculateLogicAssemblerMetrics(targetMicrochip, settings.machineOil, settings.tickCircuitDelay) : null;
+    updateNodeData(nodeId, data => ({
+      ...data, recipe: { ...data.recipe, inputs: inputs.length > 0 ? inputs : [{ product_id: 'p_logic_plate', quantity: 'Variable' }, { product_id: 'p_copper_wire', quantity: 'Variable' },
+        { product_id: 'p_semiconductor', quantity: 'Variable' }, { product_id: 'p_gold_wire', quantity: 'Variable' }],
+        outputs: outputs.length > 0 ? outputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }], assemblerSettings: settings,
+        cycle_time: metrics ? metrics.cycleTime : 'Variable', power_consumption: metrics ? { max: metrics.maxPowerConsumption, average: metrics.avgPowerConsumption } : 'Variable' },
+        leftHandles: Math.max(inputs.length, 1), rightHandles: Math.max(outputs.length, 1)
+    }));
+    setEdges((eds) => eds.filter(edge => {
+      if (edge.source === nodeId || edge.target === nodeId) {
+        const handleIndex = parseInt((edge.source === nodeId ? edge.sourceHandle : edge.targetHandle).split('-')[1]);
+        return edge.source === nodeId ? handleIndex < outputs.length : handleIndex < inputs.length;
+      }
+      return true;
+    }));
+  }, [setEdges]);
+
+  const handleTemperatureSettingsChange = useCallback((nodeId, settings, outputs, powerConsumption) => {
+    setNodes(nds => nds.map(n => 
+      n.id === nodeId 
+        ? { ...n, data: { ...n.data, recipe: { ...n.data.recipe, outputs, temperatureSettings: settings, power_consumption: powerConsumption !== null && powerConsumption !== undefined ? powerConsumption : n.data.recipe.power_consumption } } }
+        : n
+    ));
+  }, [setNodes]);
+
+  const handleBoilerSettingsChange = useCallback((nodeId, settings) => {
+    setNodes(nds => nds.map(n => {
+      if (n.id !== nodeId) return n;
+      const machine = getMachine(n.data.recipe.machine_id);
+      const heatSource = HEAT_SOURCES[machine?.id];
+      if (!heatSource || heatSource.type !== 'boiler') return n;
+      
+      return { 
+        ...n, 
+        data: {
+          ...n.data,
+          recipe: { 
+            ...n.data.recipe, 
+            temperatureSettings: settings
+          }
+        }
+      };
+    }));
+  }, [setNodes]);
+
   const createRecipeBox = useCallback((recipe) => {
     const machine = getMachine(recipe.machine_id);
-    if (!machine || !recipe.inputs || !recipe.outputs) {
-      alert('Error: Invalid machine or recipe data');
-      return;
-    }
-
-    // Initialize temperature data for heat source machines
-    const recipeWithTemp = initializeRecipeTemperatures(recipe, machine.id);
-
+    if (!machine || !recipe.inputs || !recipe.outputs) { alert('Error: Invalid machine or recipe data'); return; }
+    let recipeWithTemp = initializeRecipeTemperatures(recipe, machine.id);
     const newNodeId = `node-${nodeId}`;
     const targetNode = autoConnectTarget ? nodes.find(n => n.id === autoConnectTarget.nodeId) : null;
-    const position = targetNode 
-      ? { 
-          x: targetNode.position.x + (autoConnectTarget.isOutput ? 400 : -400), 
-          y: targetNode.position.y 
+    const position = targetNode ? { x: targetNode.position.x + (autoConnectTarget.isOutput ? 400 : -400), y: targetNode.position.y } : { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 };
+    
+    const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
+    const isLogicAssembler = recipe.isLogicAssembler || recipe.id === 'r_logic_assembler';
+    
+    const isBoiler = HEAT_SOURCES[machine.id]?.type === 'boiler';
+    
+    // For boilers, temporarily use hot temperature for machine count calculations
+    if (isBoiler) {
+      const settingsWithCoolant = {
+        heatLoss: recipeWithTemp.temperatureSettings?.heatLoss ?? 8,
+        coolantTemp: DEFAULT_BOILER_INPUT_TEMPERATURE
+      };
+      
+      const outputTemp = calculateOutputTemperature(machine.id, settingsWithCoolant, DEFAULT_BOILER_INPUT_TEMPERATURE, null, DEFAULT_BOILER_INPUT_TEMPERATURE);
+      const heatSource = HEAT_SOURCES[machine.id];
+      const updatedOutputs = applyTemperatureToOutputs(recipeWithTemp.outputs, outputTemp, true, heatSource, DEFAULT_BOILER_INPUT_TEMPERATURE);
+      
+      recipeWithTemp = {
+        ...recipeWithTemp,
+        outputs: updatedOutputs,
+        temperatureSettings: settingsWithCoolant
+      };
+    }
+    
+    let drillSettings = null;
+    let drillInputs = recipe.inputs;
+    let drillOutputs = recipe.outputs;
+    
+    if (isMineshaftDrill) {
+      const defaultDrillHead = lastDrillConfig?.drillHead || 'steel';
+      const defaultConsumable = lastDrillConfig?.consumable || 'hydrochloric_acid';
+      const defaultMachineOil = lastDrillConfig?.machineOil !== undefined ? lastDrillConfig.machineOil : true;
+      
+      if (autoConnectTarget) {
+        if (autoConnectTarget.isOutput) {
+          const lastUsedDepth = nodes.find(n => n.data?.recipe?.drillSettings?.depth)?.data.recipe.drillSettings.depth || 100;
+          drillSettings = {
+            drillHead: defaultDrillHead,
+            consumable: defaultConsumable,
+            machineOil: defaultMachineOil,
+            depth: lastUsedDepth
+          };
+        } else {
+          const targetProductId = autoConnectTarget.productId;
+          const bestDepth = findBestDepthForProduct(targetProductId, defaultDrillHead, defaultConsumable, defaultMachineOil);
+          
+          if (bestDepth) {
+            drillSettings = {
+              drillHead: defaultDrillHead,
+              consumable: defaultConsumable,
+              machineOil: defaultMachineOil,
+              depth: bestDepth
+            };
+          }
         }
-      : { 
-          x: Math.random() * 400 + 100, 
-          y: Math.random() * 300 + 100 
+      } else {
+        const lastUsedDepth = nodes.find(n => n.data?.recipe?.drillSettings?.depth)?.data.recipe.drillSettings.depth || 100;
+        drillSettings = {
+          drillHead: defaultDrillHead,
+          consumable: defaultConsumable,
+          machineOil: defaultMachineOil,
+          depth: lastUsedDepth
         };
-
-    const newNode = {
-      id: newNodeId,
-      type: 'custom',
-      position,
-      data: {
-        recipe: recipeWithTemp,
-        machine,
-        machineCount: 0,
-        displayMode: displayMode,
-        machineDisplayMode: machineDisplayMode,
-        leftHandles: recipeWithTemp.inputs.length,
-        rightHandles: recipeWithTemp.outputs.length,
-        onInputClick: openRecipeSelectorForInput,
-        onOutputClick: openRecipeSelectorForOutput,
-        onDrillSettingsChange: handleDrillSettingsChange,
-        onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange,
-        onTemperatureSettingsChange: handleTemperatureSettingsChange,
-        onBoilerSettingsChange: handleBoilerSettingsChange,
-        isTarget: false,
-      },
-      sourcePosition: 'right',
-      targetPosition: 'left',
-    };
-
+      }
+      
+      if (drillSettings) {
+        drillInputs = buildDrillInputs(drillSettings.drillHead, drillSettings.consumable, drillSettings.machineOil, drillSettings.depth);
+        drillOutputs = buildDrillOutputs(drillSettings.drillHead, drillSettings.consumable, drillSettings.machineOil, drillSettings.depth);
+        const metrics = calculateDrillMetrics(drillSettings.drillHead, drillSettings.consumable, drillSettings.machineOil, drillSettings.depth);
+        
+        recipeWithTemp = {
+          ...recipeWithTemp,
+          inputs: drillInputs.length > 0 ? drillInputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
+          outputs: drillOutputs.length > 0 ? drillOutputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
+          drillSettings,
+          cycle_time: 1,
+          power_consumption: metrics ? { max: metrics.drillingPower * 1000000, average: ((metrics.drillingPower * metrics.lifeTime + metrics.idlePower * (metrics.replacementTime + metrics.travelTime)) / metrics.totalCycleTime) * 1000000 } : 'Variable',
+          pollution: metrics ? metrics.pollution : 'Variable'
+        };
+      }
+    }
+    
+    let assemblerSettings = null;
+    let assemblerInputs = recipe.inputs;
+    let assemblerOutputs = recipe.outputs;
+    
+    if (isLogicAssembler) {
+      const defaultOuterStage = lastAssemblerConfig?.outerStage || 1;
+      const defaultInnerStage = lastAssemblerConfig?.innerStage || 2;
+      const defaultMachineOil = lastAssemblerConfig?.machineOil !== undefined ? lastAssemblerConfig.machineOil : true;
+      const defaultTickCircuitDelay = lastAssemblerConfig?.tickCircuitDelay || 0;
+      
+      let targetMicrochip = defaultOuterStage === 1 ? `p_${defaultInnerStage}x_microchip` : `p_${defaultOuterStage}x${defaultInnerStage}x_microchip`;
+      
+      if (autoConnectTarget) {
+        if (autoConnectTarget.productId.includes('microchip')) {
+          targetMicrochip = autoConnectTarget.productId;
+          const match = autoConnectTarget.productId.match(/p_(?:(\d+)x)?(\d+)x_microchip/);
+          if (match) {
+            const outerStage = match[1] ? parseInt(match[1]) : 1;
+            const innerStage = parseInt(match[2]);
+            assemblerSettings = {
+              outerStage,
+              innerStage,
+              machineOil: defaultMachineOil,
+              tickCircuitDelay: defaultTickCircuitDelay
+            };
+          }
+        } else {
+          assemblerSettings = {
+            outerStage: defaultOuterStage,
+            innerStage: defaultInnerStage,
+            machineOil: defaultMachineOil,
+            tickCircuitDelay: defaultTickCircuitDelay
+          };
+        }
+      } else {
+        assemblerSettings = {
+          outerStage: defaultOuterStage,
+          innerStage: defaultInnerStage,
+          machineOil: defaultMachineOil,
+          tickCircuitDelay: defaultTickCircuitDelay
+        };
+      }
+      
+      if (assemblerSettings) {
+        assemblerInputs = buildLogicAssemblerInputs(targetMicrochip, assemblerSettings.machineOil);
+        assemblerOutputs = buildLogicAssemblerOutputs(targetMicrochip, assemblerSettings.machineOil);
+        const metrics = calculateLogicAssemblerMetrics(targetMicrochip, assemblerSettings.machineOil, assemblerSettings.tickCircuitDelay);
+        
+        recipeWithTemp = {
+          ...recipeWithTemp,
+          inputs: assemblerInputs.length > 0 ? assemblerInputs : [{ product_id: 'p_logic_plate', quantity: 'Variable' }, { product_id: 'p_copper_wire', quantity: 'Variable' }, { product_id: 'p_semiconductor', quantity: 'Variable' }, { product_id: 'p_gold_wire', quantity: 'Variable' }],
+          outputs: assemblerOutputs.length > 0 ? assemblerOutputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
+          assemblerSettings,
+          cycle_time: metrics ? metrics.cycleTime : 'Variable',
+          power_consumption: metrics ? { max: metrics.maxPowerConsumption, average: metrics.avgPowerConsumption } : 'Variable'
+        };
+      }
+    }
+    
+    const calculatedMachineCount = recipeMachineCounts[recipe.id] || 1;
+    
+    const newNode = { id: newNodeId, type: 'custom', position, data: { recipe: recipeWithTemp, machine, machineCount: calculatedMachineCount, displayMode, machineDisplayMode,
+      leftHandles: recipeWithTemp.inputs.length, rightHandles: recipeWithTemp.outputs.length, onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput,
+      onDrillSettingsChange: handleDrillSettingsChange, onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange,
+      onBoilerSettingsChange: handleBoilerSettingsChange, isTarget: false }, sourcePosition: 'right', targetPosition: 'left' };
+    
     setNodes((nds) => {
       const updatedNodes = [...nds, newNode];
-      
-      // Auto-connect edge if opened from input/output click
       if (autoConnectTarget) {
         setTimeout(() => {
           const searchKey = autoConnectTarget.isOutput ? 'inputs' : 'outputs';
           const index = recipeWithTemp[searchKey].findIndex(item => item.product_id === autoConnectTarget.productId);
-
           if (index !== -1) {
             const sourceHandleIndex = autoConnectTarget.isOutput ? autoConnectTarget.outputIndex : index;
             const targetHandleIndex = autoConnectTarget.isOutput ? index : autoConnectTarget.inputIndex;
-
-            const newEdge = {
-              source: autoConnectTarget.isOutput ? autoConnectTarget.nodeId : newNodeId,
-              sourceHandle: `right-${sourceHandleIndex}`,
-              target: autoConnectTarget.isOutput ? newNodeId : autoConnectTarget.nodeId,
-              targetHandle: `left-${targetHandleIndex}`,
-              type: 'custom',
-              animated: false,
-            };
-            
-            setEdges((eds) => {
-              const updatedEdges = addEdge(newEdge, eds);
-              // Recalculate temperatures after auto-connecting
-              setTimeout(() => recalculateAllTemperatures(updatedNodes, updatedEdges), 0);
-              return updatedEdges;
-            });
+            const newEdge = { source: autoConnectTarget.isOutput ? autoConnectTarget.nodeId : newNodeId, sourceHandle: `right-${sourceHandleIndex}`,
+              target: autoConnectTarget.isOutput ? newNodeId : autoConnectTarget.nodeId, targetHandle: `left-${targetHandleIndex}`, type: 'custom', animated: false };
+            setEdges((eds) => addEdge(newEdge, eds));
           }
         }, 50);
       }
-      
       return updatedNodes;
     });
-
     setNodeId((id) => id + 1);
     resetSelector();
-  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange, autoConnectTarget, displayMode, machineDisplayMode, recalculateAllTemperatures]);
+  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, 
+    handleTemperatureSettingsChange, handleBoilerSettingsChange, autoConnectTarget, displayMode, machineDisplayMode, lastDrillConfig, lastAssemblerConfig, findBestDepthForProduct, recipeMachineCounts]);
 
-  // Delete recipe box and its associated target
   const deleteRecipeBoxAndTarget = useCallback((boxId) => {
-    setNodes((nds) => nds.filter((n) => n.id !== boxId));
-    setEdges((eds) => eds.filter((e) => e.source !== boxId && e.target !== boxId));
+    setNodes((nds) => nds.filter((n) => n.id !== boxId)); setEdges((eds) => eds.filter((e) => e.source !== boxId && e.target !== boxId));
     setTargetProducts(prev => prev.filter(t => t.recipeBoxId !== boxId));
   }, [setNodes, setEdges]);
 
-  // Toggle target status on a recipe box
   const toggleTargetStatus = useCallback((node) => {
     const existingTarget = targetProducts.find(t => t.recipeBoxId === node.id);
-    if (existingTarget) {
-      setTargetProducts(prev => prev.filter(t => t.recipeBoxId !== node.id));
-      updateNodeData(node.id, data => ({ ...data, isTarget: false }));
-    } else if (node.data?.recipe?.outputs?.length > 0) {
-      setTargetProducts(prev => [...prev, { 
-        id: `target_${targetIdCounter}`, 
-        recipeBoxId: node.id, 
-        productId: node.data.recipe.outputs[0].product_id, 
-        desiredAmount: 0 
-      }]);
-      setTargetIdCounter(prev => prev + 1);
-      updateNodeData(node.id, data => ({ ...data, isTarget: true }));
+    if (existingTarget) { setTargetProducts(prev => prev.filter(t => t.recipeBoxId !== node.id)); updateNodeData(node.id, data => ({ ...data, isTarget: false })); }
+    else if (node.data?.recipe?.outputs?.length > 0) {
+      setTargetProducts(prev => [...prev, { id: `target_${targetIdCounter}`, recipeBoxId: node.id, productId: node.data.recipe.outputs[0].product_id, desiredAmount: 0 }]);
+      setTargetIdCounter(prev => prev + 1); updateNodeData(node.id, data => ({ ...data, isTarget: true }));
     }
   }, [targetProducts, targetIdCounter]);
 
-  // Node interactions
   const onNodeClick = useCallback((event, node) => {
-    if (event.shiftKey && !event.ctrlKey && !event.altKey) {
-      toggleTargetStatus(node);
-    } else if (event.ctrlKey && event.altKey) {
-      deleteRecipeBoxAndTarget(node.id);
-    }
+    if (event.shiftKey && !event.ctrlKey && !event.altKey) toggleTargetStatus(node);
+    else if (event.ctrlKey && event.altKey) deleteRecipeBoxAndTarget(node.id);
   }, [toggleTargetStatus, deleteRecipeBoxAndTarget]);
 
-  // Double-click to edit machine count
   const onNodeDoubleClick = useCallback((event, node) => {
-    event.stopPropagation();
-    setEditingNodeId(node.id);
-    setEditingMachineCount(String(node.data?.machineCount ?? 0));
-    setShowMachineCountEditor(true);
+    event.stopPropagation(); setEditingNodeId(node.id); setEditingMachineCount(String(node.data?.machineCount ?? 0)); setShowMachineCountEditor(true);
   }, []);
 
-  // Update machine count for a node
   const handleMachineCountUpdate = useCallback(() => {
-    const value = parseFloat(editingMachineCount);
+    let value = parseFloat(editingMachineCount);
+    if (isNaN(value) || value <= 0) { value = 1; }
     
-    if (isNaN(value) || value < 0) {
-      alert('Machine count must be a non-negative number');
-      return;
+    const editedNode = nodes.find(n => n.id === editingNodeId);
+    if (!editedNode) return;
+    
+    const oldMachineCount = editedNode.data?.machineCount || 1;
+    const effectiveOldCount = oldMachineCount <= 0 ? 1 : oldMachineCount;
+    const multiplier = value / effectiveOldCount;
+    
+    const connectedNodeIds = new Set();
+    const toVisit = [editingNodeId];
+    const visited = new Set();
+    
+    while (toVisit.length > 0) {
+      const currentId = toVisit.pop();
+      if (visited.has(currentId)) continue;
+      visited.add(currentId);
+      connectedNodeIds.add(currentId);
+      
+      edges.forEach(edge => {
+        if (edge.source === currentId && !visited.has(edge.target)) {
+          toVisit.push(edge.target);
+        }
+        if (edge.target === currentId && !visited.has(edge.source)) {
+          toVisit.push(edge.source);
+        }
+      });
     }
-
-    updateNodeData(editingNodeId, data => ({
-      ...data,
-      machineCount: value
+    
+    setNodes(nds => nds.map(node => {
+      if (connectedNodeIds.has(node.id)) {
+        const currentCount = node.data?.machineCount || 1;
+        const effectiveCurrentCount = currentCount <= 0 ? 1 : currentCount;
+        const newCount = effectiveCurrentCount * multiplier;
+        return { ...node, data: { ...node.data, machineCount: newCount } };
+      }
+      return node;
     }));
+    
+    setShowMachineCountEditor(false); setEditingNodeId(null); setEditingMachineCount('');
+  }, [editingNodeId, editingMachineCount, nodes, edges, setNodes]);
 
-    setShowMachineCountEditor(false);
-    setEditingNodeId(null);
-    setEditingMachineCount('');
-  }, [editingNodeId, editingMachineCount]);
-
-  // Compute machines
-  const handleCompute = useCallback(() => {
-    alert('Computation to come soon!');
-  }, []);
-
-  // Handle extended panel toggle with animation
+  const handleCompute = useCallback(() => alert('Computation to come soon!'), []);
   const handleExtendedPanelToggle = useCallback(() => {
-    if (extendedPanelOpen) {
-      setExtendedPanelClosing(true);
-      setTimeout(() => {
-        setExtendedPanelOpen(false);
-        setExtendedPanelClosing(false);
-      }, 300);
-    } else {
-      setExtendedPanelOpen(true);
-    }
+    if (extendedPanelOpen) { setExtendedPanelClosing(true); setTimeout(() => { setExtendedPanelOpen(false); setExtendedPanelClosing(false); }, 300); }
+    else setExtendedPanelOpen(true);
   }, [extendedPanelOpen]);
 
-  // Get filtered recipe list based on selected product
   const getAvailableRecipes = () => {
     if (!selectedProduct) return [];
-    
     const producers = getRecipesProducingProductFiltered(selectedProduct.id);
     const consumers = getRecipesUsingProduct(selectedProduct.id);
     const isDrillInput = canDrillUseProduct(selectedProduct.id);
     const isDrillOutput = Object.values(DEPTH_OUTPUTS).some(outputs => outputs.some(o => o.product_id === selectedProduct.id));
     const isAssemblerInput = ['p_logic_plate', 'p_copper_wire', 'p_semiconductor', 'p_gold_wire', 'p_machine_oil'].includes(selectedProduct.id);
     const isAssemblerOutput = MICROCHIP_STAGES.some(stage => stage.productId === selectedProduct.id);
-
-    if (recipeFilter === 'producers') {
-      const drillRecipes = isDrillOutput ? [DEFAULT_DRILL_RECIPE] : [];
-      const assemblerRecipes = isAssemblerOutput ? [DEFAULT_LOGIC_ASSEMBLER_RECIPE] : [];
-      return [...producers, ...drillRecipes, ...assemblerRecipes];
-    }
-    
-    if (recipeFilter === 'consumers') {
-      const drillRecipes = isDrillInput ? [DEFAULT_DRILL_RECIPE] : [];
-      const assemblerRecipes = isAssemblerInput ? [DEFAULT_LOGIC_ASSEMBLER_RECIPE] : [];
-      return [...consumers, ...drillRecipes, ...assemblerRecipes];
-    }
-    
-    const drillRecipes = (isDrillInput || isDrillOutput) ? [DEFAULT_DRILL_RECIPE] : [];
-    const assemblerRecipes = (isAssemblerInput || isAssemblerOutput) ? [DEFAULT_LOGIC_ASSEMBLER_RECIPE] : [];
-    return Array.from(new Map([...producers, ...consumers, ...drillRecipes, ...assemblerRecipes].map(r => [r.id, r])).values());
+    if (recipeFilter === 'producers') return [...producers, ...(isDrillOutput ? [DEFAULT_DRILL_RECIPE] : []), ...(isAssemblerOutput ? [DEFAULT_LOGIC_ASSEMBLER_RECIPE] : [])];
+    if (recipeFilter === 'consumers') return [...consumers, ...(isDrillInput ? [DEFAULT_DRILL_RECIPE] : []), ...(isAssemblerInput ? [DEFAULT_LOGIC_ASSEMBLER_RECIPE] : [])];
+    return Array.from(new Map([...producers, ...consumers, ...((isDrillInput || isDrillOutput) ? [DEFAULT_DRILL_RECIPE] : []), 
+      ...((isAssemblerInput || isAssemblerOutput) ? [DEFAULT_LOGIC_ASSEMBLER_RECIPE] : [])].map(r => [r.id, r])).values());
   };
 
-  // Trigger file input for import
-  const handleImport = useCallback(() => fileInputRef.current?.click(), []);
+  useEffect(() => {
+    if (showRecipeSelector) {
+      const availableRecipes = selectorMode === 'product' 
+        ? getAvailableRecipes() 
+        : getRecipesForMachine(selectedMachine?.id);
+      
+      const targetNode = autoConnectTarget ? nodes.find(n => n.id === autoConnectTarget.nodeId) : null;
+      
+      const newCounts = {};
+      availableRecipes.forEach(recipe => {
+        const calculatedCount = calculateMachineCountForRecipe(recipe, targetNode, autoConnectTarget);
+        newCounts[recipe.id] = calculatedCount;
+      });
+      
+      setRecipeMachineCounts(newCounts);
+    }
+  }, [showRecipeSelector, selectorMode, selectedProduct, selectedMachine, autoConnectTarget, nodes, recipeFilter]);
 
-  // Process JSON import
+  const handleImport = useCallback(() => fileInputRef.current?.click(), []);
   const processImport = useCallback((event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const imported = JSON.parse(e.target.result);
-        
-        // Merge products
         const productMap = new Map((imported.products || []).map(p => [p.id, p]));
         const uniqueProducts = Array.from(productMap.values());
         const machineIds = new Set(imported.machines?.map(m => m.id) || []);
         const cleanedRecipes = (imported.recipes || []).filter(r => machineIds.has(r.machine_id));
-
         const currentProducts = [...products];
         uniqueProducts.forEach(newProduct => {
           const existingIndex = currentProducts.findIndex(p => p.id === newProduct.id);
-          existingIndex >= 0 
-            ? (currentProducts[existingIndex] = newProduct) 
-            : currentProducts.push(newProduct);
+          existingIndex >= 0 ? (currentProducts[existingIndex] = newProduct) : currentProducts.push(newProduct);
         });
         updateProducts(currentProducts);
-
-        // Update machines and recipes
         if (imported.machines?.length > 0) {
           const currentMachines = [...machines];
           const importedMachineIdSet = new Set(imported.machines.map(m => m.id));
           const recipesWithoutImportedMachines = recipes.filter(r => !importedMachineIdSet.has(r.machine_id));
-          
           imported.machines.forEach(newMachine => {
             const existingIndex = currentMachines.findIndex(m => m.id === newMachine.id);
-            existingIndex >= 0 
-              ? (currentMachines[existingIndex] = newMachine) 
-              : currentMachines.push(newMachine);
+            existingIndex >= 0 ? (currentMachines[existingIndex] = newMachine) : currentMachines.push(newMachine);
           });
-          updateMachines(currentMachines);
-          updateRecipes([...recipesWithoutImportedMachines, ...cleanedRecipes]);
+          updateMachines(currentMachines); updateRecipes([...recipesWithoutImportedMachines, ...cleanedRecipes]);
         }
-
-        // Import canvas layout
         if (imported.canvas && window.confirm('Clear current canvas and load imported layout?')) {
-          const restoredNodes = (imported.canvas.nodes || []).map(node => ({
-            ...node,
-            data: { 
-              ...node.data,
-              machineCount: node.data.machineCount ?? 0,
-              displayMode: displayMode,
-              machineDisplayMode: machineDisplayMode,
-              onInputClick: openRecipeSelectorForInput, 
-              onOutputClick: openRecipeSelectorForOutput, 
-              onDrillSettingsChange: handleDrillSettingsChange, 
-              onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange,
-              onTemperatureSettingsChange: handleTemperatureSettingsChange,
-              onBoilerSettingsChange: handleBoilerSettingsChange
-            }
-          }));
-          setNodes(restoredNodes);
-          setEdges(imported.canvas.edges || []);
-          setTargetProducts(imported.canvas.targetProducts || []);
-          setSoldProducts(imported.canvas.soldProducts || {});
-          setNodeId(imported.canvas.nodeId || 0);
-          setTargetIdCounter(imported.canvas.targetIdCounter || 0);
+          const restoredNodes = (imported.canvas.nodes || []).map(node => ({ ...node, data: { ...node.data, machineCount: node.data.machineCount ?? 1, displayMode, machineDisplayMode,
+            onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput, onDrillSettingsChange: handleDrillSettingsChange,
+            onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange, onBoilerSettingsChange: handleBoilerSettingsChange }}));
+          setNodes(restoredNodes); setEdges(imported.canvas.edges || []); setTargetProducts(imported.canvas.targetProducts || []);
+          setSoldProducts(imported.canvas.soldProducts || {}); setFavoriteRecipes(imported.canvas.favoriteRecipes || []); 
+          setLastDrillConfig(imported.canvas.lastDrillConfig || null); setLastAssemblerConfig(imported.canvas.lastAssemblerConfig || null);
+          setNodeId(imported.canvas.nodeId || 0); setTargetIdCounter(imported.canvas.targetIdCounter || 0);
         }
-        
-        alert('Import successful!');
-        window.location.reload();
-      } catch (error) {
-        alert(`Import failed: ${error.message}`);
-      }
+        alert('Import successful!'); window.location.reload();
+      } catch (error) { alert(`Import failed: ${error.message}`); }
     };
-    reader.readAsText(file);
-    event.target.value = '';
-  }, [setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange, displayMode, machineDisplayMode]);
+    reader.readAsText(file); event.target.value = '';
+  }, [setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, 
+    handleTemperatureSettingsChange, handleBoilerSettingsChange, displayMode, machineDisplayMode]);
 
-  // Export canvas to JSON
   const handleExport = useCallback(() => {
-    const blob = new Blob(
-      [JSON.stringify(
-        { 
-          products, 
-          machines, 
-          recipes, 
-          canvas: { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts } 
-        }, 
-        null, 
-        2
-      )], 
-      { type: 'application/json' }
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `industrialist-export-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts]);
+    const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig } }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `industrialist-export-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
+  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig]);
 
-  // Reset to default game data
   const handleRestoreDefaults = useCallback(() => {
     if (window.confirm('Restore all data to defaults? This will clear the canvas and reset all products, machines, and recipes.')) {
-      restoreDefaults();
-      setNodes([]);
-      setEdges([]);
-      setNodeId(0);
-      setTargetProducts([]);
-      setTargetIdCounter(0);
-      setSoldProducts({});
-      window.location.reload();
+      restoreDefaults(); setNodes([]); setEdges([]); setNodeId(0); setTargetProducts([]); setTargetIdCounter(0); setSoldProducts({}); setFavoriteRecipes([]); setLastDrillConfig(null); setLastAssemblerConfig(null); window.location.reload();
     }
   }, [setNodes, setEdges]);
 
-  // Filter and sort products for selector
-  const filteredProducts = products
-    .filter(p => 
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-      (filterType === 'all' || p.type === filterType)
-    )
-    .sort((a, b) => {
-      if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
-      if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
-      if (sortBy === 'price_asc') return (a.price === 'Variable' ? Infinity : a.price) - (b.price === 'Variable' ? Infinity : b.price);
-      if (sortBy === 'price_desc') return (b.price === 'Variable' ? -Infinity : b.price) - (a.price === 'Variable' ? -Infinity : a.price);
-      if (sortBy === 'rp_asc') return (a.rp_multiplier === 'Variable' ? Infinity : a.rp_multiplier) - (b.rp_multiplier === 'Variable' ? Infinity : b.rp_multiplier);
-      return (b.rp_multiplier === 'Variable' ? -Infinity : b.rp_multiplier) - (a.rp_multiplier === 'Variable' ? -Infinity : a.rp_multiplier);
-    });
+  const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) && (filterType === 'all' || p.type === filterType)).sort((a, b) => {
+    if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
+    if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
+    if (sortBy === 'price_asc') return (a.price === 'Variable' ? Infinity : a.price) - (b.price === 'Variable' ? Infinity : b.price);
+    if (sortBy === 'price_desc') return (b.price === 'Variable' ? -Infinity : b.price) - (a.price === 'Variable' ? -Infinity : a.price);
+    if (sortBy === 'rp_asc') return (a.rp_multiplier === 'Variable' ? Infinity : a.rp_multiplier) - (b.rp_multiplier === 'Variable' ? Infinity : b.rp_multiplier);
+    return (b.rp_multiplier === 'Variable' ? -Infinity : b.rp_multiplier) - (a.rp_multiplier === 'Variable' ? -Infinity : a.rp_multiplier);
+  });
 
-  // Filter machines
-  const filteredMachines = machines
-    .filter(m => 
-      m.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-      (m.id === 'm_mineshaft_drill' || m.id === 'm_logic_assembler' || getRecipesForMachine(m.id).length > 0)
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const filteredMachines = machines.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
+    (m.id === 'm_mineshaft_drill' || m.id === 'm_logic_assembler' || getRecipesForMachine(m.id).length > 0)).sort((a, b) => a.name.localeCompare(b.name));
 
-  // Handle machine selection
   const handleMachineSelect = (machine) => {
     if (machine.id === 'm_mineshaft_drill') createRecipeBox(DEFAULT_DRILL_RECIPE);
     else if (machine.id === 'm_logic_assembler') createRecipeBox(DEFAULT_LOGIC_ASSEMBLER_RECIPE);
     else setSelectedMachine(machine);
   };
 
-  const availableRecipes = selectorMode === 'product' 
-    ? getAvailableRecipes() 
-    : getRecipesForMachine(selectedMachine?.id);
+  const availableRecipes = (selectorMode === 'product' ? getAvailableRecipes() : getRecipesForMachine(selectedMachine?.id))
+    .sort((a, b) => {
+      const aIsFavorite = favoriteRecipes.includes(a.id);
+      const bIsFavorite = favoriteRecipes.includes(b.id);
+      if (aIsFavorite && !bIsFavorite) return -1;
+      if (!aIsFavorite && bIsFavorite) return 1;
+      const machineA = getMachine(a.machine_id);
+      const machineB = getMachine(b.machine_id);
+      return (machineA?.name || '').localeCompare(machineB?.name || '');
+    });
+
+  const toggleFavoriteRecipe = (recipeId) => {
+    setFavoriteRecipes(prev => 
+      prev.includes(recipeId) ? prev.filter(id => id !== recipeId) : [...prev, recipeId]
+    );
+  };
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
-      <ReactFlow 
-        ref={reactFlowWrapper} 
-        nodes={nodes} 
-        edges={edges} 
-        onNodesChange={onNodesChange} 
-        onEdgesChange={onEdgesChange} 
-        onConnect={onConnect} 
-        onNodeClick={onNodeClick}
-        onNodeDoubleClick={onNodeDoubleClick}
-        nodeTypes={nodeTypes} 
-        edgeTypes={edgeTypes} 
-        fitView
-      >
+      <ReactFlow ref={reactFlowWrapper} nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} 
+        onNodeClick={onNodeClick} onNodeDoubleClick={onNodeDoubleClick} nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView>
         <Background color="#333" gap={16} size={1} />
         <Controls className={(extendedPanelOpen || extendedPanelClosing) && !leftPanelCollapsed ? 'controls-shifted' : ''} />
-        <MiniMap 
-          nodeColor={(node) => {
-            return getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim();
-          }}
-          maskColor={getComputedStyle(document.documentElement).getPropertyValue('--bg-overlay').trim()}
-        />
+        <MiniMap nodeColor={() => getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim()}
+          maskColor={getComputedStyle(document.documentElement).getPropertyValue('--bg-overlay').trim()} />
         
-        {/* Stats Panel and Action Buttons - Left Side */}
         <Panel position="top-left" style={{ margin: '10px' }}>
           <div className={`left-panel-container ${leftPanelCollapsed ? 'collapsed' : ''}`}>
             <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start', flexDirection: 'column' }}>
               <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
-                {/* Stats Panel */}
                 <div className="stats-panel">
                   <h3 className="stats-title">{statisticsTitle}</h3>
                   <div className="stats-grid">
-                    <div className="stat-item">
-                      <div className="stat-label">Total Power:</div>
-                      <div className="stat-value">{formatPowerDisplay(stats.totalPower)}</div>
-                    </div>
-                    <div className="stat-item">
-                      <div className="stat-label">Total Pollution:</div>
-                      <div className="stat-value">{stats.totalPollution.toFixed(2)}%/hr</div>
-                    </div>
-                    <div className="stat-item">
-                      <div className="stat-label">Total Minimum Model Count:</div>
-                      <div className="stat-value">{stats.totalModelCount.toFixed(0)}</div>
-                    </div>
-                    <div className="stat-item">
-                      <div className="stat-label">Total Profit:</div>
-                      <div className="stat-value" style={{ color: totalProfit >= 0 ? '#86efac' : '#fca5a5' }}>
-                        ${metricFormat(totalProfit)}/s
-                      </div>
-                    </div>
+                    <div className="stat-item"><div className="stat-label">Total Power:</div><div className="stat-value">{formatPowerDisplay(stats.totalPower)}</div></div>
+                    <div className="stat-item"><div className="stat-label">Total Pollution:</div><div className="stat-value">{stats.totalPollution.toFixed(2)}%/hr</div></div>
+                    <div className="stat-item"><div className="stat-label">Total Minimum Model Count:</div><div className="stat-value">{stats.totalModelCount.toFixed(0)}</div></div>
+                    <div className="stat-item"><div className="stat-label">Total Profit:</div><div className="stat-value" style={{ color: totalProfit >= 0 ? '#86efac' : '#fca5a5' }}>
+                      ${metricFormat(totalProfit)}/s</div></div>
                   </div>
                 </div>
-
-                {/* Action Buttons */}
                 <div className="flex-col action-buttons-container">
-                  <button onClick={openRecipeSelector} className="btn btn-primary">
-                    + Select Recipe
-                  </button>
-                  <button onClick={() => setShowTargetsModal(true)} className="btn btn-secondary">
-                    View Targets ({targetProducts.length})
-                  </button>
-                  <button onClick={handleCompute} className="btn btn-secondary">
-                    Compute Machines
-                  </button>
-                  
-                  {/* Extended Panel and Collapse Toggle Buttons */}
+                  <button onClick={openRecipeSelector} className="btn btn-primary">+ Select Recipe</button>
+                  <button onClick={() => setShowTargetsModal(true)} className="btn btn-secondary">View Targets ({targetProducts.length})</button>
+                  <button onClick={handleCompute} className="btn btn-secondary">Compute Machines</button>
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <button 
-                      onClick={() => setExtendedPanelOpen(!extendedPanelOpen)} 
-                      className="btn btn-secondary btn-square"
-                      title={extendedPanelOpen ? "Close more statistics" : "Open more statistics"}
-                    >
-                      {extendedPanelOpen ? '↓' : '↑'}
-                    </button>
-                    <button 
-                      onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)} 
-                      className="btn btn-secondary btn-square btn-panel-toggle"
-                      title={leftPanelCollapsed ? "Show left panel" : "Hide left panel"}
-                    >
-                      {leftPanelCollapsed ? '→' : '←'}
-                    </button>
+                    <button onClick={() => setExtendedPanelOpen(!extendedPanelOpen)} className="btn btn-secondary btn-square"
+                      title={extendedPanelOpen ? "Close more statistics" : "Open more statistics"}>{extendedPanelOpen ? '↓' : '↑'}</button>
+                    <button onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)} className="btn btn-secondary btn-square btn-panel-toggle"
+                      title={leftPanelCollapsed ? "Show left panel" : "Hide left panel"}>{leftPanelCollapsed ? '→' : '←'}</button>
                   </div>
                 </div>
               </div>
               
-              {/* More Statistics Panel */}
               {(extendedPanelOpen || extendedPanelClosing) && (
                 <div className={`extended-panel ${extendedPanelClosing ? 'closing' : ''}`}>
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    padding: '15px',
-                    borderBottom: '2px solid var(--border-divider)',
-                    position: 'sticky',
-                    top: 0,
-                    background: 'var(--bg-secondary)',
-                    zIndex: 1
-                  }}>
-                    <h3 style={{
-                      color: 'var(--color-primary)',
-                      fontSize: 'var(--font-size-md)',
-                      fontWeight: 700,
-                      margin: 0
-                    }}>
-                      More Statistics
-                    </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px', borderBottom: '2px solid var(--border-divider)',
+                    position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 1 }}>
+                    <h3 style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-md)', fontWeight: 700, margin: 0 }}>More Statistics</h3>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                      <button 
-                        onClick={() => setDisplayMode(prev => prev === 'perSecond' ? 'perCycle' : 'perSecond')}
-                        className="btn btn-secondary"
-                        style={{
-                          padding: '8px 16px',
-                          fontSize: 'var(--font-size-base)',
-                          minWidth: 'auto'
-                        }}
-                        title={displayMode === 'perSecond' ? 'Switch to per-cycle display' : 'Switch to per-second display'}
-                      >
-                        {displayMode === 'perSecond' ? 'Per Second' : 'Per Cycle'}
-                      </button>
-                      <button 
-                        onClick={() => setMachineDisplayMode(prev => prev === 'perMachine' ? 'total' : 'perMachine')}
-                        className="btn btn-secondary"
-                        style={{
-                          padding: '8px 16px',
-                          fontSize: 'var(--font-size-base)',
-                          minWidth: 'auto'
-                        }}
-                        title={machineDisplayMode === 'perMachine' ? 'Switch to total display' : 'Switch to per-machine display'}
-                      >
-                        {machineDisplayMode === 'perMachine' ? 'Per Machine' : 'Total'}
-                      </button>
+                      <button onClick={() => setDisplayMode(prev => prev === 'perSecond' ? 'perCycle' : 'perSecond')} className="btn btn-secondary"
+                        style={{ padding: '8px 16px', fontSize: 'var(--font-size-base)', minWidth: 'auto' }}
+                        title={displayMode === 'perSecond' ? 'Switch to per-cycle display' : 'Switch to per-second display'}>
+                        {displayMode === 'perSecond' ? 'Per Second' : 'Per Cycle'}</button>
+                      <button onClick={() => setMachineDisplayMode(prev => prev === 'perMachine' ? 'total' : 'perMachine')} className="btn btn-secondary"
+                        style={{ padding: '8px 16px', fontSize: 'var(--font-size-base)', minWidth: 'auto' }}
+                        title={machineDisplayMode === 'perMachine' ? 'Switch to total display' : 'Switch to per-machine display'}>
+                        {machineDisplayMode === 'perMachine' ? 'Per Machine' : 'Total'}</button>
                     </div>
                   </div>
                   <div className="extended-panel-content" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', paddingBottom: '120px' }}>
-                    {/* Global Pollution Input */}
                     <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <label 
-                        htmlFor="global-pollution" 
-                        style={{ 
-                          color: 'var(--text-primary)', 
-                          fontSize: 'var(--font-size-base)', 
-                          fontWeight: 600,
-                          whiteSpace: 'nowrap'
-                        }}
-                      >
-                        Global Pollution (%):
-                      </label>
-                      <input 
-                        id="global-pollution"
-                        type="text" 
-                        value={globalPollution} 
-                        onFocus={() => setPollutionInputFocused(true)}
-                        onBlur={(e) => {
-                          setPollutionInputFocused(false);
-                          const val = e.target.value;
-                          const num = parseFloat(val);
-                          if (!isNaN(num) && isFinite(num)) {
-                            setGlobalPollution(parseFloat(num.toFixed(4)));
-                          } else {
-                            setGlobalPollution(0);
-                          }
-                        }}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setGlobalPollution(val);
-                        }}
-                        className="input"
-                        placeholder="Enter global pollution"
-                        style={{ 
-                          flex: 1,
-                          textAlign: 'left'
-                        }}
-                      />
+                      <label htmlFor="global-pollution" style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-base)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        Global Pollution (%):</label>
+                      <input id="global-pollution" type="text" value={globalPollution} onFocus={() => setPollutionInputFocused(true)}
+                        onBlur={(e) => { setPollutionInputFocused(false); const val = e.target.value; const num = parseFloat(val);
+                          setGlobalPollution(!isNaN(num) && isFinite(num) ? parseFloat(num.toFixed(4)) : 0); }}
+                        onChange={(e) => setGlobalPollution(e.target.value)} className="input" placeholder="Enter global pollution" style={{ flex: 1, textAlign: 'left' }} />
                     </div>
 
-                    {/* Excess Products Table */}
                     <div style={{ marginTop: '30px' }}>
-                      <h4 style={{ 
-                        color: 'var(--text-primary)', 
-                        fontSize: 'var(--font-size-base)', 
-                        fontWeight: 600,
-                        marginBottom: '12px'
-                      }}>
-                        Excess Products:
-                      </h4>
+                      <h4 style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: '12px' }}>Excess Products:</h4>
                       {excessProducts.length === 0 ? (
-                        <div style={{ 
-                          color: 'var(--text-secondary)', 
-                          fontSize: 'var(--font-size-sm)',
-                          padding: '15px',
-                          textAlign: 'center',
-                          background: 'var(--bg-main)',
-                          borderRadius: 'var(--radius-sm)'
-                        }}>
-                          No excess products. All outputs are consumed by connected inputs.
-                        </div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', padding: '15px', textAlign: 'center', 
+                          background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)' }}>No excess products. All outputs are consumed by connected inputs.</div>
                       ) : (
-                        <div style={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: '8px' 
-                        }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {excessProducts.map(item => (
-                            <div 
-                              key={item.productId}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '10px 12px',
-                                background: 'var(--bg-main)',
-                                borderRadius: 'var(--radius-sm)',
-                                border: item.isSold ? '2px solid var(--color-primary)' : '2px solid var(--border-light)'
-                              }}
-                            >
+                            <div key={item.productId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px',
+                              background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: item.isSold ? '2px solid var(--color-primary)' : '2px solid var(--border-light)' }}>
                               <div style={{ flex: 1 }}>
-                                <div style={{ 
-                                  color: 'var(--text-primary)', 
-                                  fontSize: 'var(--font-size-sm)',
-                                  fontWeight: 600 
-                                }}>
-                                  {item.product.name}
-                                </div>
-                                <div style={{ 
-                                  color: 'var(--text-secondary)', 
-                                  fontSize: 'var(--font-size-xs)',
-                                  marginTop: '2px'
-                                }}>
-                                  {metricFormat(item.excessRate)}/s
-                                </div>
+                                <div style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>{item.product.name}</div>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-xs)', marginTop: '2px' }}>{metricFormat(item.excessRate)}/s</div>
                               </div>
-                              <div style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '10px' 
-                              }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 {typeof item.product.price === 'number' && (
-                                  <div style={{ 
-                                    color: item.isSold ? 'var(--color-primary)' : 'var(--text-muted)',
-                                    fontSize: 'var(--font-size-sm)',
-                                    fontWeight: 600
-                                  }}>
-                                    ${metricFormat(item.product.price * item.excessRate)}/s
-                                  </div>
+                                  <div style={{ color: item.isSold ? 'var(--color-primary)' : 'var(--text-muted)', fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>
+                                    ${metricFormat(item.product.price * item.excessRate)}/s</div>
                                 )}
-                                <label style={{ 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: '6px',
-                                  cursor: 'pointer',
-                                  color: 'var(--text-primary)',
-                                  fontSize: 'var(--font-size-sm)'
-                                }}>
-                                  <input 
-                                    type="checkbox"
-                                    checked={item.isSold}
-                                    onChange={(e) => {
-                                      setSoldProducts(prev => ({
-                                        ...prev,
-                                        [item.productId]: e.target.checked
-                                      }));
-                                    }}
-                                    style={{
-                                      width: '18px',
-                                      height: '18px',
-                                      cursor: 'pointer',
-                                      accentColor: 'var(--color-primary)'
-                                    }}
-                                  />
-                                  Sell
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: 'var(--text-primary)', fontSize: 'var(--font-size-sm)' }}>
+                                  <input type="checkbox" checked={item.isSold} onChange={(e) => setSoldProducts(prev => ({ ...prev, [item.productId]: e.target.checked }))}
+                                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--color-primary)' }} />Sell
                                 </label>
                               </div>
                             </div>
@@ -1449,187 +814,55 @@ function App() {
                       )}
                     </div>
 
-                    {/* Deficient Products Table */}
                     <div style={{ marginTop: '30px' }}>
-                      <h4 style={{ 
-                        color: 'var(--text-primary)', 
-                        fontSize: 'var(--font-size-base)', 
-                        fontWeight: 600,
-                        marginBottom: '12px'
-                      }}>
-                        Deficient Products:
-                      </h4>
+                      <h4 style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: '12px' }}>Deficient Products:</h4>
                       {deficientProducts.length === 0 ? (
-                        <div style={{ 
-                          color: 'var(--text-secondary)', 
-                          fontSize: 'var(--font-size-sm)',
-                          padding: '15px',
-                          textAlign: 'center',
-                          background: 'var(--bg-main)',
-                          borderRadius: 'var(--radius-sm)'
-                        }}>
-                          No deficient products. All inputs are fully supplied by connected outputs.
-                        </div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', padding: '15px', textAlign: 'center',
+                          background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)' }}>No deficient products. All inputs are fully supplied by connected outputs.</div>
                       ) : (
-                        <div style={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: '8px' 
-                        }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                           {deficientProducts.map(item => (
-                            <div 
-                              key={item.productId}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '10px 12px',
-                                background: 'var(--bg-main)',
-                                borderRadius: 'var(--radius-sm)',
-                                border: '2px solid #fca5a5'
-                              }}
-                            >
+                            <div key={item.productId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px',
+                              background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '2px solid #fca5a5' }}>
                               <div style={{ flex: 1 }}>
-                                <div style={{ 
-                                  color: 'var(--text-primary)', 
-                                  fontSize: 'var(--font-size-sm)',
-                                  fontWeight: 600 
-                                }}>
-                                  {item.product.name}
-                                </div>
-                                <div style={{ 
-                                  color: '#fca5a5', 
-                                  fontSize: 'var(--font-size-xs)',
-                                  marginTop: '2px'
-                                }}>
-                                  Shortage: {metricFormat(item.deficiencyRate)}/s
-                                </div>
+                                <div style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>{item.product.name}</div>
+                                <div style={{ color: '#fca5a5', fontSize: 'var(--font-size-xs)', marginTop: '2px' }}>Shortage: {metricFormat(item.deficiencyRate)}/s</div>
                               </div>
-                              <div style={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '10px' 
-                              }}>
-                                <div style={{ 
-                                  color: '#fca5a5',
-                                  fontSize: 'var(--font-size-xs)',
-                                  fontWeight: 600,
-                                  textAlign: 'right'
-                                }}>
-                                  {item.affectedNodes.length} node{item.affectedNodes.length !== 1 ? 's' : ''} affected
-                                </div>
-                              </div>
+                              <div style={{ color: '#fca5a5', fontSize: 'var(--font-size-xs)', fontWeight: 600, textAlign: 'right' }}>
+                                {item.affectedNodes.length} node{item.affectedNodes.length !== 1 ? 's' : ''} affected</div>
                             </div>
                           ))}
                         </div>
                       )}
                     </div>
 
-                    {/* Machine Costs Table */}
                     <div style={{ marginTop: '30px' }}>
-                      <h4 style={{ 
-                        color: 'var(--text-primary)', 
-                        fontSize: 'var(--font-size-base)', 
-                        fontWeight: 600,
-                        marginBottom: '12px'
-                      }}>
-                        Machine Costs:
-                      </h4>
+                      <h4 style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: '12px' }}>Machine Costs:</h4>
                       {machineStats.stats.length === 0 ? (
-                        <div style={{ 
-                          color: 'var(--text-secondary)', 
-                          fontSize: 'var(--font-size-sm)',
-                          padding: '15px',
-                          textAlign: 'center',
-                          background: 'var(--bg-main)',
-                          borderRadius: 'var(--radius-sm)'
-                        }}>
-                          No machines on canvas.
-                        </div>
+                        <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', padding: '15px', textAlign: 'center',
+                          background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)' }}>No machines on canvas.</div>
                       ) : (
                         <>
-                          <div style={{ 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            gap: '8px',
-                            marginBottom: '15px'
-                          }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '15px' }}>
                             {machineStats.stats.map(stat => (
-                              <div 
-                                key={stat.machineId}
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  padding: '10px 12px',
-                                  background: 'var(--bg-main)',
-                                  borderRadius: 'var(--radius-sm)',
-                                  border: '2px solid var(--border-light)'
-                                }}
-                              >
+                              <div key={stat.machineId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px',
+                                background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '2px solid var(--border-light)' }}>
                                 <div style={{ flex: 1 }}>
-                                  <div style={{ 
-                                    color: 'var(--text-primary)', 
-                                    fontSize: 'var(--font-size-sm)',
-                                    fontWeight: 600 
-                                  }}>
-                                    {stat.machine.name}
-                                  </div>
-                                  <div style={{ 
-                                    color: 'var(--text-secondary)', 
-                                    fontSize: 'var(--font-size-xs)',
-                                    marginTop: '2px'
-                                  }}>
-                                    Count: {stat.count} × ${metricFormat(stat.cost)}
-                                  </div>
+                                  <div style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>{stat.machine.name}</div>
+                                  <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-xs)', marginTop: '2px' }}>
+                                    Count: {stat.count} × ${metricFormat(stat.cost)}</div>
                                 </div>
-                                <div style={{ 
-                                  color: 'var(--color-primary)',
-                                  fontSize: 'var(--font-size-sm)',
-                                  fontWeight: 600
-                                }}>
-                                  ${metricFormat(stat.totalCost)}
-                                </div>
+                                <div style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>${metricFormat(stat.totalCost)}</div>
                               </div>
                             ))}
                           </div>
-                          
-                          {/* Total Cost */}
-                          <div style={{
-                            padding: '12px',
-                            background: 'var(--bg-main)',
-                            borderRadius: 'var(--radius-sm)',
-                            border: '2px solid var(--color-primary)'
-                          }}>
-                            <div style={{
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              marginBottom: '8px'
-                            }}>
-                              <div style={{ 
-                                color: 'var(--text-primary)', 
-                                fontSize: 'var(--font-size-base)',
-                                fontWeight: 700 
-                              }}>
-                                Total Cost:
-                              </div>
-                              <div style={{ 
-                                color: 'var(--color-primary)',
-                                fontSize: 'var(--font-size-md)',
-                                fontWeight: 700
-                              }}>
-                                ${metricFormat(machineStats.totalCost)}
-                              </div>
+                          <div style={{ padding: '12px', background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '2px solid var(--color-primary)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <div style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-base)', fontWeight: 700 }}>Total Cost:</div>
+                              <div style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-md)', fontWeight: 700 }}>${metricFormat(machineStats.totalCost)}</div>
                             </div>
-                            <div style={{ 
-                              color: 'var(--text-muted)', 
-                              fontSize: 'var(--font-size-xs)',
-                              fontStyle: 'italic',
-                              textAlign: 'center'
-                            }}>
-                              For machines only. Poles and pipes not accounted for.
-                            </div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-xs)', fontStyle: 'italic', textAlign: 'center' }}>
+                              For machines only. Poles and pipes not accounted for.</div>
                           </div>
                         </>
                       )}
@@ -1641,200 +874,79 @@ function App() {
           </div>
         </Panel>
 
-        {/* Menu - Right Side */}
         <Panel position="top-right" style={{ margin: '10px' }}>
           <div className={`menu-container ${menuOpen ? '' : 'closed'}`}>
-            <button 
-              onClick={() => setMenuOpen(!menuOpen)} 
-              className="btn btn-secondary btn-menu-toggle"
-            >
-              {menuOpen ? '>' : '<'}
-            </button>
+            <button onClick={() => setMenuOpen(!menuOpen)} className="btn btn-secondary btn-menu-toggle">{menuOpen ? '>' : '<'}</button>
             <div className="menu-buttons">
-              <button 
-                onClick={() => { setNodes([]); setEdges([]); setNodeId(0); setTargetProducts([]); setTargetIdCounter(0); setSoldProducts({}); }} 
-                className="btn btn-secondary"
-              >
-                Clear All
-              </button>
-              <button onClick={handleImport} className="btn btn-secondary">
-                Import JSON
-              </button>
-              <button onClick={handleExport} className="btn btn-secondary">
-                Export JSON
-              </button>
-              <button onClick={handleRestoreDefaults} className="btn btn-secondary">
-                Restore Defaults
-              </button>
-              <button 
-                onClick={() => setShowThemeEditor(true)}
-                className="btn btn-secondary"
-              >
-                Theme Editor
-              </button>
+              <button onClick={() => { setNodes([]); setEdges([]); setNodeId(0); setTargetProducts([]); setTargetIdCounter(0); setSoldProducts({}); setLastDrillConfig(null); setLastAssemblerConfig(null); }} 
+                className="btn btn-secondary">Clear All</button>
+              <button onClick={handleImport} className="btn btn-secondary">Import JSON</button>
+              <button onClick={handleExport} className="btn btn-secondary">Export JSON</button>
+              <button onClick={handleRestoreDefaults} className="btn btn-secondary">Restore Defaults</button>
+              <button onClick={() => setShowThemeEditor(true)} className="btn btn-secondary">Theme Editor</button>
             </div>
           </div>
         </Panel>
       </ReactFlow>
 
-      <input 
-        ref={fileInputRef} 
-        type="file" 
-        accept=".json" 
-        style={{ display: 'none' }} 
-        onChange={processImport} 
-      />
+      <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={processImport} />
 
-      {/* Machine Count Editor Modal */}
       {showMachineCountEditor && (
         <div className="modal-overlay" onClick={() => setShowMachineCountEditor(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '400px' }}>
             <h2 className="modal-title">Edit Machine Count</h2>
             <div style={{ marginBottom: '20px' }}>
-              <label 
-                style={{ 
-                  display: 'block',
-                  color: 'var(--text-primary)', 
-                  fontSize: 'var(--font-size-base)', 
-                  fontWeight: 600,
-                  marginBottom: '10px'
-                }}
-              >
-                Machine Count:
-              </label>
-              <input 
-                type="number"
-                min="0"
-                step="0.1"
-                value={editingMachineCount}
-                onChange={(e) => setEditingMachineCount(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    handleMachineCountUpdate();
-                  }
-                }}
-                className="input"
-                placeholder="Enter machine count"
-                autoFocus
-              />
-              <p style={{ 
-                marginTop: '8px', 
-                fontSize: 'var(--font-size-sm)', 
-                color: 'var(--text-secondary)' 
-              }}>
-                Must be a non-negative number (can be decimal)
-              </p>
+              <label style={{ display: 'block', color: 'var(--text-primary)', fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: '10px' }}>
+                Machine Count:</label>
+              <input type="number" min="0" step="0.1" value={editingMachineCount} onChange={(e) => setEditingMachineCount(e.target.value)}
+                onKeyPress={(e) => { if (e.key === 'Enter') handleMachineCountUpdate(); }} className="input" placeholder="Enter machine count" autoFocus />
+              <p style={{ marginTop: '8px', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>Must be a non-negative number (can be decimal)</p>
             </div>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button 
-                onClick={() => setShowMachineCountEditor(false)} 
-                className="btn btn-secondary"
-                style={{ flex: 1 }}
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={handleMachineCountUpdate} 
-                className="btn btn-primary"
-                style={{ flex: 1 }}
-              >
-                Apply
-              </button>
+              <button onClick={() => setShowMachineCountEditor(false)} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
+              <button onClick={handleMachineCountUpdate} className="btn btn-primary" style={{ flex: 1 }}>Apply</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Recipe Selector Modal */}
       {showRecipeSelector && (
         <div className="modal-overlay" onClick={resetSelector}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="modal-title">
-              {selectedProduct 
-                ? `Recipes for ${selectedProduct.name}` 
-                : selectedMachine 
-                  ? `Recipes for ${selectedMachine.name}` 
-                  : 'Select Product or Machine'}
-            </h2>
-
+            <h2 className="modal-title">{selectedProduct ? `Recipes for ${selectedProduct.name}` : selectedMachine ? `Recipes for ${selectedMachine.name}` : 'Select Product or Machine'}</h2>
             {!selectedProduct && !selectedMachine ? (
               <>
                 <div className="mb-lg">
                   <div className="flex-row" style={{ gap: '10px', marginBottom: '15px' }}>
-                    <button 
-                      onClick={() => setSelectorMode('product')} 
-                      className={`btn ${selectorMode === 'product' ? 'btn-primary' : 'btn-secondary'}`} 
-                      style={{ flex: 1 }}
-                    >
-                      By Products
-                    </button>
-                    <button 
-                      onClick={() => setSelectorMode('machine')} 
-                      className={`btn ${selectorMode === 'machine' ? 'btn-primary' : 'btn-secondary'}`} 
-                      style={{ flex: 1 }}
-                    >
-                      By Machines
-                    </button>
+                    <button onClick={() => setSelectorMode('product')} className={`btn ${selectorMode === 'product' ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1 }}>
+                      By Products</button>
+                    <button onClick={() => setSelectorMode('machine')} className={`btn ${selectorMode === 'machine' ? 'btn-primary' : 'btn-secondary'}`} style={{ flex: 1 }}>
+                      By Machines</button>
                   </div>
                 </div>
-
                 {selectorMode === 'product' ? (
                   <>
                     <div className="mb-lg flex-col">
-                      <input 
-                        type="text" 
-                        placeholder="Search products..." 
-                        value={searchTerm} 
-                        onChange={(e) => setSearchTerm(e.target.value)} 
-                        className="input" 
-                      />
+                      <input type="text" placeholder="Search products..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input" />
                       <div className="flex-row">
-                        <select 
-                          value={filterType} 
-                          onChange={(e) => setFilterType(e.target.value)} 
-                          className="select"
-                        >
-                          <option value="all">All Types</option>
-                          <option value="item">Items Only</option>
-                          <option value="fluid">Fluids Only</option>
+                        <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="select">
+                          <option value="all">All Types</option><option value="item">Items Only</option><option value="fluid">Fluids Only</option>
                         </select>
-                        <select 
-                          value={sortBy} 
-                          onChange={(e) => setSortBy(e.target.value)} 
-                          className="select"
-                        >
-                          <option value="name_asc">Name ↑ (A-Z)</option>
-                          <option value="name_desc">Name ↓ (Z-A)</option>
-                          <option value="price_asc">Price ↑ (Low-High)</option>
-                          <option value="price_desc">Price ↓ (High-Low)</option>
-                          <option value="rp_asc">RP Mult ↑ (Low-High)</option>
-                          <option value="rp_desc">RP Mult ↓ (High-Low)</option>
+                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="select">
+                          <option value="name_asc">Name ↑ (A-Z)</option><option value="name_desc">Name ↓ (Z-A)</option>
+                          <option value="price_asc">Price ↑ (Low-High)</option><option value="price_desc">Price ↓ (High-Low)</option>
+                          <option value="rp_asc">RP Mult ↑ (Low-High)</option><option value="rp_desc">RP Mult ↓ (High-Low)</option>
                         </select>
                       </div>
                     </div>
                     <div className="modal-content" style={{ maxHeight: '400px' }}>
-                      <div className="product-table-header">
-                        <div>Product</div>
-                        <div className="text-right">Price</div>
-                        <div className="text-right">RP Mult</div>
-                      </div>
+                      <div className="product-table-header"><div>Product</div><div className="text-right">Price</div><div className="text-right">RP Mult</div></div>
                       {filteredProducts.map(product => (
                         <div key={product.id} onClick={() => setSelectedProduct(product)} className="product-row">
-                          <div>
-                            <div className="product-name">{product.name}</div>
-                            <div className="product-type">
-                              {product.type === 'item' ? '📦 Item' : '💧 Fluid'}
-                            </div>
-                          </div>
+                          <div><div className="product-name">{product.name}</div><div className="product-type">{product.type === 'item' ? '📦 Item' : '💧 Fluid'}</div></div>
+                          <div className="text-right" style={{ alignSelf: 'center' }}>{product.price === 'Variable' ? 'Variable' : `${metricFormat(product.price)}`}</div>
                           <div className="text-right" style={{ alignSelf: 'center' }}>
-                            {product.price === 'Variable' ? 'Variable' : `${metricFormat(product.price)}`}
-                          </div>
-                          <div className="text-right" style={{ alignSelf: 'center' }}>
-                            {product.rp_multiplier === 'Variable' 
-                              ? 'Variable' 
-                              : product.rp_multiplier >= 1000 
-                                ? `${metricFormat(product.rp_multiplier)}x` 
-                                : `${product.rp_multiplier.toFixed(1)}x`}
+                            {product.rp_multiplier === 'Variable' ? 'Variable' : product.rp_multiplier >= 1000 ? `${metricFormat(product.rp_multiplier)}x` : `${product.rp_multiplier.toFixed(1)}x`}
                           </div>
                         </div>
                       ))}
@@ -1842,152 +954,135 @@ function App() {
                   </>
                 ) : (
                   <>
-                    <div className="mb-lg">
-                      <input 
-                        type="text" 
-                        placeholder="Search machines..." 
-                        value={searchTerm} 
-                        onChange={(e) => setSearchTerm(e.target.value)} 
-                        className="input" 
-                      />
-                    </div>
+                    <div className="mb-lg"><input type="text" placeholder="Search machines..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input" /></div>
                     <div className="modal-content flex-col" style={{ maxHeight: '400px' }}>
-                      {filteredMachines.length === 0 ? (
-                        <div className="empty-state">No machines found</div>
-                      ) : (
-                        filteredMachines.map(machine => (
-                          <div 
-                            key={machine.id} 
-                            onClick={() => handleMachineSelect(machine)} 
-                            className="recipe-card" 
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <div className="recipe-machine">{machine.name}</div>
-                            <div className="recipe-details" style={{ color: '#999' }}>
-                              {machine.id === 'm_mineshaft_drill' || machine.id === 'm_logic_assembler' 
-                                ? 'Click to create box' 
-                                : `${getRecipesForMachine(machine.id).length} recipe(s)`}
-                            </div>
+                      {filteredMachines.length === 0 ? <div className="empty-state">No machines found</div> : filteredMachines.map(machine => (
+                        <div key={machine.id} onClick={() => handleMachineSelect(machine)} className="recipe-card" style={{ cursor: 'pointer' }}>
+                          <div className="recipe-machine">{machine.name}</div>
+                          <div className="recipe-details" style={{ color: '#999' }}>
+                            {machine.id === 'm_mineshaft_drill' || machine.id === 'm_logic_assembler' ? 'Click to create box' : `${getRecipesForMachine(machine.id).length} recipe(s)`}
                           </div>
-                        ))
-                      )}
+                        </div>
+                      ))}
                     </div>
                   </>
                 )}
               </>
             ) : (
               <>
-                {selectorOpenedFrom === 'button' && (
-                  <button 
-                    onClick={() => { setSelectedProduct(null); setSelectedMachine(null); }} 
-                    className="btn btn-secondary btn-back"
-                  >
-                    ← Back
-                  </button>
-                )}
+                {selectorOpenedFrom === 'button' && <button onClick={() => { setSelectedProduct(null); setSelectedMachine(null); }} className="btn btn-secondary btn-back">← Back</button>}
                 {selectedProduct && (
                   <div className="mb-lg">
-                    <select 
-                      value={recipeFilter} 
-                      onChange={(e) => setRecipeFilter(e.target.value)} 
-                      className="select"
-                    >
-                      <option value="all">All Recipes</option>
-                      <option value="producers">Producers (Outputs {selectedProduct.name})</option>
+                    <select value={recipeFilter} onChange={(e) => setRecipeFilter(e.target.value)} className="select">
+                      <option value="all">All Recipes</option><option value="producers">Producers (Outputs {selectedProduct.name})</option>
                       <option value="consumers">Consumers (Uses {selectedProduct.name})</option>
                     </select>
                   </div>
                 )}
                 <div className="modal-content flex-col" style={{ maxHeight: '400px' }}>
-                  {availableRecipes.length === 0 ? (
-                    <div className="empty-state">No recipes found</div>
-                  ) : (
-                    availableRecipes.map(recipe => {
-                      const machine = getMachine(recipe.machine_id);
-                      return machine && recipe.inputs && recipe.outputs ? (
+                  {availableRecipes.length === 0 ? <div className="empty-state">No recipes found</div> : availableRecipes.map(recipe => {
+                    const machine = getMachine(recipe.machine_id);
+                    const isFavorite = favoriteRecipes.includes(recipe.id);
+                    const machineCount = recipeMachineCounts[recipe.id] || 1;
+                    return machine && recipe.inputs && recipe.outputs ? (
+                      <div key={recipe.id} className="recipe-card" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <button onClick={(e) => { e.stopPropagation(); toggleFavoriteRecipe(recipe.id); }}
+                          style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '4px', lineHeight: 1,
+                            filter: isFavorite ? 'none' : 'grayscale(100%)', opacity: isFavorite ? 1 : 0.4, transition: 'all 0.2s' }}
+                          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.2)'; e.currentTarget.style.opacity = '1'; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = isFavorite ? '1' : '0.4'; }}
+                          title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
+                          ⭐
+                        </button>
                         <div 
-                          key={recipe.id} 
-                          onClick={() => createRecipeBox(recipe)} 
-                          className="recipe-card"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const newCount = prompt('Enter machine count:', machineCount.toString());
+                            if (newCount !== null && !isNaN(parseFloat(newCount)) && parseFloat(newCount) > 0) {
+                              setRecipeMachineCounts(prev => ({
+                                ...prev,
+                                [recipe.id]: parseFloat(newCount)
+                              }));
+                            }
+                          }}
+                          style={{
+                            minWidth: '70px',
+                            padding: '10px 12px',
+                            background: 'var(--color-primary)',
+                            color: 'var(--color-primary-dark)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontWeight: 700,
+                            fontSize: '18px',
+                            textAlign: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            userSelect: 'none',
+                            border: '2px solid transparent'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'var(--color-primary-hover)';
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                            e.currentTarget.style.borderColor = 'var(--color-primary-hover)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'var(--color-primary)';
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.borderColor = 'transparent';
+                          }}
+                          title="Click to edit machine count"
                         >
-                          <div className="recipe-machine">{machine.name}</div>
-                          <div className="recipe-details">
-                            <span className="recipe-label-input">Inputs: </span>
-                            <span>{recipe.inputs.map(input => formatIngredient(input, getProduct)).join(', ')}</span>
-                          </div>
-                          <div className="recipe-details">
-                            <span className="recipe-label-output">Outputs: </span>
-                            <span>{recipe.outputs.map(output => formatIngredient(output, getProduct)).join(', ')}</span>
-                          </div>
+                          {Number.isInteger(machineCount) ? machineCount : machineCount.toFixed(2)}
                         </div>
-                      ) : null;
-                    })
-                  )}
+                        <div style={{ flex: 1, cursor: 'pointer', minWidth: 0 }} onClick={() => createRecipeBox(recipe)}>
+                          <div className="recipe-machine">{machine.name}</div>
+                          <div className="recipe-details"><span className="recipe-label-input">Inputs: </span>
+                            <span>{recipe.inputs.map(input => formatIngredient(input, getProduct)).join(', ')}</span></div>
+                          <div className="recipe-details"><span className="recipe-label-output">Outputs: </span>
+                            <span>{recipe.outputs.map(output => formatIngredient(output, getProduct)).join(', ')}</span></div>
+                        </div>
+                      </div>
+                    ) : null;
+                  })}
                 </div>
               </>
             )}
-            <button onClick={resetSelector} className="btn btn-secondary" style={{ marginTop: '20px' }}>
-              Close
-            </button>
+            <button onClick={resetSelector} className="btn btn-secondary" style={{ marginTop: '20px' }}>Close</button>
           </div>
         </div>
       )}
 
-      {/* Target Products Modal */}
       {showTargetsModal && (
         <div className="modal-overlay" onClick={() => setShowTargetsModal(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h2 className="modal-title">Target Products</h2>
             <div className="modal-content flex-col" style={{ maxHeight: '500px', marginBottom: '20px' }}>
               {targetProducts.length === 0 ? (
-                <div className="empty-state">
-                  No target products yet. Shift+Click a recipe box to mark it as a target.
-                </div>
+                <div className="empty-state">No target products yet. Shift+Click a recipe box to mark it as a target.</div>
               ) : (
                 targetProducts.map(target => (
                   <div key={target.id} className="target-card">
                     <div className="flex-1">
-                      <div className="target-product-name">
-                        {getProductName(target.productId, getProduct)}
-                      </div>
+                      <div className="target-product-name">{getProductName(target.productId, getProduct)}</div>
                       <div className="target-box-id">Box ID: {target.recipeBoxId}</div>
                     </div>
                     <div className="target-input-group">
                       <label className="target-label">Target:</label>
-                      <input 
-                        type="number" 
-                        min="0" 
-                        value={target.desiredAmount} 
-                        onChange={(e) => setTargetProducts(prev => prev.map(t => 
-                          t.id === target.id 
-                            ? { ...t, desiredAmount: parseFloat(e.target.value) || 0 } 
-                            : t
-                        ))} 
-                        className="input input-small" 
-                      />
+                      <input type="number" min="0" value={target.desiredAmount} 
+                        onChange={(e) => setTargetProducts(prev => prev.map(t => t.id === target.id ? { ...t, desiredAmount: parseFloat(e.target.value) || 0 } : t))} 
+                        className="input input-small" />
                       <span className="target-label">/s</span>
                     </div>
-                    <button 
-                      onClick={() => setTargetProducts(prev => prev.filter(t => t.id !== target.id))} 
-                      className="btn btn-delete"
-                    >
-                      Remove
-                    </button>
+                    <button onClick={() => setTargetProducts(prev => prev.filter(t => t.id !== target.id))} className="btn btn-delete">Remove</button>
                   </div>
                 ))
               )}
             </div>
-            <button onClick={() => setShowTargetsModal(false)} className="btn btn-secondary">
-              Close
-            </button>
+            <button onClick={() => setShowTargetsModal(false)} className="btn btn-secondary">Close</button>
           </div>
         </div>
       )}
 
-      {/* Theme Editor Modal */}
-      {showThemeEditor && (
-        <ThemeEditor onClose={() => setShowThemeEditor(false)} />
-      )}
+      {showThemeEditor && <ThemeEditor onClose={() => setShowThemeEditor(false)} />}
     </div>
   );
 }
