@@ -41,7 +41,7 @@ const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onC
 
   return (
     <div className="drill-settings-overlay" onClick={onClose}>
-      <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()}>
+      <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
         <h3 className="drill-settings-title">Logic Assembler Settings</h3>
 
         <div className="drill-settings-content">

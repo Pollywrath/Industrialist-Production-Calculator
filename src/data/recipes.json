@@ -6132,23 +6132,23 @@
       "id": "r_chemical_plant_01",
       "name": "Makes Ammonia",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 1,
+      "power_consumption": 100000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_hydrogen",
-          "quantity": "Variable"
+          "quantity": 30
         },
         {
           "product_id": "p_nitrogen",
-          "quantity": "Variable"
+          "quantity": 10
         }
       ],
       "outputs": [
         {
           "product_id": "p_ammonia",
-          "quantity": "Variable"
+          "quantity": 20
         }
       ]
     },
@@ -6156,23 +6156,23 @@
       "id": "r_chemical_plant_02",
       "name": "Makes Hardened Plastic Pellets",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 5,
+      "power_consumption": 1000000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_ammonia",
-          "quantity": "Variable"
+          "quantity": 25
         },
         {
           "product_id": "p_naphtha",
-          "quantity": "Variable"
+          "quantity": 5
         }
       ],
       "outputs": [
         {
           "product_id": "p_hardened_plastic_pellets",
-          "quantity": "Variable"
+          "quantity": 50
         }
       ]
     },
@@ -6180,23 +6180,23 @@
       "id": "r_chemical_plant_03",
       "name": "Makes Hydrogen",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 1,
+      "power_consumption": 500000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_steam",
-          "quantity": "Variable"
+          "quantity": 90
         },
         {
           "product_id": "p_refined_gas",
-          "quantity": "Variable"
+          "quantity": 60
         }
       ],
       "outputs": [
         {
           "product_id": "p_hydrogen",
-          "quantity": "Variable"
+          "quantity": 15
         }
       ]
     },
@@ -6204,23 +6204,23 @@
       "id": "r_chemical_plant_04",
       "name": "Makes Unenriched Uf6 Gas",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 1,
+      "power_consumption": 500000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_yellowcake",
-          "quantity": "Variable"
+          "quantity": 0.5
         },
         {
           "product_id": "p_hydrofluoric_acid",
-          "quantity": "Variable"
+          "quantity": 0.5
         }
       ],
       "outputs": [
         {
           "product_id": "p_unenriched_uf6_gas",
-          "quantity": "Variable"
+          "quantity": 1.5
         }
       ]
     },
@@ -6228,39 +6228,39 @@
       "id": "r_chemical_plant_05",
       "name": "Makes Residue, Reprocessed Uranium, Plutonium Oxide Pellets",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 1,
+      "power_consumption": 500000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_mixed_fissile_oxides",
-          "quantity": "Variable"
+          "quantity": 0.5
         },
         {
           "product_id": "p_hydrochloric_acid",
-          "quantity": "Variable"
+          "quantity": 0.5
         },
         {
           "product_id": "p_sodium_hydroxide_solution",
-          "quantity": "Variable"
+          "quantity": 0.5
         },
         {
           "product_id": "p_argon",
-          "quantity": "Variable"
+          "quantity": 10
         }
       ],
       "outputs": [
         {
           "product_id": "p_residue",
-          "quantity": "Variable"
+          "quantity": 3
         },
         {
           "product_id": "p_reprocessed_uranium",
-          "quantity": "Variable"
+          "quantity": 0.1
         },
         {
           "product_id": "p_plutonium_oxide_pellets",
-          "quantity": "Variable"
+          "quantity": 0.05
         }
       ]
     },
@@ -6268,27 +6268,27 @@
       "id": "r_chemical_plant_06",
       "name": "Makes Hydrofluoric Acid, Residue",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 1,
+      "power_consumption": 100000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_deep_earth_fragment",
-          "quantity": "Variable"
+          "quantity": 0.5
         },
         {
           "product_id": "p_sulfuric_acid",
-          "quantity": "Variable"
+          "quantity": 0.5
         }
       ],
       "outputs": [
         {
           "product_id": "p_hydrofluoric_acid",
-          "quantity": "Variable"
+          "quantity": 2
         },
         {
           "product_id": "p_residue",
-          "quantity": "Variable"
+          "quantity": 2
         }
       ]
     },
@@ -6296,23 +6296,23 @@
       "id": "r_chemical_plant_07",
       "name": "Makes Slightly Enriched Uf6 Gas",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 1,
+      "power_consumption": 100000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_reprocessed_uranium",
-          "quantity": "Variable"
+          "quantity": 0.5
         },
         {
           "product_id": "p_hydrofluoric_acid",
-          "quantity": "Variable"
+          "quantity": 0.5
         }
       ],
       "outputs": [
         {
           "product_id": "p_slightly_enriched_uf6_gas",
-          "quantity": "Variable"
+          "quantity": 2
         }
       ]
     },
@@ -6320,27 +6320,27 @@
       "id": "r_chemical_plant_08",
       "name": "Makes Boric Acid, Residue",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 10,
+      "power_consumption": 250000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_impure_boron",
-          "quantity": "Variable"
+          "quantity": 1.6
         },
         {
           "product_id": "p_hydrochloric_acid",
-          "quantity": "Variable"
+          "quantity": 0.5
         }
       ],
       "outputs": [
         {
           "product_id": "p_boric_acid",
-          "quantity": "Variable"
+          "quantity": 2
         },
         {
           "product_id": "p_residue",
-          "quantity": "Variable"
+          "quantity": 2
         }
       ]
     },
@@ -6348,27 +6348,27 @@
       "id": "r_chemical_plant_09",
       "name": "Makes Boric Acid, Residue",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 10,
+      "power_consumption": 250000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_impure_boron",
-          "quantity": "Variable"
+          "quantity": 1.6
         },
         {
           "product_id": "p_sulfuric_acid",
-          "quantity": "Variable"
+          "quantity": 0.35
         }
       ],
       "outputs": [
         {
           "product_id": "p_boric_acid",
-          "quantity": "Variable"
+          "quantity": 2
         },
         {
           "product_id": "p_residue",
-          "quantity": "Variable"
+          "quantity": 2
         }
       ]
     },
@@ -6376,27 +6376,27 @@
       "id": "r_chemical_plant_10",
       "name": "Makes Phosphorus Oxychloride, Residue",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 1,
+      "power_consumption": 1000000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_shallow_earth_fragment",
-          "quantity": "Variable"
+          "quantity": 2
         },
         {
           "product_id": "p_hydrochloric_acid",
-          "quantity": "Variable"
+          "quantity": 6
         }
       ],
       "outputs": [
         {
           "product_id": "p_phosphorus_oxychloride",
-          "quantity": "Variable"
+          "quantity": 3
         },
         {
           "product_id": "p_residue",
-          "quantity": "Variable"
+          "quantity": 2
         }
       ]
     },
@@ -6404,31 +6404,31 @@
       "id": "r_chemical_plant_11",
       "name": "Makes Tributyl Phosphate, Hydrochloric Acid",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 1,
+      "power_consumption": 1100000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_phosphorus_oxychloride",
-          "quantity": "Variable"
+          "quantity": 1.5
         },
         {
           "product_id": "p_ethanol",
-          "quantity": "Variable"
+          "quantity": 1.5
         },
         {
           "product_id": "p_steam",
-          "quantity": "Variable"
+          "quantity": 90
         }
       ],
       "outputs": [
         {
           "product_id": "p_tributyl_phosphate",
-          "quantity": "Variable"
+          "quantity": 1
         },
         {
           "product_id": "p_hydrochloric_acid",
-          "quantity": "Variable"
+          "quantity": 1
         }
       ]
     },
@@ -6436,31 +6436,31 @@
       "id": "r_chemical_plant_12",
       "name": "Makes Enriched Uo2 Pellets, Residue",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 1,
+      "power_consumption": 2000000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_enriched_uf6_gas",
-          "quantity": "Variable"
+          "quantity": 0.05
         },
         {
           "product_id": "p_steam",
-          "quantity": "Variable"
+          "quantity": 90
         },
         {
           "product_id": "p_tributyl_phosphate",
-          "quantity": "Variable"
+          "quantity": 1
         }
       ],
       "outputs": [
         {
           "product_id": "p_enriched_uo2_pellets",
-          "quantity": "Variable"
+          "quantity": 0.05
         },
         {
           "product_id": "p_residue",
-          "quantity": "Variable"
+          "quantity": 5
         }
       ]
     },
@@ -6468,31 +6468,31 @@
       "id": "r_chemical_plant_13",
       "name": "Makes Enriched Uo2 Pellets, Residue",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 1,
+      "power_consumption": 2500000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_enriched_uf6_gas",
-          "quantity": "Variable"
+          "quantity": 0.02
         },
         {
           "product_id": "p_steam",
-          "quantity": "Variable"
+          "quantity": 90
         },
         {
           "product_id": "p_hydrogen",
-          "quantity": "Variable"
+          "quantity": 4
         }
       ],
       "outputs": [
         {
           "product_id": "p_enriched_uo2_pellets",
-          "quantity": "Variable"
+          "quantity": 0.01
         },
         {
           "product_id": "p_residue",
-          "quantity": "Variable"
+          "quantity": 5
         }
       ]
     },
@@ -6500,31 +6500,31 @@
       "id": "r_chemical_plant_14",
       "name": "Makes Sulfuric Acid, Residue",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 1,
+      "power_consumption": 1500000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_sulfur_trioxide",
-          "quantity": "Variable"
+          "quantity": 14
         },
         {
           "product_id": "p_distilled_water",
-          "quantity": "Variable"
+          "quantity": 11
         },
         {
           "product_id": "p_argon",
-          "quantity": "Variable"
+          "quantity": 70
         }
       ],
       "outputs": [
         {
           "product_id": "p_sulfuric_acid",
-          "quantity": "Variable"
+          "quantity": 11
         },
         {
           "product_id": "p_residue",
-          "quantity": "Variable"
+          "quantity": 2
         }
       ]
     },
@@ -6532,34 +6532,34 @@
       "id": "r_chemical_plant_15",
       "name": "Makes Hydrochloric Acid",
       "machine_id": "m_chemical_plant",
-      "cycle_time": "Variable",
-      "power_consumption": "Variable",
+      "cycle_time": 1,
+      "power_consumption": 1500000,
       "pollution": "?",
       "inputs": [
         {
           "product_id": "p_chlorine",
-          "quantity": "Variable"
+          "quantity": 20
         },
         {
           "product_id": "p_hydrogen",
-          "quantity": "Variable"
+          "quantity": 20
         },
         {
           "product_id": "p_distilled_water",
-          "quantity": "Variable"
+          "quantity": 10
         },
         {
           "product_id": "p_argon",
-          "quantity": "Variable"
+          "quantity": 20
         }
       ],
       "outputs": [
         {
           "product_id": "p_hydrochloric_acid",
-          "quantity": "Variable"
+          "quantity": 10
         }
       ]
-    },
+    }, 
     {
       "id": "r_industrial_roller_01",
       "name": "Makes Copper Wire",

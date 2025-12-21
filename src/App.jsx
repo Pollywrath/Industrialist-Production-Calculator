@@ -14,6 +14,7 @@ import { DEFAULT_DRILL_RECIPE, DEPTH_OUTPUTS, calculateDrillMetrics, buildDrillI
 import { DEFAULT_LOGIC_ASSEMBLER_RECIPE, MICROCHIP_STAGES, calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from './data/logicAssembler';
 import { DEFAULT_TREE_FARM_RECIPE, calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs } from './data/treeFarm';
 import { FUEL_PRODUCTS, calculateFireboxMetrics, buildFireboxInputs, isIndustrialFireboxRecipe } from './data/industrialFirebox';
+import { applyChemicalPlantSettings, DEFAULT_CHEMICAL_PLANT_SETTINGS } from './data/chemicalPlant';
 import { solveProductionNetwork, getExcessProducts, getDeficientProducts } from './solvers/productionSolver';
 import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, getRecipesProducingProductFiltered, 
   getRecipesForMachine, canDrillUseProduct, canLogicAssemblerUseProduct, canTreeFarmUseProduct, applyTemperatureToOutputs, 
@@ -96,7 +97,7 @@ function App() {
           onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput, onDrillSettingsChange: handleDrillSettingsChange,
           onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTreeFarmSettingsChange: handleTreeFarmSettingsChange,
           onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange, 
-          onBoilerSettingsChange: handleBoilerSettingsChange, globalPollution }};
+          onBoilerSettingsChange: handleBoilerSettingsChange, onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange, globalPollution }};
       });
       setNodes(restoredNodes);
       setEdges(savedState.edges || []);
@@ -632,6 +633,30 @@ function App() {
     }));
   }, [setNodes]);
 
+  const handleChemicalPlantSettingsChange = useCallback((nodeId, settings) => {
+    setNodes(nds => nds.map(n => {
+      if (n.id !== nodeId) return n;
+      
+      const machine = getMachine(n.data.recipe.machine_id);
+      if (machine?.id !== 'm_chemical_plant') return n;
+      
+      // Get the base recipe (without any settings applied)
+      const baseRecipe = recipes.find(r => r.id === n.data.recipe.id);
+      if (!baseRecipe) return n;
+      
+      // Apply the new settings to the base recipe
+      const updatedRecipe = applyChemicalPlantSettings(baseRecipe, settings.speedFactor, settings.efficiencyFactor);
+      
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          recipe: updatedRecipe
+        }
+      };
+    }));
+  }, [setNodes]);
+
   const createRecipeBox = useCallback((recipe) => {
     const machine = getMachine(recipe.machine_id);
     if (!machine || !recipe.inputs || !recipe.outputs) { alert('Error: Invalid machine or recipe data'); return; }
@@ -892,8 +917,8 @@ function App() {
       leftHandles: recipeWithTemp.inputs.length, rightHandles: recipeWithTemp.outputs.length, onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput,
       onDrillSettingsChange: handleDrillSettingsChange, onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTreeFarmSettingsChange: handleTreeFarmSettingsChange,
       onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange, 
-      onBoilerSettingsChange: handleBoilerSettingsChange, globalPollution, isTarget: false }, sourcePosition: 'right', targetPosition: 'left' };
-    
+      onBoilerSettingsChange: handleBoilerSettingsChange, onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange, globalPollution, isTarget: false }, sourcePosition: 'right', targetPosition: 'left' };
+        
     setNodes((nds) => {
       const updatedNodes = [...nds, newNode];
       if (autoConnectTarget) {

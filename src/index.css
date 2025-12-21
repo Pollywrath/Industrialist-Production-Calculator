@@ -1008,3 +1008,36 @@ input[type="number"] {
   transition: left 0.3s ease-out;
   z-index: 10; /* Above extended panel */
 }
+
+/* ============================================================
+   SLIDER STYLES
+   ============================================================ */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 5px;
+  background: var(--bg-main);
+  outline: none;
+  border: 2px solid var(--border-primary);
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid var(--color-primary-dark);
+}
+
+.slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: 2px solid var(--color-primary-dark);
+}
