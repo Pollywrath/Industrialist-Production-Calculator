@@ -97,7 +97,8 @@ function App() {
           onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput, onDrillSettingsChange: handleDrillSettingsChange,
           onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTreeFarmSettingsChange: handleTreeFarmSettingsChange,
           onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange, 
-          onBoilerSettingsChange: handleBoilerSettingsChange, onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange, globalPollution }};
+          onBoilerSettingsChange: handleBoilerSettingsChange, onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange, globalPollution,
+          flows: null }};
       });
       setNodes(restoredNodes);
       setEdges(savedState.edges || []);
@@ -224,6 +225,17 @@ function App() {
   const productionSolution = useMemo(() => solveProductionNetwork(nodes, edges), [nodes, edges]);
   const excessProductsRaw = useMemo(() => getExcessProducts(productionSolution), [productionSolution]);
   const deficientProducts = useMemo(() => getDeficientProducts(productionSolution), [productionSolution]);
+
+  // Add this useEffect here - AFTER productionSolution is declared
+  useEffect(() => {
+    if (productionSolution?.flows?.byNode) {
+      setNodes(nds => nds.map(node => ({ 
+        ...node, 
+        data: { ...node.data, flows: productionSolution.flows.byNode[node.id] || null } 
+      }))); 
+    }
+  }, [productionSolution, setNodes]);
+  
   const excessProducts = useMemo(() => excessProductsRaw.map(item => {
     const shouldAutoSell = typeof item.product.price === 'number' && item.product.price > 0;
     const explicitlySold = soldProducts[item.productId];
@@ -917,7 +929,7 @@ function App() {
       leftHandles: recipeWithTemp.inputs.length, rightHandles: recipeWithTemp.outputs.length, onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput,
       onDrillSettingsChange: handleDrillSettingsChange, onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTreeFarmSettingsChange: handleTreeFarmSettingsChange,
       onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange, 
-      onBoilerSettingsChange: handleBoilerSettingsChange, onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange, globalPollution, isTarget: false }, sourcePosition: 'right', targetPosition: 'left' };
+      onBoilerSettingsChange: handleBoilerSettingsChange, onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange, globalPollution, isTarget: false, flows: null }, sourcePosition: 'right', targetPosition: 'left' };
         
     setNodes((nds) => {
       const updatedNodes = [...nds, newNode];

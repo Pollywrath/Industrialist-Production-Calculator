@@ -28,7 +28,7 @@ const calculateTextLines = (text, availableWidth, fontSize = 16) => {
 const CustomNode = ({ data, id }) => {
   const { recipe, machine, machineCount, displayMode, machineDisplayMode, onInputClick, onOutputClick, isTarget,
     onDrillSettingsChange, onLogicAssemblerSettingsChange, onTreeFarmSettingsChange, onIndustrialFireboxSettingsChange, 
-    onTemperatureSettingsChange, onBoilerSettingsChange, onChemicalPlantSettingsChange, globalPollution } = data;
+    onTemperatureSettingsChange, onBoilerSettingsChange, onChemicalPlantSettingsChange, globalPollution, flows } = data;
   
   const [showDrillSettings, setShowDrillSettings] = useState(false);
   const [showAssemblerSettings, setShowAssemblerSettings] = useState(false);
@@ -265,7 +265,7 @@ const CustomNode = ({ data, id }) => {
             <NodeRect side="left" index={i} position={pos} width={leftWidth} isOnly={!hasRight} 
               input={recipe.inputs[i]} onClick={onInputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
             <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} 
-              onClick={onInputClick} nodeId={id} productId={recipe.inputs[i].product_id} />
+              onClick={onInputClick} nodeId={id} productId={recipe.inputs[i].product_id} flows={data.flows} />
           </React.Fragment>
         ))}
 
@@ -274,7 +274,7 @@ const CustomNode = ({ data, id }) => {
             <NodeRect side="right" index={i} position={pos} width={rightWidth} isOnly={!hasLeft} 
               input={recipe.outputs[i]} onClick={onOutputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
             <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} 
-              onClick={onOutputClick} nodeId={id} productId={recipe.outputs[i].product_id} />
+              onClick={onOutputClick} nodeId={id} productId={recipe.outputs[i].product_id} flows={data.flows} />
           </React.Fragment>
         ))}
       </div>
@@ -335,22 +335,53 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
   );
 };
 
-const NodeHandle = ({ side, index, position, onClick, nodeId, productId }) => (
-  <Handle
-    type={side === 'left' ? 'target' : 'source'}
-    position={side === 'left' ? Position.Left : Position.Right}
-    id={`${side}-${index}`}
-    style={{ 
-      background: side === 'left' ? '#22c55e' : '#ef4444', 
-      width: '12px', height: '12px', border: '2px solid #1a1a1a', top: `${position}%` 
-    }}
-    onClick={(e) => {
-      if (onClick && e.ctrlKey) {
-        e.stopPropagation();
-        onClick(productId, nodeId, index, e);
+const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows }) => {
+  const THRESHOLD = 0.0001;
+  
+  // Determine handle color based on flow status
+  let handleColor = side === 'left' ? '#22c55e' : '#ef4444'; // Default: green for input, red for output
+  
+  if (flows) {
+    if (side === 'left') {
+      // Input handle - check if deficient
+      const inputFlow = flows.inputFlows?.[index];
+      if (inputFlow && inputFlow.needed > 0) {
+        const shortage = inputFlow.needed - inputFlow.connected;
+        if (shortage > THRESHOLD) {
+          // Deficient input - change to red (output color)
+          handleColor = '#ef4444';
+        }
       }
-    }}
-  />
-);
+    } else {
+      // Output handle - check if excess
+      const outputFlow = flows.outputFlows?.[index];
+      if (outputFlow && outputFlow.produced > 0) {
+        const excess = outputFlow.produced - outputFlow.connected;
+        if (excess > THRESHOLD) {
+          // Excess output - change to green (input color)
+          handleColor = '#22c55e';
+        }
+      }
+    }
+  }
+  
+  return (
+    <Handle
+      type={side === 'left' ? 'target' : 'source'}
+      position={side === 'left' ? Position.Left : Position.Right}
+      id={`${side}-${index}`}
+      style={{ 
+        background: handleColor, 
+        width: '12px', height: '12px', border: '2px solid #1a1a1a', top: `${position}%` 
+      }}
+      onClick={(e) => {
+        if (onClick && e.ctrlKey) {
+          e.stopPropagation();
+          onClick(productId, nodeId, index, e);
+        }
+      }}
+    />
+  );
+};
 
 export default CustomNode;
