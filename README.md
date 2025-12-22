@@ -29,7 +29,7 @@ The Air Separation Unit's residue output is calculated based on global pollution
 residue_amount = (ln(1 + (5429 × pollution) / 7322))^1.1
 ```
 
-where `pollution` is the global pollution percentage. This formula was derived through observation and approximation of in-game behavior.
+where `pollution` is the global pollution percentage. This formula was chosen because it produced 5L/s of residue at 100 pollution, change if you want.
 
 **Microchip Pricing**  
 Microchip prices follow the established pattern from the wiki for basic stages. For advanced microchips (outer stage 2x and above, excluding 64x inner stage variants), prices were extrapolated by analyzing the pricing progression of first-stage microchips and applying similar growth rates to maintain economic balance.
