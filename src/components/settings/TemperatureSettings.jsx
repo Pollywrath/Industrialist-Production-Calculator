@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HEAT_SOURCES, calculateOutputTemperature, getPowerConsumptionForTemperature, formatTemperature } from '../utils/temperatureHandler';
+import { HEAT_SOURCES, calculateOutputTemperature, getPowerConsumptionForTemperature, formatTemperature } from '../../utils/temperatureHandler';
 
 const TemperatureSettings = ({ nodeId, machineId, currentSettings, recipe, onSettingsChange, onClose }) => {
   const heatSource = HEAT_SOURCES[machineId];

@@ -4,13 +4,13 @@ import { getProduct } from '../data/dataLoader';
 import { getProductName, formatPowerConsumption, formatPollution } from '../utils/variableHandler';
 import { isTemperatureProduct, formatTemperature, needsTemperatureConfig, needsBoilerConfig, HEAT_SOURCES, DEFAULT_STEAM_TEMPERATURE } from '../utils/temperatureHandler';
 import { hasTempDependentCycle, getTempDependentCycleTime, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getSteamInputIndex } from '../utils/temperatureDependentCycles';
-import DrillSettings from './DrillSettings';
-import LogicAssemblerSettings from './LogicAssemblerSettings';
-import TreeFarmSettings from './TreeFarmSettings';
-import IndustrialFireboxSettings from './IndustrialFireboxSettings';
-import TemperatureSettings from './TemperatureSettings';
-import BoilerSettings from './BoilerSettings';
-import ChemicalPlantSettings from './ChemicalPlantSettings';
+import DrillSettings from './settings/DrillSettings';
+import LogicAssemblerSettings from './settings/LogicAssemblerSettings';
+import TreeFarmSettings from './settings/TreeFarmSettings';
+import IndustrialFireboxSettings from './settings/IndustrialFireboxSettings';
+import TemperatureSettings from './settings/TemperatureSettings';
+import BoilerSettings from './settings/BoilerSettings';
+import ChemicalPlantSettings from './settings/ChemicalPlantSettings';
 
 const RECT_HEIGHT = 44, RECT_GAP = 8, BOTTOM_PADDING = 20, SIDE_PADDING = 10, COLUMN_GAP = 20, MIN_WIDTH = 320;
 

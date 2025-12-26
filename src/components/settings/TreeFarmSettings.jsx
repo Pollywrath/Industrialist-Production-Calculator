@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs, calculateRequiredWaterTanks } from '../data/treeFarm';
-import { getProductName } from '../utils/variableHandler';
-import { getProduct } from '../data/dataLoader';
+import { calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs, calculateRequiredWaterTanks } from '../../data/treeFarm';
+import { getProductName } from '../../utils/variableHandler';
+import { getProduct } from '../../data/dataLoader';
 
 const TreeFarmSettings = ({ nodeId, currentSettings, globalPollution, onSettingsChange, onClose }) => {
   const [trees, setTrees] = useState(currentSettings?.trees || 450);

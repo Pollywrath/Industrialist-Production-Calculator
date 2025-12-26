@@ -994,6 +994,7 @@ input[type="number"] {
   box-shadow: var(--shadow-md);
   animation: slideUp 0.3s ease-out;
   z-index: 1; /* Below controls */
+  transition: transform 0.3s ease-in-out;
 }
 
 .extended-panel.closing {
@@ -1075,6 +1076,11 @@ input[type="number"] {
   left: 385px !important; /* Move right, past the extended panel */
   transition: left 0.3s ease-out;
   z-index: 10; /* Above extended panel */
+}
+
+/* Extended panel moves with left panel */
+.left-panel-container.collapsed ~ div .extended-panel {
+  transform: translateX(calc(-100%));
 }
 
 /* ============================================================

@@ -1,5 +1,5 @@
 import React from 'react';
-import { metricFormat } from '../utils/appUtilities';
+import { metricFormat } from '../../utils/appUtilities';
 
 const ExtendedPanel = ({
   extendedPanelOpen,
@@ -22,7 +22,8 @@ const ExtendedPanel = ({
   if (!extendedPanelOpen && !extendedPanelClosing) return null;
 
   return (
-    <div className={`extended-panel ${extendedPanelClosing ? 'closing' : ''}`}>
+    <div>
+      <div className={`extended-panel ${extendedPanelClosing ? 'closing' : ''}`}>
       <div style={{ 
         display: 'flex', 
         alignItems: 'center', 
@@ -283,6 +284,7 @@ const ExtendedPanel = ({
           )}
         </div>
       </div>
+    </div>
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from '../data/logicAssembler';
+import { calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from '../../data/logicAssembler';
 
 const outerStages = [1, 2, 3, 4, 5, 6, 7, 8];
 const innerStages = [2, 4, 8, 16, 32, 64];

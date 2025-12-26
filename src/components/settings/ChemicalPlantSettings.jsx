@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { calculateChemicalPlantMetrics } from '../data/chemicalPlant';
+import { calculateChemicalPlantMetrics } from '../../data/chemicalPlant';
 
 const ChemicalPlantSettings = ({ nodeId, currentSettings, recipe, onSettingsChange, onClose }) => {
   const [speedFactor, setSpeedFactor] = useState(currentSettings?.speedFactor || 100);

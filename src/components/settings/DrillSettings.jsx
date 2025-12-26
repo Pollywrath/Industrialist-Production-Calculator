@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { DRILL_HEADS, CONSUMABLES, getAvailableDepths, buildDrillInputs, buildDrillOutputs, calculateDrillMetrics } from '../data/mineshaftDrill';
-import { getProductName } from '../utils/variableHandler';
-import { getProduct } from '../data/dataLoader';
+import { DRILL_HEADS, CONSUMABLES, getAvailableDepths, buildDrillInputs, buildDrillOutputs, calculateDrillMetrics } from '../../data/mineshaftDrill';
+import { getProductName } from '../../utils/variableHandler';
+import { getProduct } from '../../data/dataLoader';
 
 const DrillSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) => {
   const [drillHead, setDrillHead] = useState(currentSettings?.drillHead || '');

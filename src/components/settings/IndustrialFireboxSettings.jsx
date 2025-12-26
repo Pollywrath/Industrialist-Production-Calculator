@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { FUEL_PRODUCTS, calculateFireboxMetrics, buildFireboxInputs } from '../data/industrialFirebox';
-import { getProductName } from '../utils/variableHandler';
-import { getProduct } from '../data/dataLoader';
+import { FUEL_PRODUCTS, calculateFireboxMetrics, buildFireboxInputs } from '../../data/industrialFirebox';
+import { getProductName } from '../../utils/variableHandler';
+import { getProduct } from '../../data/dataLoader';
 
 const IndustrialFireboxSettings = ({ nodeId, currentSettings, recipe, onSettingsChange, onClose }) => {
   const [fuel, setFuel] = useState(currentSettings?.fuel || 'p_coal');

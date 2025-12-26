@@ -1,13 +1,13 @@
 import React from 'react';
-import { products, machines, getMachine } from '../data/dataLoader';
-import { getProductName, formatIngredient } from '../utils/variableHandler';
-import { getProduct } from '../data/dataLoader';
-import { getRecipesUsingProduct, getRecipesProducingProductFiltered, getRecipesForMachine } from '../utils/appUtilities';
-import { DEFAULT_DRILL_RECIPE } from '../data/mineshaftDrill';
-import { DEFAULT_LOGIC_ASSEMBLER_RECIPE } from '../data/logicAssembler';
-import { DEFAULT_TREE_FARM_RECIPE } from '../data/treeFarm';
-import { getSpecialRecipeInputs, getSpecialRecipeOutputs } from '../utils/recipeBoxCreation';
-import { metricFormat } from '../utils/appUtilities';
+import { products, machines, getMachine } from '../../data/dataLoader';
+import { getProductName, formatIngredient } from '../../utils/variableHandler';
+import { getProduct } from '../../data/dataLoader';
+import { getRecipesUsingProduct, getRecipesProducingProductFiltered, getRecipesForMachine } from '../../utils/appUtilities';
+import { DEFAULT_DRILL_RECIPE } from '../../data/mineshaftDrill';
+import { DEFAULT_LOGIC_ASSEMBLER_RECIPE } from '../../data/logicAssembler';
+import { DEFAULT_TREE_FARM_RECIPE } from '../../data/treeFarm';
+import { getSpecialRecipeInputs, getSpecialRecipeOutputs } from '../../utils/recipeBoxCreation';
+import { metricFormat } from '../../utils/appUtilities';
 
 const RecipeSelectorModal = ({
   selectedProduct,

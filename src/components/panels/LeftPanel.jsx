@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatPowerDisplay, metricFormat } from '../utils/appUtilities';
+import { formatPowerDisplay, metricFormat } from '../../utils/appUtilities';
 
 const LeftPanel = ({
   stats,

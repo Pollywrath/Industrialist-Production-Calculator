@@ -1,6 +1,6 @@
 import React from 'react';
-import { getProductName } from '../utils/variableHandler';
-import { getProduct } from '../data/dataLoader';
+import { getProductName } from '../../utils/variableHandler';
+import { getProduct } from '../../data/dataLoader';
 
 const TargetsModal = ({ targetProducts, setTargetProducts, onClose }) => {
   return (
