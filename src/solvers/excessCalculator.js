@@ -14,7 +14,7 @@ export const determineExcessAndDeficiency = (graph, flows) => {
     const connectedConsumption = flowData.connectedFlow;
     const excessAmount = totalProduction - connectedConsumption;
 
-    if (excessAmount > THRESHOLD) {
+    if (excessAmount !== 0 && excessAmount > 0) {
       const product = getProduct(productId);
       if (product) {
         excess.push({
@@ -32,7 +32,7 @@ export const determineExcessAndDeficiency = (graph, flows) => {
       const inputFlow = flows.byNode[consumer.nodeId]?.inputFlows[consumer.inputIndex];
       if (inputFlow) {
         const shortage = inputFlow.needed - inputFlow.connected;
-        if (shortage > THRESHOLD) {
+        if (shortage !== 0 && shortage > 0) {
           const product = getProduct(productId);
           if (product) {
             let existingDeficiency = deficiency.find(d => d.productId === productId);

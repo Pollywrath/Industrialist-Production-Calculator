@@ -2,6 +2,11 @@ import { hasTempDependentCycle, getTempDependentCycleTime, TEMP_DEPENDENT_MACHIN
 import { DEFAULT_STEAM_TEMPERATURE } from '../utils/temperatureHandler';
 
 export const buildProductionGraph = (nodes, edges) => {
+  // Early return for empty graphs
+  if (!nodes || nodes.length === 0) {
+    return { nodes: {}, products: {}, connections: [] };
+  }
+  
   const graph = { nodes: {}, products: {}, connections: [] };
 
   nodes.forEach(node => {

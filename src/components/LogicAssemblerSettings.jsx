@@ -13,7 +13,7 @@ const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onC
 
   const getTargetMicrochip = () => {
     if (!outerStage || !innerStage) return '';
-    return outerStage === '1' ? `p_${innerStage}x_microchip` : `p_${outerStage}x${innerStage}x_microchip`;
+    return parseInt(outerStage) === 1 ? `p_${innerStage}x_microchip` : `p_${outerStage}x${innerStage}x_microchip`;
   };
 
   const targetMicrochip = getTargetMicrochip();

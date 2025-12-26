@@ -16,10 +16,25 @@ import { DEFAULT_TREE_FARM_RECIPE, calculateTreeFarmMetrics, buildTreeFarmInputs
 import { FUEL_PRODUCTS, calculateFireboxMetrics, buildFireboxInputs, isIndustrialFireboxRecipe } from './data/industrialFirebox';
 import { applyChemicalPlantSettings, DEFAULT_CHEMICAL_PLANT_SETTINGS } from './data/chemicalPlant';
 import { solveProductionNetwork, getExcessProducts, getDeficientProducts } from './solvers/productionSolver';
+import { clearFlowCache } from './solvers/flowCalculator';
 import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, getRecipesProducingProductFiltered, 
   getRecipesForMachine, canDrillUseProduct, canLogicAssemblerUseProduct, canTreeFarmUseProduct, applyTemperatureToOutputs, 
   initializeRecipeTemperatures } from './utils/appUtilities';
+import { configureSpecialRecipe, calculateMachineCountForAutoConnect, getSpecialRecipeInputs, getSpecialRecipeOutputs, isSpecialRecipe } from './utils/recipeBoxCreation';
 
+if (process.env.NODE_ENV === 'development') {
+  let lastMemory = 0;
+  setInterval(() => {
+    if (performance.memory) {
+      const current = performance.memory.usedJSHeapSize / 1048576; // MB
+      const delta = current - lastMemory;
+      if (Math.abs(delta) > 50) { // Log significant changes
+        console.log(`Memory: ${current.toFixed(1)}MB (${delta > 0 ? '+' : ''}${delta.toFixed(1)}MB)`);
+      }
+      lastMemory = current;
+    }
+  }, 2000);
+}
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 const calculateResidueAmount = (globalPollution) => {
@@ -36,7 +51,7 @@ const calculateResidueAmount = (globalPollution) => {
 };
 
 function App() {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [nodes, setNodes, onNodesChangeBase] = useNodesState([]);
   const [edges, setEdges, onEdgesChangeBase] = useEdgesState([]);
   const [nodeId, setNodeId] = useState(0);
   const [showRecipeSelector, setShowRecipeSelector] = useState(false);
@@ -74,12 +89,42 @@ function App() {
   const [lastTreeFarmConfig, setLastTreeFarmConfig] = useState(null);
   const [lastFireboxConfig, setLastFireboxConfig] = useState(null);
   const [recipeMachineCounts, setRecipeMachineCounts] = useState({});
+  const [pendingNode, setPendingNode] = useState(null); // For middle-click duplication
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const reactFlowWrapper = useRef(null);
+  const reactFlowInstance = useRef(null);
   const fileInputRef = useRef(null);
 
   const isForestTheme = () => getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim().toLowerCase() === '#5fb573';
   const statisticsTitle = isForestTheme() ? "Plant Statistics" : "Plan Statistics";
+  const dragTimeoutRef = useRef(null);
+  const pendingChangesRef = useRef([]);
 
+  const onNodesChange = useCallback((changes) => {
+    // Immediately apply position changes for smooth dragging
+    const positionChanges = changes.filter(c => c.type === 'position' && c.dragging);
+    const otherChanges = changes.filter(c => !(c.type === 'position' && c.dragging));
+    
+    if (positionChanges.length > 0) {
+      onNodesChangeBase(positionChanges);
+    }
+    
+    if (otherChanges.length > 0) {
+      pendingChangesRef.current.push(...otherChanges);
+      
+      if (dragTimeoutRef.current) {
+        clearTimeout(dragTimeoutRef.current);
+      }
+      
+      dragTimeoutRef.current = setTimeout(() => {
+        if (pendingChangesRef.current.length > 0) {
+          onNodesChangeBase(pendingChangesRef.current);
+          pendingChangesRef.current = [];
+        }
+      }, 50);
+    }
+  }, [onNodesChangeBase]);
+  
   const onEdgesChange = useCallback((changes) => {
     onEdgesChangeBase(changes);
   }, [onEdgesChangeBase]);
@@ -97,7 +142,8 @@ function App() {
           onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput, onDrillSettingsChange: handleDrillSettingsChange,
           onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTreeFarmSettingsChange: handleTreeFarmSettingsChange,
           onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange, 
-          onBoilerSettingsChange: handleBoilerSettingsChange, onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange, globalPollution,
+          onBoilerSettingsChange: handleBoilerSettingsChange, onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange, 
+          onMiddleClick: onNodeMiddleClick, globalPollution,
           flows: null }};
       });
       setNodes(restoredNodes);
@@ -114,8 +160,16 @@ function App() {
     }
   }, []);
 
-  useEffect(() => { setNodes(nds => nds.map(node => ({ ...node, data: { ...node.data, displayMode } }))); }, [displayMode, setNodes]);
-  useEffect(() => { setNodes(nds => nds.map(node => ({ ...node, data: { ...node.data, machineDisplayMode } }))); }, [machineDisplayMode, setNodes]);
+  useEffect(() => { 
+    setNodes(nds => nds.map(node => ({ 
+      ...node, 
+      data: { 
+        ...node.data, 
+        displayMode,
+        machineDisplayMode 
+      } 
+    }))); 
+  }, [displayMode, machineDisplayMode, setNodes]);
   useEffect(() => { 
     const stateToSave = { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig };
     localStorage.setItem('industrialist_canvas_state', JSON.stringify(stateToSave));
@@ -132,9 +186,14 @@ function App() {
       if (machine?.id === 'm_industrial_firebox') {
         const machineCount = node.data?.machineCount || 0;
         const pollution = recipe.pollution;
-        if (typeof pollution === 'number') totalPollution += pollution * machineCount;
+        const pollutionNum = typeof pollution === 'number' ? pollution : parseFloat(pollution);
+        if (!isNaN(pollutionNum) && isFinite(pollutionNum)) totalPollution += pollutionNum * machineCount;
         const inputOutputCount = (recipe.inputs?.length || 0) + (recipe.outputs?.length || 0);
-        totalModelCount += Math.ceil(machineCount) + Math.ceil(machineCount) * inputOutputCount * 2;
+        // Industrial firebox has 0 power, so powerFactor = 0
+        const powerFactor = 0;
+        const inputOutputFactor = inputOutputCount * 2;
+        const roundedMachineCount = Math.ceil(machineCount);
+        totalModelCount += roundedMachineCount * (1 + powerFactor + inputOutputFactor);
         return;
       }
       
@@ -144,9 +203,14 @@ function App() {
       if (typeof power === 'number') { powerValue = power; totalPower += power * machineCount; }
       else if (typeof power === 'object' && power !== null && 'max' in power) { powerValue = power.max; totalPower += powerValue * machineCount; }
       const pollution = recipe.pollution;
-      if (typeof pollution === 'number') totalPollution += pollution * machineCount;
+      const pollutionNum = typeof pollution === 'number' ? pollution : parseFloat(pollution);
+      if (!isNaN(pollutionNum) && isFinite(pollutionNum)) totalPollution += pollutionNum * machineCount;
       const inputOutputCount = (recipe.inputs?.length || 0) + (recipe.outputs?.length || 0);
-      totalModelCount += Math.ceil(machineCount) + Math.ceil(machineCount * powerValue / 1500000) + Math.ceil(machineCount) * inputOutputCount * 2;
+      // Calculate model count: machineCount * (1 + powerFactor + inputOutputFactor)
+      const powerFactor = Math.ceil(powerValue / 1500000) * 2;
+      const inputOutputFactor = inputOutputCount * 2;
+      const roundedMachineCount = Math.ceil(machineCount);
+      totalModelCount += roundedMachineCount * (1 + powerFactor + inputOutputFactor);
     });
     return { totalPower, totalPollution, totalModelCount };
   }, [nodes]);
@@ -163,77 +227,136 @@ function App() {
   }, [stats.totalPollution, pollutionInputFocused, isPollutionPaused]);
 
   useEffect(() => {
-    // Update tree farms and air separation units when pollution changes
-    setNodes(nds => nds.map(node => {
-      const recipe = node.data?.recipe;
-      const machine = node.data?.machine;
-      
-      // Update tree farms
-      if (recipe?.isTreeFarm && recipe.treeFarmSettings) {
-        const settings = recipe.treeFarmSettings;
-        const updatedOutputs = buildTreeFarmOutputs(settings.trees, settings.harvesters, globalPollution);
-        const metrics = calculateTreeFarmMetrics(settings.trees, settings.harvesters, settings.sprinklers, settings.outputs, settings.controller, globalPollution);
+    // Clear flow cache every 30 seconds to prevent memory buildup
+    const interval = setInterval(() => {
+      clearFlowCache();
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  const pollutionUpdateTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    // Debounce pollution updates to avoid excessive recalculations
+    if (pollutionUpdateTimeoutRef.current) {
+      clearTimeout(pollutionUpdateTimeoutRef.current);
+    }
+    
+    pollutionUpdateTimeoutRef.current = setTimeout(() => {
+      // Update tree farms and air separation units when pollution changes
+      setNodes(nds => nds.map(node => {
+        const recipe = node.data?.recipe;
+        const machine = node.data?.machine;
         
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            recipe: {
-              ...recipe,
-              outputs: updatedOutputs,
-              power_consumption: metrics ? metrics.avgPowerConsumption : 'Variable'
-            },
-            globalPollution
-          }
-        };
-      }
-      
-      // Update air separation units
-      if (machine?.id === 'm_air_separation_unit') {
-        const residueAmount = calculateResidueAmount(globalPollution);
-        const updatedOutputs = recipe.outputs.map(output => {
-          if (output.product_id === 'p_residue') {
-            return { ...output, quantity: parseFloat(residueAmount.toFixed(6)) };
-          }
-          return output;
-        });
-        
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            recipe: {
-              ...recipe,
-              outputs: updatedOutputs
-            },
-            globalPollution
-          }
-        };
-      }
-      
-      // Update globalPollution for all nodes
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          globalPollution
+        // Update tree farms
+        if (recipe?.isTreeFarm && recipe.treeFarmSettings) {
+          const settings = recipe.treeFarmSettings;
+          const updatedOutputs = buildTreeFarmOutputs(settings.trees, settings.harvesters, globalPollution);
+          const metrics = calculateTreeFarmMetrics(settings.trees, settings.harvesters, settings.sprinklers, settings.outputs, settings.controller, globalPollution);
+          
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              recipe: {
+                ...recipe,
+                outputs: updatedOutputs,
+                power_consumption: metrics ? metrics.avgPowerConsumption : 'Variable'
+              },
+              globalPollution
+            }
+          };
         }
-      };
-    }));
+        
+        // Update air separation units
+        if (machine?.id === 'm_air_separation_unit') {
+          const residueAmount = calculateResidueAmount(globalPollution);
+          const updatedOutputs = recipe.outputs.map(output => {
+            if (output.product_id === 'p_residue') {
+              return { ...output, quantity: parseFloat(residueAmount.toFixed(6)) };
+            }
+            return output;
+          });
+          
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              recipe: {
+                ...recipe,
+                outputs: updatedOutputs
+              },
+              globalPollution
+            }
+          };
+        }
+        
+        // Update globalPollution for all nodes
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            globalPollution
+          }
+        };
+      }));
+    }, 200); // Debounce by 200ms
+    
+    return () => {
+      if (pollutionUpdateTimeoutRef.current) {
+        clearTimeout(pollutionUpdateTimeoutRef.current);
+      }
+    };
   }, [globalPollution, setNodes]);
 
-  const productionSolution = useMemo(() => solveProductionNetwork(nodes, edges), [nodes, edges]);
+  const [productionSolution, setProductionSolution] = useState(() => 
+    solveProductionNetwork([], [])
+  );
+  const solverTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    // Debounce expensive solver calculations
+    if (solverTimeoutRef.current) {
+      clearTimeout(solverTimeoutRef.current);
+    }
+    
+    solverTimeoutRef.current = setTimeout(() => {
+      const solution = solveProductionNetwork(nodes, edges);
+      setProductionSolution(solution);
+    }, 150); // Wait 150ms after last change
+    
+    return () => {
+      if (solverTimeoutRef.current) {
+        clearTimeout(solverTimeoutRef.current);
+      }
+    };
+  }, [nodes, edges]);
   const excessProductsRaw = useMemo(() => getExcessProducts(productionSolution), [productionSolution]);
   const deficientProducts = useMemo(() => getDeficientProducts(productionSolution), [productionSolution]);
 
   // Add this useEffect here - AFTER productionSolution is declared
+  const flowUpdateTimeoutRef = useRef(null);
+
   useEffect(() => {
     if (productionSolution?.flows?.byNode) {
-      setNodes(nds => nds.map(node => ({ 
-        ...node, 
-        data: { ...node.data, flows: productionSolution.flows.byNode[node.id] || null } 
-      }))); 
+      if (flowUpdateTimeoutRef.current) {
+        clearTimeout(flowUpdateTimeoutRef.current);
+      }
+      
+      flowUpdateTimeoutRef.current = setTimeout(() => {
+        setNodes(nds => nds.map(node => ({ 
+          ...node, 
+          data: { ...node.data, flows: productionSolution.flows.byNode[node.id] || null } 
+        }))); 
+      }, 100);
     }
+    
+    return () => {
+      if (flowUpdateTimeoutRef.current) {
+        clearTimeout(flowUpdateTimeoutRef.current);
+      }
+    };
   }, [productionSolution, setNodes]);
   
   const excessProducts = useMemo(() => excessProductsRaw.map(item => {
@@ -331,160 +454,10 @@ function App() {
   }, []);
 
   const calculateMachineCountForRecipe = useCallback((recipe, targetNode, autoConnect) => {
-    if (!autoConnect || !targetNode) return 1;
-    
-    const targetRecipe = targetNode.data.recipe;
-    const targetMachineCount = targetNode.data.machineCount || 1;
-    const targetMachine = getMachine(targetRecipe.machine_id);
-    
-    let targetCycleTime = targetRecipe.cycle_time;
-    if (typeof targetCycleTime !== 'number' || targetCycleTime <= 0) targetCycleTime = 1;
-    if (targetMachine && hasTempDependentCycle(targetMachine.id)) {
-      const tempInfo = TEMP_DEPENDENT_MACHINES[targetMachine.id];
-      if (tempInfo?.type === 'steam_input' && (targetMachine.id !== 'm_steam_cracking_plant' || recipeUsesSteam(targetRecipe))) {
-        const inputTemp = targetRecipe.tempDependentInputTemp ?? DEFAULT_STEAM_TEMPERATURE;
-        targetCycleTime = getTempDependentCycleTime(targetMachine.id, inputTemp, targetCycleTime);
-      }
-    }
-    
-    // Configure special recipes before calculating
-    let configuredRecipe = { ...recipe };
-    const recipeMachine = getMachine(recipe.machine_id);
-    
-    // Handle industrial firebox
-    if (recipeMachine?.id === 'm_industrial_firebox' && isIndustrialFireboxRecipe(recipe.id)) {
-      const fuelProductIds = ['p_coal', 'p_coke_fuel', 'p_planks', 'p_oak_log'];
-      let fuelToUse = lastFireboxConfig?.fuel || 'p_coke_fuel';
-      
-      if (fuelProductIds.includes(autoConnect.productId)) {
-        fuelToUse = autoConnect.productId;
-      }
-      
-      const metrics = calculateFireboxMetrics(recipe.id, fuelToUse);
-      if (metrics) {
-        configuredRecipe = {
-          ...configuredRecipe,
-          inputs: buildFireboxInputs(recipe.inputs, fuelToUse, recipe.id),
-          cycle_time: metrics.cycleTime
-        };
-      }
-    }
-    
-    // Handle mineshaft drill
-    if (recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill') {
-      const defaultDrillHead = lastDrillConfig?.drillHead || 'steel';
-      const defaultConsumable = lastDrillConfig?.consumable || 'hydrochloric_acid';
-      const defaultMachineOil = lastDrillConfig?.machineOil !== undefined ? lastDrillConfig.machineOil : true;
-      
-      const drillHeadIds = ['p_copper_drill_head', 'p_iron_drill_head', 'p_steel_drill_head', 'p_tungsten_carbide_drill_head'];
-      const drillHeadMap = {
-        'p_copper_drill_head': 'copper',
-        'p_iron_drill_head': 'iron',
-        'p_steel_drill_head': 'steel',
-        'p_tungsten_carbide_drill_head': 'tungsten_carbide'
-      };
-      
-      let drillHead = defaultDrillHead;
-      let depth = 100;
-      
-      if (drillHeadIds.includes(autoConnect.productId)) {
-        drillHead = drillHeadMap[autoConnect.productId];
-      } else if (!autoConnect.isOutput) {
-        const bestDepth = findBestDepthForProduct(autoConnect.productId, drillHead, defaultConsumable, defaultMachineOil);
-        if (bestDepth) depth = bestDepth;
-      }
-      
-      const drillInputs = buildDrillInputs(drillHead, defaultConsumable, defaultMachineOil, depth);
-      const drillOutputs = buildDrillOutputs(drillHead, defaultConsumable, defaultMachineOil, depth);
-      
-      configuredRecipe = {
-        ...configuredRecipe,
-        inputs: drillInputs,
-        outputs: drillOutputs,
-        cycle_time: 1
-      };
-    }
-    
-    // Handle logic assembler
-    if (recipe.isLogicAssembler || recipe.id === 'r_logic_assembler') {
-      const defaultOuterStage = lastAssemblerConfig?.outerStage || 1;
-      const defaultInnerStage = lastAssemblerConfig?.innerStage || 2;
-      const defaultMachineOil = lastAssemblerConfig?.machineOil !== undefined ? lastAssemblerConfig.machineOil : true;
-      
-      let targetMicrochip = autoConnect.productId.includes('microchip') 
-        ? autoConnect.productId 
-        : (defaultOuterStage === 1 ? `p_${defaultInnerStage}x_microchip` : `p_${defaultOuterStage}x${defaultInnerStage}x_microchip`);
-      
-      const assemblerInputs = buildLogicAssemblerInputs(targetMicrochip, defaultMachineOil);
-      const assemblerOutputs = buildLogicAssemblerOutputs(targetMicrochip, defaultMachineOil);
-      const metrics = calculateLogicAssemblerMetrics(targetMicrochip, defaultMachineOil, 0);
-      
-      configuredRecipe = {
-        ...configuredRecipe,
-        inputs: assemblerInputs,
-        outputs: assemblerOutputs,
-        cycle_time: metrics ? metrics.cycleTime : 1
-      };
-    }
-    
-    // Handle tree farm
-    if (recipe.isTreeFarm || recipe.id === 'r_tree_farm') {
-      const defaultTrees = lastTreeFarmConfig?.trees || 450;
-      const defaultHarvesters = lastTreeFarmConfig?.harvesters || 20;
-      
-      const treeFarmInputs = buildTreeFarmInputs(24);
-      const treeFarmOutputs = buildTreeFarmOutputs(defaultTrees, defaultHarvesters, globalPollution);
-      
-      configuredRecipe = {
-        ...configuredRecipe,
-        inputs: treeFarmInputs,
-        outputs: treeFarmOutputs,
-        cycle_time: 1
-      };
-    }
-    
-    let recipeCycleTime = configuredRecipe.cycle_time;
-    if (typeof recipeCycleTime !== 'number' || recipeCycleTime <= 0) recipeCycleTime = 1;
-    
-    if (recipeMachine && hasTempDependentCycle(recipeMachine.id)) {
-      const tempInfo = TEMP_DEPENDENT_MACHINES[recipeMachine.id];
-      if (tempInfo?.type === 'steam_input' && (recipeMachine.id !== 'm_steam_cracking_plant' || recipeUsesSteam(configuredRecipe))) {
-        const inputTemp = configuredRecipe.tempDependentInputTemp ?? DEFAULT_STEAM_TEMPERATURE;
-        recipeCycleTime = getTempDependentCycleTime(recipeMachine.id, inputTemp, recipeCycleTime);
-      }
-    }
-    
-    if (autoConnect.isOutput) {
-      const targetOutput = targetRecipe.outputs[autoConnect.outputIndex];
-      if (targetOutput) {
-        const quantityForCalculation = targetOutput.originalQuantity !== undefined ? targetOutput.originalQuantity : targetOutput.quantity;
-        if (typeof quantityForCalculation === 'number') {
-          const targetRate = (quantityForCalculation / targetCycleTime) * targetMachineCount;
-          const newInput = configuredRecipe.inputs.find(item => item.product_id === autoConnect.productId);
-          if (newInput && typeof newInput.quantity === 'number' && newInput.quantity > 0) {
-            const newRatePerMachine = newInput.quantity / recipeCycleTime;
-            return targetRate / newRatePerMachine;
-          }
-        }
-      }
-    } else {
-      const targetInput = targetRecipe.inputs[autoConnect.inputIndex];
-      if (targetInput && typeof targetInput.quantity === 'number') {
-        const targetRate = (targetInput.quantity / targetCycleTime) * targetMachineCount;
-        const newOutput = configuredRecipe.outputs.find(item => item.product_id === autoConnect.productId);
-        if (newOutput) {
-          const quantityForCalculation = newOutput.originalQuantity !== undefined ? newOutput.originalQuantity : newOutput.quantity;
-          if (typeof quantityForCalculation === 'number' && quantityForCalculation > 0) {
-            const newRatePerMachine = quantityForCalculation / recipeCycleTime;
-            return targetRate / newRatePerMachine;
-          }
-        }
-      }
-    }
-    
-    return 1;
-  }, [lastFireboxConfig, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, findBestDepthForProduct, globalPollution]);
-
+    const lastConfigs = { drillConfig: lastDrillConfig, assemblerConfig: lastAssemblerConfig, treeFarmConfig: lastTreeFarmConfig, fireboxConfig: lastFireboxConfig };
+    const flows = productionSolution?.flows || null;
+    return calculateMachineCountForAutoConnect(recipe, targetNode, autoConnect, findBestDepthForProduct, lastConfigs, globalPollution, flows);
+  }, [lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, findBestDepthForProduct, globalPollution, productionSolution]);
 
   const onConnect = useCallback((params) => {
     const sourceNode = nodes.find(n => n.id === params.source);
@@ -494,6 +467,7 @@ function App() {
     const targetProductId = targetNode.data.recipe.inputs[parseInt(params.targetHandle.split('-')[1])]?.product_id;
     if (sourceProductId !== targetProductId) return;
     setEdges((eds) => addEdge({ ...params, type: 'custom', animated: false }, eds));
+    clearFlowCache();
   }, [setEdges, nodes]);
 
   const resetSelector = () => {
@@ -509,6 +483,7 @@ function App() {
       setEdges(eds => eds.filter(edge => 
         !(edge.target === nodeId && edge.targetHandle === `left-${inputIndex}`)
       ));
+      clearFlowCache();
       return;
     }
     const product = getProduct(productId);
@@ -520,11 +495,54 @@ function App() {
       setEdges(eds => eds.filter(edge => 
         !(edge.source === nodeId && edge.sourceHandle === `right-${outputIndex}`)
       ));
+      clearFlowCache();
       return;
     }
     const product = getProduct(productId);
     if (product) { setShowRecipeSelector(true); setSelectedProduct(product); setAutoConnectTarget({ nodeId, outputIndex, productId, isOutput: true }); setSelectorOpenedFrom('rectangle'); setRecipeFilter('consumers'); }
   }, [setEdges]);
+
+  const cleanupInvalidConnections = useCallback((nodeId, inputs, outputs) => {
+    setEdges((eds) => {
+      const filteredEdges = eds.filter(edge => {
+        if (edge.source === nodeId) {
+          const handleIndex = parseInt(edge.sourceHandle.split('-')[1]);
+          if (handleIndex >= outputs.length) return false;
+          
+          // Check if product still matches
+          const output = outputs[handleIndex];
+          const targetNode = nodes.find(n => n.id === edge.target);
+          if (!targetNode) return false;
+          
+          const targetInputIndex = parseInt(edge.targetHandle.split('-')[1]);
+          const targetInput = targetNode.data?.recipe?.inputs[targetInputIndex];
+          if (!targetInput || targetInput.product_id !== output.product_id) return false;
+        }
+        
+        if (edge.target === nodeId) {
+          const handleIndex = parseInt(edge.targetHandle.split('-')[1]);
+          if (handleIndex >= inputs.length) return false;
+          
+          // Check if product still matches
+          const input = inputs[handleIndex];
+          const sourceNode = nodes.find(n => n.id === edge.source);
+          if (!sourceNode) return false;
+          
+          const sourceOutputIndex = parseInt(edge.sourceHandle.split('-')[1]);
+          const sourceOutput = sourceNode.data?.recipe?.outputs[sourceOutputIndex];
+          if (!sourceOutput || sourceOutput.product_id !== input.product_id) return false;
+        }
+        
+        return true;
+      });
+      
+      if (filteredEdges.length !== eds.length) {
+        clearFlowCache();
+      }
+      
+      return filteredEdges;
+    });
+  }, [setEdges, nodes]);
 
   const handleDrillSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
     setLastDrillConfig({
@@ -540,14 +558,8 @@ function App() {
         power_consumption: metrics ? { max: metrics.drillingPower * 1000000, average: ((metrics.drillingPower * metrics.lifeTime + metrics.idlePower * (metrics.replacementTime + metrics.travelTime)) / metrics.totalCycleTime) * 1000000 } : 'Variable',
         pollution: metrics ? metrics.pollution : 'Variable' }, leftHandles: Math.max(inputs.length, 1), rightHandles: Math.max(outputs.length, 1)
     }));
-    setEdges((eds) => eds.filter(edge => {
-      if (edge.source === nodeId || edge.target === nodeId) {
-        const handleIndex = parseInt((edge.source === nodeId ? edge.sourceHandle : edge.targetHandle).split('-')[1]);
-        return edge.source === nodeId ? handleIndex < outputs.length : handleIndex < inputs.length;
-      }
-      return true;
-    }));
-  }, [setEdges]);
+    cleanupInvalidConnections(nodeId, inputs, outputs);
+  }, [cleanupInvalidConnections]);
 
   const handleLogicAssemblerSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
     setLastAssemblerConfig({
@@ -567,14 +579,8 @@ function App() {
         cycle_time: metrics ? metrics.cycleTime : 'Variable', power_consumption: metrics ? { max: metrics.maxPowerConsumption, average: metrics.avgPowerConsumption } : 'Variable' },
         leftHandles: Math.max(inputs.length, 1), rightHandles: Math.max(outputs.length, 1)
     }));
-    setEdges((eds) => eds.filter(edge => {
-      if (edge.source === nodeId || edge.target === nodeId) {
-        const handleIndex = parseInt((edge.source === nodeId ? edge.sourceHandle : edge.targetHandle).split('-')[1]);
-        return edge.source === nodeId ? handleIndex < outputs.length : handleIndex < inputs.length;
-      }
-      return true;
-    }));
-  }, [setEdges]);
+    cleanupInvalidConnections(nodeId, inputs, outputs);
+  }, [cleanupInvalidConnections]);
 
   const handleTreeFarmSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
     setLastTreeFarmConfig({
@@ -669,24 +675,83 @@ function App() {
     }));
   }, [setNodes]);
 
-  const createRecipeBox = useCallback((recipe) => {
+  const createRecipeBox = useCallback((recipe, overrideMachineCount = null) => {
+    
     const machine = getMachine(recipe.machine_id);
-    if (!machine || !recipe.inputs || !recipe.outputs) { alert('Error: Invalid machine or recipe data'); return; }
+    if (!machine || !recipe.inputs || !recipe.outputs) { 
+      alert('Error: Invalid machine or recipe data'); 
+      return; 
+    }
+    
     let recipeWithTemp = initializeRecipeTemperatures(recipe, machine.id);
     const newNodeId = `node-${nodeId}`;
     const targetNode = autoConnectTarget ? nodes.find(n => n.id === autoConnectTarget.nodeId) : null;
-    const position = targetNode ? { x: targetNode.position.x + (autoConnectTarget.isOutput ? 400 : -400), y: targetNode.position.y } : { x: Math.random() * 400 + 100, y: Math.random() * 300 + 100 };
     
-    const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
-    const isLogicAssembler = recipe.isLogicAssembler || recipe.id === 'r_logic_assembler';
-    const isTreeFarm = recipe.isTreeFarm || recipe.id === 'r_tree_farm';
+    let position;
+    if (targetNode) {
+      // Position relative to target node for auto-connect
+      position = { 
+        x: targetNode.position.x + (autoConnectTarget.isOutput ? 400 : -400), 
+        y: targetNode.position.y 
+      };
+    } else {
+      // Place at center of screen viewport
+      if (reactFlowInstance.current && reactFlowWrapper.current) {
+        const bounds = reactFlowWrapper.current.getBoundingClientRect();
+        const centerX = bounds.width / 2;
+        const centerY = bounds.height / 2;
+        
+        // Convert screen center to flow coordinates
+        const flowPosition = reactFlowInstance.current.screenToFlowPosition({
+          x: bounds.left + centerX,
+          y: bounds.top + centerY,
+        });
+        
+        // Check if there's already a node near this position
+        const nodeWidth = 320;
+        const nodeHeight = 300;
+        const spacing = 50;
+        
+        let finalPosition = { x: flowPosition.x - nodeWidth / 2, y: flowPosition.y - nodeHeight / 2 };
+        
+        // Find a clear spot near the center if occupied
+        let attempts = 0;
+        const maxAttempts = 20;
+        while (attempts < maxAttempts) {
+          const hasOverlap = nodes.some(node => {
+            const dx = Math.abs(node.position.x - finalPosition.x);
+            const dy = Math.abs(node.position.y - finalPosition.y);
+            return dx < nodeWidth + spacing && dy < nodeHeight + spacing;
+          });
+          
+          if (!hasOverlap) break;
+          
+          // Try positions in a spiral pattern around center
+          const angle = (attempts / maxAttempts) * Math.PI * 2;
+          const distance = 100 + (attempts * 50);
+          finalPosition = {
+            x: flowPosition.x - nodeWidth / 2 + Math.cos(angle) * distance,
+            y: flowPosition.y - nodeHeight / 2 + Math.sin(angle) * distance
+          };
+          attempts++;
+        }
+        
+        position = finalPosition;
+      } else {
+        // Fallback to random position if ReactFlow instance not ready
+        position = { 
+          x: Math.random() * 400 + 100, 
+          y: Math.random() * 300 + 100 
+        };
+      }
+    }
     
     const isBoiler = HEAT_SOURCES[machine.id]?.type === 'boiler';
     
     // For boilers, temporarily use hot temperature for machine count calculations
     if (isBoiler) {
       const settingsWithCoolant = {
-        heatLoss: recipeWithTemp.temperatureSettings?.heatLoss ?? 8,
+        heatLoss: recipeWithTemp.temperatureSettings?.heatLoss ?? 0,
         coolantTemp: DEFAULT_BOILER_INPUT_TEMPERATURE
       };
       
@@ -701,181 +766,58 @@ function App() {
       };
     }
     
-    let drillSettings = null;
-    let drillInputs = recipe.inputs;
-    let drillOutputs = recipe.outputs;
+    // Configure special recipes
+    const lastConfigs = { 
+      drillConfig: lastDrillConfig, 
+      assemblerConfig: lastAssemblerConfig, 
+      treeFarmConfig: lastTreeFarmConfig, 
+      fireboxConfig: lastFireboxConfig 
+    };
     
-    if (isMineshaftDrill) {
-      const defaultDrillHead = lastDrillConfig?.drillHead || 'steel';
-      const defaultConsumable = lastDrillConfig?.consumable || 'hydrochloric_acid';
-      const defaultMachineOil = lastDrillConfig?.machineOil !== undefined ? lastDrillConfig.machineOil : true;
+    if (isSpecialRecipe(recipeWithTemp)) {
+      recipeWithTemp = configureSpecialRecipe(
+        recipeWithTemp, 
+        autoConnectTarget, 
+        selectedProduct, 
+        lastConfigs, 
+        globalPollution, 
+        findBestDepthForProduct
+      );
       
-      // Check if the searched product is a drill head
-      const drillHeadIds = ['p_copper_drill_head', 'p_iron_drill_head', 'p_steel_drill_head', 'p_tungsten_carbide_drill_head'];
-      const drillHeadMap = {
-        'p_copper_drill_head': 'copper',
-        'p_iron_drill_head': 'iron',
-        'p_steel_drill_head': 'steel',
-        'p_tungsten_carbide_drill_head': 'tungsten_carbide'
-      };
-      
-      // Get the product ID either from autoConnectTarget or selectedProduct
-      const searchedProductId = autoConnectTarget?.productId || selectedProduct?.id;
-      
-      if (searchedProductId) {
-        // If user searched for a drill head, use that drill head
-        if (drillHeadIds.includes(searchedProductId)) {
-          const lastUsedDepth = nodes.find(n => n.data?.recipe?.drillSettings?.depth)?.data.recipe.drillSettings.depth || 100;
-          drillSettings = {
-            drillHead: drillHeadMap[searchedProductId],
-            consumable: defaultConsumable,
-            machineOil: defaultMachineOil,
-            depth: lastUsedDepth
-          };
-        }
-        // If user is connecting to an output, use last depth
-        else if (autoConnectTarget?.isOutput) {
-          const lastUsedDepth = nodes.find(n => n.data?.recipe?.drillSettings?.depth)?.data.recipe.drillSettings.depth || 100;
-          drillSettings = {
-            drillHead: defaultDrillHead,
-            consumable: defaultConsumable,
-            machineOil: defaultMachineOil,
-            depth: lastUsedDepth
-          };
-        } 
-        // If user searched for an output product, find best depth
-        else {
-          const bestDepth = findBestDepthForProduct(searchedProductId, defaultDrillHead, defaultConsumable, defaultMachineOil);
-          
-          if (bestDepth) {
-            drillSettings = {
-              drillHead: defaultDrillHead,
-              consumable: defaultConsumable,
-              machineOil: defaultMachineOil,
-              depth: bestDepth
-            };
-          }
-        }
-      } else {
-        const lastUsedDepth = nodes.find(n => n.data?.recipe?.drillSettings?.depth)?.data.recipe.drillSettings.depth || 100;
-        drillSettings = {
-          drillHead: defaultDrillHead,
-          consumable: defaultConsumable,
-          machineOil: defaultMachineOil,
-          depth: lastUsedDepth
-        };
+      // Update last configs based on the configured recipe
+      if (recipeWithTemp.drillSettings) {
+        setLastDrillConfig({
+          drillHead: recipeWithTemp.drillSettings.drillHead,
+          consumable: recipeWithTemp.drillSettings.consumable,
+          machineOil: recipeWithTemp.drillSettings.machineOil
+        });
       }
       
-      if (drillSettings) {
-        drillInputs = buildDrillInputs(drillSettings.drillHead, drillSettings.consumable, drillSettings.machineOil, drillSettings.depth);
-        drillOutputs = buildDrillOutputs(drillSettings.drillHead, drillSettings.consumable, drillSettings.machineOil, drillSettings.depth);
-        const metrics = calculateDrillMetrics(drillSettings.drillHead, drillSettings.consumable, drillSettings.machineOil, drillSettings.depth);
-        
-        recipeWithTemp = {
-          ...recipeWithTemp,
-          inputs: drillInputs.length > 0 ? drillInputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
-          outputs: drillOutputs.length > 0 ? drillOutputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
-          drillSettings,
-          cycle_time: 1,
-          power_consumption: metrics ? { max: metrics.drillingPower * 1000000, average: ((metrics.drillingPower * metrics.lifeTime + metrics.idlePower * (metrics.replacementTime + metrics.travelTime)) / metrics.totalCycleTime) * 1000000 } : 'Variable',
-          pollution: metrics ? metrics.pollution : 'Variable'
-        };
+      if (recipeWithTemp.assemblerSettings) {
+        setLastAssemblerConfig({
+          outerStage: recipeWithTemp.assemblerSettings.outerStage,
+          innerStage: recipeWithTemp.assemblerSettings.innerStage,
+          machineOil: recipeWithTemp.assemblerSettings.machineOil,
+          tickCircuitDelay: recipeWithTemp.assemblerSettings.tickCircuitDelay
+        });
+      }
+      
+      if (recipeWithTemp.treeFarmSettings) {
+        setLastTreeFarmConfig({
+          trees: recipeWithTemp.treeFarmSettings.trees,
+          harvesters: recipeWithTemp.treeFarmSettings.harvesters,
+          sprinklers: recipeWithTemp.treeFarmSettings.sprinklers,
+          outputs: recipeWithTemp.treeFarmSettings.outputs
+        });
+      }
+      
+      if (recipeWithTemp.fireboxSettings) {
+        setLastFireboxConfig({
+          fuel: recipeWithTemp.fireboxSettings.fuel
+        });
       }
     }
     
-    let assemblerSettings = null;
-    let assemblerInputs = recipe.inputs;
-    let assemblerOutputs = recipe.outputs;
-    
-    if (isLogicAssembler) {
-      const defaultOuterStage = lastAssemblerConfig?.outerStage || 1;
-      const defaultInnerStage = lastAssemblerConfig?.innerStage || 2;
-      const defaultMachineOil = lastAssemblerConfig?.machineOil !== undefined ? lastAssemblerConfig.machineOil : true;
-      const defaultTickCircuitDelay = lastAssemblerConfig?.tickCircuitDelay || 0;
-      
-      let targetMicrochip = defaultOuterStage === 1 ? `p_${defaultInnerStage}x_microchip` : `p_${defaultOuterStage}x${defaultInnerStage}x_microchip`;
-      
-      if (autoConnectTarget) {
-        if (autoConnectTarget.productId.includes('microchip')) {
-          targetMicrochip = autoConnectTarget.productId;
-          const match = autoConnectTarget.productId.match(/p_(?:(\d+)x)?(\d+)x_microchip/);
-          if (match) {
-            const outerStage = match[1] ? parseInt(match[1]) : 1;
-            const innerStage = parseInt(match[2]);
-            assemblerSettings = {
-              outerStage,
-              innerStage,
-              machineOil: defaultMachineOil,
-              tickCircuitDelay: defaultTickCircuitDelay
-            };
-          }
-        } else {
-          assemblerSettings = {
-            outerStage: defaultOuterStage,
-            innerStage: defaultInnerStage,
-            machineOil: defaultMachineOil,
-            tickCircuitDelay: defaultTickCircuitDelay
-          };
-        }
-      } else {
-        assemblerSettings = {
-          outerStage: defaultOuterStage,
-          innerStage: defaultInnerStage,
-          machineOil: defaultMachineOil,
-          tickCircuitDelay: defaultTickCircuitDelay
-        };
-      }
-      
-      if (assemblerSettings) {
-        assemblerInputs = buildLogicAssemblerInputs(targetMicrochip, assemblerSettings.machineOil);
-        assemblerOutputs = buildLogicAssemblerOutputs(targetMicrochip, assemblerSettings.machineOil);
-        const metrics = calculateLogicAssemblerMetrics(targetMicrochip, assemblerSettings.machineOil, assemblerSettings.tickCircuitDelay);
-        
-        recipeWithTemp = {
-          ...recipeWithTemp,
-          inputs: assemblerInputs.length > 0 ? assemblerInputs : [{ product_id: 'p_logic_plate', quantity: 'Variable' }, { product_id: 'p_copper_wire', quantity: 'Variable' }, { product_id: 'p_semiconductor', quantity: 'Variable' }, { product_id: 'p_gold_wire', quantity: 'Variable' }],
-          outputs: assemblerOutputs.length > 0 ? assemblerOutputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
-          assemblerSettings,
-          cycle_time: metrics ? metrics.cycleTime : 'Variable',
-          power_consumption: metrics ? { max: metrics.maxPowerConsumption, average: metrics.avgPowerConsumption } : 'Variable'
-        };
-      }
-    }
-
-    let treeFarmSettings = null;
-    let treeFarmInputs = recipe.inputs;
-    let treeFarmOutputs = recipe.outputs;
-    
-    if (isTreeFarm) {
-      const defaultTrees = lastTreeFarmConfig?.trees || 450;
-      const defaultHarvesters = lastTreeFarmConfig?.harvesters || 20;
-      const defaultSprinklers = lastTreeFarmConfig?.sprinklers || 24;
-      const defaultOutputs = lastTreeFarmConfig?.outputs || 8;
-      const defaultController = 1;
-      
-      treeFarmSettings = {
-        trees: defaultTrees,
-        harvesters: defaultHarvesters,
-        sprinklers: defaultSprinklers,
-        outputs: defaultOutputs,
-        controller: defaultController
-      };
-      
-      treeFarmInputs = buildTreeFarmInputs(defaultSprinklers);
-      treeFarmOutputs = buildTreeFarmOutputs(defaultTrees, defaultHarvesters, globalPollution);
-      const metrics = calculateTreeFarmMetrics(defaultTrees, defaultHarvesters, defaultSprinklers, defaultOutputs, defaultController, globalPollution);
-      
-      recipeWithTemp = {
-        ...recipeWithTemp,
-        inputs: treeFarmInputs.length > 0 ? treeFarmInputs : [{ product_id: 'p_water', quantity: 'Variable' }],
-        outputs: treeFarmOutputs.length > 0 ? treeFarmOutputs : [{ product_id: 'p_oak_log', quantity: 'Variable' }],
-        treeFarmSettings,
-        cycle_time: 1,
-        power_consumption: metrics ? metrics.avgPowerConsumption : 'Variable',
-        pollution: 0
-      };
-    }
-
     // Initialize air separation unit with pollution-based residue
     if (machine.id === 'm_air_separation_unit') {
       const residueAmount = calculateResidueAmount(globalPollution);
@@ -891,72 +833,78 @@ function App() {
         outputs: updatedOutputs
       };
     }
-
-    // Initialize industrial firebox with default fuel (only for recipes with variable fuel input)
-    const hasVariableFuelInput = recipe.inputs?.some(input => input.product_id === 'p_variableproduct');
-    if (machine.id === 'm_industrial_firebox' && isIndustrialFireboxRecipe(recipe.id) && hasVariableFuelInput) {
-      // Check if the searched product is a fuel
-      const fuelProductIds = ['p_coal', 'p_coke_fuel', 'p_planks', 'p_oak_log'];
-      let fuelToUse = lastFireboxConfig?.fuel || 'p_coke_fuel';
-      
-      // Get the product ID either from autoConnectTarget or selectedProduct
-      const searchedProductId = autoConnectTarget?.productId || selectedProduct?.id;
-      
-      // If user searched for a fuel product, use that fuel
-      if (searchedProductId && fuelProductIds.includes(searchedProductId)) {
-        fuelToUse = searchedProductId;
-      }
-      
-      const metrics = calculateFireboxMetrics(recipe.id, fuelToUse);
-      
-      if (metrics) {
-        const fireboxInputs = buildFireboxInputs(recipe.inputs, fuelToUse, recipe.id);
-        const fireboxSettings = { fuel: fuelToUse };
-        
-        recipeWithTemp = {
-          ...recipeWithTemp,
-          inputs: fireboxInputs,
-          fireboxSettings,
-          cycle_time: metrics.cycleTime,
-          power_consumption: 0 // No power consumption
-        };
-      }
-    }
     
-    const calculatedMachineCount = recipeMachineCounts[recipe.id] || 1;
+    // Use override machine count if provided, otherwise use calculated
+  const calculatedMachineCount = overrideMachineCount !== null ? overrideMachineCount : (recipeMachineCounts[recipe.id] ?? 1);
     
-    const newNode = { id: newNodeId, type: 'custom', position, data: { recipe: recipeWithTemp, machine, machineCount: calculatedMachineCount, displayMode, machineDisplayMode,
-      leftHandles: recipeWithTemp.inputs.length, rightHandles: recipeWithTemp.outputs.length, onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput,
-      onDrillSettingsChange: handleDrillSettingsChange, onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTreeFarmSettingsChange: handleTreeFarmSettingsChange,
-      onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange, 
-      onBoilerSettingsChange: handleBoilerSettingsChange, onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange, globalPollution, isTarget: false, flows: null }, sourcePosition: 'right', targetPosition: 'left' };
-        
+    const newNode = { 
+      id: newNodeId, 
+      type: 'custom', 
+      position, 
+      data: { 
+        recipe: recipeWithTemp, 
+        machine, 
+        machineCount: calculatedMachineCount, 
+        displayMode, 
+        machineDisplayMode,
+        leftHandles: recipeWithTemp.inputs.length, 
+        rightHandles: recipeWithTemp.outputs.length, 
+        onInputClick: openRecipeSelectorForInput, 
+        onOutputClick: openRecipeSelectorForOutput,
+        onDrillSettingsChange: handleDrillSettingsChange, 
+        onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, 
+        onTreeFarmSettingsChange: handleTreeFarmSettingsChange,
+        onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, 
+        onTemperatureSettingsChange: handleTemperatureSettingsChange, 
+        onBoilerSettingsChange: handleBoilerSettingsChange, 
+        onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange, 
+        onMiddleClick: onNodeMiddleClick,
+        globalPollution, 
+        isTarget: false, 
+        flows: null 
+      }, 
+      sourcePosition: 'right', 
+      targetPosition: 'left' 
+    };
+    
     setNodes((nds) => {
       const updatedNodes = [...nds, newNode];
-      if (autoConnectTarget) {
+      if (autoConnectTarget && calculatedMachineCount > 0) {
         setTimeout(() => {
           const searchKey = autoConnectTarget.isOutput ? 'inputs' : 'outputs';
           const index = recipeWithTemp[searchKey].findIndex(item => item.product_id === autoConnectTarget.productId);
           if (index !== -1) {
             const sourceHandleIndex = autoConnectTarget.isOutput ? autoConnectTarget.outputIndex : index;
             const targetHandleIndex = autoConnectTarget.isOutput ? index : autoConnectTarget.inputIndex;
-            const newEdge = { source: autoConnectTarget.isOutput ? autoConnectTarget.nodeId : newNodeId, sourceHandle: `right-${sourceHandleIndex}`,
-              target: autoConnectTarget.isOutput ? newNodeId : autoConnectTarget.nodeId, targetHandle: `left-${targetHandleIndex}`, type: 'custom', animated: false };
+            const newEdge = { 
+              source: autoConnectTarget.isOutput ? autoConnectTarget.nodeId : newNodeId, 
+              sourceHandle: `right-${sourceHandleIndex}`,
+              target: autoConnectTarget.isOutput ? newNodeId : autoConnectTarget.nodeId, 
+              targetHandle: `left-${targetHandleIndex}`, 
+              type: 'custom', 
+              animated: false 
+            };
             setEdges((eds) => addEdge(newEdge, eds));
           }
         }, 50);
       }
       return updatedNodes;
     });
+    
     setNodeId((id) => id + 1);
-    resetSelector();
-  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, 
-    handleTreeFarmSettingsChange, handleIndustrialFireboxSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange, autoConnectTarget, displayMode, 
-    machineDisplayMode, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, findBestDepthForProduct, recipeMachineCounts, globalPollution]);
+    
+    // Return the new node ID for machine count editor flow
+    return newNodeId;
+  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, 
+    handleLogicAssemblerSettingsChange, handleTreeFarmSettingsChange, handleIndustrialFireboxSettingsChange, 
+    handleTemperatureSettingsChange, handleBoilerSettingsChange, handleChemicalPlantSettingsChange, autoConnectTarget, displayMode, 
+    machineDisplayMode, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, findBestDepthForProduct, 
+    recipeMachineCounts, globalPollution, selectedProduct]);
 
   const deleteRecipeBoxAndTarget = useCallback((boxId) => {
     setNodes((nds) => nds.filter((n) => n.id !== boxId)); setEdges((eds) => eds.filter((e) => e.source !== boxId && e.target !== boxId));
     setTargetProducts(prev => prev.filter(t => t.recipeBoxId !== boxId));
+    clearFlowCache();
   }, [setNodes, setEdges]);
 
   const toggleTargetStatus = useCallback((node) => {
@@ -977,24 +925,139 @@ function App() {
     event.stopPropagation(); setEditingNodeId(node.id); setEditingMachineCount(String(node.data?.machineCount ?? 0)); setShowMachineCountEditor(true);
   }, []);
 
+  const nodesRef = useRef(nodes);
+  
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+
+  const onNodeMiddleClick = useCallback((nodeId) => {
+    const node = nodesRef.current.find(n => n.id === nodeId);
+    if (!node) {
+      return;
+    }
+    // Create a copy of the node data
+    const copiedRecipe = { ...node.data.recipe };
+    const copiedMachine = node.data.machine;
+    const copiedMachineCount = node.data.machineCount;
+    
+    setPendingNode({
+      recipe: copiedRecipe,
+      machine: copiedMachine,
+      machineCount: copiedMachineCount
+    });
+  }, []);
+
+  const handleCanvasMouseMove = useCallback((event) => {
+    if (!reactFlowWrapper.current) return;
+    
+    const bounds = reactFlowWrapper.current.getBoundingClientRect();
+    setMousePosition({
+      x: event.clientX - bounds.left,
+      y: event.clientY - bounds.top
+    });
+  }, []);
+
+  const handleCanvasClick = useCallback((event) => {
+    if (!pendingNode || event.button !== 0) return; // Only left click
+    
+    event.stopPropagation();
+    
+    if (!reactFlowInstance.current) return;
+    
+    const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
+    if (!reactFlowBounds) return;
+    
+    // Convert screen coordinates to flow coordinates using ReactFlow's screenToFlowPosition method
+    const position = reactFlowInstance.current.screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+    
+    // Center the node at the mouse position by offsetting half the width and height
+    position.x -= 160; // Half of typical node width (320 / 2)
+    position.y -= 150; // Half of typical node height (roughly 300 / 2)
+    
+    const newNodeId = `node-${nodeId}`;
+    
+    const newNode = {
+      id: newNodeId,
+      type: 'custom',
+      position,
+      data: {
+        recipe: pendingNode.recipe,
+        machine: pendingNode.machine,
+        machineCount: pendingNode.machineCount,
+        displayMode,
+        machineDisplayMode,
+        leftHandles: pendingNode.recipe.inputs.length,
+        rightHandles: pendingNode.recipe.outputs.length,
+        onInputClick: openRecipeSelectorForInput,
+        onOutputClick: openRecipeSelectorForOutput,
+        onDrillSettingsChange: handleDrillSettingsChange,
+        onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange,
+        onTreeFarmSettingsChange: handleTreeFarmSettingsChange,
+        onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange,
+        onTemperatureSettingsChange: handleTemperatureSettingsChange,
+        onBoilerSettingsChange: handleBoilerSettingsChange,
+        onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange,
+        onMiddleClick: onNodeMiddleClick,
+        globalPollution,
+        isTarget: false,
+        flows: null
+      },
+      sourcePosition: 'right',
+      targetPosition: 'left'
+    };
+    
+    setNodes((nds) => [...nds, newNode]);
+    setNodeId((id) => id + 1);
+    setPendingNode(null);
+  }, [pendingNode, nodeId, displayMode, machineDisplayMode, openRecipeSelectorForInput, openRecipeSelectorForOutput,
+    handleDrillSettingsChange, handleLogicAssemblerSettingsChange, handleTreeFarmSettingsChange,
+    handleIndustrialFireboxSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange,
+    handleChemicalPlantSettingsChange, globalPollution, setNodes, onNodeMiddleClick]);
+
+  const handleCancelPlacement = useCallback((event) => {
+    if (event.button === 2) { // Right click
+      setPendingNode(null);
+    }
+  }, []);
+
   const handleMachineCountUpdate = useCallback(() => {
     let value = parseFloat(editingMachineCount);
-    if (isNaN(value) || value <= 0) { value = 1; }
+    if (isNaN(value) || value <= 0) {
+      if (newNodePendingMachineCount) {
+        // If value is 0 or invalid for new node, prompt user
+        alert('Machine count must be greater than 0. Please enter a valid number.');
+        return; // Don't close, let user try again
+      }
+      // For existing nodes, default to 1
+      value = 1;
+    }
     
-    if (editingNodeId) {
+    if (editingNodeId && !newNodePendingMachineCount) {
+      // Editing existing node
       updateNodeData(editingNodeId, data => ({ ...data, machineCount: value }));
+    } else if (newNodePendingMachineCount) {
+      // Creating new node
+      updateNodeData(newNodePendingMachineCount, data => ({ ...data, machineCount: value }));
     }
     
     setShowMachineCountEditor(false); 
     setEditingNodeId(null); 
     setEditingMachineCount('');
     setNewNodePendingMachineCount(null);
-  }, [editingNodeId, editingMachineCount]);
+  }, [editingNodeId, editingMachineCount, newNodePendingMachineCount, deleteRecipeBoxAndTarget]);
 
   const handleMachineCountCancel = useCallback(() => {
     if (newNodePendingMachineCount) {
-      // Delete the newly created node
       deleteRecipeBoxAndTarget(newNodePendingMachineCount);
+      // Return to product/machine selection
+      setShowRecipeSelector(true);
+      setSelectedProduct(null);
+      setSelectedMachine(null);
+      setSelectorMode('product');
     }
     setShowMachineCountEditor(false);
     setEditingNodeId(null);
@@ -1009,19 +1072,33 @@ function App() {
   }, [extendedPanelOpen]);
 
   const getAvailableRecipes = () => {
+    
     if (!selectedProduct) return [];
+    
     const producers = getRecipesProducingProductFiltered(selectedProduct.id);
     const consumers = getRecipesUsingProduct(selectedProduct.id);
-    const isDrillInput = canDrillUseProduct(selectedProduct.id);
-    const isDrillOutput = Object.values(DEPTH_OUTPUTS).some(outputs => outputs.some(o => o.product_id === selectedProduct.id));
-    const isAssemblerInput = ['p_logic_plate', 'p_copper_wire', 'p_semiconductor', 'p_gold_wire', 'p_machine_oil'].includes(selectedProduct.id);
-    const isAssemblerOutput = MICROCHIP_STAGES.some(stage => stage.productId === selectedProduct.id);
-    const isTreeFarmInput = selectedProduct.id === 'p_water';
-    const isTreeFarmOutput = selectedProduct.id === 'p_oak_log';
-    if (recipeFilter === 'producers') return [...producers, ...(isDrillOutput ? [DEFAULT_DRILL_RECIPE] : []), ...(isAssemblerOutput ? [DEFAULT_LOGIC_ASSEMBLER_RECIPE] : []), ...(isTreeFarmOutput ? [DEFAULT_TREE_FARM_RECIPE] : [])];
-    if (recipeFilter === 'consumers') return [...consumers, ...(isDrillInput ? [DEFAULT_DRILL_RECIPE] : []), ...(isAssemblerInput ? [DEFAULT_LOGIC_ASSEMBLER_RECIPE] : []), ...(isTreeFarmInput ? [DEFAULT_TREE_FARM_RECIPE] : [])];
-    return Array.from(new Map([...producers, ...consumers, ...((isDrillInput || isDrillOutput) ? [DEFAULT_DRILL_RECIPE] : []), 
-      ...((isAssemblerInput || isAssemblerOutput) ? [DEFAULT_LOGIC_ASSEMBLER_RECIPE] : []), ...((isTreeFarmInput || isTreeFarmOutput) ? [DEFAULT_TREE_FARM_RECIPE] : [])].map(r => [r.id, r])).values());
+    
+    // Check special recipes
+    const specialRecipes = [DEFAULT_DRILL_RECIPE, DEFAULT_LOGIC_ASSEMBLER_RECIPE, DEFAULT_TREE_FARM_RECIPE];
+    const specialProducers = specialRecipes.filter(sr => 
+      getSpecialRecipeOutputs(sr.id).includes(selectedProduct.id)
+    );
+    const specialConsumers = specialRecipes.filter(sr => 
+      getSpecialRecipeInputs(sr.id).includes(selectedProduct.id)
+    );
+    
+    if (recipeFilter === 'producers') {
+      return [...producers, ...specialProducers];
+    }
+    if (recipeFilter === 'consumers') {
+      return [...consumers, ...specialConsumers];
+    }
+    
+    // All recipes - combine and deduplicate
+    return Array.from(new Map(
+      [...producers, ...consumers, ...specialProducers, ...specialConsumers]
+        .map(r => [r.id, r])
+    ).values());
   };
 
   useEffect(() => {
@@ -1043,6 +1120,7 @@ function App() {
   }, [showRecipeSelector, selectorMode, selectedProduct, selectedMachine, autoConnectTarget, nodes, recipeFilter]);
 
   const handleImport = useCallback(() => fileInputRef.current?.click(), []);
+  
   const processImport = useCallback((event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -1050,44 +1128,196 @@ function App() {
     reader.onload = (e) => {
       try {
         const imported = JSON.parse(e.target.result);
-        const productMap = new Map((imported.products || []).map(p => [p.id, p]));
-        const uniqueProducts = Array.from(productMap.values());
-        const machineIds = new Set(imported.machines?.map(m => m.id) || []);
-        const cleanedRecipes = (imported.recipes || []).filter(r => machineIds.has(r.machine_id));
-        const currentProducts = [...products];
-        uniqueProducts.forEach(newProduct => {
-          const existingIndex = currentProducts.findIndex(p => p.id === newProduct.id);
-          existingIndex >= 0 ? (currentProducts[existingIndex] = newProduct) : currentProducts.push(newProduct);
-        });
-        updateProducts(currentProducts);
-        if (imported.machines?.length > 0) {
-          const currentMachines = [...machines];
-          const importedMachineIdSet = new Set(imported.machines.map(m => m.id));
-          const recipesWithoutImportedMachines = recipes.filter(r => !importedMachineIdSet.has(r.machine_id));
-          imported.machines.forEach(newMachine => {
-            const existingIndex = currentMachines.findIndex(m => m.id === newMachine.id);
-            existingIndex >= 0 ? (currentMachines[existingIndex] = newMachine) : currentMachines.push(newMachine);
+        console.log('=== IMPORT STARTED ===');
+        console.log('Imported data:', imported);
+        
+        // Determine import type
+        const isDataImport = imported.products || imported.machines || imported.recipes;
+        const isCanvasImport = imported.canvas;
+        
+        console.log('Is data import:', isDataImport);
+        console.log('Is canvas import:', isCanvasImport);
+        
+        // Handle data import (products, machines, recipes)
+        if (isDataImport) {
+          console.log('Processing data import...');
+          const productMap = new Map((imported.products || []).map(p => [p.id, p]));
+          const uniqueProducts = Array.from(productMap.values());
+          const machineIds = new Set(imported.machines?.map(m => m.id) || []);
+          const cleanedRecipes = (imported.recipes || []).filter(r => machineIds.has(r.machine_id));
+          const currentProducts = [...products];
+          uniqueProducts.forEach(newProduct => {
+            const existingIndex = currentProducts.findIndex(p => p.id === newProduct.id);
+            existingIndex >= 0 ? (currentProducts[existingIndex] = newProduct) : currentProducts.push(newProduct);
           });
-          updateMachines(currentMachines); updateRecipes([...recipesWithoutImportedMachines, ...cleanedRecipes]);
+          updateProducts(currentProducts);
+          if (imported.machines?.length > 0) {
+            const currentMachines = [...machines];
+            const importedMachineIdSet = new Set(imported.machines.map(m => m.id));
+            const recipesWithoutImportedMachines = recipes.filter(r => !importedMachineIdSet.has(r.machine_id));
+            imported.machines.forEach(newMachine => {
+              const existingIndex = currentMachines.findIndex(m => m.id === newMachine.id);
+              existingIndex >= 0 ? (currentMachines[existingIndex] = newMachine) : currentMachines.push(newMachine);
+            });
+            updateMachines(currentMachines); 
+            updateRecipes([...recipesWithoutImportedMachines, ...cleanedRecipes]);
+          }
+          console.log('Data import complete');
+          
+          if (!isCanvasImport) {
+            alert('Data import successful!');
+            window.location.reload();
+            return;
+          }
         }
-        if (imported.canvas && window.confirm('Clear current canvas and load imported layout?')) {
-          const restoredNodes = (imported.canvas.nodes || []).map(node => ({ ...node, data: { ...node.data, machineCount: node.data.machineCount ?? 1, displayMode, machineDisplayMode,
-            onInputClick: openRecipeSelectorForInput, onOutputClick: openRecipeSelectorForOutput, onDrillSettingsChange: handleDrillSettingsChange,
-            onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, onTreeFarmSettingsChange: handleTreeFarmSettingsChange, 
-            onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange, 
-            onBoilerSettingsChange: handleBoilerSettingsChange }}));
-          setNodes(restoredNodes); setEdges(imported.canvas.edges || []); setTargetProducts(imported.canvas.targetProducts || []);
-          setSoldProducts(imported.canvas.soldProducts || {}); setFavoriteRecipes(imported.canvas.favoriteRecipes || []); 
-          setLastDrillConfig(imported.canvas.lastDrillConfig || null); setLastAssemblerConfig(imported.canvas.lastAssemblerConfig || null);
-          setLastTreeFarmConfig(imported.canvas.lastTreeFarmConfig || null); setLastFireboxConfig(imported.canvas.lastFireboxConfig || null);
-          setNodeId(imported.canvas.nodeId || 0); setTargetIdCounter(imported.canvas.targetIdCounter || 0);
+        
+        // Handle canvas import (validate and load)
+        if (isCanvasImport) {
+          console.log('Processing canvas import...');
+          console.log('Canvas nodes count:', imported.canvas.nodes?.length || 0);
+          console.log('Canvas edges count:', imported.canvas.edges?.length || 0);
+          
+          // Validate that all required products/recipes/machines exist
+          const canvasNodes = imported.canvas.nodes || [];
+          const missingItems = [];
+          
+          canvasNodes.forEach(node => {
+            const machineId = node.data?.recipe?.machine_id;
+            
+            if (machineId && !getMachine(machineId)) {
+              missingItems.push(`Machine: ${machineId}`);
+            }
+            
+            node.data?.recipe?.inputs?.forEach(input => {
+              if (input.product_id !== 'p_variableproduct' && !getProduct(input.product_id)) {
+                missingItems.push(`Product: ${input.product_id}`);
+              }
+            });
+            
+            node.data?.recipe?.outputs?.forEach(output => {
+              if (output.product_id !== 'p_variableproduct' && !getProduct(output.product_id)) {
+                missingItems.push(`Product: ${output.product_id}`);
+              }
+            });
+          });
+          
+          if (missingItems.length > 0) {
+            const uniqueMissing = [...new Set(missingItems)];
+            console.error('Missing items:', uniqueMissing);
+            alert(`Cannot import canvas - missing items:\n${uniqueMissing.slice(0, 10).join('\n')}${uniqueMissing.length > 10 ? `\n...and ${uniqueMissing.length - 10} more` : ''}`);
+            event.target.value = '';
+            return;
+          }
+          
+          if (!window.confirm('Clear current canvas and load imported layout?')) {
+            console.log('User cancelled canvas import');
+            event.target.value = '';
+            return;
+          }
+          
+          console.log('User confirmed canvas import, processing nodes...');
+          
+          // Process nodes with all callbacks
+          const restoredNodes = canvasNodes.map(node => {
+            const machine = getMachine(node.data?.recipe?.machine_id);
+            let recipe = node.data?.recipe;
+            if (machine && recipe && !recipe.outputs?.some(o => o.temperature !== undefined)) {
+              recipe = initializeRecipeTemperatures(recipe, machine.id);
+            }
+            return { 
+              ...node, 
+              data: { 
+                ...node.data, 
+                recipe, 
+                machineCount: node.data.machineCount ?? 1, 
+                displayMode, 
+                machineDisplayMode,
+                onInputClick: openRecipeSelectorForInput, 
+                onOutputClick: openRecipeSelectorForOutput, 
+                onDrillSettingsChange: handleDrillSettingsChange,
+                onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange, 
+                onTreeFarmSettingsChange: handleTreeFarmSettingsChange, 
+                onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, 
+                onTemperatureSettingsChange: handleTemperatureSettingsChange, 
+                onBoilerSettingsChange: handleBoilerSettingsChange,
+                onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange,
+                onMiddleClick: onNodeMiddleClick,
+                globalPollution,
+                flows: null 
+              }
+            };
+          });
+          
+          console.log('Processed nodes count:', restoredNodes.length);
+          console.log('Setting state...');
+          
+          // Set all state directly - NO RELOAD
+          setNodes(restoredNodes);
+          setEdges(imported.canvas.edges || []);
+          setTargetProducts(imported.canvas.targetProducts || []);
+          setSoldProducts(imported.canvas.soldProducts || {});
+          setFavoriteRecipes(imported.canvas.favoriteRecipes || []);
+          setLastDrillConfig(imported.canvas.lastDrillConfig || null);
+          setLastAssemblerConfig(imported.canvas.lastAssemblerConfig || null);
+          setLastTreeFarmConfig(imported.canvas.lastTreeFarmConfig || null);
+          setLastFireboxConfig(imported.canvas.lastFireboxConfig || null);
+          setNodeId(imported.canvas.nodeId || 0);
+          setTargetIdCounter(imported.canvas.targetIdCounter || 0);
+          
+          console.log('State updated, import complete!');
+          console.log('=== IMPORT FINISHED ===');
+          
+          clearFlowCache();
+          alert('Canvas import successful!');
         }
-        alert('Import successful!'); window.location.reload();
-      } catch (error) { alert(`Import failed: ${error.message}`); }
+        
+      } catch (error) { 
+        console.error('=== IMPORT ERROR ===');
+        console.error('Error details:', error);
+        alert(`Import failed: ${error.message}`); 
+      }
     };
-    reader.readAsText(file); event.target.value = '';
-  }, [setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, handleLogicAssemblerSettingsChange, 
-    handleTreeFarmSettingsChange, handleIndustrialFireboxSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange, displayMode, machineDisplayMode]);
+    reader.readAsText(file); 
+    event.target.value = '';
+  }, [displayMode, machineDisplayMode, globalPollution, openRecipeSelectorForInput, openRecipeSelectorForOutput,
+    handleDrillSettingsChange, handleLogicAssemblerSettingsChange, handleTreeFarmSettingsChange,
+    handleIndustrialFireboxSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange,
+    handleChemicalPlantSettingsChange, onNodeMiddleClick, setNodes, setEdges, setTargetProducts,
+    setSoldProducts, setFavoriteRecipes, setLastDrillConfig, setLastAssemblerConfig,
+    setLastTreeFarmConfig, setLastFireboxConfig, setNodeId, setTargetIdCounter]);
+
+  const handleExportData = useCallback(() => {
+    const blob = new Blob([JSON.stringify({ products, machines, recipes }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `industrialist-data-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [products, machines, recipes]);
+
+  const handleExportCanvas = useCallback(() => {
+    const canvas = { 
+      nodes, 
+      edges, 
+      targetProducts, 
+      nodeId, 
+      targetIdCounter, 
+      soldProducts, 
+      favoriteRecipes, 
+      lastDrillConfig, 
+      lastAssemblerConfig, 
+      lastTreeFarmConfig, 
+      lastFireboxConfig 
+    };
+    const blob = new Blob([JSON.stringify({ canvas }, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `industrialist-canvas-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig]);
 
   const handleExport = useCallback(() => {
     const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig } }, null, 2)], { type: 'application/json' });
@@ -1110,14 +1340,22 @@ function App() {
   });
 
   const filteredMachines = machines.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-    (m.id === 'm_mineshaft_drill' || m.id === 'm_logic_assembler' || getRecipesForMachine(m.id).length > 0)).sort((a, b) => a.name.localeCompare(b.name));
+    (m.id === 'm_mineshaft_drill' || m.id === 'm_logic_assembler' || m.id === 'm_tree_farm' || getRecipesForMachine(m.id).length > 0)).sort((a, b) => a.name.localeCompare(b.name));
 
   const handleMachineSelect = (machine) => {
-    if (machine.id === 'm_mineshaft_drill') createRecipeBox(DEFAULT_DRILL_RECIPE);
-    else if (machine.id === 'm_logic_assembler') createRecipeBox(DEFAULT_LOGIC_ASSEMBLER_RECIPE);
-    else if (machine.id === 'm_tree_farm') createRecipeBox(DEFAULT_TREE_FARM_RECIPE);
-    else setSelectedMachine(machine);
-  };
+  if (machine.id === 'm_mineshaft_drill') {
+    createRecipeBox(DEFAULT_DRILL_RECIPE, 1);
+    resetSelector();
+  } else if (machine.id === 'm_logic_assembler') {
+    createRecipeBox(DEFAULT_LOGIC_ASSEMBLER_RECIPE, 1);
+    resetSelector();
+  } else if (machine.id === 'm_tree_farm') {
+    createRecipeBox(DEFAULT_TREE_FARM_RECIPE, 1);
+    resetSelector();
+  } else {
+    setSelectedMachine(machine);
+  }
+};
 
   const availableRecipes = (selectorMode === 'product' ? getAvailableRecipes() : getRecipesForMachine(selectedMachine?.id))
     .sort((a, b) => {
@@ -1138,8 +1376,32 @@ function App() {
 
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
-      <ReactFlow ref={reactFlowWrapper} nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} 
-        onNodeClick={onNodeClick} onNodeDoubleClick={onNodeDoubleClick} nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView>
+      <ReactFlow 
+        ref={reactFlowWrapper} 
+        nodes={nodes} 
+        edges={edges} 
+        onNodesChange={onNodesChange} 
+        onEdgesChange={onEdgesChange} 
+        onConnect={onConnect} 
+        onNodeClick={onNodeClick} 
+        onNodeDoubleClick={onNodeDoubleClick}
+        onMouseMove={handleCanvasMouseMove}
+        onClick={handleCanvasClick}
+        onContextMenu={handleCancelPlacement}
+        onInit={(instance) => { reactFlowInstance.current = instance; }}
+        nodeTypes={nodeTypes} 
+        edgeTypes={edgeTypes} 
+        panOnDrag={[0, 2]}
+        panOnScroll={false}
+        selectionOnDrag={false}
+        fitView
+        elevateNodesOnSelect={false}
+        nodesDraggable={true}
+        nodesConnectable={true}
+        elementsSelectable={true}
+        minZoom={0.1}
+        maxZoom={4}
+        defaultEdgeOptions={{ type: 'custom' }}>
         <Background color="#333" gap={16} size={1} />
         <Controls className={(extendedPanelOpen || extendedPanelClosing) && !leftPanelCollapsed ? 'controls-shifted' : ''} />
         <MiniMap nodeColor={() => getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim()}
@@ -1153,7 +1415,7 @@ function App() {
                   <h3 className="stats-title">{statisticsTitle}</h3>
                   <div className="stats-grid">
                     <div className="stat-item"><div className="stat-label">Total Power:</div><div className="stat-value">{formatPowerDisplay(stats.totalPower)}</div></div>
-                    <div className="stat-item"><div className="stat-label">Total Pollution:</div><div className="stat-value">{stats.totalPollution.toFixed(2)}%/hr</div></div>
+                    <div className="stat-item"><div className="stat-label">Total Pollution:</div><div className="stat-value" style={{ color: stats.totalPollution >= 0 ? '#fca5a5' : '#86efac' }}>{stats.totalPollution.toFixed(2)}%/hr</div></div>
                     <div className="stat-item"><div className="stat-label">Total Minimum Model Count:</div><div className="stat-value">{stats.totalModelCount.toFixed(0)}</div></div>
                     <div className="stat-item"><div className="stat-label">Total Profit:</div><div className="stat-value" style={{ color: totalProfit >= 0 ? '#86efac' : '#fca5a5' }}>
                       ${metricFormat(totalProfit)}/s</div></div>
@@ -1202,13 +1464,14 @@ function App() {
                             fontSize: 'var(--font-size-lg)',
                             lineHeight: 1
                           }}
-                          title={isPollutionPaused ? 'Resume pollution increase' : 'Pause pollution increase'}
+                          title={isPollutionPaused ? 'Resume pollution change' : 'Pause pollution change'}
                         >
-                          {isPollutionPaused ? '▶' : '⏸'}
+                          {isPollutionPaused ? '▶' : '❚❚'}
                         </button>
                         <input 
                           id="global-pollution" 
-                          type="text" 
+                          type="number"
+                          step="0.0001"
                           value={globalPollution} 
                           onFocus={() => setPollutionInputFocused(true)}
                           onBlur={(e) => { 
@@ -1217,7 +1480,7 @@ function App() {
                             const num = parseFloat(val);
                             setGlobalPollution(!isNaN(num) && isFinite(num) ? parseFloat(num.toFixed(4)) : 0); 
                           }}
-                          onChange={(e) => setGlobalPollution(e.target.value)} 
+                          onChange={(e) => setGlobalPollution(e.target.value === '' ? '' : parseFloat(e.target.value))} 
                           className="input" 
                           placeholder="Enter global pollution" 
                           style={{ flex: 1, textAlign: 'left' }} 
@@ -1319,10 +1582,11 @@ function App() {
           <div className={`menu-container ${menuOpen ? '' : 'closed'}`}>
             <button onClick={() => setMenuOpen(!menuOpen)} className="btn btn-secondary btn-menu-toggle">{menuOpen ? '>' : '<'}</button>
             <div className="menu-buttons">
-              <button onClick={() => { setNodes([]); setEdges([]); setNodeId(0); setTargetProducts([]); setTargetIdCounter(0); setSoldProducts({}); setLastDrillConfig(null); setLastAssemblerConfig(null); }} 
+              <button onClick={() => { setNodes([]); setEdges([]); setNodeId(0); setTargetProducts([]); setTargetIdCounter(0); setSoldProducts({}); setLastDrillConfig(null); setLastAssemblerConfig(null); clearFlowCache(); }} 
                 className="btn btn-secondary">Clear All</button>
               <button onClick={handleImport} className="btn btn-secondary">Import JSON</button>
-              <button onClick={handleExport} className="btn btn-secondary">Export JSON</button>
+              <button onClick={handleExportData} className="btn btn-secondary">Export Data</button>
+              <button onClick={handleExportCanvas} className="btn btn-secondary">Export Canvas</button>
               <button onClick={handleRestoreDefaults} className="btn btn-secondary">Restore Defaults</button>
               <button onClick={() => setShowThemeEditor(true)} className="btn btn-secondary">Theme Editor</button>
               <button onClick={() => window.open('https://github.com/Pollywrath/Industrialist-Production-Calculator', '_blank')} className="btn btn-secondary">Source Code</button>
@@ -1404,7 +1668,7 @@ function App() {
                         <div key={machine.id} onClick={() => handleMachineSelect(machine)} className="recipe-card" style={{ cursor: 'pointer' }}>
                           <div className="recipe-machine">{machine.name}</div>
                           <div className="recipe-details" style={{ color: '#999' }}>
-                            {machine.id === 'm_mineshaft_drill' || machine.id === 'm_logic_assembler' ? 'Click to create box' : `${getRecipesForMachine(machine.id).length} recipe(s)`}
+                            {machine.id === 'm_mineshaft_drill' || machine.id === 'm_logic_assembler' || machine.id === 'm_tree_farm' ? 'Click to create box' : `${getRecipesForMachine(machine.id).length} recipe(s)`}
                           </div>
                         </div>
                       ))}
@@ -1425,72 +1689,103 @@ function App() {
                 )}
                 <div className="modal-content flex-col" style={{ maxHeight: '400px' }}>
                   {availableRecipes.length === 0 ? <div className="empty-state">No recipes found</div> : availableRecipes.map(recipe => {
-                    const machine = getMachine(recipe.machine_id);
-                    const isFavorite = favoriteRecipes.includes(recipe.id);
-                    const machineCount = recipeMachineCounts[recipe.id] || 1;
-                    return machine && recipe.inputs && recipe.outputs ? (
-                      <div key={recipe.id} className="recipe-card" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <button onClick={(e) => { e.stopPropagation(); toggleFavoriteRecipe(recipe.id); }}
-                          style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '4px', lineHeight: 1,
-                            filter: isFavorite ? 'none' : 'grayscale(100%)', opacity: isFavorite ? 1 : 0.4, transition: 'all 0.2s' }}
-                          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.2)'; e.currentTarget.style.opacity = '1'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = isFavorite ? '1' : '0.4'; }}
-                          title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
-                          ⭐
-                        </button>
-                        <div 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const newNodeId = `node-${nodeId}`;
-                            setKeepOverlayDuringTransition(true);
-                            setShowRecipeSelector(false);
-                            createRecipeBox(recipe);
-                            setTimeout(() => {
-                              setNewNodePendingMachineCount(newNodeId);
-                              setEditingNodeId(newNodeId);
-                              setEditingMachineCount('1');
-                              setShowMachineCountEditor(true);
-                              setKeepOverlayDuringTransition(false);
-                            }, 50);
-                          }}
-                          style={{
-                            minWidth: '70px',
-                            padding: '10px 12px',
-                            background: 'var(--color-primary)',
-                            color: 'var(--color-primary-dark)',
-                            borderRadius: 'var(--radius-sm)',
-                            fontWeight: 700,
-                            fontSize: '18px',
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            userSelect: 'none',
-                            border: '2px solid transparent'
-                          }}
-                          onMouseEnter={(e) => {
+                  const machine = getMachine(recipe.machine_id);
+                  const isFavorite = favoriteRecipes.includes(recipe.id);
+                  const machineCount = recipeMachineCounts[recipe.id] ?? 1;
+                  return machine && recipe.inputs && recipe.outputs ? (
+                    <div key={recipe.id} className="recipe-card" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <button onClick={(e) => { e.stopPropagation(); toggleFavoriteRecipe(recipe.id); }}
+                        style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', padding: '4px', lineHeight: 1,
+                          filter: isFavorite ? 'none' : 'grayscale(100%)', opacity: isFavorite ? 1 : 0.4, transition: 'all 0.2s' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.2)'; e.currentTarget.style.opacity = '1'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = isFavorite ? '1' : '0.4'; }}
+                        title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}>
+                        ⭐
+                      </button>
+                      <div 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          
+                          // Always create node then open editor for machine count button
+                          const initialCount = machineCount <= 0 ? 1 : machineCount;
+                          const newNodeId = createRecipeBox(recipe, initialCount);
+                          setKeepOverlayDuringTransition(true);
+                          setShowRecipeSelector(false);
+                          setTimeout(() => {
+                            setNewNodePendingMachineCount(newNodeId);
+                            setEditingNodeId(newNodeId);
+                            setEditingMachineCount(String(initialCount));
+                            setShowMachineCountEditor(true);
+                            setKeepOverlayDuringTransition(false);
+                          }, 50);
+                        }}
+                        style={{
+                          minWidth: '70px',
+                          padding: '10px 12px',
+                          background: autoConnectTarget && machineCount <= 0 ? 'var(--delete-bg)' : 'var(--color-primary)',
+                          color: autoConnectTarget && machineCount <= 0 ? 'var(--delete-color)' : 'var(--color-primary-dark)',
+                          borderRadius: 'var(--radius-sm)',
+                          fontWeight: 700,
+                          fontSize: '18px',
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          userSelect: 'none',
+                          border: autoConnectTarget && machineCount <= 0 ? '2px solid var(--delete-color)' : '2px solid transparent'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (autoConnectTarget && machineCount <= 0) {
+                            e.currentTarget.style.background = 'var(--delete-hover-bg)';
+                            e.currentTarget.style.color = 'var(--delete-hover-color)';
+                          } else {
                             e.currentTarget.style.background = 'var(--color-primary-hover)';
                             e.currentTarget.style.transform = 'scale(1.05)';
                             e.currentTarget.style.borderColor = 'var(--color-primary-hover)';
-                          }}
-                          onMouseLeave={(e) => {
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (autoConnectTarget && machineCount <= 0) {
+                            e.currentTarget.style.background = 'var(--delete-bg)';
+                            e.currentTarget.style.color = 'var(--delete-color)';
+                          } else {
                             e.currentTarget.style.background = 'var(--color-primary)';
                             e.currentTarget.style.transform = 'scale(1)';
                             e.currentTarget.style.borderColor = 'transparent';
-                          }}
-                          title="Click to edit machine count"
-                        >
-                          {Number.isInteger(machineCount) ? machineCount : machineCount.toFixed(2)}
-                        </div>
-                        <div style={{ flex: 1, cursor: 'pointer', minWidth: 0 }} onClick={() => createRecipeBox(recipe)}>
-                          <div className="recipe-machine">{machine.name}</div>
-                          <div className="recipe-details"><span className="recipe-label-input">Inputs: </span>
-                            <span>{recipe.inputs.map(input => formatIngredient(input, getProduct)).join(', ')}</span></div>
-                          <div className="recipe-details"><span className="recipe-label-output">Outputs: </span>
-                            <span>{recipe.outputs.map(output => formatIngredient(output, getProduct)).join(', ')}</span></div>
-                        </div>
+                          }
+                        }}
+                        title={autoConnectTarget ? (machineCount <= 0 ? "Cannot create: machine count is 0" : `Click to edit before creating (${Number.isInteger(machineCount) ? machineCount : machineCount.toFixed(2)} calculated)`) : "Click to set machine count"}
+                      >
+                        {Number.isInteger(machineCount) ? machineCount : machineCount.toFixed(2)}
                       </div>
-                    ) : null;
-                  })}
+                      <div style={{ flex: 1, cursor: 'pointer', minWidth: 0 }} onClick={(e) => {
+                        e.stopPropagation();
+                        // If machine count is 0, create with 1 and open editor
+                        if (machineCount <= 0) {
+                          const newNodeId = createRecipeBox(recipe, 1);
+                          setKeepOverlayDuringTransition(true);
+                          setShowRecipeSelector(false);
+                          setTimeout(() => {
+                            setNewNodePendingMachineCount(newNodeId);
+                            setEditingNodeId(newNodeId);
+                            setEditingMachineCount('1');
+                            setShowMachineCountEditor(true);
+                            setKeepOverlayDuringTransition(false);
+                          }, 50);
+                        } else {
+                          // Machine count > 0, create box directly
+                          createRecipeBox(recipe);
+                          resetSelector();
+                        }
+                      }}>
+                        <div className="recipe-machine">{machine.name}</div>
+                        <div className="recipe-details"><span className="recipe-label-input">Inputs: </span>
+                          <span>{recipe.inputs.map(input => formatIngredient(input, getProduct)).join(', ')}</span></div>
+                        <div className="recipe-details"><span className="recipe-label-output">Outputs: </span>
+                          <span>{recipe.outputs.map(output => formatIngredient(output, getProduct)).join(', ')}</span></div>
+                      </div>
+                    </div>
+                  ) : null;
+                })}
                 </div>
               </>
             )}
@@ -1531,6 +1826,21 @@ function App() {
       )}
 
       {showThemeEditor && <ThemeEditor onClose={() => setShowThemeEditor(false)} />}
+
+      {pendingNode && (
+        <div 
+          className="pending-node-preview"
+          style={{
+            left: `${mousePosition.x + 20}px`,
+            top: `${mousePosition.y + 20}px`
+          }}
+        >
+          <div className="pending-node-recipe-name">{pendingNode.recipe.name}</div>
+          <div className="pending-node-machine-name">{pendingNode.machine.name}</div>
+          <div className="pending-node-machine-name">Count: {pendingNode.machineCount}</div>
+          <div className="pending-node-hint">Left-click to place | Right-click to cancel</div>
+        </div>
+      )}
     </div>
   );
 }

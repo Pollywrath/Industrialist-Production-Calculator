@@ -570,6 +570,45 @@ input[type="number"] {
 }
 
 /* ============================================================
+   PENDING NODE PREVIEW
+   ============================================================ */
+.pending-node-preview {
+  position: fixed;
+  pointer-events: none;
+  z-index: 10000;
+  opacity: 0.7;
+  background: var(--node-bg);
+  border: 3px dashed var(--color-primary);
+  border-radius: var(--radius-lg);
+  padding: 15px 20px;
+  color: var(--text-primary);
+  box-shadow: var(--shadow-lg);
+  min-width: 320px;
+}
+
+.pending-node-recipe-name {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.pending-node-machine-name {
+  font-size: var(--font-size-sm);
+  text-align: center;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.pending-node-hint {
+  font-size: var(--font-size-xs);
+  text-align: center;
+  color: var(--text-muted);
+  margin-top: 8px;
+  font-style: italic;
+}
+
+/* ============================================================
    UTILITY CLASSES
    ============================================================ */
 .flex-row {

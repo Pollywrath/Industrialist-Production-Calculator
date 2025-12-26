@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { getProduct } from '../data/dataLoader';
 import { getProductName, formatPowerConsumption, formatPollution } from '../utils/variableHandler';
@@ -123,7 +123,8 @@ const CustomNode = ({ data, id }) => {
   const getMaxWidth = (items) => !items?.length ? 80 : Math.max(80, ...items.map(item => {
     const name = getProductName(item.product_id, getProduct);
     const qty = formatDisplayQuantity(item.quantity);
-    return qty.length * 8 + name.length * 8 + 6;
+    // Increased multiplier from 8 to 10 for better width, and added base padding
+    return qty.length * 10 + name.length * 10 + 20;
   }));
 
   const leftWidth = leftCount > 0 ? getMaxWidth(recipe.inputs) : 0;
@@ -165,7 +166,23 @@ const CustomNode = ({ data, id }) => {
 
   return (
     <>
-      <div className={`custom-node ${isTarget ? 'target' : ''}`} style={{ width, height }}>
+      <div 
+        className={`custom-node ${isTarget ? 'target' : ''}`} 
+        style={{ width, height }}
+        onMouseDownCapture={(e) => {
+          if (e.button === 1) { // Middle mouse button
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('Middle click detected on node:', id);
+            if (data.onMiddleClick) {
+              console.log('Calling onMiddleClick');
+              data.onMiddleClick(id);
+            } else {
+              console.log('onMiddleClick not found in data');
+            }
+          }
+        }}
+      >
         {temperatureData.outputs.length > 0 && (
           <div onDoubleClick={(e) => e.stopPropagation()} style={{
             position: 'absolute', top: '10px', left: '10px', background: 'var(--bg-secondary)',
@@ -336,31 +353,21 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
 };
 
 const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows }) => {
-  const THRESHOLD = 0.0001;
-  
-  // Determine handle color based on flow status
-  let handleColor = side === 'left' ? '#22c55e' : '#ef4444'; // Default: green for input, red for output
+  // Determine handle color based on flow status (simplified for performance)
+  let handleColor = side === 'left' ? '#22c55e' : '#ef4444';
   
   if (flows) {
-    if (side === 'left') {
-      // Input handle - check if deficient
-      const inputFlow = flows.inputFlows?.[index];
-      if (inputFlow && inputFlow.needed > 0) {
-        const shortage = inputFlow.needed - inputFlow.connected;
-        if (shortage > THRESHOLD) {
-          // Deficient input - change to red (output color)
-          handleColor = '#ef4444';
-        }
-      }
-    } else {
-      // Output handle - check if excess
-      const outputFlow = flows.outputFlows?.[index];
-      if (outputFlow && outputFlow.produced > 0) {
-        const excess = outputFlow.produced - outputFlow.connected;
-        if (excess > THRESHOLD) {
-          // Excess output - change to green (input color)
-          handleColor = '#22c55e';
-        }
+    const flowData = side === 'left' 
+      ? flows.inputFlows?.[index] 
+      : flows.outputFlows?.[index];
+    
+    if (flowData) {
+      const hasIssue = side === 'left'
+        ? flowData.needed > 0 && (flowData.needed - flowData.connected) > 0.001
+        : flowData.produced > 0 && (flowData.produced - flowData.connected) > 0.001;
+      
+      if (hasIssue) {
+        handleColor = side === 'left' ? '#ef4444' : '#22c55e';
       }
     }
   }
@@ -384,4 +391,15 @@ const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows }
   );
 };
 
-export default CustomNode;
+export default memo(CustomNode, (prevProps, nextProps) => {
+  // Only re-render if these specific props change
+  return (
+    prevProps.data.recipe === nextProps.data.recipe &&
+    prevProps.data.machineCount === nextProps.data.machineCount &&
+    prevProps.data.displayMode === nextProps.data.displayMode &&
+    prevProps.data.machineDisplayMode === nextProps.data.machineDisplayMode &&
+    prevProps.data.isTarget === nextProps.data.isTarget &&
+    prevProps.data.globalPollution === nextProps.data.globalPollution &&
+    prevProps.data.flows === nextProps.data.flows
+  );
+});

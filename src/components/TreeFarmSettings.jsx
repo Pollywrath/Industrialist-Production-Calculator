@@ -89,7 +89,7 @@ const TreeFarmSettings = ({ nodeId, currentSettings, globalPollution, onSettings
             }}>
               <div style={{ color: '#f5d56a', fontWeight: 600, marginBottom: '12px' }}>Calculated Metrics:</div>
               <div style={{ color: '#999', lineHeight: '1.6', marginBottom: '12px' }}>
-                <div>Growth Time: {metrics.growthTime}s (at {globalPollution.toFixed(1)}% pollution)</div>
+                <div>Growth Time: {metrics.growthTime}s (at {typeof globalPollution === 'number' ? globalPollution.toFixed(1) : globalPollution}% pollution)</div>
                 <div>Water Tanks: {metrics.waterTanks}</div>
                 <div>Sustainable Rate: {metrics.sustainableHarvestRate.toFixed(4)} trees/s</div>
                 <div>Max Harvest Rate: {metrics.maxHarvestRate.toFixed(4)} trees/s</div>
