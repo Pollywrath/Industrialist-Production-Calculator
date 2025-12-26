@@ -1,4 +1,44 @@
-MIT License
+# Dual License
+
+This project uses a dual licensing model:
+
+## 1. Game Data (CC BY-NC-SA 4.0)
+
+The following content is derived from the [Industrialist Wiki](https://industrialist.miraheze.org/) and is licensed under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**:
+
+### Affected Files and Content:
+- `src/data/products.json` - Product definitions and properties
+- `src/data/machines.json` - Machine definitions and properties  
+- `src/data/recipes.json` - Recipe data and requirements
+- `src/data/mineshaftDrill.js` - Depth outputs and drill deterioration rate formulas
+- `src/data/logicAssembler.js` - Microchip stages and material requirements
+- `src/data/treeFarm.js` - Tree farm mechanics and growth times
+- `src/data/industrialFirebox.js` - Fuel products and energy requirements
+- `src/data/chemicalPlant.js` - Chemical plant mechanics
+- `src/utils/temperatureDependentCycles.js` - Temperature-dependent cycle time formulas
+- Any exported JSON files containing the above data
+
+### CC BY-NC-SA 4.0 License Terms:
+
+**You are free to:**
+- **Share** — copy and redistribute the material in any medium or format
+- **Adapt** — remix, transform, and build upon the material
+
+**Under the following terms:**
+- **Attribution** — You must give appropriate credit to the Industrialist Wiki, provide a link to the license, and indicate if changes were made.
+- **NonCommercial** — You may not use the material for commercial purposes.
+- **ShareAlike** — If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
+
+Full license text: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+
+### Attribution:
+Game data sourced from the [Industrialist Wiki](https://industrialist.miraheze.org/), licensed under CC BY-NC-SA 4.0.
+
+---
+
+## 2. Original Code (MIT License)
+
+All original code, implementation, UI, calculations, and algorithms not derived from the wiki are licensed under the **MIT License**:
 
 Copyright (c) 2025 Pollywrath
 
@@ -19,3 +59,11 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+## Summary
+
+- **Wiki-derived game data**: CC BY-NC-SA 4.0 (non-commercial, attribution required)
+- **Original application code**: MIT (permissive, commercial use allowed)
+- **Combined work**: When using this project, you must comply with both licenses for their respective components
