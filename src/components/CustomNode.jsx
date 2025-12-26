@@ -406,6 +406,10 @@ const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows }
 
 export default memo(CustomNode, (prevProps, nextProps) => {
   // Only re-render if these specific props change
+  // Deep equality check for flows to avoid unnecessary re-renders
+  const flowsEqual = (!prevProps.data.flows && !nextProps.data.flows) || 
+    (prevProps.data.flows === nextProps.data.flows);
+  
   return (
     prevProps.data.recipe === nextProps.data.recipe &&
     prevProps.data.machineCount === nextProps.data.machineCount &&
@@ -413,6 +417,7 @@ export default memo(CustomNode, (prevProps, nextProps) => {
     prevProps.data.machineDisplayMode === nextProps.data.machineDisplayMode &&
     prevProps.data.isTarget === nextProps.data.isTarget &&
     prevProps.data.globalPollution === nextProps.data.globalPollution &&
-    prevProps.data.flows === nextProps.data.flows
+    flowsEqual &&
+    prevProps.id === nextProps.id
   );
 });

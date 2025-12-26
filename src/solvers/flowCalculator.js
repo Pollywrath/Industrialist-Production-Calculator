@@ -28,7 +28,7 @@ class LRUCache {
   }
 }
 
-let flowCache = new LRUCache(20);
+let flowCache = new LRUCache(100);
 
 // Union-Find for detecting connected components
 class UnionFind {

@@ -27,13 +27,15 @@ if (process.env.NODE_ENV === 'development') {
   setInterval(() => {
     if (performance.memory) {
       const current = performance.memory.usedJSHeapSize / 1048576; // MB
+      const total = performance.memory.totalJSHeapSize / 1048576;
+      const limit = performance.memory.jsHeapSizeLimit / 1048576;
       const delta = current - lastMemory;
-      if (Math.abs(delta) > 50) { // Log significant changes
-        console.log(`Memory: ${current.toFixed(1)}MB (${delta > 0 ? '+' : ''}${delta.toFixed(1)}MB)`);
+      if (Math.abs(delta) > 10) { // Reduced threshold to see smaller changes
+        console.log(`Memory: ${current.toFixed(1)}MB / ${total.toFixed(1)}MB (limit: ${limit.toFixed(0)}MB) ${delta > 0 ? '+' : ''}${delta.toFixed(1)}MB`);
       }
       lastMemory = current;
     }
-  }, 2000);
+  }, 3000); // Check every 3s instead of 2s
 }
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
@@ -260,22 +262,32 @@ function App() {
     return { totalPower, totalPollution, totalModelCount };
   }, [nodes]);
 
-  const stats = calculateTotalStats();
+  const stats = useMemo(() => calculateTotalStats(), [nodes]);
   
   useEffect(() => {
+    // Don't even start the interval if paused or no pollution
+    if (isPollutionPaused || stats.totalPollution === 0) {
+      return; // No interval created, no memory churn
+    }
+    
     const interval = setInterval(() => {
-      if (pollutionInputFocused || isPollutionPaused) return;
+      if (pollutionInputFocused) return;
       const pollutionPerSecond = stats.totalPollution / 3600;
-      setGlobalPollution(prev => (typeof prev === 'number' && !isNaN(prev) && isFinite(prev)) ? parseFloat((prev + pollutionPerSecond).toFixed(4)) : prev);
+      setGlobalPollution(prev => {
+        if (typeof prev !== 'number' || isNaN(prev) || !isFinite(prev)) return prev;
+        const newValue = parseFloat((prev + pollutionPerSecond).toFixed(4));
+        // Only update if value actually changed
+        return newValue !== prev ? newValue : prev;
+      });
     }, 1000);
     return () => clearInterval(interval);
   }, [stats.totalPollution, pollutionInputFocused, isPollutionPaused]);
 
   useEffect(() => {
-    // Clear flow cache every 30 seconds to prevent memory buildup
+    // Clear flow cache periodically
     const interval = setInterval(() => {
       clearFlowCache();
-    }, 30000);
+    }, 20000); // Every 20 seconds
     
     return () => clearInterval(interval);
   }, []);
@@ -283,70 +295,78 @@ function App() {
   const pollutionUpdateTimeoutRef = useRef(null);
 
   useEffect(() => {
-    // Debounce pollution updates to avoid excessive recalculations
     if (pollutionUpdateTimeoutRef.current) {
       clearTimeout(pollutionUpdateTimeoutRef.current);
     }
     
     pollutionUpdateTimeoutRef.current = setTimeout(() => {
-      // Update tree farms and air separation units when pollution changes
-      setNodes(nds => nds.map(node => {
-        const recipe = node.data?.recipe;
-        const machine = node.data?.machine;
-        
-        // Update tree farms
-        if (recipe?.isTreeFarm && recipe.treeFarmSettings) {
-          const settings = recipe.treeFarmSettings;
-          const updatedOutputs = buildTreeFarmOutputs(settings.trees, settings.harvesters, globalPollution);
-          const metrics = calculateTreeFarmMetrics(settings.trees, settings.harvesters, settings.sprinklers, settings.outputs, settings.controller, globalPollution);
+      // Only update nodes that actually depend on pollution (tree farms and air separation)
+      setNodes(nds => {
+        let hasChanges = false;
+        const newNodes = nds.map(node => {
+          const recipe = node.data?.recipe;
+          const machine = node.data?.machine;
           
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              recipe: {
-                ...recipe,
-                outputs: updatedOutputs,
-                power_consumption: metrics ? metrics.avgPowerConsumption : 'Variable'
-              },
-              globalPollution
-            }
-          };
-        }
-        
-        // Update air separation units
-        if (machine?.id === 'm_air_separation_unit') {
-          const residueAmount = calculateResidueAmount(globalPollution);
-          const updatedOutputs = recipe.outputs.map(output => {
-            if (output.product_id === 'p_residue') {
-              return { ...output, quantity: parseFloat(residueAmount.toFixed(6)) };
-            }
-            return output;
-          });
-          
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              recipe: {
-                ...recipe,
-                outputs: updatedOutputs
-              },
-              globalPollution
-            }
-          };
-        }
-        
-        // Update globalPollution for all nodes
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            globalPollution
+          // Update tree farms
+          if (recipe?.isTreeFarm && recipe.treeFarmSettings) {
+            const settings = recipe.treeFarmSettings;
+            const updatedOutputs = buildTreeFarmOutputs(settings.trees, settings.harvesters, globalPollution);
+            const metrics = calculateTreeFarmMetrics(settings.trees, settings.harvesters, settings.sprinklers, settings.outputs, settings.controller, globalPollution);
+            
+            hasChanges = true;
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                recipe: {
+                  ...recipe,
+                  outputs: updatedOutputs,
+                  power_consumption: metrics ? metrics.avgPowerConsumption : 'Variable'
+                },
+                globalPollution
+              }
+            };
           }
-        };
-      }));
-    }, 200); // Debounce by 200ms
+          
+          // Update air separation units
+          if (machine?.id === 'm_air_separation_unit') {
+            const residueAmount = calculateResidueAmount(globalPollution);
+            const updatedOutputs = recipe.outputs.map(output => {
+              if (output.product_id === 'p_residue') {
+                return { ...output, quantity: parseFloat(residueAmount.toFixed(6)) };
+              }
+              return output;
+            });
+            
+            hasChanges = true;
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                recipe: {
+                  ...recipe,
+                  outputs: updatedOutputs
+                },
+                globalPollution
+              }
+            };
+          }
+          
+          // Update globalPollution for all nodes
+          hasChanges = true;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              globalPollution
+            }
+          };
+        });
+        
+        // Only trigger update if something actually changed
+        return hasChanges ? newNodes : nds;
+      });
+    }, 250);
     
     return () => {
       if (pollutionUpdateTimeoutRef.current) {
@@ -359,6 +379,7 @@ function App() {
     solveProductionNetwork([], [])
   );
   const solverTimeoutRef = useRef(null);
+  const lastSolverHash = useRef('');
 
   useEffect(() => {
     // Debounce expensive solver calculations
@@ -367,9 +388,16 @@ function App() {
     }
     
     solverTimeoutRef.current = setTimeout(() => {
-      const solution = solveProductionNetwork(nodes, edges);
-      setProductionSolution(solution);
-    }, 150); // Wait 150ms after last change
+      // Create a hash of node/edge structure to detect if calculation is needed
+      const currentHash = `${nodes.length}-${edges.length}-${nodes.map(n => `${n.id}:${n.data?.machineCount}`).join(',')}`;
+      
+      // Only recalculate if structure actually changed
+      if (currentHash !== lastSolverHash.current) {
+        const solution = solveProductionNetwork(nodes, edges);
+        setProductionSolution(solution);
+        lastSolverHash.current = currentHash;
+      }
+    }, 300); // Increased debounce time
     
     return () => {
       if (solverTimeoutRef.current) {
@@ -394,7 +422,7 @@ function App() {
           ...node, 
           data: { ...node.data, flows: productionSolution.flows.byNode[node.id] || null } 
         }))); 
-      }, 100);
+      }, 250);
     }
     
     return () => {
