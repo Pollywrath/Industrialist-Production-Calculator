@@ -13,6 +13,7 @@ const RecipeSelectorModal = ({
   selectedProduct,
   setSelectedProduct,
   selectedMachine,
+  setSelectedMachine,
   selectorMode,
   setSelectorMode,
   searchTerm,
@@ -60,7 +61,7 @@ const RecipeSelectorModal = ({
     } else if (machine.id === 'm_tree_farm') {
       onSelectRecipe(DEFAULT_TREE_FARM_RECIPE, 1);
     } else {
-      selectedMachine(machine);
+      setSelectedMachine(machine);
     }
   };
 
@@ -212,7 +213,7 @@ const RecipeSelectorModal = ({
           </>
         ) : (
           <>
-            <button onClick={() => { setSelectedProduct(null); selectedMachine(null); }} className="btn btn-secondary btn-back">
+            <button onClick={() => { setSelectedProduct(null); setSelectedMachine(null); }} className="btn btn-secondary btn-back">
               ← Back
             </button>
             {selectedProduct && (

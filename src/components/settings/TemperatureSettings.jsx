@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { HEAT_SOURCES, calculateOutputTemperature, getPowerConsumptionForTemperature, formatTemperature } from '../../utils/temperatureHandler';
 
 const TemperatureSettings = ({ nodeId, machineId, currentSettings, recipe, onSettingsChange, onClose }) => {
   const heatSource = HEAT_SOURCES[machineId];
   const [temperature, setTemperature] = useState(currentSettings?.temperature || heatSource?.tempOptions?.[0]?.temp || 120);
+  const overlayRef = useRef(null);
+
+  useEffect(() => {
+    const handleWheel = (e) => {
+      e.stopPropagation();
+    };
+
+    const overlay = overlayRef.current;
+    if (overlay) {
+      overlay.addEventListener('wheel', handleWheel, { passive: false });
+    }
+
+    return () => {
+      if (overlay) {
+        overlay.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, []);
 
   if (!heatSource || heatSource.type !== 'configurable') return null;
 
@@ -26,7 +44,7 @@ const TemperatureSettings = ({ nodeId, machineId, currentSettings, recipe, onSet
   };
 
   return (
-    <div className="drill-settings-overlay" onClick={onClose}>
+    <div ref={overlayRef} className="drill-settings-overlay" onClick={onClose}>
       <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
         <h3 className="drill-settings-title">{heatSource.name} Settings</h3>
 

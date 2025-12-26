@@ -1,10 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { FUEL_PRODUCTS, calculateFireboxMetrics, buildFireboxInputs } from '../../data/industrialFirebox';
 import { getProductName } from '../../utils/variableHandler';
 import { getProduct } from '../../data/dataLoader';
 
 const IndustrialFireboxSettings = ({ nodeId, currentSettings, recipe, onSettingsChange, onClose }) => {
   const [fuel, setFuel] = useState(currentSettings?.fuel || 'p_coal');
+  const overlayRef = useRef(null);
+
+  useEffect(() => {
+    const handleWheel = (e) => {
+      e.stopPropagation();
+    };
+
+    const overlay = overlayRef.current;
+    if (overlay) {
+      overlay.addEventListener('wheel', handleWheel, { passive: false });
+    }
+
+    return () => {
+      if (overlay) {
+        overlay.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, []);
 
   const metrics = calculateFireboxMetrics(recipe.id, fuel);
   const inputs = metrics ? buildFireboxInputs(recipe.inputs, fuel, recipe.id) : recipe.inputs;
@@ -20,7 +38,7 @@ const IndustrialFireboxSettings = ({ nodeId, currentSettings, recipe, onSettings
   };
 
   return (
-    <div className="drill-settings-overlay" onClick={onClose}>
+    <div ref={overlayRef} className="drill-settings-overlay" onClick={onClose}>
       <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
         <h3 className="drill-settings-title">Industrial Firebox Settings</h3>
 

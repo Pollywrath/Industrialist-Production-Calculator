@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from '../../data/logicAssembler';
 
 const outerStages = [1, 2, 3, 4, 5, 6, 7, 8];
@@ -10,6 +10,24 @@ const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onC
   const [innerStage, setInnerStage] = useState(currentSettings?.innerStage || '');
   const [machineOil, setMachineOil] = useState(currentSettings?.machineOil || false);
   const [tickCircuitDelay, setTickCircuitDelay] = useState(currentSettings?.tickCircuitDelay ?? 0);
+  const overlayRef = useRef(null);
+
+  useEffect(() => {
+    const handleWheel = (e) => {
+      e.stopPropagation();
+    };
+
+    const overlay = overlayRef.current;
+    if (overlay) {
+      overlay.addEventListener('wheel', handleWheel, { passive: false });
+    }
+
+    return () => {
+      if (overlay) {
+        overlay.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, []);
 
   const getTargetMicrochip = () => {
     if (!outerStage || !innerStage) return '';
@@ -40,7 +58,7 @@ const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onC
   };
 
   return (
-    <div className="drill-settings-overlay" onClick={onClose}>
+    <div ref={overlayRef} className="drill-settings-overlay" onClick={onClose}>
       <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
         <h3 className="drill-settings-title">Logic Assembler Settings</h3>
 

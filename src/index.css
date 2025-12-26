@@ -814,6 +814,26 @@ input[type="number"] {
   max-height: 80vh;
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
+  overscroll-behavior: contain;
+}
+
+.drill-settings-bubble::-webkit-scrollbar {
+  width: 12px;
+}
+
+.drill-settings-bubble::-webkit-scrollbar-track {
+  background: var(--bg-main);
+  border-radius: var(--radius-sm);
+}
+
+.drill-settings-bubble::-webkit-scrollbar-thumb {
+  background: var(--color-primary);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--bg-main);
+}
+
+.drill-settings-bubble::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary-hover);
 }
 
 .drill-settings-title {

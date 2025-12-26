@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs, calculateRequiredWaterTanks } from '../../data/treeFarm';
 import { getProductName } from '../../utils/variableHandler';
 import { getProduct } from '../../data/dataLoader';
@@ -9,6 +9,24 @@ const TreeFarmSettings = ({ nodeId, currentSettings, globalPollution, onSettings
   const [sprinklers, setSprinklers] = useState(currentSettings?.sprinklers || 24);
   const [outputs, setOutputs] = useState(currentSettings?.outputs || 8);
   const controller = 1; // Always 1
+  const overlayRef = useRef(null);
+
+  useEffect(() => {
+    const handleWheel = (e) => {
+      e.stopPropagation();
+    };
+
+    const overlay = overlayRef.current;
+    if (overlay) {
+      overlay.addEventListener('wheel', handleWheel, { passive: false });
+    }
+
+    return () => {
+      if (overlay) {
+        overlay.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, []);
 
   const waterTanks = calculateRequiredWaterTanks(sprinklers);
   const metrics = calculateTreeFarmMetrics(trees, harvesters, sprinklers, outputs, controller, globalPollution);
@@ -40,7 +58,7 @@ const TreeFarmSettings = ({ nodeId, currentSettings, globalPollution, onSettings
   const hasErrors = trees > 500 || trees < 1 || harvesters < 1 || sprinklers < 1 || outputs < 1;
 
   return (
-    <div className="drill-settings-overlay" onClick={onClose}>
+    <div ref={overlayRef} className="drill-settings-overlay" onClick={onClose}>
       <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
         <h3 className="drill-settings-title">Tree Farm Settings</h3>
 

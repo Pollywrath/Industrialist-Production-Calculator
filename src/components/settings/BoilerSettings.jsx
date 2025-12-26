@@ -1,7 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const BoilerSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) => {
   const [heatLoss, setHeatLoss] = useState(currentSettings?.heatLoss ?? 0);
+  const overlayRef = useRef(null);
+
+  useEffect(() => {
+    const handleWheel = (e) => {
+      e.stopPropagation();
+    };
+
+    const overlay = overlayRef.current;
+    if (overlay) {
+      overlay.addEventListener('wheel', handleWheel, { passive: false });
+    }
+
+    return () => {
+      if (overlay) {
+        overlay.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, []);
 
   const handleApply = () => {
     onSettingsChange(nodeId, { heatLoss });
@@ -9,7 +27,7 @@ const BoilerSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) 
   };
 
   return (
-    <div className="drill-settings-overlay" onClick={onClose}>
+    <div ref={overlayRef} className="drill-settings-overlay" onClick={onClose}>
       <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
         <h3 className="drill-settings-title">Boiler Settings</h3>
 

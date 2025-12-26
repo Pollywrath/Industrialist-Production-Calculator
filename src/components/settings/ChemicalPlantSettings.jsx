@@ -1,9 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { calculateChemicalPlantMetrics } from '../../data/chemicalPlant';
 
 const ChemicalPlantSettings = ({ nodeId, currentSettings, recipe, onSettingsChange, onClose }) => {
   const [speedFactor, setSpeedFactor] = useState(currentSettings?.speedFactor || 100);
   const [efficiencyFactor, setEfficiencyFactor] = useState(currentSettings?.efficiencyFactor || 100);
+  const overlayRef = useRef(null);
+
+  useEffect(() => {
+    const handleWheel = (e) => {
+      e.stopPropagation();
+    };
+
+    const overlay = overlayRef.current;
+    if (overlay) {
+      overlay.addEventListener('wheel', handleWheel, { passive: false });
+    }
+
+    return () => {
+      if (overlay) {
+        overlay.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, []);
 
   const metrics = calculateChemicalPlantMetrics(speedFactor, efficiencyFactor);
 
@@ -32,7 +50,7 @@ const ChemicalPlantSettings = ({ nodeId, currentSettings, recipe, onSettingsChan
   };
 
   return (
-    <div className="drill-settings-overlay" onClick={onClose}>
+    <div ref={overlayRef} className="drill-settings-overlay" onClick={onClose}>
       <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
         <h3 className="drill-settings-title">Chemical Plant Settings</h3>
 

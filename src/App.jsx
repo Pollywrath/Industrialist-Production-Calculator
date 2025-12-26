@@ -560,6 +560,7 @@ function App() {
           selectedProduct={selectedProduct}
           setSelectedProduct={setSelectedProduct}
           selectedMachine={selectedMachine}
+          setSelectedMachine={setSelectedMachine}
           selectorMode={selectorMode}
           setSelectorMode={setSelectorMode}
           searchTerm={searchTerm}

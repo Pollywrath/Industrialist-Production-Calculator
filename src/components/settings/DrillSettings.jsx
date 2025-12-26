@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { DRILL_HEADS, CONSUMABLES, getAvailableDepths, buildDrillInputs, buildDrillOutputs, calculateDrillMetrics } from '../../data/mineshaftDrill';
 import { getProductName } from '../../utils/variableHandler';
 import { getProduct } from '../../data/dataLoader';
@@ -8,6 +8,24 @@ const DrillSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) =
   const [consumable, setConsumable] = useState(currentSettings?.consumable || 'none');
   const [machineOil, setMachineOil] = useState(currentSettings?.machineOil || false);
   const [depth, setDepth] = useState(currentSettings?.depth || '');
+  const overlayRef = useRef(null);
+
+  useEffect(() => {
+    const handleWheel = (e) => {
+      e.stopPropagation();
+    };
+
+    const overlay = overlayRef.current;
+    if (overlay) {
+      overlay.addEventListener('wheel', handleWheel, { passive: false });
+    }
+
+    return () => {
+      if (overlay) {
+        overlay.removeEventListener('wheel', handleWheel);
+      }
+    };
+  }, []);
 
   const metrics = drillHead && depth ? calculateDrillMetrics(drillHead, consumable, machineOil, parseInt(depth)) : null;
   const inputs = buildDrillInputs(drillHead, consumable, machineOil, depth ? parseInt(depth) : null);
@@ -26,7 +44,7 @@ const DrillSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) =
   };
 
   return (
-    <div className="drill-settings-overlay" onClick={onClose}>
+    <div ref={overlayRef} className="drill-settings-overlay" onClick={onClose}>
       <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
         <h3 className="drill-settings-title">Mineshaft Drill Settings</h3>
 
