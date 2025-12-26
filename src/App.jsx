@@ -4,6 +4,9 @@ import '@xyflow/react/dist/style.css';
 import CustomNode from './components/CustomNode';
 import CustomEdge from './components/CustomEdge';
 import { getRecipesUsingProduct, getRecipesProducingProductFiltered, getRecipesForMachine } from './utils/appUtilities';
+import { DEFAULT_DRILL_RECIPE } from './data/mineshaftDrill';
+import { DEFAULT_LOGIC_ASSEMBLER_RECIPE } from './data/logicAssembler';
+import { DEFAULT_TREE_FARM_RECIPE } from './data/treeFarm';
 import { calculateMachineCountForAutoConnect, getSpecialRecipeInputs, getSpecialRecipeOutputs } from './utils/recipeBoxCreation';
 import { DEFAULT_STEAM_TEMPERATURE } from './utils/temperatureHandler';
 import ThemeEditor, { applyTheme, loadTheme } from './components/ThemeEditor';
@@ -556,7 +559,7 @@ function App() {
         <RecipeSelectorModal
           selectedProduct={selectedProduct}
           setSelectedProduct={setSelectedProduct}
-          selectedMachine={setSelectedMachine}
+          selectedMachine={selectedMachine}
           selectorMode={selectorMode}
           setSelectorMode={setSelectorMode}
           searchTerm={searchTerm}
