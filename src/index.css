@@ -66,7 +66,7 @@
   --settings-output-label: #fca5a5;
   
   /* Edge Settings */
-  --edge-path: bezier;
+  --edge-path: orthogonal;
   --edge-style: animated;
   
   /* Spacing */

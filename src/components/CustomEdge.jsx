@@ -36,7 +36,7 @@ const getOrthogonalPath = (sourceX, sourceY, targetX, targetY, sourcePosition, t
 
 const CustomEdge = ({ id, sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data }) => {
   // Read edge settings from data prop (passed from parent)
-  const edgePath = data?.edgePath || 'bezier';
+  const edgePath = data?.edgePath || 'orthogonal';
   const edgeStyle = data?.edgeStyle || 'animated';
 
   const [path] = useMemo(() => {

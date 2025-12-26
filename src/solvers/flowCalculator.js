@@ -104,7 +104,23 @@ const findConnectedComponents = (graph, productId) => {
     const targetIdx = portToIndex.get(targetKey);
     
     if (sourceIdx !== undefined && targetIdx !== undefined) {
+      // DEBUG: Log self-loop unions
+      if (conn.sourceNodeId === conn.targetNodeId) {
+        console.log(`[UNION DEBUG] Self-loop union for ${productId}:`, {
+          sourceIdx,
+          targetIdx,
+          sourcePort: ports[sourceIdx],
+          targetPort: ports[targetIdx],
+          beforeUnion: { sourceRoot: uf.find(sourceIdx), targetRoot: uf.find(targetIdx) }
+        });
+      }
       uf.union(sourceIdx, targetIdx);
+      if (conn.sourceNodeId === conn.targetNodeId) {
+        console.log(`[UNION DEBUG] After union:`, {
+          sourceRoot: uf.find(sourceIdx),
+          targetRoot: uf.find(targetIdx)
+        });
+      }
     }
   });
 
@@ -186,6 +202,22 @@ const calculateProductConnectionFlows = (graph, productId, connections) => {
 
   if (connections.length === 0) return result;
 
+  // DEBUG: Check for self-loops
+  const selfLoops = connections.filter(c => c.sourceNodeId === c.targetNodeId);
+  if (selfLoops.length > 0) {
+    console.log(`[FLOW DEBUG] Product ${productId}:`, {
+      totalProduction,
+      totalConsumption,
+      selfLoops: selfLoops.map(c => ({
+        sourceRate: c.sourceRate,
+        targetRate: c.targetRate,
+        sourceNode: c.sourceNodeId,
+        sourceOutput: c.sourceOutputIndex,
+        targetInput: c.targetInputIndex
+      }))
+    });
+  }
+
   // Find connected components
   const { components, portToComponent } = findConnectedComponents(graph, productId);
 
@@ -209,6 +241,24 @@ const calculateProductConnectionFlows = (graph, productId, connections) => {
       // Compute flow for this component only
       const network = buildFlowNetworkOptimized(component.connections, totalProduction);
       const maxFlow = dinic(network);
+
+      // DEBUG: Log self-loop flow results
+      const hasSelfLoop = component.connections.some(c => c.sourceNodeId === c.targetNodeId);
+      if (hasSelfLoop) {
+        console.log(`[FLOW RESULT] Component with self-loop:`, {
+          productId,
+          totalFlow: maxFlow.totalFlow,
+          connectionFlows: maxFlow.connectionFlows,
+          connections: component.connections.map((c, idx) => ({
+            id: c.id,
+            sourceNode: c.sourceNodeId,
+            targetNode: c.targetNodeId,
+            sourceRate: c.sourceRate,
+            targetRate: c.targetRate,
+            calculatedFlow: maxFlow.connectionFlows[idx]
+          }))
+        });
+      }
 
       componentResult = {
         connectedFlow: 0,
@@ -272,8 +322,8 @@ const buildFlowNetworkOptimized = (connections, totalProduction) => {
   const targets = new Map();
 
   connections.forEach(conn => {
-    const sourceKey = `${conn.sourceNodeId}-${conn.sourceOutputIndex}`;
-    const targetKey = `${conn.targetNodeId}-${conn.targetInputIndex}`;
+    const sourceKey = `out:${conn.sourceNodeId}:${conn.sourceOutputIndex}`;
+    const targetKey = `in:${conn.targetNodeId}:${conn.targetInputIndex}`;
     
     getNodeIndex(sourceKey);
     getNodeIndex(targetKey);
@@ -311,9 +361,24 @@ const buildFlowNetworkOptimized = (connections, totalProduction) => {
   });
 
   connections.forEach((conn, connIdx) => {
-    const sourceKey = `${conn.sourceNodeId}-${conn.sourceOutputIndex}`;
-    const targetKey = `${conn.targetNodeId}-${conn.targetInputIndex}`;
-    addEdge(getNodeIndex(sourceKey), getNodeIndex(targetKey), maxCapacity, connIdx);
+    const sourceKey = `out:${conn.sourceNodeId}:${conn.sourceOutputIndex}`;
+    const targetKey = `in:${conn.targetNodeId}:${conn.targetInputIndex}`;
+    const sourceIdx = getNodeIndex(sourceKey);
+    const targetIdx = getNodeIndex(targetKey);
+    
+    // DEBUG: Log edge creation for self-loops
+    if (conn.sourceNodeId === conn.targetNodeId) {
+      const edgeIndex = edges.length;
+      console.log(`[EDGE DEBUG] Creating self-loop edge:`, {
+        connIdx,
+        sourceIdx,
+        targetIdx,
+        edgeIndex,
+        conn
+      });
+    }
+    
+    addEdge(sourceIdx, targetIdx, maxCapacity, connIdx);
   });
 
   return { adj, edges, nodeCount, SOURCE, SINK };
@@ -495,6 +560,11 @@ const dinic = (network) => {
     const edge = edges[i];
     if (edge.connIndex >= 0) {
       connectionFlows[edge.connIndex] = clampFlow(edge.flow);
+      
+      // DEBUG: Log flow extraction
+      if (edge.flow > 0) {
+        console.log(`[EDGE FLOW] Edge ${i} has connIndex ${edge.connIndex} with flow ${edge.flow}`);
+      }
     }
   }
 

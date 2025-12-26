@@ -9,7 +9,7 @@ const DEFAULT_THEME = {
   nodeBg: '#1a1a1a', nodeBorder: '#d4a637', nodeTargetBg: '#2d2416', nodeTargetBorder: '#f5d56a',
   handleInputSupplied: '#22c55e', handleInputDeficient: '#ef4444', handleOutputConnected: '#ef4444', handleOutputExcess: '#22c55e',
   statPositive: '#86efac', statNegative: '#fca5a5', settingsInputLabel: '#86efac', settingsOutputLabel: '#fca5a5',
-  edgePath: 'bezier', edgeStyle: 'animated'
+  edgePath: 'orthogonal', edgeStyle: 'animated'
 };
 
 const THEME_PRESETS = [
@@ -23,7 +23,7 @@ const THEME_PRESETS = [
     nodeBg: '#44475a', nodeBorder: '#bd93f9', nodeTargetBg: '#5a4a6a', nodeTargetBorder: '#ff79c6',
     handleInputSupplied: '#50fa7b', handleInputDeficient: '#ff5555', handleOutputConnected: '#ff5555', handleOutputExcess: '#50fa7b',
     statPositive: '#50fa7b', statNegative: '#ff5555', settingsInputLabel: '#50fa7b', settingsOutputLabel: '#ff79c6',
-    edgePath: 'bezier', edgeStyle: 'animated' }},
+    edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'nord', name: 'Nord', description: 'Cool arctic bluish palette', theme: {
     colorPrimary: '#88c0d0', colorPrimaryHover: '#8fbcbb', colorPrimaryDark: '#2e3440', colorSecondary: '#3b4252',
     bgMain: '#2e3440', bgSecondary: '#3b4252', textPrimary: '#eceff4', textSecondary: '#d8dee9', textMuted: '#4c566a',
@@ -33,7 +33,7 @@ const THEME_PRESETS = [
     nodeBg: '#3b4252', nodeBorder: '#88c0d0', nodeTargetBg: '#4c5a68', nodeTargetBorder: '#8fbcbb',
     handleInputSupplied: '#a3be8c', handleInputDeficient: '#bf616a', handleOutputConnected: '#bf616a', handleOutputExcess: '#a3be8c',
     statPositive: '#a3be8c', statNegative: '#bf616a', settingsInputLabel: '#a3be8c', settingsOutputLabel: '#d08770',
-    edgePath: 'bezier', edgeStyle: 'animated' }},
+    edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'solarized-dark', name: 'Solarized Dark', description: 'Precision dark theme with balanced contrast', theme: {
     colorPrimary: '#268bd2', colorPrimaryHover: '#2aa198', colorPrimaryDark: '#002b36', colorSecondary: '#073642',
     bgMain: '#002b36', bgSecondary: '#073642', textPrimary: '#839496', textSecondary: '#586e75', textMuted: '#657b83',
@@ -43,7 +43,7 @@ const THEME_PRESETS = [
     nodeBg: '#073642', nodeBorder: '#268bd2', nodeTargetBg: '#0f4a52', nodeTargetBorder: '#2aa198',
     handleInputSupplied: '#859900', handleInputDeficient: '#dc322f', handleOutputConnected: '#dc322f', handleOutputExcess: '#859900',
     statPositive: '#859900', statNegative: '#dc322f', settingsInputLabel: '#859900', settingsOutputLabel: '#cb4b16',
-    edgePath: 'bezier', edgeStyle: 'animated' }},
+    edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'solarized-light', name: 'Solarized Light', description: 'For those who want to burn their eyes out', theme: {
     colorPrimary: '#268bd2', colorPrimaryHover: '#2aa198', colorPrimaryDark: '#fdf6e3', colorSecondary: '#eee8d5',
     bgMain: '#fdf6e3', bgSecondary: '#eee8d5', textPrimary: '#657b83', textSecondary: '#586e75', textMuted: '#93a1a1',
@@ -53,7 +53,7 @@ const THEME_PRESETS = [
     nodeBg: '#eee8d5', nodeBorder: '#268bd2', nodeTargetBg: '#d9d2c2', nodeTargetBorder: '#2aa198',
     handleInputSupplied: '#859900', handleInputDeficient: '#dc322f', handleOutputConnected: '#dc322f', handleOutputExcess: '#859900',
     statPositive: '#859900', statNegative: '#dc322f', settingsInputLabel: '#859900', settingsOutputLabel: '#cb4b16',
-    edgePath: 'bezier', edgeStyle: 'animated' }},
+    edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'midnight', name: 'Midnight Blue', description: 'Deep blue dark theme', theme: {
     colorPrimary: '#4a9eff', colorPrimaryHover: '#70b4ff', colorPrimaryDark: '#0a0e1a', colorSecondary: '#151a2e',
     bgMain: '#0a0e1a', bgSecondary: '#151a2e', textPrimary: '#e0e6ff', textSecondary: '#8892b0', textMuted: '#a8b2d1',
@@ -63,7 +63,7 @@ const THEME_PRESETS = [
     nodeBg: '#151a2e', nodeBorder: '#4a9eff', nodeTargetBg: '#1e2a45', nodeTargetBorder: '#70b4ff',
     handleInputSupplied: '#64ffda', handleInputDeficient: '#ff6b9d', handleOutputConnected: '#ff6b9d', handleOutputExcess: '#64ffda',
     statPositive: '#64ffda', statNegative: '#ff6b9d', settingsInputLabel: '#64ffda', settingsOutputLabel: '#ffa7c4',
-    edgePath: 'bezier', edgeStyle: 'animated' }},
+    edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'forest', name: 'Forest Green', description: 'Natural green theme', theme: {
     colorPrimary: '#5fb573', colorPrimaryHover: '#7fc794', colorPrimaryDark: '#0a1a0f', colorSecondary: '#152820',
     bgMain: '#0a1a0f', bgSecondary: '#152820', textPrimary: '#c8e6c9', textSecondary: '#81c784', textMuted: '#a5d6a7',
@@ -73,7 +73,7 @@ const THEME_PRESETS = [
     nodeBg: '#152820', nodeBorder: '#5fb573', nodeTargetBg: '#243a2d', nodeTargetBorder: '#7fc794',
     handleInputSupplied: '#66bb6a', handleInputDeficient: '#ef5350', handleOutputConnected: '#ef5350', handleOutputExcess: '#66bb6a',
     statPositive: '#a5d6a7', statNegative: '#ff8a80', settingsInputLabel: '#a5d6a7', settingsOutputLabel: '#ff8a80',
-    edgePath: 'bezier', edgeStyle: 'animated' }},
+    edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'sunset', name: 'Sunset Orange', description: 'Warm sunset-inspired theme, steampunk-esque', theme: {
     colorPrimary: '#ff8c42', colorPrimaryHover: '#ffaa6f', colorPrimaryDark: '#1a0f0a', colorSecondary: '#281912',
     bgMain: '#1a0f0a', bgSecondary: '#281912', textPrimary: '#ffe4d1', textSecondary: '#ffb88c', textMuted: '#ffc9a3',
@@ -83,7 +83,7 @@ const THEME_PRESETS = [
     nodeBg: '#281912', nodeBorder: '#ff8c42', nodeTargetBg: '#3d2a1a', nodeTargetBorder: '#ffaa6f',
     handleInputSupplied: '#a3e048', handleInputDeficient: '#ff5555', handleOutputConnected: '#ff5555', handleOutputExcess: '#a3e048',
     statPositive: '#c6f68d', statNegative: '#ff8787', settingsInputLabel: '#c6f68d', settingsOutputLabel: '#ff8787',
-    edgePath: 'bezier', edgeStyle: 'animated' }},
+    edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'cyberpunk', name: 'Cyberpunk', description: 'Neon-inspired futuristic theme', theme: {
     colorPrimary: '#00ff9f', colorPrimaryHover: '#00ffbf', colorPrimaryDark: '#0a0a15', colorSecondary: '#1a1a2e',
     bgMain: '#0a0a15', bgSecondary: '#1a1a2e', textPrimary: '#00ff9f', textSecondary: '#00d4aa', textMuted: '#00b494',
@@ -93,7 +93,7 @@ const THEME_PRESETS = [
     nodeBg: '#1a1a2e', nodeBorder: '#00ff9f', nodeTargetBg: '#2a2a45', nodeTargetBorder: '#00ffbf',
     handleInputSupplied: '#00ff9f', handleInputDeficient: '#ff006e', handleOutputConnected: '#ff006e', handleOutputExcess: '#00ff9f',
     statPositive: '#00ffbf', statNegative: '#ff4d9d', settingsInputLabel: '#00ffbf', settingsOutputLabel: '#ff4d9d',
-    edgePath: 'bezier', edgeStyle: 'animated' }}
+    edgePath: 'orthogonal', edgeStyle: 'animated' }}
 ];
 
 export const applyTheme = (theme) => {
@@ -119,7 +119,7 @@ const ThemeEditor = ({ onClose }) => {
   const applyPreset = (preset) => { 
     // Preserve current edge settings when applying preset
     const currentEdgeSettings = {
-      edgePath: theme.edgePath || 'bezier',
+      edgePath: theme.edgePath || 'orthogonal',
       edgeStyle: theme.edgeStyle || 'animated'
     };
     const newTheme = { ...preset.theme, ...currentEdgeSettings };

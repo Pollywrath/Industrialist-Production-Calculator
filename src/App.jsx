@@ -80,7 +80,7 @@ function App() {
   const [edgeSettings, setEdgeSettings] = useState(() => {
     const theme = loadTheme();
     return {
-      edgePath: theme.edgePath || 'bezier',
+      edgePath: theme.edgePath || 'orthogonal',
       edgeStyle: theme.edgeStyle || 'animated'
     };
   });
@@ -142,7 +142,7 @@ function App() {
     const theme = loadTheme();
     applyTheme(theme);
     setEdgeSettings({
-      edgePath: theme.edgePath || 'bezier',
+      edgePath: theme.edgePath || 'orthogonal',
       edgeStyle: theme.edgeStyle || 'animated'
     });
   }, []);
@@ -1411,7 +1411,7 @@ function App() {
         try {
           const theme = JSON.parse(e.newValue);
           setEdgeSettings({
-            edgePath: theme.edgePath || 'bezier',
+            edgePath: theme.edgePath || 'orthogonal',
             edgeStyle: theme.edgeStyle || 'animated'
           });
         } catch (err) {
@@ -1429,7 +1429,7 @@ function App() {
     if (!showThemeEditor) {
       const theme = loadTheme();
       setEdgeSettings({
-        edgePath: theme.edgePath || 'bezier',
+        edgePath: theme.edgePath || 'orthogonal',
         edgeStyle: theme.edgeStyle || 'animated'
       });
     }
