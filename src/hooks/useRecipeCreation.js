@@ -5,6 +5,7 @@ import { configureSpecialRecipe, isSpecialRecipe } from '../utils/recipeBoxCreat
 import { initializeRecipeTemperatures } from '../utils/appUtilities';
 import { HEAT_SOURCES, calculateOutputTemperature, DEFAULT_BOILER_INPUT_TEMPERATURE } from '../utils/temperatureHandler';
 import { applyTemperatureToOutputs } from '../utils/appUtilities';
+import { DEPTH_OUTPUTS, calculateDrillMetrics } from '../data/mineshaftDrill';
 
 const calculateResidueAmount = (globalPollution) => {
   const x = globalPollution;
@@ -28,7 +29,6 @@ export const useRecipeCreation = ({
 }) => {
 
   const findBestDepthForProduct = useCallback((productId, drillHead, consumable, machineOil) => {
-    const { DEPTH_OUTPUTS, calculateDrillMetrics } = require('../data/mineshaftDrill');
     const availableDepths = Object.keys(DEPTH_OUTPUTS).map(d => parseInt(d));
     let bestDepth = null;
     let bestRate = 0;
@@ -41,6 +41,7 @@ export const useRecipeCreation = ({
         const metrics = calculateDrillMetrics(drillHead, consumable, machineOil, depth);
         if (metrics) {
           const oilBonus = machineOil ? 1.1 : 1;
+          // Calculate average rate per second for this specific product
           const effectiveRate = outputForProduct.quantity * oilBonus * metrics.dutyCycle;
           
           if (effectiveRate > bestRate) {
