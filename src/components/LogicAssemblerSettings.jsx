@@ -104,7 +104,7 @@ const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onC
               </div>
 
               <div style={{ borderTop: '1px solid rgba(212, 166, 55, 0.3)', paddingTop: '10px' }}>
-                <div style={{ color: '#86efac', fontWeight: 600, marginBottom: '6px' }}>Materials per Cycle:</div>
+                <div style={{ color: 'var(--settings-input-label)', fontWeight: 600, marginBottom: '6px' }}>Materials per Cycle:</div>
                 <div style={{ color: '#999', lineHeight: '1.5', fontSize: '12px', paddingLeft: '10px' }}>
                   <div>Logic Plates: {metrics.logicPlates}</div>
                   <div>Copper Wires: {metrics.copperWires}</div>

@@ -62,7 +62,7 @@ const IndustrialFireboxSettings = ({ nodeId, currentSettings, recipe, onSettings
                 borderTop: '1px solid rgba(212, 166, 55, 0.3)', 
                 paddingTop: '12px' 
               }}>
-                <div style={{ color: '#86efac', fontWeight: 600, marginBottom: '8px', fontSize: '12px' }}>
+                <div style={{ color: 'var(--settings-input-label)', fontWeight: 600, marginBottom: '8px', fontSize: '12px' }}>
                   Inputs (per cycle):
                 </div>
                 <div style={{ color: '#999', lineHeight: '1.5', fontSize: '12px' }}>

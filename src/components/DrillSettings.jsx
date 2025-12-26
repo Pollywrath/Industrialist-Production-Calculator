@@ -83,7 +83,7 @@ const DrillSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) =
               }}>
                 {inputs.length > 0 && (
                   <div>
-                    <div style={{ color: '#86efac', fontWeight: 600, marginBottom: '8px', fontSize: '12px' }}>Inputs:</div>
+                    <div style={{ color: 'var(--settings-input-label)', fontWeight: 600, marginBottom: '8px', fontSize: '12px' }}>Inputs:</div>
                     <div style={{ color: '#999', lineHeight: '1.5', fontSize: '12px' }}>
                       {inputs.map((input, idx) => (
                         <div key={idx}>{(typeof input.quantity === 'number' ? input.quantity.toFixed(4) : input.quantity)}x {getProductName(input.product_id, getProduct)}</div>
@@ -93,7 +93,7 @@ const DrillSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) =
                 )}
                 {outputs.length > 0 && (
                   <div>
-                    <div style={{ color: '#fca5a5', fontWeight: 600, marginBottom: '8px', fontSize: '12px' }}>Outputs:</div>
+                    <div style={{ color: 'var(--settings-output-label)', fontWeight: 600, marginBottom: '8px', fontSize: '12px' }}>Outputs:</div>
                     <div style={{ color: '#999', lineHeight: '1.5', fontSize: '12px' }}>
                       {outputs.map((output, idx) => (
                         <div key={idx}>{(typeof output.quantity === 'number' ? output.quantity.toFixed(4) : output.quantity)}x {getProductName(output.product_id, getProduct)}</div>

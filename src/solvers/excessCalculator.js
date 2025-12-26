@@ -3,7 +3,8 @@ import { getProduct } from '../data/dataLoader';
 export const determineExcessAndDeficiency = (graph, flows) => {
   const excess = [];
   const deficiency = [];
-  const THRESHOLD = 0.0001;
+  // Use 15 decimal precision - only consider real excess/deficiency if > epsilon
+  const EPSILON = 1e-15;
 
   Object.keys(graph.products).forEach(productId => {
     const productData = graph.products[productId];
@@ -14,7 +15,8 @@ export const determineExcessAndDeficiency = (graph, flows) => {
     const connectedConsumption = flowData.connectedFlow;
     const excessAmount = totalProduction - connectedConsumption;
 
-    if (excessAmount !== 0 && excessAmount > 0) {
+    // Only consider excess if difference is truly > epsilon (not just floating point error)
+    if (Math.abs(excessAmount) > EPSILON && excessAmount > 0) {
       const product = getProduct(productId);
       if (product) {
         excess.push({
@@ -32,7 +34,8 @@ export const determineExcessAndDeficiency = (graph, flows) => {
       const inputFlow = flows.byNode[consumer.nodeId]?.inputFlows[consumer.inputIndex];
       if (inputFlow) {
         const shortage = inputFlow.needed - inputFlow.connected;
-        if (shortage !== 0 && shortage > 0) {
+        // Only consider deficiency if difference is truly > epsilon (not just floating point error)
+        if (Math.abs(shortage) > EPSILON && shortage > 0) {
           const product = getProduct(productId);
           if (product) {
             let existingDeficiency = deficiency.find(d => d.productId === productId);

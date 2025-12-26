@@ -244,9 +244,9 @@ const calculateProductConnectionFlows = (graph, productId, connections) => {
   return result;
 };
 
-// Clamp tiny values to zero
+// Clamp tiny values to zero - use 15 decimal precision
 const clampFlow = (flow) => {
-  const EPSILON = 1e-10;
+  const EPSILON = 1e-15;
   return Math.abs(flow) < EPSILON ? 0 : flow;
 };
 
@@ -376,7 +376,7 @@ const dinic = (network) => {
         const edge = edges[adjV[i]];
         const residual = edge.cap - edge.flow;
         
-        if (level[edge.to] < 0 && residual > 1e-10) {
+        if (level[edge.to] < 0 && residual > 1e-15) {
           level[edge.to] = level[v] + 1;
           queue.push(edge.to);
         }
@@ -455,7 +455,7 @@ const dinic = (network) => {
         const edge = edges[edgeIdx];
         const residual = edge.cap - edge.flow;
         
-        if (level[v] + 1 === level[edge.to] && residual > 1e-10 && !visited[edge.to]) {
+        if (level[v] + 1 === level[edge.to] && residual > 1e-15 && !visited[edge.to]) {
           visited[edge.to] = 1;
           parent[edge.to] = edgeIdx;
           stack.push(edge.to);

@@ -75,6 +75,13 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showThemeEditor, setShowThemeEditor] = useState(false);
   const [extendedPanelOpen, setExtendedPanelOpen] = useState(false);
+  const [edgeSettings, setEdgeSettings] = useState(() => {
+    const theme = loadTheme();
+    return {
+      edgePath: theme.edgePath || 'bezier',
+      edgeStyle: theme.edgeStyle || 'animated'
+    };
+  });
   const [extendedPanelClosing, setExtendedPanelClosing] = useState(false);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [globalPollution, setGlobalPollution] = useState(0);
@@ -129,7 +136,14 @@ function App() {
     onEdgesChangeBase(changes);
   }, [onEdgesChangeBase]);
 
-  useEffect(() => { applyTheme(loadTheme()); }, []);
+  useEffect(() => { 
+    const theme = loadTheme();
+    applyTheme(theme);
+    setEdgeSettings({
+      edgePath: theme.edgePath || 'bezier',
+      edgeStyle: theme.edgeStyle || 'animated'
+    });
+  }, []);
 
   useEffect(() => {
     const savedState = loadCanvasState();
@@ -170,6 +184,14 @@ function App() {
       } 
     }))); 
   }, [displayMode, machineDisplayMode, setNodes]);
+
+  // Update edges when edge settings change
+  useEffect(() => {
+    setEdges(eds => eds.map(edge => ({
+      ...edge,
+      data: edgeSettings
+    })));
+  }, [edgeSettings, setEdges]);
   useEffect(() => { 
     const stateToSave = { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig };
     localStorage.setItem('industrialist_canvas_state', JSON.stringify(stateToSave));
@@ -194,6 +216,29 @@ function App() {
         const inputOutputFactor = inputOutputCount * 2;
         const roundedMachineCount = Math.ceil(machineCount);
         totalModelCount += roundedMachineCount * (1 + powerFactor + inputOutputFactor);
+        return;
+      }
+      
+      // Special handling for tree farm - count all sub-machines
+      if (machine?.id === 'm_tree_farm' && recipe?.treeFarmSettings) {
+        const machineCount = node.data?.machineCount || 0;
+        const settings = recipe.treeFarmSettings;
+        const waterTanks = Math.ceil(settings.sprinklers / 3);
+        
+        const power = recipe.power_consumption;
+        const powerValue = typeof power === 'number' ? power : 0;
+        totalPower += powerValue * machineCount;
+        
+        const pollution = recipe.pollution;
+        const pollutionNum = typeof pollution === 'number' ? pollution : parseFloat(pollution);
+        if (!isNaN(pollutionNum) && isFinite(pollutionNum)) totalPollution += pollutionNum * machineCount;
+        
+        // Model count = (Trees + Harvesters + Sprinklers + WaterTanks*3 + Controller + Outputs*3 + powerFactor) * machineCount
+        const powerFactor = Math.ceil(powerValue / 1500000) * 2;
+        const treeFarmModelCount = settings.trees + settings.harvesters + settings.sprinklers + 
+                                    (waterTanks * 3) + settings.controller + (settings.outputs * 3) + powerFactor;
+        const roundedMachineCount = Math.ceil(machineCount);
+        totalModelCount += roundedMachineCount * treeFarmModelCount;
         return;
       }
       
@@ -466,9 +511,9 @@ function App() {
     const sourceProductId = sourceNode.data.recipe.outputs[parseInt(params.sourceHandle.split('-')[1])]?.product_id;
     const targetProductId = targetNode.data.recipe.inputs[parseInt(params.targetHandle.split('-')[1])]?.product_id;
     if (sourceProductId !== targetProductId) return;
-    setEdges((eds) => addEdge({ ...params, type: 'custom', animated: false }, eds));
+    setEdges((eds) => addEdge({ ...params, type: 'custom', animated: false, data: edgeSettings }, eds));
     clearFlowCache();
-  }, [setEdges, nodes]);
+  }, [setEdges, nodes, edgeSettings]);
 
   const resetSelector = () => {
     setShowRecipeSelector(false); setSelectedProduct(null); setSelectedMachine(null); setSelectorMode('product');
@@ -882,7 +927,8 @@ function App() {
               target: autoConnectTarget.isOutput ? newNodeId : autoConnectTarget.nodeId, 
               targetHandle: `left-${targetHandleIndex}`, 
               type: 'custom', 
-              animated: false 
+              animated: false,
+              data: edgeSettings
             };
             setEdges((eds) => addEdge(newEdge, eds));
           }
@@ -1330,6 +1376,37 @@ function App() {
     }
   }, [setNodes, setEdges]);
 
+  // Listen for theme changes (including edge settings)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'industrialist_theme') {
+        try {
+          const theme = JSON.parse(e.newValue);
+          setEdgeSettings({
+            edgePath: theme.edgePath || 'bezier',
+            edgeStyle: theme.edgeStyle || 'animated'
+          });
+        } catch (err) {
+          console.error('Error parsing theme from storage:', err);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Also listen for theme editor closing (same window)
+  useEffect(() => {
+    if (!showThemeEditor) {
+      const theme = loadTheme();
+      setEdgeSettings({
+        edgePath: theme.edgePath || 'bezier',
+        edgeStyle: theme.edgeStyle || 'animated'
+      });
+    }
+  }, [showThemeEditor]);
+
   const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()) && (filterType === 'all' || p.type === filterType)).sort((a, b) => {
     if (sortBy === 'name_asc') return a.name.localeCompare(b.name);
     if (sortBy === 'name_desc') return b.name.localeCompare(a.name);
@@ -1401,6 +1478,12 @@ function App() {
         elementsSelectable={true}
         minZoom={0.1}
         maxZoom={4}
+        connectionLineType={edgeSettings.edgePath === 'straight' ? 'straight' : edgeSettings.edgePath === 'orthogonal' ? 'step' : 'default'}
+        connectionLineStyle={{ 
+          stroke: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim(),
+          strokeWidth: 2,
+          strokeDasharray: edgeSettings.edgeStyle === 'animated' || edgeSettings.edgeStyle === 'dashed' ? '8 4' : 'none'
+        }}
         defaultEdgeOptions={{ type: 'custom' }}>
         <Background color="#333" gap={16} size={1} />
         <Controls className={(extendedPanelOpen || extendedPanelClosing) && !leftPanelCollapsed ? 'controls-shifted' : ''} />
@@ -1415,9 +1498,9 @@ function App() {
                   <h3 className="stats-title">{statisticsTitle}</h3>
                   <div className="stats-grid">
                     <div className="stat-item"><div className="stat-label">Total Power:</div><div className="stat-value">{formatPowerDisplay(stats.totalPower)}</div></div>
-                    <div className="stat-item"><div className="stat-label">Total Pollution:</div><div className="stat-value" style={{ color: stats.totalPollution >= 0 ? '#fca5a5' : '#86efac' }}>{stats.totalPollution.toFixed(2)}%/hr</div></div>
+                    <div className="stat-item"><div className="stat-label">Total Pollution:</div><div className="stat-value" style={{ color: stats.totalPollution >= 0 ? 'var(--stat-negative)' : 'var(--stat-positive)' }}>{stats.totalPollution.toFixed(2)}%/hr</div></div>
                     <div className="stat-item"><div className="stat-label">Total Minimum Model Count:</div><div className="stat-value">{stats.totalModelCount.toFixed(0)}</div></div>
-                    <div className="stat-item"><div className="stat-label">Total Profit:</div><div className="stat-value" style={{ color: totalProfit >= 0 ? '#86efac' : '#fca5a5' }}>
+                    <div className="stat-item"><div className="stat-label">Total Profit:</div><div className="stat-value" style={{ color: totalProfit >= 0 ? 'var(--stat-positive)' : 'var(--stat-negative)' }}>
                       ${metricFormat(totalProfit)}/s</div></div>
                   </div>
                 </div>

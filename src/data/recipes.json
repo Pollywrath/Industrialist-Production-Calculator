@@ -6134,7 +6134,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 100000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_hydrogen",
@@ -6158,7 +6158,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 5,
       "power_consumption": 1000000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_ammonia",
@@ -6182,7 +6182,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 500000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_steam",
@@ -6206,7 +6206,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 500000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_yellowcake",
@@ -6230,7 +6230,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 500000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_mixed_fissile_oxides",
@@ -6270,7 +6270,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 100000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_deep_earth_fragment",
@@ -6298,7 +6298,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 100000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_reprocessed_uranium",
@@ -6322,7 +6322,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 10,
       "power_consumption": 250000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_impure_boron",
@@ -6350,7 +6350,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 10,
       "power_consumption": 250000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_impure_boron",
@@ -6378,7 +6378,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 1000000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_shallow_earth_fragment",
@@ -6406,7 +6406,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 1100000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_phosphorus_oxychloride",
@@ -6438,7 +6438,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 2000000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_enriched_uf6_gas",
@@ -6470,7 +6470,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 2500000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_enriched_uf6_gas",
@@ -6502,7 +6502,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 1500000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_sulfur_trioxide",
@@ -6534,7 +6534,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 1500000,
-      "pollution": "?",
+      "pollution": 0.72,
       "inputs": [
         {
           "product_id": "p_chlorine",

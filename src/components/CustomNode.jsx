@@ -353,8 +353,18 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
 };
 
 const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows }) => {
-  // Determine handle color based on flow status (simplified for performance)
-  let handleColor = side === 'left' ? '#22c55e' : '#ef4444';
+  // Use same epsilon as excess/deficiency calculations (15 decimal precision)
+  const EPSILON = 1e-15;
+  
+  // Get colors from CSS variables (theme)
+  const cssVars = getComputedStyle(document.documentElement);
+  const inputSupplied = cssVars.getPropertyValue('--handle-input-supplied').trim();
+  const inputDeficient = cssVars.getPropertyValue('--handle-input-deficient').trim();
+  const outputConnected = cssVars.getPropertyValue('--handle-output-connected').trim();
+  const outputExcess = cssVars.getPropertyValue('--handle-output-excess').trim();
+  
+  // Determine handle color based on flow status
+  let handleColor = side === 'left' ? inputSupplied : outputConnected;
   
   if (flows) {
     const flowData = side === 'left' 
@@ -362,12 +372,15 @@ const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows }
       : flows.outputFlows?.[index];
     
     if (flowData) {
-      const hasIssue = side === 'left'
-        ? flowData.needed > 0 && (flowData.needed - flowData.connected) > 0.001
-        : flowData.produced > 0 && (flowData.produced - flowData.connected) > 0.001;
+      const difference = side === 'left'
+        ? flowData.needed - flowData.connected
+        : flowData.produced - flowData.connected;
+      
+      // Only show as having issue if difference is truly > epsilon (not floating point error)
+      const hasIssue = Math.abs(difference) > EPSILON && difference > 0;
       
       if (hasIssue) {
-        handleColor = side === 'left' ? '#ef4444' : '#22c55e';
+        handleColor = side === 'left' ? inputDeficient : outputExcess;
       }
     }
   }

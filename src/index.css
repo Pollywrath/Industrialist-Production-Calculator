@@ -51,6 +51,24 @@
   --node-target-bg: #2d2416;
   --node-target-border: #f5d56a;
   
+  /* Node Handle Colors */
+  --handle-input-supplied: #22c55e;
+  --handle-input-deficient: #ef4444;
+  --handle-output-connected: #ef4444;
+  --handle-output-excess: #22c55e;
+  
+  /* Statistics Colors */
+  --stat-positive: #86efac;
+  --stat-negative: #fca5a5;
+  
+  /* Settings Modal Colors */
+  --settings-input-label: #86efac;
+  --settings-output-label: #fca5a5;
+  
+  /* Edge Settings */
+  --edge-path: bezier;
+  --edge-style: animated;
+  
   /* Spacing */
   --spacing-xs: 4px;
   --spacing-sm: 8px;
@@ -554,7 +572,7 @@ input[type="number"] {
 }
 
 /* ============================================================
-   EDGE ANIMATION
+   EDGE ANIMATION & STYLES
    ============================================================ */
 @keyframes dash {
   to {
@@ -564,9 +582,20 @@ input[type="number"] {
 
 .custom-edge {
   stroke: var(--color-primary);
-  stroke-width: 2;
+  stroke-width: 3;
+}
+
+.custom-edge-animated {
   stroke-dasharray: 8 4;
   animation: dash 1.5s linear infinite;
+}
+
+.custom-edge-dashed {
+  stroke-dasharray: 8 4;
+}
+
+.custom-edge-solid {
+  stroke-dasharray: none;
 }
 
 /* ============================================================
