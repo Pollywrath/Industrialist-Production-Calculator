@@ -1,9 +1,30 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { calculateChemicalPlantMetrics } from '../data/chemicalPlant';
 
 const ChemicalPlantSettings = ({ nodeId, currentSettings, recipe, onSettingsChange, onClose }) => {
   const [speedFactor, setSpeedFactor] = useState(currentSettings?.speedFactor || 100);
   const [efficiencyFactor, setEfficiencyFactor] = useState(currentSettings?.efficiencyFactor || 100);
+  const bubbleRef = React.useRef(null);
+
+  const handleWheel = (e) => {
+    const element = bubbleRef.current;
+    if (!element) return;
+
+    const isScrollable = element.scrollHeight > element.clientHeight;
+    const isAtTop = element.scrollTop === 0 && e.deltaY < 0;
+    const isAtBottom = element.scrollTop + element.clientHeight >= element.scrollHeight && e.deltaY > 0;
+
+    if (isScrollable && !isAtTop && !isAtBottom) {
+      e.stopPropagation();
+    } else if (isScrollable) {
+      e.preventDefault();
+      e.stopPropagation();
+    } else {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   const metrics = calculateChemicalPlantMetrics(speedFactor, efficiencyFactor);
 
@@ -31,9 +52,9 @@ const ChemicalPlantSettings = ({ nodeId, currentSettings, recipe, onSettingsChan
     setEfficiencyFactor(100);
   };
 
-  return (
+  return ReactDOM.createPortal(
     <div className="drill-settings-overlay" onClick={onClose}>
-      <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+      <div ref={bubbleRef} className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()} onWheel={handleWheel}>
         <h3 className="drill-settings-title">Chemical Plant Settings</h3>
 
         <div className="drill-settings-content">
@@ -165,7 +186,8 @@ const ChemicalPlantSettings = ({ nodeId, currentSettings, recipe, onSettingsChan
           <button onClick={handleApply} className="btn btn-primary">Apply</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

@@ -1,10 +1,31 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { FUEL_PRODUCTS, calculateFireboxMetrics, buildFireboxInputs } from '../data/industrialFirebox';
 import { getProductName } from '../utils/variableHandler';
 import { getProduct } from '../data/dataLoader';
 
 const IndustrialFireboxSettings = ({ nodeId, currentSettings, recipe, onSettingsChange, onClose }) => {
   const [fuel, setFuel] = useState(currentSettings?.fuel || 'p_coal');
+  const bubbleRef = React.useRef(null);
+
+  const handleWheel = (e) => {
+    const element = bubbleRef.current;
+    if (!element) return;
+
+    const isScrollable = element.scrollHeight > element.clientHeight;
+    const isAtTop = element.scrollTop === 0 && e.deltaY < 0;
+    const isAtBottom = element.scrollTop + element.clientHeight >= element.scrollHeight && e.deltaY > 0;
+
+    if (isScrollable && !isAtTop && !isAtBottom) {
+      e.stopPropagation();
+    } else if (isScrollable) {
+      e.preventDefault();
+      e.stopPropagation();
+    } else {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   const metrics = calculateFireboxMetrics(recipe.id, fuel);
   const inputs = metrics ? buildFireboxInputs(recipe.inputs, fuel, recipe.id) : recipe.inputs;
@@ -19,9 +40,9 @@ const IndustrialFireboxSettings = ({ nodeId, currentSettings, recipe, onSettings
     setFuel('p_coal');
   };
 
-  return (
+  return ReactDOM.createPortal(
     <div className="drill-settings-overlay" onClick={onClose}>
-      <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+      <div ref={bubbleRef} className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()} onWheel={handleWheel}>
         <h3 className="drill-settings-title">Industrial Firebox Settings</h3>
 
         <div className="drill-settings-content">
@@ -82,7 +103,8 @@ const IndustrialFireboxSettings = ({ nodeId, currentSettings, recipe, onSettings
           <button onClick={handleApply} className="btn btn-primary">Apply</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

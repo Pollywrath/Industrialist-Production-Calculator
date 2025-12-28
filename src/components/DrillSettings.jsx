@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { DRILL_HEADS, CONSUMABLES, getAvailableDepths, buildDrillInputs, buildDrillOutputs, calculateDrillMetrics } from '../data/mineshaftDrill';
 import { getProductName } from '../utils/variableHandler';
 import { getProduct } from '../data/dataLoader';
@@ -8,6 +9,26 @@ const DrillSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) =
   const [consumable, setConsumable] = useState(currentSettings?.consumable || 'none');
   const [machineOil, setMachineOil] = useState(currentSettings?.machineOil || false);
   const [depth, setDepth] = useState(currentSettings?.depth || '');
+  const bubbleRef = React.useRef(null);
+
+  const handleWheel = (e) => {
+    const element = bubbleRef.current;
+    if (!element) return;
+
+    const isScrollable = element.scrollHeight > element.clientHeight;
+    const isAtTop = element.scrollTop === 0 && e.deltaY < 0;
+    const isAtBottom = element.scrollTop + element.clientHeight >= element.scrollHeight && e.deltaY > 0;
+
+    if (isScrollable && !isAtTop && !isAtBottom) {
+      e.stopPropagation();
+    } else if (isScrollable) {
+      e.preventDefault();
+      e.stopPropagation();
+    } else {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   const metrics = drillHead && depth ? calculateDrillMetrics(drillHead, consumable, machineOil, parseInt(depth)) : null;
   const inputs = buildDrillInputs(drillHead, consumable, machineOil, depth ? parseInt(depth) : null);
@@ -25,9 +46,9 @@ const DrillSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) =
     setDepth('');
   };
 
-  return (
+  return ReactDOM.createPortal(
     <div className="drill-settings-overlay" onClick={onClose}>
-      <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+      <div ref={bubbleRef} className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()} onWheel={handleWheel}>
         <h3 className="drill-settings-title">Mineshaft Drill Settings</h3>
 
         <div className="drill-settings-content">
@@ -111,7 +132,8 @@ const DrillSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) =
           <button onClick={handleApply} className="btn btn-primary">Apply</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

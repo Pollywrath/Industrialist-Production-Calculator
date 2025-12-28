@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs, calculateRequiredWaterTanks } from '../data/treeFarm';
 import { getProductName } from '../utils/variableHandler';
 import { getProduct } from '../data/dataLoader';
@@ -9,6 +10,26 @@ const TreeFarmSettings = ({ nodeId, currentSettings, globalPollution, onSettings
   const [sprinklers, setSprinklers] = useState(currentSettings?.sprinklers || 24);
   const [outputs, setOutputs] = useState(currentSettings?.outputs || 8);
   const controller = 1; // Always 1
+  const bubbleRef = React.useRef(null);
+
+  const handleWheel = (e) => {
+    const element = bubbleRef.current;
+    if (!element) return;
+
+    const isScrollable = element.scrollHeight > element.clientHeight;
+    const isAtTop = element.scrollTop === 0 && e.deltaY < 0;
+    const isAtBottom = element.scrollTop + element.clientHeight >= element.scrollHeight && e.deltaY > 0;
+
+    if (isScrollable && !isAtTop && !isAtBottom) {
+      e.stopPropagation();
+    } else if (isScrollable) {
+      e.preventDefault();
+      e.stopPropagation();
+    } else {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   const waterTanks = calculateRequiredWaterTanks(sprinklers);
   const metrics = calculateTreeFarmMetrics(trees, harvesters, sprinklers, outputs, controller, globalPollution);
@@ -39,9 +60,9 @@ const TreeFarmSettings = ({ nodeId, currentSettings, globalPollution, onSettings
 
   const hasErrors = trees > 500 || trees < 1 || harvesters < 1 || sprinklers < 1 || outputs < 1;
 
-  return (
+  return ReactDOM.createPortal(
     <div className="drill-settings-overlay" onClick={onClose}>
-      <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+      <div ref={bubbleRef} className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()} onWheel={handleWheel}>
         <h3 className="drill-settings-title">Tree Farm Settings</h3>
 
         <div className="drill-settings-content">
@@ -136,7 +157,8 @@ const TreeFarmSettings = ({ nodeId, currentSettings, globalPollution, onSettings
           <button onClick={handleApply} className="btn btn-primary" disabled={hasErrors}>Apply</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

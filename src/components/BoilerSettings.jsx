@@ -1,16 +1,37 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 
 const BoilerSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) => {
   const [heatLoss, setHeatLoss] = useState(currentSettings?.heatLoss ?? 0);
+  const bubbleRef = React.useRef(null);
+
+  const handleWheel = (e) => {
+    const element = bubbleRef.current;
+    if (!element) return;
+
+    const isScrollable = element.scrollHeight > element.clientHeight;
+    const isAtTop = element.scrollTop === 0 && e.deltaY < 0;
+    const isAtBottom = element.scrollTop + element.clientHeight >= element.scrollHeight && e.deltaY > 0;
+
+    if (isScrollable && !isAtTop && !isAtBottom) {
+      e.stopPropagation();
+    } else if (isScrollable) {
+      e.preventDefault();
+      e.stopPropagation();
+    } else {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   const handleApply = () => {
     onSettingsChange(nodeId, { heatLoss });
     onClose();
   };
 
-  return (
+  return ReactDOM.createPortal(
     <div className="drill-settings-overlay" onClick={onClose}>
-      <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+      <div ref={bubbleRef} className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()} onWheel={handleWheel}>
         <h3 className="drill-settings-title">Boiler Settings</h3>
 
         <div className="drill-settings-content">
@@ -53,7 +74,8 @@ const BoilerSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) 
           <button onClick={handleApply} className="btn btn-primary">Apply</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

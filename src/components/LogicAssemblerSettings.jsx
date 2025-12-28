@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import ReactDOM from 'react-dom';
 import { calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from '../data/logicAssembler';
 
 const outerStages = [1, 2, 3, 4, 5, 6, 7, 8];
@@ -10,6 +11,26 @@ const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onC
   const [innerStage, setInnerStage] = useState(currentSettings?.innerStage || '');
   const [machineOil, setMachineOil] = useState(currentSettings?.machineOil || false);
   const [tickCircuitDelay, setTickCircuitDelay] = useState(currentSettings?.tickCircuitDelay ?? 0);
+  const bubbleRef = React.useRef(null);
+
+  const handleWheel = (e) => {
+    const element = bubbleRef.current;
+    if (!element) return;
+
+    const isScrollable = element.scrollHeight > element.clientHeight;
+    const isAtTop = element.scrollTop === 0 && e.deltaY < 0;
+    const isAtBottom = element.scrollTop + element.clientHeight >= element.scrollHeight && e.deltaY > 0;
+
+    if (isScrollable && !isAtTop && !isAtBottom) {
+      e.stopPropagation();
+    } else if (isScrollable) {
+      e.preventDefault();
+      e.stopPropagation();
+    } else {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
 
   const getTargetMicrochip = () => {
     if (!outerStage || !innerStage) return '';
@@ -39,9 +60,9 @@ const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onC
     setTickCircuitDelay(0);
   };
 
-  return (
+  return ReactDOM.createPortal(
     <div className="drill-settings-overlay" onClick={onClose}>
-      <div className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+      <div ref={bubbleRef} className="drill-settings-bubble" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()} onWheel={handleWheel}>
         <h3 className="drill-settings-title">Logic Assembler Settings</h3>
 
         <div className="drill-settings-content">
@@ -121,7 +142,8 @@ const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onC
           <button onClick={handleApply} className="btn btn-primary">Apply</button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
