@@ -282,7 +282,8 @@ const CustomNode = ({ data, id }) => {
             <NodeRect side="left" index={i} position={pos} width={leftWidth} isOnly={!hasRight} 
               input={recipe.inputs[i]} onClick={onInputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
             <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} 
-              onClick={onInputClick} nodeId={id} productId={recipe.inputs[i].product_id} flows={data.flows} />
+              onClick={onInputClick} nodeId={id} productId={recipe.inputs[i].product_id} flows={data.flows} 
+              onHandleDoubleClick={data.onHandleDoubleClick} />
           </React.Fragment>
         ))}
 
@@ -291,7 +292,8 @@ const CustomNode = ({ data, id }) => {
             <NodeRect side="right" index={i} position={pos} width={rightWidth} isOnly={!hasLeft} 
               input={recipe.outputs[i]} onClick={onOutputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
             <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} 
-              onClick={onOutputClick} nodeId={id} productId={recipe.outputs[i].product_id} flows={data.flows} />
+              onClick={onOutputClick} nodeId={id} productId={recipe.outputs[i].product_id} flows={data.flows} 
+              onHandleDoubleClick={data.onHandleDoubleClick} />
           </React.Fragment>
         ))}
       </div>
@@ -352,7 +354,7 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
   );
 };
 
-const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows }) => {
+const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, onHandleDoubleClick }) => {
   // Use same epsilon as excess/deficiency calculations (15 decimal precision)
   const EPSILON = 1e-15;
   
@@ -398,6 +400,18 @@ const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows }
         if (onClick && e.ctrlKey) {
           e.stopPropagation();
           onClick(productId, nodeId, index, e);
+        }
+      }}
+      onDoubleClick={(e) => {
+        if (onHandleDoubleClick) {
+          e.stopPropagation();
+          console.log('[HANDLE DOUBLE-CLICK]', {
+            side,
+            nodeId,
+            index,
+            productId
+          });
+          onHandleDoubleClick(nodeId, side, index, productId);
         }
       }}
     />
