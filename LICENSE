@@ -1,4 +1,15 @@
-MIT License
+# License
+
+This project uses a dual-license structure:
+
+## MIT License (Code)
+
+All source code, including but not limited to:
+- React components
+- JavaScript logic and utilities
+- CSS styling
+- Build configuration
+- Application logic in all `.js` and `.jsx` files (excluding game data constants)
 
 Copyright (c) 2025 Pollywrath
 
@@ -19,3 +30,44 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+## Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) - Game Data
+
+The following game data and constants are derived from the Industrialist game and are licensed under CC BY-NC-SA 4.0:
+
+### Covered Files and Data:
+- `src/data/products.json`
+- `src/data/machines.json`
+- `src/data/recipes.json`
+- Constants in `src/data/mineshaftDrill.js`:
+- Constants in `src/data/logicAssembler.js`:
+- Constants in `src/data/treeFarm.js`:
+- Constants in `src/data/industrialFirebox.js`:
+- Constants in `src/data/chemicalPlant.js`:
+- Constants in `src/utils/temperatureDependentCycles.js`:
+- Constants in `src/utils/temperatureHandler.js`:
+
+### Attribution:
+All game data is sourced from the [Industrialist Wiki](https://industrialist.miraheze.org/).
+
+### License Terms:
+You are free to:
+- **Share** — copy and redistribute the material in any medium or format
+- **Adapt** — remix, transform, and build upon the material
+
+Under the following terms:
+- **Attribution** — You must give appropriate credit to the Industrialist Wiki and this project, provide a link to the license, and indicate if changes were made.
+- **NonCommercial** — You may not use the material for commercial purposes.
+- **ShareAlike** — If you remix, transform, or build upon the material, you must distribute your contributions under the same license as the original.
+
+Full license text: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+
+---
+
+## Summary
+
+- **Use the code freely** (MIT License) for any purpose, including commercial projects
+- **Game data is for non-commercial use only** (CC BY-NC-SA 4.0) and must maintain attribution
+- When using this project, ensure you comply with both licenses for their respective components

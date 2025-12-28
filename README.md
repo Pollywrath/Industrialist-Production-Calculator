@@ -4,48 +4,78 @@ A visual production planning tool for the Industrialist game. Create interactive
 
 ## Features
 
+### Core Functionality
 - **Visual Recipe Planning**: Drag-and-drop interface for building production chains
-- **Smart Connections**: Automatically connect compatible inputs and outputs
-- **Machine Count Editing**: Double-click nodes to set precise machine counts
-- **Target Production**: Set production goals for optimizing your factory
-- **Production Analysis**: Track excess products, deficiencies, and profit calculations
-- **Custom Data**: Import/export custom recipes, products, and machines
+- **Smart Connections**: Automatically connect compatible inputs and outputs with intelligent routing
+- **Production Analysis**: Track excess products, deficiencies, and profit calculations in real-time
+- **Machine Count Editing**: Double-click nodes to set precise machine counts, or double-click handles to auto-balance production
+- **Target Production Goals**: Set production targets for specific products to optimize your factory
 - **Persistent Storage**: Your work is automatically saved in browser storage
-- **Variable Support**: Handle recipes with variable inputs/outputs/cycle times
-- **Special Recipes**: Full support for Mineshaft Drill, Logic Assembler, Tree Farm, and Industrial Firebox
-- **Temperature System**: Model heat sources, boilers, and temperature-dependent production
-- **Theme Customization**: Built-in theme editor with multiple presets
 
-## Data Sources
+### Special Recipe Support
+- **Mineshaft Drill**: Configure drill heads, consumable acids, machine oil, and target depth with automatic deterioration calculations
+- **Logic Assembler**: Set target microchip stages with machine oil speed boost and tick circuit delay adjustment
+- **Tree Farm**: Configure trees, harvesters, sprinklers with pollution-aware growth time calculations
+- **Industrial Firebox**: Variable fuel support (Coal, Coke Fuel, Planks, Oak Log) with energy-based cycle times
+- **Chemical Plant**: Speed and efficiency factor adjustments with multiplicative resource calculations
 
-All game data (products, machines, recipes, and mechanics) were sourced from the [Industrialist Wiki](https://industrialist.miraheze.org/).
+### Advanced Systems
+- **Temperature System**: Full support for heat sources, boilers, and temperature-dependent production cycles
+  - Geothermal Wells, Fireboxes, Electric Water Heaters, Gas Burners
+  - Boiler heat loss configuration
+  - Temperature tracking through production chains
+  - Temperature-dependent cycle times for Industrial Drill, Alloyer, Coal Liquefaction, Steam Cracking, Water Treatment
+- **Pollution Tracking**: Global pollution affects tree growth rates and residue production from Air Separation Units
+- **Display Modes**: Toggle between per-second/per-cycle and per-machine/total views
+- **Flow Analysis**: Advanced production flow solver with excess/deficiency detection
+- **Custom Data**: Import/export custom recipes, products, and machines via JSON
 
-### Custom Calculations & Assumptions
+### Customization
+- **Theme Editor**: Built-in theme customization with multiple presets
+  - 8+ pre-built themes (Golden Industrial, Dracula, Nord, Solarized, Cyberpunk, etc.)
+  - Full color customization for every UI element
+  - Edge path and style options (Bezier, Straight, Orthogonal with animated/static/solid styles)
+- **Favorite Recipes**: Mark frequently used recipes for quick access
+- **Machine Statistics**: View total machine costs and counts by type
 
-**Residue Production Formula**  
-The Air Separation Unit's residue output is calculated based on global pollution using a custom formula:
+## Controls
 
-```
-residue_amount = (ln(1 + (5429 × pollution) / 7322))^1.1
-```
+### Basic Controls
+- **Add Recipe**: Click "+ Select Recipe" to browse and add recipe nodes
+- **Pan Canvas**: Left-click and drag on empty space
+- **Zoom**: Mouse wheel or pinch gesture
+- **Connect Nodes**: Drag from output handle (red, right side) to input handle (green, left side)
 
-where `pollution` is the global pollution percentage. This formula was chosen because it produced 5L/s of residue at 100 pollution, change if you want.
+### Node Interactions
+- **Edit Machine Count**: Double-click any node to manually set machine count
+- **Auto-Balance Machine Count**: Double-click an input or output handle to automatically adjust machine count based on excess/shortage
+- **Set as Target**: Shift+Click a node to mark it as a target product
+- **Delete Node**: Ctrl+Alt+Click a node to remove it
+- **Duplicate Node**: Middle-click a node, then left-click on canvas to place the copy (right-click to cancel)
+- **Configure Special Recipes**: Click the ⚙️ icon on Mineshaft Drill, Logic Assembler, Tree Farm, Industrial Firebox, or Chemical Plant nodes
 
-**Microchip Pricing**  
-Microchip prices follow the established pattern from the wiki for basic stages. For advanced microchips (outer stage 2x and above, excluding 64x inner stage variants), prices were extrapolated by analyzing the pricing progression of first-stage microchips and applying similar growth rates to maintain economic balance.
+### Connection Management
+- **Delete Connection**: Ctrl+Click on an input or output rectangle to remove all connections to that port
+- **Auto-Connect**: Click an input/output rectangle to open recipe selector with auto-connection enabled
+- **Connection Paths**: Supports Bezier curves, straight lines, or orthogonal (90° angles) routing
 
-## Upcoming Features
+### Display Toggles
+- **Per Second / Per Cycle**: Toggle how quantities are displayed
+- **Total / Per Machine**: Toggle whether totals include machine count multiplication
+- **Pause Pollution**: Use the ▶/❚❚ button to pause/resume global pollution changes
 
-- **Compute Machines Button**: Automatic calculation of optimal machine counts to meet production targets
-- **Machine Multiplier Propagation**: Change one recipe's machine count and automatically scale connected recipes proportionally throughout your production chain
+### Canvas Management
+- **Clear All**: Remove all nodes and connections
+- **View Targets**: Manage production targets and set desired output rates
+- **Compute Machines**: *(Coming Soon)* Automatically calculate optimal machine counts
 
-## Local Installation
+## Installation
 
-### Prerequisites
-- Node.js (v16 or higher)
-- npm or yarn
+### Requirements
+- **Node.js**: v16 or higher
+- **npm** or **yarn**: Package manager
 
-### Setup
+### Local Setup
 
 ```bash
 # Clone the repository
@@ -60,239 +90,129 @@ npm run dev
 
 # Build for production
 npm run build
+
+# Preview production build
+npm run preview
 ```
 
-The app will be available at `http://localhost:5173`
+The application will be available at `http://localhost:5173`
 
-## Usage Guide
-
-### Basic Controls
-
-- **Add Recipe**: Click "+ Select Recipe" to browse and add recipe nodes
-- **Edit Machine Count**: Double-click any node to edit its machine count
-- **Connect Nodes**: Drag from output (red) to input (green) handles
-- **Delete Connection**: Ctrl+Click on an input or output rectangle to remove all connections
-- **Set Target**: Shift+Click a node to mark it as a target product
-- **Delete Node**: Ctrl+Alt+Click a node to remove it
-- **Pan Canvas**: Click and drag on empty space
-- **Zoom**: Mouse wheel or pinch gesture
-
-### Display Modes
-
-- **Per Second / Per Cycle**: Toggle how quantities are displayed
-- **Total / Per Machine**: Toggle whether totals include machine count multiplication
-
-### Special Recipes
-
-**Mineshaft Drill**  
-Configure drill head type, consumable acid, machine oil usage, and target depth. The system automatically calculates deterioration rates, cycle times, and output quantities based on your configuration.
-
-**Logic Assembler**  
-Set target microchip (outer and inner stage), enable machine oil for 5x speed boost, and adjust tick circuit delay. The calculator determines required materials, cycle time, and power consumption.
-
-**Tree Farm**  
-Configure number of trees, harvesters, sprinklers, and outputs. The system calculates sustainable harvest rates based on current global pollution levels (pollution affects tree growth time).
-
-**Industrial Firebox**  
-Select fuel type (Coal, Coke Fuel, Planks, Oak Log) and the system calculates energy-based cycle times and fuel consumption rates.
-
-### Temperature System
-
-Some machines produce temperature-dependent outputs:
-- **Heat Sources**: Geothermal Wells, Fireboxes, Electric Water Heaters, Gas Burners
-- **Boilers**: Convert hot water to steam (click wrench icon to configure heat loss)
-- **Temperature-Dependent Cycles**: Industrial Drill, Alloyer, Coal Liquefaction Plant, Steam Cracking Plant, Water Treatment Plant
-
-Temperature is tracked through connections and affects cycle times where applicable.
-
-### Target Products
-
-1. Shift+Click any recipe node to set it as a target
-2. Click "View Targets" to manage target production rates
-3. Enter desired output per second
-4. (Automatic machine count calculation coming soon)
-
-## Customizing Data
-
-### Adding New Recipes via Import
-
-Create a JSON file with your custom data:
-
-```json
-{
-  "products": [
-    {
-      "id": "p_custom_item",
-      "name": "Custom Item",
-      "type": "item",
-      "price": 100,
-      "rp_multiplier": 1.5
-    }
-  ],
-  "machines": [
-    {
-      "id": "m_custom_machine",
-      "name": "Custom Machine",
-      "cost": 5000
-    }
-  ],
-  "recipes": [
-    {
-      "id": "r_custom_recipe",
-      "name": "Make Custom Item",
-      "machine_id": "m_custom_machine",
-      "cycle_time": 5,
-      "power_consumption": 1000000,
-      "pollution": 10,
-      "inputs": [
-        {
-          "product_id": "p_iron_ore",
-          "quantity": 2
-        }
-      ],
-      "outputs": [
-        {
-          "product_id": "p_custom_item",
-          "quantity": 1
-        }
-      ]
-    }
-  ]
-}
-```
-
-**Import Steps:**
-1. Click the menu toggle (`<`) in the top-right corner
-2. Click "Import JSON"
-3. Select your JSON file
-4. Choose whether to clear the current canvas or keep it
-
-**Notes:**
-- Products: If `id` matches existing product, it will be replaced; otherwise added
-- Machines: Must have unique IDs
-- Recipes: All recipes using imported machine IDs are replaced
-- Variable values: Use `"Variable"` for flexible quantities/times
-- Power consumption: In MF/s (e.g., 1000000 = 1 MMF/s)
-
-### Exporting Your Work
-
-1. Click the menu toggle (`<`)
-2. Click "Export JSON"
-3. Downloads a timestamped file with all current data
-
-This exports everything: products, machines, recipes, and your current canvas state.
-
-## Theme Customization
-
-The app includes a built-in theme editor with multiple presets:
-
-**Built-in Themes:**
-- Golden Industrial (Default)
-- Dracula
-- Nord
-- Solarized Dark/Light
-- Midnight Blue
-- Forest Green
-- Sunset Orange
-- Cyberpunk
-
-**To Customize:**
-1. Open the menu (`<` button)
-2. Click "Theme Editor"
-3. Choose a preset or use "Advanced Editing" for full control
-4. All changes are saved automatically
-
-### Manual Theme Editing
-
-All visual styling uses CSS variables in `src/index.css`. Edit the `:root` section:
-
-```css
-:root {
-  /* Primary theme color */
-  --color-primary: #d4a637;
-  --color-primary-hover: #f5d56a;
-  
-  /* Background colors */
-  --bg-main: #0a0a0a;
-  --bg-secondary: #1a1a1a;
-  
-  /* Input (green) / Output (red) colors */
-  --input-bg: #1a3a2a;
-  --input-border: #22c55e;
-  --output-bg: #3a1a1a;
-  --output-border: #ef4444;
-}
-```
+### Browser Compatibility
+- Modern browsers with ES6+ support
+- Chrome, Firefox, Edge, Safari (latest versions)
+- Local storage must be enabled for save functionality
 
 ## Data Management
 
-### Storage Location
+### Importing Custom Data
+1. Click menu toggle (`<` button in top-right)
+2. Click "Import JSON"
+3. Select your JSON file
+4. Choose whether to clear current canvas or keep it
 
-All data is stored in browser `localStorage`:
-- `industrialist_products` - Product definitions
-- `industrialist_machines` - Machine types  
-- `industrialist_recipes` - Recipe data
-- `industrialist_canvas_state` - Current canvas layout
-- `industrialist_theme` - Theme settings
+#### Supported Import Types
+- **Data Only**: Products, machines, and recipes
+- **Canvas Only**: Your current production layout
+- **Full Export**: Both data and canvas state
+
+### Exporting
+- **Export Data**: Products, machines, and recipes only
+- **Export Canvas**: Current layout and configuration
+- **Export JSON**: Everything (recommended for backups)
 
 ### Restoring Defaults
-
-Click "Restore Defaults" in the menu to reset all data to original values. **This clears your canvas and any custom data.**
+Click "Restore Defaults" in the menu to reset all data to original game values. **Warning**: This clears your canvas and any custom data.
 
 ## Project Structure
 
 ```
 Industrialist-Production-Calculator/
 ├── src/
-│   ├── components/
+│   ├── components/          # React components
 │   │   ├── CustomNode.jsx           # Recipe node rendering
-│   │   ├── CustomEdge.jsx           # Connection lines
+│   │   ├── CustomEdge.jsx           # Connection visualization
 │   │   ├── DrillSettings.jsx        # Mineshaft drill config
 │   │   ├── LogicAssemblerSettings.jsx
 │   │   ├── TreeFarmSettings.jsx
 │   │   ├── IndustrialFireboxSettings.jsx
+│   │   ├── ChemicalPlantSettings.jsx
 │   │   ├── TemperatureSettings.jsx
 │   │   ├── BoilerSettings.jsx
-│   │   ├── ChemicalPlantSettings.jsx
-│   │   └── ThemeEditor.jsx          # Theme customization UI
-│   ├── data/
-│   │   ├── dataLoader.js            # Data management & storage
-│   │   ├── mineshaftDrill.js        # Drill calculations
-│   │   ├── logicAssembler.js        # Logic assembler calculations
-│   │   ├── treeFarm.js              # Tree farm calculations
-│   │   ├── industrialFirebox.js     # Firebox calculations
-│   │   ├── chemicalPlant.js         # Chemical plant calculations
-│   │   ├── products.json            # Default products
-│   │   ├── machines.json            # Default machines
-│   │   └── recipes.json             # Default recipes
-│   ├── utils/
-│   │   ├── variableHandler.js       # Variable value formatting
-│   │   ├── temperatureHandler.js    # Temperature system
+│   │   └── ThemeEditor.jsx
+│   ├── data/               # Game data (CC BY-NC-SA 4.0)
+│   │   ├── products.json
+│   │   ├── machines.json
+│   │   ├── recipes.json
+│   │   ├── dataLoader.js
+│   │   ├── mineshaftDrill.js
+│   │   ├── logicAssembler.js
+│   │   ├── treeFarm.js
+│   │   ├── industrialFirebox.js
+│   │   └── chemicalPlant.js
+│   ├── utils/              # Utility functions (MIT)
+│   │   ├── variableHandler.js
+│   │   ├── temperatureHandler.js
 │   │   ├── temperatureDependentCycles.js
-│   │   └── appUtilities.js          # Helper functions
-│   ├── solvers/
-│   │   ├── productionSolver.js      # Production network analysis
-│   │   ├── graphBuilder.js          # Build production graph
-│   │   ├── flowCalculator.js        # Calculate product flows
-│   │   └── excessCalculator.js      # Find excess/deficiencies
-│   ├── App.jsx                      # Main application
-│   ├── index.css                    # Global styles
-│   └── main.jsx                     # Entry point
+│   │   ├── appUtilities.js
+│   │   └── recipeBoxCreation.js
+│   ├── solvers/            # Production analysis (MIT)
+│   │   ├── productionSolver.js
+│   │   ├── graphBuilder.js
+│   │   ├── flowCalculator.js
+│   │   └── excessCalculator.js
+│   ├── App.jsx             # Main application
+│   ├── index.css           # Global styles
+│   └── main.jsx            # Entry point
 ├── index.html
 ├── package.json
+├── LICENSE
 └── README.md
 ```
 
-## Contributing
+## Upcoming Features
 
-Contributions are welcome! Please feel free to submit pull requests or open issues on the [GitHub repository](https://github.com/Pollywrath/Industrialist-Production-Calculator).
+### In Development
+- **Compute Machines Button**: Automatic calculation of optimal machine counts to meet all production targets simultaneously
+- **Machine Multiplier Propagation**: Change one recipe's machine count and automatically scale all connected recipes proportionally throughout your entire production chain
 
 ## License
 
-MIT License - see LICENSE file for details
+This project uses a **dual-license structure**:
+
+### MIT License (Code)
+All source code including React components, JavaScript logic, CSS styling, and application utilities are licensed under the MIT License. See [LICENSE](LICENSE) for full details.
+
+### CC BY-NC-SA 4.0 (Game Data)
+Game data including:
+- All JSON files in `src/data/`
+- Game constants and formulas in data-related JavaScript files
+- Drill deterioration rates and mechanics
+- Temperature calculations and heat source definitions
+
+This data is sourced from the [Industrialist Wiki](https://industrialist.miraheze.org/) and is licensed under [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+**Summary**: Use the code freely for any purpose (including commercial), but game data is for non-commercial use only and requires attribution.
 
 ## Credits
 
-- Game data sourced from [Industrialist Wiki](https://industrialist.miraheze.org/)
-- Built with React, ReactFlow, and Vite
-- Created by Pollywrath
+- **Game Data**: All recipes, products, machines, and game mechanics sourced from the [Industrialist Wiki](https://industrialist.miraheze.org/)
+- **Development**: Pollywrath
+- **Built With**: React, ReactFlow, Vite
+
+## Contributing
+
+Contributions are welcome! Please feel free to:
+- Submit pull requests with bug fixes or new features
+- Open issues for bug reports or feature requests
+- Improve documentation
+- Share custom themes or production layouts
+
+## Support
+
+- **Issues**: [GitHub Issues](https://github.com/Pollywrath/Industrialist-Production-Calculator/issues)
+- **Source Code**: [GitHub Repository](https://github.com/Pollywrath/Industrialist-Production-Calculator)
+- **Wiki Reference**: [Industrialist Wiki](https://industrialist.miraheze.org/)
+
+---
+
+**Note**: This is a fan-made tool and is not officially affiliated with the Industrialist game.
