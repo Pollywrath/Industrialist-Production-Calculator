@@ -5,8 +5,8 @@ import { calculateSuggestions } from './suggestionCalculator';
 export const determineExcessAndDeficiency = (graph, flows) => {
   const excess = [];
   const deficiency = [];
-  // Use 15 decimal precision - only consider real excess/deficiency if > epsilon
-  const EPSILON = 1e-15;
+  // Use 10 decimal precision - only consider real excess/deficiency if > epsilon
+  const EPSILON = 1e-10;
 
   Object.keys(graph.products).forEach(productId => {
     const productData = graph.products[productId];

@@ -14,7 +14,7 @@ import ChemicalPlantSettings from './ChemicalPlantSettings';
 
 const RECT_HEIGHT = 44, RECT_GAP = 8, BOTTOM_PADDING = 20, SIDE_PADDING = 10, COLUMN_GAP = 20, MIN_WIDTH = 320;
 
-const smartFormat = (num) => typeof num === 'number' ? Math.round(num * 10000) / 10000 : num;
+const smartFormat = (num) => typeof num === 'number' ? Math.round(num * 1e10) / 1e10 : num;
 
 // Function to estimate text width and calculate lines needed
 const calculateTextLines = (text, availableWidth, fontSize = 16) => {
@@ -173,12 +173,8 @@ const CustomNode = ({ data, id }) => {
           if (e.button === 1) { // Middle mouse button
             e.preventDefault();
             e.stopPropagation();
-            console.log('Middle click detected on node:', id);
             if (data.onMiddleClick) {
-              console.log('Calling onMiddleClick');
               data.onMiddleClick(id);
-            } else {
-              console.log('onMiddleClick not found in data');
             }
           }
         }}
@@ -355,8 +351,8 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
 };
 
 const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, onHandleDoubleClick, suggestions }) => {
-  // Use same epsilon as excess/deficiency calculations (15 decimal precision)
-  const EPSILON = 1e-15;
+  // Use same epsilon as excess/deficiency calculations (10 decimal precision)
+  const EPSILON = 1e-10;
   
   // Get colors from CSS variables (theme)
   const cssVars = getComputedStyle(document.documentElement);

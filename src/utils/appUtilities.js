@@ -5,7 +5,7 @@ import { HEAT_SOURCES, calculateOutputTemperature, DEFAULT_BOILER_INPUT_TEMPERAT
   DEFAULT_WATER_TEMPERATURE, DEFAULT_STEAM_TEMPERATURE, getDefaultTemperatureSettings, isTemperatureProduct } from '../utils/temperatureHandler';
 import { hasTempDependentCycle, TEMP_DEPENDENT_MACHINES } from '../utils/temperatureDependentCycles';
 
-export const smartFormat = (num) => typeof num === 'number' ? Math.round(num * 10000) / 10000 : num;
+export const smartFormat = (num) => typeof num === 'number' ? Math.round(num * 1e10) / 1e10 : num;
 
 export const metricFormat = (num) => {
   if (typeof num !== 'number') return num;

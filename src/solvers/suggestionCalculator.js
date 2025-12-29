@@ -1,4 +1,4 @@
-const EPSILON = 1e-15;
+const EPSILON = 1e-10;
 
 /**
  * Find all outputs that could help supply a deficient input through connection chains
@@ -287,10 +287,10 @@ export const calculateSuggestions = (graph, flows) => {
     });
   });
   
-  // Round all machine counts to 15 decimal places
+  // Round all machine counts to 10 decimal places
   suggestions.forEach(s => {
-    s.suggestedMachineCount = Math.round(s.suggestedMachineCount * 1e15) / 1e15;
-    s.machineDelta = Math.round(s.machineDelta * 1e15) / 1e15;
+    s.suggestedMachineCount = Math.round(s.suggestedMachineCount * 1e10) / 1e10;
+    s.machineDelta = Math.round(s.machineDelta * 1e10) / 1e10;
   });
   
   return suggestions;

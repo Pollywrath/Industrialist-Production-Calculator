@@ -22,21 +22,19 @@ import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, 
   initializeRecipeTemperatures } from './utils/appUtilities';
 import { configureSpecialRecipe, calculateMachineCountForAutoConnect, getSpecialRecipeInputs, getSpecialRecipeOutputs, isSpecialRecipe } from './utils/recipeBoxCreation';
 
-if (process.env.NODE_ENV === 'development') {
-  let lastMemory = 0;
-  setInterval(() => {
-    if (performance.memory) {
-      const current = performance.memory.usedJSHeapSize / 1048576; // MB
-      const total = performance.memory.totalJSHeapSize / 1048576;
-      const limit = performance.memory.jsHeapSizeLimit / 1048576;
-      const delta = current - lastMemory;
-      if (Math.abs(delta) > 10) { // Reduced threshold to see smaller changes
-        console.log(`Memory: ${current.toFixed(1)}MB / ${total.toFixed(1)}MB (limit: ${limit.toFixed(0)}MB) ${delta > 0 ? '+' : ''}${delta.toFixed(1)}MB`);
-      }
-      lastMemory = current;
+let lastMemory = 0;
+setInterval(() => {
+  if (performance.memory) {
+    const current = performance.memory.usedJSHeapSize / 1048576; // MB
+    const total = performance.memory.totalJSHeapSize / 1048576;
+    const limit = performance.memory.jsHeapSizeLimit / 1048576;
+    const delta = current - lastMemory;
+    if (Math.abs(delta) > 10) {
+      console.log(`Memory: ${current.toFixed(1)}MB / ${total.toFixed(1)}MB (limit: ${limit.toFixed(0)}MB) ${delta > 0 ? '+' : ''}${delta.toFixed(1)}MB`);
     }
-  }, 3000); // Check every 3s instead of 2s
-}
+    lastMemory = current;
+  }
+}, 3000);
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 const calculateResidueAmount = (globalPollution) => {
@@ -738,11 +736,8 @@ function App() {
     );
     
     if (!suggestion) {
-      console.log('[HANDLE DOUBLE-CLICK] No suggestion available for this handle');
       return;
     }
-    
-    console.log('[HANDLE DOUBLE-CLICK] Applying suggestion:', suggestion);
     
     setNodes(nds => nds.map(n => 
       n.id === nodeId
@@ -1238,19 +1233,13 @@ function App() {
     reader.onload = (e) => {
       try {
         const imported = JSON.parse(e.target.result);
-        console.log('=== IMPORT STARTED ===');
-        console.log('Imported data:', imported);
         
         // Determine import type
         const isDataImport = imported.products || imported.machines || imported.recipes;
         const isCanvasImport = imported.canvas;
         
-        console.log('Is data import:', isDataImport);
-        console.log('Is canvas import:', isCanvasImport);
-        
         // Handle data import (products, machines, recipes)
         if (isDataImport) {
-          console.log('Processing data import...');
           const productMap = new Map((imported.products || []).map(p => [p.id, p]));
           const uniqueProducts = Array.from(productMap.values());
           const machineIds = new Set(imported.machines?.map(m => m.id) || []);
@@ -1272,7 +1261,6 @@ function App() {
             updateMachines(currentMachines); 
             updateRecipes([...recipesWithoutImportedMachines, ...cleanedRecipes]);
           }
-          console.log('Data import complete');
           
           if (!isCanvasImport) {
             alert('Data import successful!');
@@ -1283,10 +1271,6 @@ function App() {
         
         // Handle canvas import (validate and load)
         if (isCanvasImport) {
-          console.log('Processing canvas import...');
-          console.log('Canvas nodes count:', imported.canvas.nodes?.length || 0);
-          console.log('Canvas edges count:', imported.canvas.edges?.length || 0);
-          
           // Validate that all required products/recipes/machines exist
           const canvasNodes = imported.canvas.nodes || [];
           const missingItems = [];
@@ -1313,19 +1297,15 @@ function App() {
           
           if (missingItems.length > 0) {
             const uniqueMissing = [...new Set(missingItems)];
-            console.error('Missing items:', uniqueMissing);
             alert(`Cannot import canvas - missing items:\n${uniqueMissing.slice(0, 10).join('\n')}${uniqueMissing.length > 10 ? `\n...and ${uniqueMissing.length - 10} more` : ''}`);
             event.target.value = '';
             return;
           }
           
           if (!window.confirm('Clear current canvas and load imported layout?')) {
-            console.log('User cancelled canvas import');
             event.target.value = '';
             return;
           }
-          
-          console.log('User confirmed canvas import, processing nodes...');
           
           // Process nodes with all callbacks
           const restoredNodes = canvasNodes.map(node => {
@@ -1360,9 +1340,6 @@ function App() {
             };
           });
           
-          console.log('Processed nodes count:', restoredNodes.length);
-          console.log('Setting state...');
-          
           // Set all state directly - NO RELOAD
           setNodes(restoredNodes);
           setEdges(imported.canvas.edges || []);
@@ -1376,16 +1353,11 @@ function App() {
           setNodeId(imported.canvas.nodeId || 0);
           setTargetIdCounter(imported.canvas.targetIdCounter || 0);
           
-          console.log('State updated, import complete!');
-          console.log('=== IMPORT FINISHED ===');
-          
           clearFlowCache();
           alert('Canvas import successful!');
         }
         
       } catch (error) { 
-        console.error('=== IMPORT ERROR ===');
-        console.error('Error details:', error);
         alert(`Import failed: ${error.message}`); 
       }
     };
