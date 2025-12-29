@@ -160,7 +160,7 @@ function App() {
           onIndustrialFireboxSettingsChange: handleIndustrialFireboxSettingsChange, onTemperatureSettingsChange: handleTemperatureSettingsChange, 
           onBoilerSettingsChange: handleBoilerSettingsChange, onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange, 
           onMiddleClick: onNodeMiddleClick, onHandleDoubleClick: handleHandleDoubleClick, globalPollution,
-          flows: null }};
+          flows: null, suggestions: [] }};
       });
       setNodes(restoredNodes);
       setEdges(savedState.edges || []);
@@ -420,7 +420,11 @@ function App() {
       flowUpdateTimeoutRef.current = setTimeout(() => {
         setNodes(nds => nds.map(node => ({ 
           ...node, 
-          data: { ...node.data, flows: productionSolution.flows.byNode[node.id] || null } 
+          data: { 
+            ...node.data, 
+            flows: productionSolution.flows.byNode[node.id] || null,
+            suggestions: productionSolution.suggestions || []
+          } 
         }))); 
       }, 250);
     }
@@ -724,217 +728,27 @@ function App() {
     }));
   }, [setNodes]);
 
-  const handleHandleDoubleClick = useCallback((nodeId, side, index, productId) => {
-    const EPSILON = 1e-15;
+  const handleHandleDoubleClick = useCallback((nodeId, side, index, productId, suggestions) => {
+    // Check if there's a suggestion for this handle
+    const handleType = side === 'right' ? 'output' : 'input';
+    const suggestion = suggestions?.find(s => 
+      s.nodeId === nodeId && 
+      s.handleType === handleType && 
+      s.handleIndex === index
+    );
     
-    console.log('[HANDLE DOUBLE-CLICK START]', { nodeId, side, index, productId });
+    if (!suggestion) {
+      console.log('[HANDLE DOUBLE-CLICK] No suggestion available for this handle');
+      return;
+    }
     
-    // Use functional update to access current nodes state
-    setNodes(currentNodes => {
-      // Get current node and its flow data
-      const node = currentNodes.find(n => n.id === nodeId);
-      if (!node) {
-        console.log('[HANDLE DOUBLE-CLICK] Node not found');
-        return currentNodes;
-      }
-      
-      // Get flow data from node's data (already stored there)
-      const flowData = node.data.flows;
-      
-      if (!flowData) {
-        console.log('[HANDLE DOUBLE-CLICK] No flow data available in node data');
-        return currentNodes;
-      }
-      
-      const isOutput = side === 'right';
-      const handleFlow = isOutput ? flowData.outputFlows?.[index] : flowData.inputFlows?.[index];
-      
-      if (!handleFlow) {
-        console.log('[HANDLE DOUBLE-CLICK] No handle flow data');
-        return currentNodes;
-      }
-      
-      console.log('[HANDLE DOUBLE-CLICK] Current flow:', handleFlow);
-      
-      // Calculate the difference based on handle type
-      let difference;
-      
-      if (isOutput) {
-        // For outputs: check if there's local excess
-        const localExcess = handleFlow.produced - handleFlow.connected;
-        console.log('[HANDLE DOUBLE-CLICK] Output local excess:', localExcess);
-        
-        // Also check downstream demand: find connected input nodes and see if they have shortages
-        let downstreamShortage = 0;
-        const currentEdges = edgesRef.current;
-        const connectedEdges = currentEdges.filter(e => 
-          e.source === nodeId && 
-          parseInt(e.sourceHandle.split('-')[1]) === index
-        );
-        
-        console.log('[HANDLE DOUBLE-CLICK] Connected edges:', connectedEdges.length);
-        console.log('[HANDLE DOUBLE-CLICK] All edges:', currentEdges.length);
-        
-        connectedEdges.forEach(edge => {
-          const targetNode = currentNodes.find(n => n.id === edge.target);
-          const targetInputIndex = parseInt(edge.targetHandle.split('-')[1]);
-          
-          if (targetNode?.data?.flows?.inputFlows?.[targetInputIndex]) {
-            const targetFlow = targetNode.data.flows.inputFlows[targetInputIndex];
-            const shortage = targetFlow.needed - targetFlow.connected;
-            console.log('[HANDLE DOUBLE-CLICK] Downstream node', edge.target, 'input', targetInputIndex, 'shortage:', shortage);
-            if (shortage > EPSILON) {
-              downstreamShortage += shortage;
-            }
-          }
-        });
-        
-        console.log('[HANDLE DOUBLE-CLICK] Total downstream shortage:', downstreamShortage);
-        
-        // Use whichever is larger: local excess or downstream shortage
-        if (localExcess > EPSILON) {
-          difference = localExcess; // Positive = reduce production (excess)
-        } else if (downstreamShortage > EPSILON) {
-          difference = -downstreamShortage; // Negative = increase production (to meet demand)
-        } else {
-          difference = 0;
-        }
-      } else {
-        // For inputs: check if there's local shortage
-        const localShortage = handleFlow.needed - handleFlow.connected;
-        console.log('[HANDLE DOUBLE-CLICK] Input local shortage:', localShortage);
-        
-        // Also check upstream excess: find connected output nodes and see if they have excess
-        let upstreamExcess = 0;
-        const currentEdges = edgesRef.current;
-        const connectedEdges = currentEdges.filter(e => 
-          e.target === nodeId && 
-          parseInt(e.targetHandle.split('-')[1]) === index
-        );
-        
-        console.log('[HANDLE DOUBLE-CLICK] Connected upstream edges:', connectedEdges.length);
-        
-        connectedEdges.forEach(edge => {
-          const sourceNode = currentNodes.find(n => n.id === edge.source);
-          const sourceOutputIndex = parseInt(edge.sourceHandle.split('-')[1]);
-          
-          if (sourceNode?.data?.flows?.outputFlows?.[sourceOutputIndex]) {
-            const sourceFlow = sourceNode.data.flows.outputFlows[sourceOutputIndex];
-            const excess = sourceFlow.produced - sourceFlow.connected;
-            console.log('[HANDLE DOUBLE-CLICK] Upstream node', edge.source, 'output', sourceOutputIndex, 'excess:', excess);
-            if (excess > EPSILON) {
-              upstreamExcess += excess;
-            }
-          }
-        });
-        
-        console.log('[HANDLE DOUBLE-CLICK] Total upstream excess:', upstreamExcess);
-        
-        // Use whichever is relevant
-        if (localShortage > EPSILON) {
-          difference = localShortage; // Positive = reduce consumption (shortage)
-        } else if (upstreamExcess > EPSILON) {
-          difference = -upstreamExcess; // Negative = increase consumption (to use excess)
-        } else {
-          difference = 0;
-        }
-      }
-      
-      console.log('[HANDLE DOUBLE-CLICK] Final difference:', difference);
-      
-      // If difference is negligible, do nothing
-      if (Math.abs(difference) <= EPSILON) {
-        console.log('[HANDLE DOUBLE-CLICK] Difference negligible, no change needed');
-        return currentNodes;
-      }
-      
-      const currentMachineCount = node.data.machineCount || 0;
-      const recipe = node.data.recipe;
-      const machine = node.data.machine;
-      
-      // Calculate cycle time (accounting for temperature-dependent machines)
-      let cycleTime = recipe.cycle_time;
-      if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
-      
-      const isTempDependent = machine && hasTempDependentCycle(machine.id);
-      if (isTempDependent) {
-        const tempInfo = TEMP_DEPENDENT_MACHINES[machine.id];
-        if (tempInfo?.type === 'steam_input' && (machine.id !== 'm_steam_cracking_plant' || recipeUsesSteam(recipe))) {
-          const inputTemp = recipe.tempDependentInputTemp ?? DEFAULT_STEAM_TEMPERATURE;
-          cycleTime = getTempDependentCycleTime(machine.id, inputTemp, cycleTime);
-        }
-      }
-      
-      const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
-      
-      // Get the quantity per machine for this handle
-      let quantityPerMachine;
-      if (isOutput) {
-        const output = recipe.outputs[index];
-        const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
-        quantityPerMachine = isMineshaftDrill ? quantity : quantity / cycleTime;
-      } else {
-        const input = recipe.inputs[index];
-        quantityPerMachine = isMineshaftDrill ? input.quantity : input.quantity / cycleTime;
-      }
-      
-      if (typeof quantityPerMachine !== 'number' || quantityPerMachine <= EPSILON) {
-        console.log('[HANDLE DOUBLE-CLICK] Invalid quantity per machine:', quantityPerMachine);
-        return currentNodes;
-      }
-      
-      console.log('[HANDLE DOUBLE-CLICK] Quantity per machine:', quantityPerMachine);
-      
-      // Calculate new machine count
-      let newMachineCount;
-      
-      if (isOutput) {
-        if (difference > 0) {
-          // There's excess - reduce machine count to eliminate excess
-          const excessMachines = difference / quantityPerMachine;
-          newMachineCount = currentMachineCount - excessMachines;
-          console.log('[HANDLE DOUBLE-CLICK] OUTPUT - Reducing by', excessMachines, 'machines to eliminate excess');
-        } else {
-          // There's deficiency (other nodes need more) - increase to meet demand
-          const neededMachines = Math.abs(difference) / quantityPerMachine;
-          newMachineCount = currentMachineCount + neededMachines;
-          console.log('[HANDLE DOUBLE-CLICK] OUTPUT - Increasing by', neededMachines, 'machines to meet demand');
-        }
-      } else {
-        if (difference > 0) {
-          // There's shortage - reduce machine count to match available supply
-          const excessDemandMachines = difference / quantityPerMachine;
-          newMachineCount = currentMachineCount - excessDemandMachines;
-          console.log('[HANDLE DOUBLE-CLICK] INPUT - Reducing by', excessDemandMachines, 'machines due to shortage');
-        } else {
-          // There's excess supply - increase to consume it
-          const unusedSupplyMachines = Math.abs(difference) / quantityPerMachine;
-          newMachineCount = currentMachineCount + unusedSupplyMachines;
-          console.log('[HANDLE DOUBLE-CLICK] INPUT - Increasing by', unusedSupplyMachines, 'machines to consume excess');
-        }
-      }
-      
-      // Round to 15 decimal places to avoid floating point errors
-      newMachineCount = Math.round(newMachineCount * 1e15) / 1e15;
-      
-      console.log('[HANDLE DOUBLE-CLICK] New machine count:', newMachineCount);
-      
-      // Don't allow machine count to go to 0 or negative
-      if (newMachineCount <= EPSILON) {
-        console.log('[HANDLE DOUBLE-CLICK] New machine count would be <= 0, aborting');
-        return currentNodes;
-      }
-      
-      // Update the node
-      const updatedNodes = currentNodes.map(n => 
-        n.id === nodeId 
-          ? { ...n, data: { ...n.data, machineCount: newMachineCount } }
-          : n
-      );
-      
-      console.log('[HANDLE DOUBLE-CLICK] Machine count updated successfully');
-      return updatedNodes;
-    });
+    console.log('[HANDLE DOUBLE-CLICK] Applying suggestion:', suggestion);
+    
+    setNodes(nds => nds.map(n => 
+      n.id === nodeId
+        ? { ...n, data: { ...n.data, machineCount: suggestion.suggestedMachineCount } }
+        : n
+    ));
   }, [setNodes]);
 
   const handleChemicalPlantSettingsChange = useCallback((nodeId, settings) => {
@@ -1148,7 +962,8 @@ function App() {
         onHandleDoubleClick: handleHandleDoubleClick,
         globalPollution, 
         isTarget: false, 
-        flows: null 
+        flows: null,
+        suggestions: []
       }, 
       sourcePosition: 'right', 
       targetPosition: 'left' 
@@ -1298,7 +1113,8 @@ function App() {
         onHandleDoubleClick: handleHandleDoubleClick,
         globalPollution,
         isTarget: false,
-        flows: null
+        flows: null,
+        suggestions: []
       },
       sourcePosition: 'right',
       targetPosition: 'left'
@@ -1538,7 +1354,8 @@ function App() {
                 onMiddleClick: onNodeMiddleClick,
                 onHandleDoubleClick: handleHandleDoubleClick,
                 globalPollution,
-                flows: null 
+                flows: null,
+                suggestions: []
               }
             };
           });

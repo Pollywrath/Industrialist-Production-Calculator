@@ -283,7 +283,7 @@ const CustomNode = ({ data, id }) => {
               input={recipe.inputs[i]} onClick={onInputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
             <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} 
               onClick={onInputClick} nodeId={id} productId={recipe.inputs[i].product_id} flows={data.flows} 
-              onHandleDoubleClick={data.onHandleDoubleClick} />
+              onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} />
           </React.Fragment>
         ))}
 
@@ -293,7 +293,7 @@ const CustomNode = ({ data, id }) => {
               input={recipe.outputs[i]} onClick={onOutputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
             <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} 
               onClick={onOutputClick} nodeId={id} productId={recipe.outputs[i].product_id} flows={data.flows} 
-              onHandleDoubleClick={data.onHandleDoubleClick} />
+              onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} />
           </React.Fragment>
         ))}
       </div>
@@ -354,7 +354,7 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
   );
 };
 
-const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, onHandleDoubleClick }) => {
+const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, onHandleDoubleClick, suggestions }) => {
   // Use same epsilon as excess/deficiency calculations (15 decimal precision)
   const EPSILON = 1e-15;
   
@@ -405,13 +405,7 @@ const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, 
       onDoubleClick={(e) => {
         if (onHandleDoubleClick) {
           e.stopPropagation();
-          console.log('[HANDLE DOUBLE-CLICK]', {
-            side,
-            nodeId,
-            index,
-            productId
-          });
-          onHandleDoubleClick(nodeId, side, index, productId);
+          onHandleDoubleClick(nodeId, side, index, productId, suggestions);
         }
       }}
     />

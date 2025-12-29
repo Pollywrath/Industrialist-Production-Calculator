@@ -1,5 +1,7 @@
 import { getProduct } from '../data/dataLoader';
 
+import { calculateSuggestions } from './suggestionCalculator';
+
 export const determineExcessAndDeficiency = (graph, flows) => {
   const excess = [];
   const deficiency = [];
@@ -66,7 +68,12 @@ export const determineExcessAndDeficiency = (graph, flows) => {
   excess.sort((a, b) => b.excessRate - a.excessRate);
   deficiency.sort((a, b) => b.deficiencyRate - a.deficiencyRate);
 
-  return { excess, deficiency };
+  // Calculate suggestions only if there's excess or deficiency
+  const suggestions = (excess.length > 0 || deficiency.length > 0) 
+    ? calculateSuggestions(graph, flows)
+    : [];
+
+  return { excess, deficiency, suggestions };
 };
 
 export const getProductExcess = (excessProducts, productId) => 
