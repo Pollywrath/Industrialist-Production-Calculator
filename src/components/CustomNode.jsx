@@ -14,7 +14,7 @@ import ChemicalPlantSettings from './ChemicalPlantSettings';
 
 const RECT_HEIGHT = 44, RECT_GAP = 8, BOTTOM_PADDING = 20, SIDE_PADDING = 10, COLUMN_GAP = 20, MIN_WIDTH = 320;
 
-const smartFormat = (num) => typeof num === 'number' ? Math.round(num * 1e10) / 1e10 : num;
+const smartFormat = (num) => typeof num === 'number' ? Math.round(num * 10000) / 10000 : num;
 
 // Function to estimate text width and calculate lines needed
 const calculateTextLines = (text, availableWidth, fontSize = 16) => {
