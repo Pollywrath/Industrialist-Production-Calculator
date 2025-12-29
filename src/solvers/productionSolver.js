@@ -1,12 +1,24 @@
 import { buildProductionGraph } from './graphBuilder';
 import { calculateProductFlows } from './flowCalculator';
 import { determineExcessAndDeficiency } from './excessCalculator';
+import { propagateTemperatures, applyTemperaturesToNodes } from '../utils/temperaturePropagation';
 
 export const solveProductionNetwork = (nodes, edges) => {
   const graph = buildProductionGraph(nodes, edges);
   const flows = calculateProductFlows(graph);
-  const result = determineExcessAndDeficiency(graph, flows);
-  return { ...result, graph, flows };
+  
+  // Propagate temperatures through the network
+  const temperatureData = propagateTemperatures(graph, flows);
+  
+  // Apply temperatures back to nodes (this modifies the graph for cycle time calculations)
+  const nodesWithTemperatures = applyTemperaturesToNodes(nodes, temperatureData, graph);
+  
+  // Rebuild graph with updated temperatures for accurate cycle times
+  const updatedGraph = buildProductionGraph(nodesWithTemperatures, edges);
+  const updatedFlows = calculateProductFlows(updatedGraph);
+  
+  const result = determineExcessAndDeficiency(updatedGraph, updatedFlows);
+  return { ...result, graph: updatedGraph, flows: updatedFlows, temperatureData };
 };
 
 export const getExcessProducts = (solution) => solution.excess || [];

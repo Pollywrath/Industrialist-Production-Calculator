@@ -10,6 +10,7 @@ import { getProductName, formatIngredient } from './utils/variableHandler';
 import { calculateOutputTemperature, isTemperatureProduct, HEAT_SOURCES, DEFAULT_BOILER_INPUT_TEMPERATURE, 
   DEFAULT_WATER_TEMPERATURE, DEFAULT_STEAM_TEMPERATURE } from './utils/temperatureHandler';
 import { hasTempDependentCycle, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getSteamInputIndex, getTempDependentCycleTime } from './utils/temperatureDependentCycles';
+import { applyTemperaturesToNodes } from './utils/temperaturePropagation';
 import { DEFAULT_DRILL_RECIPE, DEPTH_OUTPUTS, calculateDrillMetrics, buildDrillInputs, buildDrillOutputs } from './data/mineshaftDrill';
 import { DEFAULT_LOGIC_ASSEMBLER_RECIPE, MICROCHIP_STAGES, calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from './data/logicAssembler';
 import { DEFAULT_TREE_FARM_RECIPE, calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs } from './data/treeFarm';
@@ -374,7 +375,7 @@ function App() {
   }, [globalPollution, setNodes]);
 
   const [productionSolution, setProductionSolution] = useState(() => 
-    solveProductionNetwork([], [])
+    solveProductionNetwork([], [], {})
   );
   const solverTimeoutRef = useRef(null);
   const lastSolverHash = useRef('');
@@ -416,14 +417,30 @@ function App() {
       }
       
       flowUpdateTimeoutRef.current = setTimeout(() => {
-        setNodes(nds => nds.map(node => ({ 
-          ...node, 
-          data: { 
-            ...node.data, 
-            flows: productionSolution.flows.byNode[node.id] || null,
-            suggestions: productionSolution.suggestions || []
-          } 
-        }))); 
+        setNodes(nds => {
+          // Apply temperature data if available
+          if (productionSolution.temperatureData) {
+            const nodesWithTemp = applyTemperaturesToNodes(nds, productionSolution.temperatureData, productionSolution.graph);
+            
+            return nodesWithTemp.map(node => ({
+              ...node,
+              data: {
+                ...node.data,
+                flows: productionSolution.flows.byNode[node.id] || null,
+                suggestions: productionSolution.suggestions || []
+              }
+            }));
+          }
+          
+          return nds.map(node => ({ 
+            ...node, 
+            data: { 
+              ...node.data, 
+              flows: productionSolution.flows.byNode[node.id] || null,
+              suggestions: productionSolution.suggestions || []
+            } 
+          }));
+        }); 
       }, 250);
     }
     
