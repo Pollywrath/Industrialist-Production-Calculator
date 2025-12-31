@@ -17,8 +17,18 @@ export const solveProductionNetwork = (nodes, edges) => {
   const updatedGraph = buildProductionGraph(nodesWithTemperatures, edges);
   const updatedFlows = calculateProductFlows(updatedGraph);
   
-  const result = determineExcessAndDeficiency(updatedGraph, updatedFlows);
-  return { ...result, graph: updatedGraph, flows: updatedFlows, temperatureData };
+  // Re-propagate temperatures with the updated graph (in case cycle time changes affect flow distribution)
+  const finalTemperatureData = propagateTemperatures(updatedGraph, updatedFlows);
+  
+  // Apply final temperatures to nodes
+  const finalNodes = applyTemperaturesToNodes(nodesWithTemperatures, finalTemperatureData, updatedGraph);
+  
+  // Final graph build with all updates
+  const finalGraph = buildProductionGraph(finalNodes, edges);
+  const finalFlows = calculateProductFlows(finalGraph);
+  
+  const result = determineExcessAndDeficiency(finalGraph, finalFlows);
+  return { ...result, graph: finalGraph, flows: finalFlows, temperatureData: finalTemperatureData };
 };
 
 export const getExcessProducts = (solution) => solution.excess || [];

@@ -379,16 +379,26 @@ function App() {
   );
   const solverTimeoutRef = useRef(null);
   const lastSolverHash = useRef('');
+  const shouldRecalculate = useRef(false);
+
+  // Helper to trigger recalculation
+  const triggerRecalculation = useCallback(() => {
+    shouldRecalculate.current = true;
+  }, []);
 
   useEffect(() => {
-    // Debounce expensive solver calculations
+    // Only recalculate when explicitly triggered
+    if (!shouldRecalculate.current) return;
+    
     if (solverTimeoutRef.current) {
       clearTimeout(solverTimeoutRef.current);
     }
     
     solverTimeoutRef.current = setTimeout(() => {
-      // Create a hash of node/edge structure to detect if calculation is needed
-      const currentHash = `${nodes.length}-${edges.length}-${nodes.map(n => `${n.id}:${n.data?.machineCount}`).join(',')}`;
+      // Create a hash including recipe settings for change detection
+      const currentHash = `${nodes.length}-${edges.length}-${nodes.map(n => 
+        `${n.id}:${n.data?.machineCount}:${JSON.stringify(n.data?.recipe?.temperatureSettings || {})}:${JSON.stringify(n.data?.recipe?.drillSettings || {})}:${JSON.stringify(n.data?.recipe?.assemblerSettings || {})}:${JSON.stringify(n.data?.recipe?.treeFarmSettings || {})}:${JSON.stringify(n.data?.recipe?.fireboxSettings || {})}:${JSON.stringify(n.data?.recipe?.chemicalPlantSettings || {})}`
+      ).join(',')}`;
       
       // Only recalculate if structure actually changed
       if (currentHash !== lastSolverHash.current) {
@@ -396,7 +406,9 @@ function App() {
         setProductionSolution(solution);
         lastSolverHash.current = currentHash;
       }
-    }, 300); // Increased debounce time
+      
+      shouldRecalculate.current = false;
+    }, 100);
     
     return () => {
       if (solverTimeoutRef.current) {
@@ -560,7 +572,8 @@ function App() {
     if (sourceProductId !== targetProductId) return;
     setEdges((eds) => addEdge({ ...params, type: 'custom', animated: false, data: edgeSettings }, eds));
     clearFlowCache();
-  }, [setEdges, nodes, edgeSettings]);
+    triggerRecalculation();
+  }, [setEdges, nodes, edgeSettings, triggerRecalculation]);
 
   const resetSelector = () => {
     setShowRecipeSelector(false); setSelectedProduct(null); setSelectedMachine(null); setSelectorMode('product');
@@ -576,6 +589,7 @@ function App() {
         !(edge.target === nodeId && edge.targetHandle === `left-${inputIndex}`)
       ));
       clearFlowCache();
+      triggerRecalculation();
       return;
     }
     const product = getProduct(productId);
@@ -588,6 +602,7 @@ function App() {
         !(edge.source === nodeId && edge.sourceHandle === `right-${outputIndex}`)
       ));
       clearFlowCache();
+      triggerRecalculation();
       return;
     }
     const product = getProduct(productId);
@@ -651,7 +666,8 @@ function App() {
         pollution: metrics ? metrics.pollution : 'Variable' }, leftHandles: Math.max(inputs.length, 1), rightHandles: Math.max(outputs.length, 1)
     }));
     cleanupInvalidConnections(nodeId, inputs, outputs);
-  }, [cleanupInvalidConnections]);
+    triggerRecalculation();
+  }, [cleanupInvalidConnections, triggerRecalculation]);
 
   const handleLogicAssemblerSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
     setLastAssemblerConfig({
@@ -672,7 +688,8 @@ function App() {
         leftHandles: Math.max(inputs.length, 1), rightHandles: Math.max(outputs.length, 1)
     }));
     cleanupInvalidConnections(nodeId, inputs, outputs);
-  }, [cleanupInvalidConnections]);
+    triggerRecalculation();
+  }, [cleanupInvalidConnections, triggerRecalculation]);
 
   const handleTreeFarmSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
     setLastTreeFarmConfig({
@@ -696,6 +713,7 @@ function App() {
       }
       return true;
     }));
+    triggerRecalculation();
   }, [setEdges, globalPollution]);
 
   const handleIndustrialFireboxSettingsChange = useCallback((nodeId, settings, inputs, metrics) => {
@@ -713,6 +731,7 @@ function App() {
         power_consumption: 0 // No power consumption
       }
     }));
+    triggerRecalculation();
   }, []);
 
   const handleTemperatureSettingsChange = useCallback((nodeId, settings, outputs, powerConsumption) => {
@@ -721,7 +740,8 @@ function App() {
         ? { ...n, data: { ...n.data, recipe: { ...n.data.recipe, outputs, temperatureSettings: settings, power_consumption: powerConsumption !== null && powerConsumption !== undefined ? powerConsumption : n.data.recipe.power_consumption } } }
         : n
     ));
-  }, [setNodes]);
+    triggerRecalculation();
+  }, [setNodes, triggerRecalculation]);
 
   const handleBoilerSettingsChange = useCallback((nodeId, settings) => {
     setNodes(nds => nds.map(n => {
@@ -741,6 +761,7 @@ function App() {
         }
       };
     }));
+    triggerRecalculation();
   }, [setNodes]);
 
   const handleHandleDoubleClick = useCallback((nodeId, side, index, productId, suggestions) => {
@@ -761,7 +782,8 @@ function App() {
         ? { ...n, data: { ...n.data, machineCount: suggestion.suggestedMachineCount } }
         : n
     ));
-  }, [setNodes]);
+    triggerRecalculation();
+  }, [setNodes, triggerRecalculation]);
 
   const handleChemicalPlantSettingsChange = useCallback((nodeId, settings) => {
     setNodes(nds => nds.map(n => {
@@ -785,6 +807,7 @@ function App() {
         }
       };
     }));
+    triggerRecalculation();
   }, [setNodes]);
 
   const createRecipeBox = useCallback((recipe, overrideMachineCount = null) => {
@@ -1007,20 +1030,22 @@ function App() {
     });
     
     setNodeId((id) => id + 1);
+    triggerRecalculation();
     
     // Return the new node ID for machine count editor flow
     return newNodeId;
-  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange, 
+  }, [nodeId, nodes, setNodes, setEdges, openRecipeSelectorForInput, openRecipeSelectorForOutput, handleDrillSettingsChange,
     handleLogicAssemblerSettingsChange, handleTreeFarmSettingsChange, handleIndustrialFireboxSettingsChange, 
     handleTemperatureSettingsChange, handleBoilerSettingsChange, handleChemicalPlantSettingsChange, autoConnectTarget, displayMode, 
     machineDisplayMode, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, findBestDepthForProduct, 
-    recipeMachineCounts, globalPollution, selectedProduct]);
+    recipeMachineCounts, globalPollution, selectedProduct, triggerRecalculation]);
 
   const deleteRecipeBoxAndTarget = useCallback((boxId) => {
     setNodes((nds) => nds.filter((n) => n.id !== boxId)); setEdges((eds) => eds.filter((e) => e.source !== boxId && e.target !== boxId));
     setTargetProducts(prev => prev.filter(t => t.recipeBoxId !== boxId));
     clearFlowCache();
-  }, [setNodes, setEdges]);
+    triggerRecalculation();
+  }, [setNodes, setEdges, triggerRecalculation]);
 
   const toggleTargetStatus = useCallback((node) => {
     const existingTarget = targetProducts.find(t => t.recipeBoxId === node.id);
@@ -1170,7 +1195,8 @@ function App() {
     setEditingNodeId(null); 
     setEditingMachineCount('');
     setNewNodePendingMachineCount(null);
-  }, [editingNodeId, editingMachineCount, newNodePendingMachineCount, deleteRecipeBoxAndTarget]);
+    triggerRecalculation();
+  }, [editingNodeId, editingMachineCount, newNodePendingMachineCount, deleteRecipeBoxAndTarget, triggerRecalculation]);
 
   const handleMachineCountCancel = useCallback(() => {
     if (newNodePendingMachineCount) {

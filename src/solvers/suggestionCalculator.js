@@ -328,10 +328,24 @@ export const calculateSuggestions = (graph, flows) => {
     });
   });
   
-  // Round all machine counts to 10 decimal places
+  // Round all machine counts to 20 decimal places for repeating decimals, otherwise 10
   suggestions.forEach(s => {
-    s.suggestedMachineCount = Math.round(s.suggestedMachineCount * 1e10) / 1e10;
-    s.machineDelta = Math.round(s.machineDelta * 1e10) / 1e10;
+    // Check if value has repeating pattern by comparing 10 vs 20 decimal precision
+    const at10 = Math.round(s.suggestedMachineCount * 1e10) / 1e10;
+    const at20 = Math.round(s.suggestedMachineCount * 1e20) / 1e20;
+    const hasRepeating = Math.abs(at20 - at10) > 1e-12;
+    
+    s.suggestedMachineCount = hasRepeating 
+      ? Math.round(s.suggestedMachineCount * 1e20) / 1e20
+      : Math.round(s.suggestedMachineCount * 1e10) / 1e10;
+    
+    const deltaAt10 = Math.round(s.machineDelta * 1e10) / 1e10;
+    const deltaAt20 = Math.round(s.machineDelta * 1e20) / 1e20;
+    const deltaHasRepeating = Math.abs(deltaAt20 - deltaAt10) > 1e-12;
+    
+    s.machineDelta = deltaHasRepeating
+      ? Math.round(s.machineDelta * 1e20) / 1e20
+      : Math.round(s.machineDelta * 1e10) / 1e10;
   });
   
   return suggestions;

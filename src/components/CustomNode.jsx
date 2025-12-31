@@ -75,6 +75,7 @@ const CustomNode = ({ data, id }) => {
 
   const temperatureData = { outputs: [] };
   if (heatSource) {
+    const isBoiler = heatSource.type === 'boiler';
     const outputsWater = recipe.outputs?.some(o => ['p_water', 'p_filtered_water', 'p_distilled_water'].includes(o.product_id));
     const outputsSteam = recipe.outputs?.some(o => ['p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam'].includes(o.product_id));
     
@@ -82,8 +83,17 @@ const CustomNode = ({ data, id }) => {
       if (isTemperatureProduct(output.product_id) && output.temperature != null) {
         const isWater = ['p_water', 'p_filtered_water', 'p_distilled_water'].includes(output.product_id);
         const isSteam = ['p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam'].includes(output.product_id);
-        if ((isWater && outputsWater) || (isSteam && outputsSteam)) {
-          temperatureData.outputs.push({ temp: output.temperature, index });
+        
+        // For boilers, only show steam temperature
+        if (isBoiler) {
+          if (isSteam && outputsSteam) {
+            temperatureData.outputs.push({ temp: output.temperature, index });
+          }
+        } else {
+          // For other heat sources, show all temperature products
+          if ((isWater && outputsWater) || (isSteam && outputsSteam)) {
+            temperatureData.outputs.push({ temp: output.temperature, index });
+          }
         }
       }
     });
@@ -161,7 +171,10 @@ const CustomNode = ({ data, id }) => {
   const getHandlePositions = (positions) => positions.map(p => ((p + RECT_HEIGHT / 2) / height) * 100);
 
   const displayMachineCount = machineCount ?? 0;
-  const formattedMachineCount = Number.isInteger(displayMachineCount) ? displayMachineCount.toString() : displayMachineCount.toFixed(2);
+  // Display up to 2 decimal places, but compute with full precision internally
+  const formattedMachineCount = Number.isInteger(displayMachineCount) 
+    ? displayMachineCount.toString() 
+    : displayMachineCount.toFixed(2);
   const machineCountStyle = machineDisplayMode === 'total' ? { color: 'var(--text-muted)', opacity: 0.5 } : {};
 
   return (
