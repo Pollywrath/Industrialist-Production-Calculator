@@ -22,6 +22,9 @@ import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, 
   getRecipesForMachine, canDrillUseProduct, canLogicAssemblerUseProduct, canTreeFarmUseProduct, applyTemperatureToOutputs, 
   initializeRecipeTemperatures } from './utils/appUtilities';
 import { configureSpecialRecipe, calculateMachineCountForAutoConnect, getSpecialRecipeInputs, getSpecialRecipeOutputs, isSpecialRecipe } from './utils/recipeBoxCreation';
+import { propagateMachineCount, propagateFromHandle, calculateMachineCountForNewConnection, setDebugMode } from './utils/machineCountPropagator';
+import PropagationDebugPanel from './components/PropagationDebugPanel';
+import { buildProductionGraph } from './solvers/graphBuilder';
   
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
@@ -86,6 +89,7 @@ function App() {
   const [recipeMachineCounts, setRecipeMachineCounts] = useState({});
   const [pendingNode, setPendingNode] = useState(null); // For middle-click duplication
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [debugModeEnabled, setDebugModeEnabled] = useState(false);
   const reactFlowWrapper = useRef(null);
   const reactFlowInstance = useRef(null);
   const fileInputRef = useRef(null);
@@ -428,7 +432,6 @@ function App() {
         // Determine if temperature propagation is needed based on reason
         const needsTemperature = reason === 'connection' || 
                                 reason === 'node' || 
-                                reason === 'machineCount' || 
                                 reason === 'temperatureSettings' ||
                                 reason === 'boilerSettings';
         
@@ -831,13 +834,44 @@ function App() {
       return;
     }
     
-    setNodes(nds => nds.map(n => 
-      n.id === nodeId
-        ? { ...n, data: { ...n.data, machineCount: suggestion.suggestedMachineCount } }
-        : n
-    ));
+    const oldMachineCount = nodes.find(n => n.id === nodeId)?.data?.machineCount || 0;
+    const newMachineCount = suggestion.suggestedMachineCount;
+    
+    // Build graph for propagation
+    const graph = buildProductionGraph(nodes, edges);
+    const flows = productionSolution?.flows;
+    
+    if (flows) {
+      // Propagate from handle (excludes directly connected nodes)
+      const newMachineCounts = propagateFromHandle(
+        nodeId, 
+        side === 'right' ? 'right' : 'left', 
+        index, 
+        oldMachineCount, 
+        newMachineCount, 
+        graph, 
+        flows
+      );
+      
+      // Apply propagated machine counts
+      setNodes(nds => nds.map(n => {
+        const propagatedCount = newMachineCounts.get(n.id);
+        if (propagatedCount !== undefined) {
+          return { ...n, data: { ...n.data, machineCount: propagatedCount } };
+        }
+        return n;
+      }));
+    } else {
+      // Fallback to just setting the suggested count
+      setNodes(nds => nds.map(n => 
+        n.id === nodeId
+          ? { ...n, data: { ...n.data, machineCount: newMachineCount } }
+          : n
+      ));
+    }
+    
     triggerRecalculation('machineCount');
-  }, [setNodes, triggerRecalculation]);
+  }, [nodes, edges, productionSolution, setNodes, triggerRecalculation]);
 
   const handleChemicalPlantSettingsChange = useCallback((nodeId, settings) => {
     setNodes(nds => nds.map(n => {
@@ -1119,7 +1153,10 @@ function App() {
   }, [toggleTargetStatus, deleteRecipeBoxAndTarget]);
 
   const onNodeDoubleClick = useCallback((event, node) => {
-    event.stopPropagation(); setEditingNodeId(node.id); setEditingMachineCount(String(node.data?.machineCount ?? 0)); setShowMachineCountEditor(true);
+    event.stopPropagation(); 
+    setEditingNodeId(node.id); 
+    setEditingMachineCount(String(node.data?.machineCount ?? 0)); 
+    setShowMachineCountEditor(true);
   }, []);
 
   const nodesRef = useRef(nodes);
@@ -1241,8 +1278,33 @@ function App() {
     }
     
     if (editingNodeId && !newNodePendingMachineCount) {
-      // Editing existing node
-      updateNodeData(editingNodeId, data => ({ ...data, machineCount: value }));
+      // Editing existing node - propagate changes
+      const oldMachineCount = nodes.find(n => n.id === editingNodeId)?.data?.machineCount || 0;
+      
+      if (oldMachineCount > 0 && value !== oldMachineCount) {
+        // Build graph for propagation
+        const graph = buildProductionGraph(nodes, edges);
+        const flows = productionSolution?.flows;
+        
+        if (flows) {
+          // Propagate machine count changes
+          const newMachineCounts = propagateMachineCount(editingNodeId, oldMachineCount, value, graph, flows);
+          
+          // Apply propagated machine counts
+          setNodes(nds => nds.map(n => {
+            const propagatedCount = newMachineCounts.get(n.id);
+            if (propagatedCount !== undefined) {
+              return { ...n, data: { ...n.data, machineCount: propagatedCount } };
+            }
+            return n;
+          }));
+        } else {
+          // Fallback to just updating this node
+          updateNodeData(editingNodeId, data => ({ ...data, machineCount: value }));
+        }
+      } else {
+        updateNodeData(editingNodeId, data => ({ ...data, machineCount: value }));
+      }
     } else if (newNodePendingMachineCount) {
       // Creating new node
       updateNodeData(newNodePendingMachineCount, data => ({ ...data, machineCount: value }));
@@ -1253,7 +1315,7 @@ function App() {
     setEditingMachineCount('');
     setNewNodePendingMachineCount(null);
     triggerRecalculation('machineCount');
-  }, [editingNodeId, editingMachineCount, newNodePendingMachineCount, deleteRecipeBoxAndTarget, triggerRecalculation]);
+  }, [editingNodeId, editingMachineCount, newNodePendingMachineCount, nodes, edges, productionSolution, setNodes, deleteRecipeBoxAndTarget, triggerRecalculation]);
 
   const handleMachineCountCancel = useCallback(() => {
     if (newNodePendingMachineCount) {
@@ -1810,6 +1872,23 @@ function App() {
               <button onClick={handleExportCanvas} className="btn btn-secondary">Export Canvas</button>
               <button onClick={handleRestoreDefaults} className="btn btn-secondary">Restore Defaults</button>
               <button onClick={() => setShowThemeEditor(true)} className="btn btn-secondary">Theme Editor</button>
+              <button 
+                onClick={() => {
+                  const newState = !debugModeEnabled;
+                  setDebugModeEnabled(newState);
+                  setDebugMode(newState);
+                  if (newState) {
+                    alert('Debug mode enabled. Machine count changes will now log detailed information to console.');
+                  }
+                }}
+                className="btn btn-secondary"
+                style={{ 
+                  background: debugModeEnabled ? 'var(--color-primary)' : 'var(--bg-secondary)',
+                  color: debugModeEnabled ? 'var(--color-primary-dark)' : 'var(--color-primary)'
+                }}
+              >
+                {debugModeEnabled ? '🐛 Debug ON' : '🐛 Debug OFF'}
+              </button>
               <button onClick={() => window.open('https://github.com/Pollywrath/Industrialist-Production-Calculator', '_blank')} className="btn btn-secondary">Source Code</button>
             </div>
           </div>
@@ -1927,8 +2006,10 @@ function App() {
                         onClick={(e) => {
                           e.stopPropagation();
                           
-                          // Always create node then open editor for machine count button
                           const initialCount = machineCount <= 0 ? 1 : machineCount;
+                          const wasZero = recipeMachineCounts[recipe.id] === 0 || recipeMachineCounts[recipe.id] === undefined;
+                          
+                          // Create node then open editor for machine count button
                           const newNodeId = createRecipeBox(recipe, initialCount);
                           setKeepOverlayDuringTransition(true);
                           setShowRecipeSelector(false);
@@ -1938,6 +2019,11 @@ function App() {
                             setEditingMachineCount(String(initialCount));
                             setShowMachineCountEditor(true);
                             setKeepOverlayDuringTransition(false);
+                            
+                            // Store whether this was from zero for later propagation
+                            if (wasZero && autoConnectTarget) {
+                              // Will be handled in handleMachineCountUpdate
+                            }
                           }, 50);
                         }}
                         style={{
@@ -1980,8 +2066,10 @@ function App() {
                       </div>
                       <div style={{ flex: 1, cursor: 'pointer', minWidth: 0 }} onClick={(e) => {
                         e.stopPropagation();
+                        const currentMachineCount = machineCount;
+                        
                         // If machine count is 0, create with 1 and open editor
-                        if (machineCount <= 0) {
+                        if (currentMachineCount <= 0) {
                           const newNodeId = createRecipeBox(recipe, 1);
                           setKeepOverlayDuringTransition(true);
                           setShowRecipeSelector(false);
@@ -1993,8 +2081,18 @@ function App() {
                             setKeepOverlayDuringTransition(false);
                           }, 50);
                         } else {
-                          // Machine count > 0, create box directly
+                          // Machine count > 0, create box and potentially propagate
                           createRecipeBox(recipe);
+                          
+                          // If auto-connecting and machine count changed from calculated
+                          if (autoConnectTarget) {
+                            const calculatedCount = recipeMachineCounts[recipe.id] || 1;
+                            if (Math.abs(currentMachineCount - calculatedCount) > 0.001) {
+                              // Machine count was manually changed - will propagate on creation
+                              // This is handled in createRecipeBox through the connection
+                            }
+                          }
+                          
                           resetSelector();
                         }
                       }}>
