@@ -5782,7 +5782,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_treated_rock",
@@ -5806,7 +5806,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_raw_iron",
@@ -5826,7 +5826,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_raw_copper",
@@ -5846,7 +5846,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_gravel",
@@ -5866,7 +5866,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_bauxite_residue",
@@ -5886,7 +5886,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_alumina",
@@ -5906,7 +5906,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_soil",
@@ -5926,7 +5926,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_rock",
@@ -5946,7 +5946,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_shallow_earth_fragment",
@@ -5970,7 +5970,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_shallow_earth_fragment",
@@ -5990,7 +5990,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_medium_earth_fragment",
@@ -6014,7 +6014,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_deep_earth_fragment",
@@ -6034,7 +6034,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
-      "pollution": "?",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_treated_rock",
@@ -6054,7 +6054,7 @@
       "machine_id": "m_kiln",
       "cycle_time": 60,
       "power_consumption": 750000,
-      "pollution": "?",
+      "pollution": 0.144,
       "inputs": [
         {
           "product_id": "p_clay_brick",
@@ -8446,7 +8446,7 @@
       "machine_id": "m_gas_centrifuge",
       "cycle_time": 1,
       "power_consumption": 1000000,
-      "pollution": "???",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_unenriched_uf6_gas",
@@ -8474,7 +8474,7 @@
       "machine_id": "m_gas_centrifuge",
       "cycle_time": 1,
       "power_consumption": 1000000,
-      "pollution": "???",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_slightly_enriched_uf6_gas",
@@ -8594,7 +8594,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 10,
       "power_consumption": 500000,
-      "pollution": "???",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_raw_uranium",
@@ -8630,7 +8630,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 10,
       "power_consumption": 500000,
-      "pollution": "???",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_raw_uranium",
@@ -8666,7 +8666,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 10,
       "power_consumption": 500000,
-      "pollution": "???",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_spent_fuel",
@@ -8702,7 +8702,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 10,
       "power_consumption": 500000,
-      "pollution": "???",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_spent_fuel",
@@ -8738,7 +8738,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 4,
       "power_consumption": 500000,
-      "pollution": "???",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_lithium_ore",
@@ -8774,7 +8774,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 4,
       "power_consumption": 1000000,
-      "pollution": "???",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_deep_earth_fragment",
@@ -8810,7 +8810,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 2,
       "power_consumption": 2000000,
-      "pollution": "???",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_deep_earth_fragment",
@@ -8842,7 +8842,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 15,
       "power_consumption": 800000,
-      "pollution": "???",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_raw_iron",
@@ -8870,7 +8870,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 15,
       "power_consumption": 800000,
-      "pollution": "???",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_raw_copper",

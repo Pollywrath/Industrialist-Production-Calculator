@@ -22,20 +22,7 @@ import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, 
   getRecipesForMachine, canDrillUseProduct, canLogicAssemblerUseProduct, canTreeFarmUseProduct, applyTemperatureToOutputs, 
   initializeRecipeTemperatures } from './utils/appUtilities';
 import { configureSpecialRecipe, calculateMachineCountForAutoConnect, getSpecialRecipeInputs, getSpecialRecipeOutputs, isSpecialRecipe } from './utils/recipeBoxCreation';
-
-let lastMemory = 0;
-setInterval(() => {
-  if (performance.memory) {
-    const current = performance.memory.usedJSHeapSize / 1048576; // MB
-    const total = performance.memory.totalJSHeapSize / 1048576;
-    const limit = performance.memory.jsHeapSizeLimit / 1048576;
-    const delta = current - lastMemory;
-    if (Math.abs(delta) > 10) {
-      console.log(`Memory: ${current.toFixed(1)}MB / ${total.toFixed(1)}MB (limit: ${limit.toFixed(0)}MB) ${delta > 0 ? '+' : ''}${delta.toFixed(1)}MB`);
-    }
-    lastMemory = current;
-  }
-}, 3000);
+  
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 const calculateResidueAmount = (globalPollution) => {
@@ -375,14 +362,16 @@ function App() {
   }, [globalPollution, setNodes]);
 
   const [productionSolution, setProductionSolution] = useState(() => 
-    solveProductionNetwork([], [], {})
+    solveProductionNetwork([], [], { skipTemperature: true })
   );
   const solverTimeoutRef = useRef(null);
   const lastSolverHash = useRef('');
   const shouldRecalculate = useRef(false);
+  const recalculationReasonRef = useRef(null);
 
-  // Helper to trigger recalculation
-  const triggerRecalculation = useCallback(() => {
+  // Helper to trigger recalculation with reason tracking
+  const triggerRecalculation = useCallback((reason = 'general') => {
+    recalculationReasonRef.current = reason;
     shouldRecalculate.current = true;
   }, []);
 
@@ -402,12 +391,27 @@ function App() {
       
       // Only recalculate if structure actually changed
       if (currentHash !== lastSolverHash.current) {
-        const solution = solveProductionNetwork(nodes, edges);
+        const reason = recalculationReasonRef.current || 'general';
+        
+        // Determine if temperature propagation is needed based on reason
+        const needsTemperature = reason === 'connection' || 
+                                reason === 'node' || 
+                                reason === 'machineCount' || 
+                                reason === 'temperatureSettings' ||
+                                reason === 'boilerSettings';
+        
+        console.log(`[Recalculation] Reason: ${reason}, Temperature propagation: ${needsTemperature}`);
+        
+        const solution = solveProductionNetwork(nodes, edges, { 
+          skipTemperature: !needsTemperature,
+          previousTemperatureData: needsTemperature ? null : productionSolution?.temperatureData
+        });
         setProductionSolution(solution);
         lastSolverHash.current = currentHash;
       }
       
       shouldRecalculate.current = false;
+      recalculationReasonRef.current = null;
     }, 100);
     
     return () => {
@@ -415,7 +419,7 @@ function App() {
         clearTimeout(solverTimeoutRef.current);
       }
     };
-  }, [nodes, edges]);
+  }, [nodes, edges, productionSolution]);
   const excessProductsRaw = useMemo(() => getExcessProducts(productionSolution), [productionSolution]);
   const deficientProducts = useMemo(() => getDeficientProducts(productionSolution), [productionSolution]);
 
@@ -572,7 +576,7 @@ function App() {
     if (sourceProductId !== targetProductId) return;
     setEdges((eds) => addEdge({ ...params, type: 'custom', animated: false, data: edgeSettings }, eds));
     clearFlowCache();
-    triggerRecalculation();
+    triggerRecalculation('connection');
   }, [setEdges, nodes, edgeSettings, triggerRecalculation]);
 
   const resetSelector = () => {
@@ -589,7 +593,7 @@ function App() {
         !(edge.target === nodeId && edge.targetHandle === `left-${inputIndex}`)
       ));
       clearFlowCache();
-      triggerRecalculation();
+      triggerRecalculation('connection');
       return;
     }
     const product = getProduct(productId);
@@ -602,7 +606,7 @@ function App() {
         !(edge.source === nodeId && edge.sourceHandle === `right-${outputIndex}`)
       ));
       clearFlowCache();
-      triggerRecalculation();
+      triggerRecalculation('connection');
       return;
     }
     const product = getProduct(productId);
@@ -645,11 +649,12 @@ function App() {
       
       if (filteredEdges.length !== eds.length) {
         clearFlowCache();
+        triggerRecalculation('connection');
       }
       
       return filteredEdges;
     });
-  }, [setEdges, nodes]);
+  }, [setEdges, nodes, triggerRecalculation]);
 
   const handleDrillSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
     setLastDrillConfig({
@@ -666,7 +671,7 @@ function App() {
         pollution: metrics ? metrics.pollution : 'Variable' }, leftHandles: Math.max(inputs.length, 1), rightHandles: Math.max(outputs.length, 1)
     }));
     cleanupInvalidConnections(nodeId, inputs, outputs);
-    triggerRecalculation();
+    triggerRecalculation('settings');
   }, [cleanupInvalidConnections, triggerRecalculation]);
 
   const handleLogicAssemblerSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
@@ -688,7 +693,7 @@ function App() {
         leftHandles: Math.max(inputs.length, 1), rightHandles: Math.max(outputs.length, 1)
     }));
     cleanupInvalidConnections(nodeId, inputs, outputs);
-    triggerRecalculation();
+    triggerRecalculation('settings');
   }, [cleanupInvalidConnections, triggerRecalculation]);
 
   const handleTreeFarmSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
@@ -713,8 +718,8 @@ function App() {
       }
       return true;
     }));
-    triggerRecalculation();
-  }, [setEdges, globalPollution]);
+    triggerRecalculation('settings');
+  }, [setEdges, globalPollution, triggerRecalculation]);
 
   const handleIndustrialFireboxSettingsChange = useCallback((nodeId, settings, inputs, metrics) => {
     setLastFireboxConfig({
@@ -731,8 +736,8 @@ function App() {
         power_consumption: 0 // No power consumption
       }
     }));
-    triggerRecalculation();
-  }, []);
+    triggerRecalculation('settings');
+  }, [triggerRecalculation]);
 
   const handleTemperatureSettingsChange = useCallback((nodeId, settings, outputs, powerConsumption) => {
     setNodes(nds => nds.map(n => 
@@ -740,7 +745,7 @@ function App() {
         ? { ...n, data: { ...n.data, recipe: { ...n.data.recipe, outputs, temperatureSettings: settings, power_consumption: powerConsumption !== null && powerConsumption !== undefined ? powerConsumption : n.data.recipe.power_consumption } } }
         : n
     ));
-    triggerRecalculation();
+    triggerRecalculation('temperatureSettings');
   }, [setNodes, triggerRecalculation]);
 
   const handleBoilerSettingsChange = useCallback((nodeId, settings) => {
@@ -761,8 +766,8 @@ function App() {
         }
       };
     }));
-    triggerRecalculation();
-  }, [setNodes]);
+    triggerRecalculation('boilerSettings');
+  }, [setNodes, triggerRecalculation]);
 
   const handleHandleDoubleClick = useCallback((nodeId, side, index, productId, suggestions) => {
     // Check if there's a suggestion for this handle
@@ -782,7 +787,7 @@ function App() {
         ? { ...n, data: { ...n.data, machineCount: suggestion.suggestedMachineCount } }
         : n
     ));
-    triggerRecalculation();
+    triggerRecalculation('machineCount');
   }, [setNodes, triggerRecalculation]);
 
   const handleChemicalPlantSettingsChange = useCallback((nodeId, settings) => {
@@ -807,8 +812,8 @@ function App() {
         }
       };
     }));
-    triggerRecalculation();
-  }, [setNodes]);
+    triggerRecalculation('settings');
+  }, [setNodes, triggerRecalculation]);
 
   const createRecipeBox = useCallback((recipe, overrideMachineCount = null) => {
     
@@ -1006,6 +1011,7 @@ function App() {
     
     setNodes((nds) => {
       const updatedNodes = [...nds, newNode];
+      triggerRecalculation('node');
       if (autoConnectTarget && calculatedMachineCount > 0) {
         setTimeout(() => {
           const searchKey = autoConnectTarget.isOutput ? 'inputs' : 'outputs';
@@ -1023,6 +1029,8 @@ function App() {
               data: edgeSettings
             };
             setEdges((eds) => addEdge(newEdge, eds));
+            clearFlowCache();
+            triggerRecalculation('connection');
           }
         }, 50);
       }
@@ -1044,7 +1052,7 @@ function App() {
     setNodes((nds) => nds.filter((n) => n.id !== boxId)); setEdges((eds) => eds.filter((e) => e.source !== boxId && e.target !== boxId));
     setTargetProducts(prev => prev.filter(t => t.recipeBoxId !== boxId));
     clearFlowCache();
-    triggerRecalculation();
+    triggerRecalculation('node');
   }, [setNodes, setEdges, triggerRecalculation]);
 
   const toggleTargetStatus = useCallback((node) => {
@@ -1195,7 +1203,7 @@ function App() {
     setEditingNodeId(null); 
     setEditingMachineCount('');
     setNewNodePendingMachineCount(null);
-    triggerRecalculation();
+    triggerRecalculation('machineCount');
   }, [editingNodeId, editingMachineCount, newNodePendingMachineCount, deleteRecipeBoxAndTarget, triggerRecalculation]);
 
   const handleMachineCountCancel = useCallback(() => {
