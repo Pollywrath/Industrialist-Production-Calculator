@@ -25,7 +25,7 @@ const calculateTextLines = (text, availableWidth, fontSize = 16) => {
   return lines;
 };
 
-const CustomNode = ({ data, id }) => {
+const CustomNode = memo(({ data, id }) => {
   const { recipe, machine, machineCount, displayMode, machineDisplayMode, onInputClick, onOutputClick, isTarget,
     onDrillSettingsChange, onLogicAssemblerSettingsChange, onTreeFarmSettingsChange, onIndustrialFireboxSettingsChange, 
     onTemperatureSettingsChange, onBoilerSettingsChange, onChemicalPlantSettingsChange, globalPollution, flows } = data;
@@ -340,7 +340,33 @@ const CustomNode = ({ data, id }) => {
       )}
     </>
   );
-};
+}, (prevProps, nextProps) => {
+  // Fast path - check IDs first
+  if (prevProps.id !== nextProps.id) return false;
+  
+  const prevData = prevProps.data;
+  const nextData = nextProps.data;
+  
+  // Check primitive values
+  if (
+    prevData.machineCount !== nextData.machineCount ||
+    prevData.displayMode !== nextData.displayMode ||
+    prevData.machineDisplayMode !== nextData.machineDisplayMode ||
+    prevData.isTarget !== nextData.isTarget ||
+    prevData.globalPollution !== nextData.globalPollution
+  ) {
+    return false;
+  }
+  
+  // Check object references
+  if (prevData.recipe !== nextData.recipe) return false;
+  if (prevData.flows !== nextData.flows) return false;
+  if (prevData.suggestions !== nextData.suggestions) return false;
+  
+  return true;
+});
+
+export default CustomNode;
 
 const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId, formatQuantity }) => {
   const isLeft = side === 'left';
@@ -420,21 +446,3 @@ const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, 
     />
   );
 };
-
-export default memo(CustomNode, (prevProps, nextProps) => {
-  // Only re-render if these specific props change
-  // Deep equality check for flows to avoid unnecessary re-renders
-  const flowsEqual = (!prevProps.data.flows && !nextProps.data.flows) || 
-    (prevProps.data.flows === nextProps.data.flows);
-  
-  return (
-    prevProps.data.recipe === nextProps.data.recipe &&
-    prevProps.data.machineCount === nextProps.data.machineCount &&
-    prevProps.data.displayMode === nextProps.data.displayMode &&
-    prevProps.data.machineDisplayMode === nextProps.data.machineDisplayMode &&
-    prevProps.data.isTarget === nextProps.data.isTarget &&
-    prevProps.data.globalPollution === nextProps.data.globalPollution &&
-    flowsEqual &&
-    prevProps.id === nextProps.id
-  );
-});

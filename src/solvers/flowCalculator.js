@@ -255,12 +255,13 @@ const buildFlowNetworkOptimized = (connections, totalProduction) => {
   let nodeCount = 0;
 
   const getNodeIndex = (nodeKey) => {
-    if (!nodeToIndex.has(nodeKey)) {
-      nodeToIndex.set(nodeKey, nodeCount);
+    let idx = nodeToIndex.get(nodeKey);
+    if (idx === undefined) {
+      idx = nodeCount++;
+      nodeToIndex.set(nodeKey, idx);
       indexToNode.push(nodeKey);
-      nodeCount++;
     }
-    return nodeToIndex.get(nodeKey);
+    return idx;
   };
 
   const SOURCE = getNodeIndex('virtual-source');

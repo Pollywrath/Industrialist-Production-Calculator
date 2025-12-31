@@ -96,9 +96,18 @@ function App() {
   const pendingChangesRef = useRef([]);
 
   const onNodesChange = useCallback((changes) => {
-    // Immediately apply position changes for smooth dragging
-    const positionChanges = changes.filter(c => c.type === 'position' && c.dragging);
-    const otherChanges = changes.filter(c => !(c.type === 'position' && c.dragging));
+    // Batch all changes for better performance
+    const positionChanges = [];
+    const otherChanges = [];
+    
+    for (let i = 0; i < changes.length; i++) {
+      const change = changes[i];
+      if (change.type === 'position' && change.dragging) {
+        positionChanges.push(change);
+      } else {
+        otherChanges.push(change);
+      }
+    }
     
     if (positionChanges.length > 0) {
       onNodesChangeBase(positionChanges);
@@ -163,14 +172,21 @@ function App() {
   }, []);
 
   useEffect(() => { 
-    setNodes(nds => nds.map(node => ({ 
-      ...node, 
-      data: { 
-        ...node.data, 
-        displayMode,
-        machineDisplayMode 
-      } 
-    }))); 
+    setNodes(nds => {
+      const newNodes = new Array(nds.length);
+      for (let i = 0; i < nds.length; i++) {
+        const node = nds[i];
+        newNodes[i] = {
+          ...node,
+          data: {
+            ...node.data,
+            displayMode,
+            machineDisplayMode
+          }
+        };
+      }
+      return newNodes;
+    });
   }, [displayMode, machineDisplayMode, setNodes]);
 
   // Update edges when edge settings change
@@ -280,16 +296,27 @@ function App() {
 
   const pollutionUpdateTimeoutRef = useRef(null);
 
+  const lastPollutionRef = useRef(globalPollution);
+
   useEffect(() => {
+    // Skip if pollution hasn't changed significantly (within 0.01%)
+    if (Math.abs(globalPollution - lastPollutionRef.current) < 0.01) {
+      return;
+    }
+    
+    lastPollutionRef.current = globalPollution;
+    
     if (pollutionUpdateTimeoutRef.current) {
       clearTimeout(pollutionUpdateTimeoutRef.current);
     }
     
     pollutionUpdateTimeoutRef.current = setTimeout(() => {
-      // Only update nodes that actually depend on pollution (tree farms and air separation)
       setNodes(nds => {
+        const newNodes = new Array(nds.length);
         let hasChanges = false;
-        const newNodes = nds.map(node => {
+        
+        for (let i = 0; i < nds.length; i++) {
+          const node = nds[i];
           const recipe = node.data?.recipe;
           const machine = node.data?.machine;
           
@@ -300,7 +327,7 @@ function App() {
             const metrics = calculateTreeFarmMetrics(settings.trees, settings.harvesters, settings.sprinklers, settings.outputs, settings.controller, globalPollution);
             
             hasChanges = true;
-            return {
+            newNodes[i] = {
               ...node,
               data: {
                 ...node.data,
@@ -313,19 +340,22 @@ function App() {
               }
             };
           }
-          
           // Update air separation units
-          if (machine?.id === 'm_air_separation_unit') {
+          else if (machine?.id === 'm_air_separation_unit') {
             const residueAmount = calculateResidueAmount(globalPollution);
-            const updatedOutputs = recipe.outputs.map(output => {
+            const updatedOutputs = new Array(recipe.outputs.length);
+            
+            for (let j = 0; j < recipe.outputs.length; j++) {
+              const output = recipe.outputs[j];
               if (output.product_id === 'p_residue') {
-                return { ...output, quantity: parseFloat(residueAmount.toFixed(6)) };
+                updatedOutputs[j] = { ...output, quantity: parseFloat(residueAmount.toFixed(6)) };
+              } else {
+                updatedOutputs[j] = output;
               }
-              return output;
-            });
+            }
             
             hasChanges = true;
-            return {
+            newNodes[i] = {
               ...node,
               data: {
                 ...node.data,
@@ -337,19 +367,21 @@ function App() {
               }
             };
           }
-          
-          // Update globalPollution for all nodes
-          hasChanges = true;
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              globalPollution
-            }
-          };
-        });
+          // Only update globalPollution reference for other nodes
+          else if (node.data.globalPollution !== globalPollution) {
+            hasChanges = true;
+            newNodes[i] = {
+              ...node,
+              data: {
+                ...node.data,
+                globalPollution
+              }
+            };
+          } else {
+            newNodes[i] = node;
+          }
+        }
         
-        // Only trigger update if something actually changed
         return hasChanges ? newNodes : nds;
       });
     }, 250);
@@ -423,39 +455,56 @@ function App() {
   const excessProductsRaw = useMemo(() => getExcessProducts(productionSolution), [productionSolution]);
   const deficientProducts = useMemo(() => getDeficientProducts(productionSolution), [productionSolution]);
 
-  // Add this useEffect here - AFTER productionSolution is declared
   const flowUpdateTimeoutRef = useRef(null);
+  const lastFlowsRef = useRef(null);
 
   useEffect(() => {
     if (productionSolution?.flows?.byNode) {
+      // Skip if flows haven't changed (reference equality)
+      if (lastFlowsRef.current === productionSolution.flows) {
+        return;
+      }
+      
+      lastFlowsRef.current = productionSolution.flows;
+      
       if (flowUpdateTimeoutRef.current) {
         clearTimeout(flowUpdateTimeoutRef.current);
       }
       
       flowUpdateTimeoutRef.current = setTimeout(() => {
         setNodes(nds => {
+          const newNodes = new Array(nds.length);
+          
           // Apply temperature data if available
           if (productionSolution.temperatureData) {
             const nodesWithTemp = applyTemperaturesToNodes(nds, productionSolution.temperatureData, productionSolution.graph);
             
-            return nodesWithTemp.map(node => ({
-              ...node,
-              data: {
-                ...node.data,
-                flows: productionSolution.flows.byNode[node.id] || null,
-                suggestions: productionSolution.suggestions || []
-              }
-            }));
+            for (let i = 0; i < nodesWithTemp.length; i++) {
+              const node = nodesWithTemp[i];
+              newNodes[i] = {
+                ...node,
+                data: {
+                  ...node.data,
+                  flows: productionSolution.flows.byNode[node.id] || null,
+                  suggestions: productionSolution.suggestions || []
+                }
+              };
+            }
+          } else {
+            for (let i = 0; i < nds.length; i++) {
+              const node = nds[i];
+              newNodes[i] = {
+                ...node,
+                data: {
+                  ...node.data,
+                  flows: productionSolution.flows.byNode[node.id] || null,
+                  suggestions: productionSolution.suggestions || []
+                }
+              };
+            }
           }
           
-          return nds.map(node => ({ 
-            ...node, 
-            data: { 
-              ...node.data, 
-              flows: productionSolution.flows.byNode[node.id] || null,
-              suggestions: productionSolution.suggestions || []
-            } 
-          }));
+          return newNodes;
         }); 
       }, 250);
     }

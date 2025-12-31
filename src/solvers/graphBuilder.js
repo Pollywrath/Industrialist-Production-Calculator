@@ -8,8 +8,10 @@ export const buildProductionGraph = (nodes, edges) => {
   }
   
   const graph = { nodes: {}, products: {}, connections: [] };
+  const nodesLength = nodes.length;
 
-  nodes.forEach(node => {
+  for (let i = 0; i < nodesLength; i++) {
+    const node = nodes[i];
     const nodeId = node.id;
     const recipe = node.data?.recipe;
     const machineCount = node.data?.machineCount || 0;
@@ -100,12 +102,14 @@ export const buildProductionGraph = (nodes, edges) => {
   });
 
     graph.nodes[nodeId] = graphNode;
-  });
+  };
 
-  edges.forEach(edge => {
+  const edgesLength = edges.length;
+  for (let i = 0; i < edgesLength; i++) {
+    const edge = edges[i];
     const sourceNode = graph.nodes[edge.source];
     const targetNode = graph.nodes[edge.target];
-    if (!sourceNode || !targetNode) return;
+    if (!sourceNode || !targetNode) continue;
 
     const sourceOutputIndex = parseInt(edge.sourceHandle.split('-')[1]);
     const targetInputIndex = parseInt(edge.targetHandle.split('-')[1]);
@@ -138,7 +142,7 @@ export const buildProductionGraph = (nodes, edges) => {
     if (graph.products[productId]) {
       graph.products[productId].connections.push(connection);
     }
-  });
+  };
 
   return graph;
 };
