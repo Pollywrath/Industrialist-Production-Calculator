@@ -185,33 +185,29 @@ export const calculateSuggestions = (graph, flows) => {
         
         if (typeof ratePerMachine !== 'number' || ratePerMachine <= EPSILON) return;
         
-        // Calculate how much this output needs to increase
-        // Limited by the shortage and the bottleneck in the path
+        // Calculate how much this output needs to increase to supply the deficient input
         const outputFlow = flows.byNode[outputInfo.nodeId]?.outputFlows[outputInfo.outputIndex];
         if (!outputFlow) return;
         
-        const currentUtilization = outputFlow.connected / (outputFlow.produced || 1);
+        // Always suggest increasing output to help supply deficient inputs
+        // The suggestion shows how much increase would satisfy the shortage
+        const increase = shortage / ratePerMachine;
+        const newCount = currentMachineCount + increase;
         
-        // Only suggest if this output is heavily utilized (> 95%) or already at capacity
-        if (currentUtilization > 0.95 || Math.abs(outputFlow.produced - outputFlow.connected) < EPSILON) {
-          const increase = shortage / ratePerMachine;
-          const newCount = currentMachineCount + increase;
-          
-          suggestions.push({
-            nodeId: outputInfo.nodeId,
-            handleType: 'output',
-            handleIndex: outputInfo.outputIndex,
-            productId: output.productId,
-            adjustmentType: 'increase',
-            reason: 'connected_shortage',
-            currentFlow: outputFlow.produced,
-            targetFlow: outputFlow.produced + shortage,
-            deltaFlow: shortage,
-            currentMachineCount,
-            suggestedMachineCount: newCount,
-            machineDelta: increase
-          });
-        }
+        suggestions.push({
+          nodeId: outputInfo.nodeId,
+          handleType: 'output',
+          handleIndex: outputInfo.outputIndex,
+          productId: output.productId,
+          adjustmentType: 'increase',
+          reason: 'connected_shortage',
+          currentFlow: outputFlow.produced,
+          targetFlow: outputFlow.produced + shortage,
+          deltaFlow: shortage,
+          currentMachineCount,
+          suggestedMachineCount: newCount,
+          machineDelta: increase
+        });
       });
       
       // Also suggest decreasing this input's consumer to match available supply
@@ -240,7 +236,7 @@ export const calculateSuggestions = (graph, flows) => {
     });
   });
   
-  // Find all excess outputs and trace which inputs could consume them
+  // Find all excess outputs and suggest both decreasing producers and increasing consumers
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     const nodeFlows = flows.byNode[nodeId];
@@ -264,7 +260,7 @@ export const calculateSuggestions = (graph, flows) => {
       
       if (typeof ratePerMachine !== 'number' || ratePerMachine <= EPSILON) return;
       
-      // Suggest decreasing this output
+      // Suggest decreasing this output (producer)
       const reduction = excess / ratePerMachine;
       const newCount = currentMachineCount - reduction;
       
@@ -284,6 +280,51 @@ export const calculateSuggestions = (graph, flows) => {
           machineDelta: -reduction
         });
       }
+      
+      // Find all inputs this output feeds and suggest increasing those consumers
+      const productId = output.productId;
+      const connections = graph.products[productId]?.connections.filter(
+        conn => conn.sourceNodeId === nodeId && conn.sourceOutputIndex === outputIndex
+      ) || [];
+      
+      connections.forEach(conn => {
+        const consumerNode = graph.nodes[conn.targetNodeId];
+        if (!consumerNode) return;
+        
+        const consumerMachineCount = consumerNode.machineCount || 0;
+        if (consumerMachineCount <= 0) return;
+        
+        let consumerCycleTime = consumerNode.cycleTime;
+        if (typeof consumerCycleTime !== 'number' || consumerCycleTime <= 0) consumerCycleTime = 1;
+        
+        const consumerInput = consumerNode.inputs[conn.targetInputIndex];
+        if (!consumerInput) return;
+        
+        const consumerRatePerMachine = consumerNode.isMineshaftDrill 
+          ? consumerInput.quantity 
+          : consumerInput.quantity / consumerCycleTime;
+        
+        if (typeof consumerRatePerMachine !== 'number' || consumerRatePerMachine <= EPSILON) return;
+        
+        // Suggest increasing consumer to use the excess
+        const increase = excess / consumerRatePerMachine;
+        const newConsumerCount = consumerMachineCount + increase;
+        
+        suggestions.push({
+          nodeId: conn.targetNodeId,
+          handleType: 'input',
+          handleIndex: conn.targetInputIndex,
+          productId: consumerInput.productId,
+          adjustmentType: 'increase',
+          reason: 'excess_available',
+          currentFlow: flows.byNode[conn.targetNodeId]?.inputFlows[conn.targetInputIndex]?.connected || 0,
+          targetFlow: (flows.byNode[conn.targetNodeId]?.inputFlows[conn.targetInputIndex]?.connected || 0) + excess,
+          deltaFlow: excess,
+          currentMachineCount: consumerMachineCount,
+          suggestedMachineCount: newConsumerCount,
+          machineDelta: increase
+        });
+      });
     });
   });
   
