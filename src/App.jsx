@@ -24,10 +24,85 @@ import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, 
 import { configureSpecialRecipe, calculateMachineCountForAutoConnect, getSpecialRecipeInputs, getSpecialRecipeOutputs, isSpecialRecipe } from './utils/recipeBoxCreation';
 import { propagateMachineCount, propagateFromHandle, calculateMachineCountForNewConnection, setDebugMode } from './utils/machineCountPropagator';
 import PropagationDebugPanel from './components/PropagationDebugPanel';
+import ComputeDebugPanel from './components/ComputeDebugPanel';
 import { buildProductionGraph } from './solvers/graphBuilder';
   
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
+
+const TargetRateInput = ({ initialValue, productName, onValueCommit, styleType }) => {
+  const [localValue, setLocalValue] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+
+  const formatRate = (rate) => {
+    if (typeof rate !== 'number') return '0';
+    return rate.toFixed(4);
+  };
+
+  const displayValue = isEditing ? localValue : formatRate(initialValue);
+
+  const handleCommit = () => {
+    if (!isEditing) return;
+    
+    const val = parseFloat(localValue);
+    if (!isNaN(val) && val > 0) {
+      onValueCommit(val);
+    }
+    setIsEditing(false);
+    setLocalValue('');
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleCommit();
+    }
+  };
+
+  return (
+    <div style={{
+      marginBottom: '10px',
+      padding: '8px',
+      background: styleType === 'input' ? 'var(--input-bg)' : 'var(--output-bg)',
+      border: `1px solid ${styleType === 'input' ? 'var(--input-border)' : 'var(--output-border)'}`,
+      borderRadius: 'var(--radius-sm)'
+    }}>
+      <div style={{ 
+        color: styleType === 'input' ? 'var(--input-text)' : 'var(--output-text)', 
+        fontSize: '12px',
+        marginBottom: '6px',
+        fontWeight: 600
+      }}>
+        {productName}
+      </div>
+      <input
+        type="text"
+        value={displayValue}
+        onFocus={() => {
+          setIsEditing(true);
+          setLocalValue(formatRate(initialValue));
+        }}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onBlur={handleCommit}
+        onKeyPress={handleKeyPress}
+        className="input"
+        style={{
+          padding: '6px',
+          fontSize: '13px',
+          width: '100%'
+        }}
+      />
+      <div style={{
+        color: 'var(--text-muted)',
+        fontSize: '10px',
+        marginTop: '4px',
+        textAlign: 'right'
+      }}>
+        /s
+      </div>
+    </div>
+  );
+};
+
 const calculateResidueAmount = (globalPollution) => {
   const x = globalPollution;
   
@@ -1140,12 +1215,36 @@ function App() {
 
   const toggleTargetStatus = useCallback((node) => {
     const existingTarget = targetProducts.find(t => t.recipeBoxId === node.id);
-    if (existingTarget) { setTargetProducts(prev => prev.filter(t => t.recipeBoxId !== node.id)); updateNodeData(node.id, data => ({ ...data, isTarget: false })); }
-    else if (node.data?.recipe?.outputs?.length > 0) {
-      setTargetProducts(prev => [...prev, { id: `target_${targetIdCounter}`, recipeBoxId: node.id, productId: node.data.recipe.outputs[0].product_id, desiredAmount: 0 }]);
-      setTargetIdCounter(prev => prev + 1); updateNodeData(node.id, data => ({ ...data, isTarget: true }));
+    if (existingTarget) { 
+      setTargetProducts(prev => prev.filter(t => t.recipeBoxId !== node.id)); 
+      updateNodeData(node.id, data => ({ ...data, isTarget: false })); 
+    }
+    else if (node.data?.recipe) {
+      setTargetProducts(prev => [...prev, { 
+        id: `target_${targetIdCounter}`, 
+        recipeBoxId: node.id
+      }]);
+      setTargetIdCounter(prev => prev + 1); 
+      updateNodeData(node.id, data => ({ ...data, isTarget: true }));
     }
   }, [targetProducts, targetIdCounter]);
+
+  const handleUpdateTarget = useCallback((targetId, newMachineCount, newRates) => {
+    const target = targetProducts.find(t => t.id === targetId);
+    if (!target) return;
+
+    // Update the machine count of the node
+    updateNodeData(target.recipeBoxId, data => ({ ...data, machineCount: newMachineCount }));
+    triggerRecalculation('machineCount');
+  }, [targetProducts, triggerRecalculation]);
+
+  const handleRemoveTarget = useCallback((targetId) => {
+    const target = targetProducts.find(t => t.id === targetId);
+    if (target) {
+      setTargetProducts(prev => prev.filter(t => t.id !== targetId));
+      updateNodeData(target.recipeBoxId, data => ({ ...data, isTarget: false }));
+    }
+  }, [targetProducts]);
 
   const onNodeClick = useCallback((event, node) => {
     if (event.shiftKey && !event.ctrlKey && !event.altKey) toggleTargetStatus(node);
@@ -1332,11 +1431,353 @@ function App() {
     setNewNodePendingMachineCount(null);
   }, [newNodePendingMachineCount, deleteRecipeBoxAndTarget]);
 
-  const handleCompute = useCallback(() => alert('Computation to come soon!'), []);
-  const handleExtendedPanelToggle = useCallback(() => {
-    if (extendedPanelOpen) { setExtendedPanelClosing(true); setTimeout(() => { setExtendedPanelOpen(false); setExtendedPanelClosing(false); }, 300); }
-    else setExtendedPanelOpen(true);
-  }, [extendedPanelOpen]);
+  const [computeDebugInfo, setComputeDebugInfo] = useState(null);
+  const [showComputeDebug, setShowComputeDebug] = useState(false);
+
+  const handleCompute = useCallback(() => {
+    if (targetProducts.length === 0) {
+      alert('No target recipes. Please add target recipes (Shift+Click a node) before computing.');
+      return;
+    }
+    
+    const EPSILON = 1e-10;
+    const MAX_ITERATIONS = 20;
+    
+    // Start with current nodes
+    let currentNodes = [...nodes];
+    const targetNodeIds = new Set(targetProducts.map(t => t.recipeBoxId));
+    
+    // Debug tracking
+    const debugInfo = {
+      iterations: [],
+      totalIterations: 0,
+      converged: false,
+      finalUpdates: new Map()
+    };
+    
+    // Function to find all upstream nodes recursively
+    const findUpstreamNodes = (nodeId, graph, visited = new Set(), result = new Set()) => {
+      if (visited.has(nodeId)) return result;
+      visited.add(nodeId);
+      
+      const node = graph.nodes[nodeId];
+      if (!node) return result;
+      
+      node.inputs.forEach(input => {
+        const connections = graph.products[input.productId]?.connections.filter(
+          conn => conn.targetNodeId === nodeId
+        ) || [];
+        
+        connections.forEach(conn => {
+          const sourceId = conn.sourceNodeId;
+          if (!targetNodeIds.has(sourceId) && !visited.has(sourceId)) {
+            result.add(sourceId);
+            findUpstreamNodes(sourceId, graph, visited, result);
+          }
+        });
+      });
+      
+      return result;
+    };
+    
+    let iteration = 0;
+    let hasChanges = true;
+    
+    while (hasChanges && iteration < MAX_ITERATIONS) {
+      iteration++;
+      hasChanges = false;
+      
+      const iterationDebug = {
+        iteration,
+        updates: [],
+        suggestions: []
+      };
+      
+      // Build fresh graph and calculate flows with current node counts
+      const graph = buildProductionGraph(currentNodes, edges);
+      const flows = productionSolution?.flows;
+      
+      if (!flows) break;
+      
+      // Recalculate solution with current state
+      const currentSolution = solveProductionNetwork(currentNodes, edges, { skipTemperature: true });
+      const suggestions = currentSolution.suggestions || [];
+      
+      iterationDebug.suggestions = suggestions.length;
+      
+      if (suggestions.length === 0) {
+        debugInfo.converged = true;
+        break;
+      }
+      
+      // Process each target
+      const iterationUpdates = new Map();
+      
+      // Helper function to calculate metrics for a node
+      const calculateNodeMetrics = (nodeId) => {
+        const node = currentNodes.find(n => n.id === nodeId);
+        if (!node) return null;
+        
+        const recipe = node.data?.recipe;
+        if (!recipe) return null;
+        
+        const machineCount = node.data?.machineCount || 0;
+        
+        // Calculate power
+        let power = 0;
+        const powerConsumption = recipe.power_consumption;
+        if (typeof powerConsumption === 'number') {
+          power = powerConsumption * machineCount;
+        } else if (typeof powerConsumption === 'object' && powerConsumption?.max) {
+          power = powerConsumption.max * machineCount;
+        }
+        
+        // Calculate pollution
+        let pollution = 0;
+        const pollutionValue = recipe.pollution;
+        if (typeof pollutionValue === 'number') {
+          pollution = pollutionValue * machineCount;
+        }
+        
+        // Count outputs (to determine if multi-output)
+        const outputCount = recipe.outputs?.length || 0;
+        
+        return { machineCount, power, pollution, outputCount };
+      };
+      
+      targetProducts.forEach((target) => {
+        const targetNodeId = target.recipeBoxId;
+        const targetNode = graph.nodes[targetNodeId];
+        if (!targetNode) return;
+        
+        // Find upstream nodes that feed this target
+        const upstreamNodes = findUpstreamNodes(targetNodeId, graph);
+        
+        // Group suggestions by product - we need to choose which producer to increase
+        const suggestionsByProduct = new Map();
+        
+        upstreamNodes.forEach(nodeId => {
+          const nodeSuggestions = suggestions.filter(s => {
+            if (s.nodeId !== nodeId) return false;
+            if (s.handleType !== 'output') return false;
+            if (s.adjustmentType !== 'increase') return false;
+            
+            const node = graph.nodes[nodeId];
+            if (!node) return false;
+            
+            const connections = graph.products[s.productId]?.connections || [];
+            const feedsTarget = connections.some(conn => 
+              conn.sourceNodeId === nodeId && conn.targetNodeId === targetNodeId
+            );
+            const feedsUpstream = connections.some(conn => 
+              conn.sourceNodeId === nodeId && upstreamNodes.has(conn.targetNodeId)
+            );
+            
+            return feedsTarget || feedsUpstream;
+          });
+          
+          nodeSuggestions.forEach(suggestion => {
+            const productId = suggestion.productId;
+            if (!suggestionsByProduct.has(productId)) {
+              suggestionsByProduct.set(productId, []);
+            }
+            suggestionsByProduct.get(productId).push({
+              ...suggestion,
+              metrics: calculateNodeMetrics(nodeId)
+            });
+          });
+        });
+        
+        // For each product, choose the best producer to increase
+        suggestionsByProduct.forEach((productSuggestions, productId) => {
+          if (productSuggestions.length === 0) return;
+          
+          // Sort by priority:
+          // 1. Prefer multi-output recipes (outputCount > 1) over single-output
+          // 2. Then minimize machine count increase
+          // 3. Then minimize power consumption
+          // 4. Then minimize pollution
+          productSuggestions.sort((a, b) => {
+            const aMetrics = a.metrics;
+            const bMetrics = b.metrics;
+            
+            if (!aMetrics || !bMetrics) return 0;
+            
+            // Priority 1: Prefer multi-output (outputCount > 1)
+            const aMultiOutput = aMetrics.outputCount > 1 ? 1 : 0;
+            const bMultiOutput = bMetrics.outputCount > 1 ? 1 : 0;
+            if (aMultiOutput !== bMultiOutput) return bMultiOutput - aMultiOutput;
+            
+            // Priority 2: Minimize machine count increase
+            const aMachineIncrease = a.suggestedMachineCount - aMetrics.machineCount;
+            const bMachineIncrease = b.suggestedMachineCount - bMetrics.machineCount;
+            if (Math.abs(aMachineIncrease - bMachineIncrease) > EPSILON) {
+              return aMachineIncrease - bMachineIncrease;
+            }
+            
+            // Priority 3: Minimize power consumption
+            const aPowerIncrease = (a.suggestedMachineCount / aMetrics.machineCount) * aMetrics.power - aMetrics.power;
+            const bPowerIncrease = (b.suggestedMachineCount / bMetrics.machineCount) * bMetrics.power - bMetrics.power;
+            if (Math.abs(aPowerIncrease - bPowerIncrease) > EPSILON) {
+              return aPowerIncrease - bPowerIncrease;
+            }
+            
+            // Priority 4: Minimize pollution
+            const aPollutionIncrease = (a.suggestedMachineCount / aMetrics.machineCount) * aMetrics.pollution - aMetrics.pollution;
+            const bPollutionIncrease = (b.suggestedMachineCount / bMetrics.machineCount) * bMetrics.pollution - bMetrics.pollution;
+            return aPollutionIncrease - bPollutionIncrease;
+          });
+          
+          // Apply only the best suggestion for this product
+          const bestSuggestion = productSuggestions[0];
+          const currentCount = currentNodes.find(n => n.id === bestSuggestion.nodeId)?.data?.machineCount || 0;
+          const suggestedCount = bestSuggestion.suggestedMachineCount;
+          
+          if (Math.abs(suggestedCount - currentCount) > EPSILON) {
+            // For multi-output nodes, we might need more than suggested if other outputs also need increases
+            const nodeId = bestSuggestion.nodeId;
+            const nodeMetrics = bestSuggestion.metrics;
+            
+            if (nodeMetrics && nodeMetrics.outputCount > 1) {
+              // Check if this node has other output suggestions
+              const allNodeSuggestions = suggestions.filter(s => 
+                s.nodeId === nodeId && 
+                s.handleType === 'output' && 
+                s.adjustmentType === 'increase'
+              );
+              
+              // Use maximum suggested count across all outputs
+              const maxSuggested = Math.max(...allNodeSuggestions.map(s => s.suggestedMachineCount));
+              
+              const existingUpdate = iterationUpdates.get(nodeId);
+              if (!existingUpdate || maxSuggested > existingUpdate) {
+                iterationUpdates.set(nodeId, maxSuggested);
+                hasChanges = true;
+              }
+            } else {
+              // Single output - use the suggestion as-is
+              const existingUpdate = iterationUpdates.get(nodeId);
+              if (!existingUpdate || suggestedCount > existingUpdate) {
+                iterationUpdates.set(nodeId, suggestedCount);
+                hasChanges = true;
+              }
+            }
+          }
+        });
+        
+        // Also handle input shortages - but only for single-input consumers
+        upstreamNodes.forEach(nodeId => {
+          const node = graph.nodes[nodeId];
+          if (!node) return;
+          
+          const inputSuggestions = suggestions.filter(s => {
+            if (s.nodeId !== nodeId) return false;
+            if (s.handleType !== 'input') return false;
+            if (s.adjustmentType !== 'increase') return false;
+            return true;
+          });
+          
+          // Only process if this is the only consumer of the input products
+          inputSuggestions.forEach(inputSuggestion => {
+            const productId = inputSuggestion.productId;
+            const productData = graph.products[productId];
+            if (!productData) return;
+            
+            // Check if this node is the only consumer of this product in the upstream chain
+            const upstreamConsumers = productData.consumers.filter(c => 
+              upstreamNodes.has(c.nodeId) || c.nodeId === targetNodeId
+            );
+            
+            if (upstreamConsumers.length === 1 && upstreamConsumers[0].nodeId === nodeId) {
+              // This is the only consumer - safe to increase
+              const connections = graph.products[productId]?.connections || [];
+              
+              connections.forEach(conn => {
+                if (conn.targetNodeId === nodeId && upstreamNodes.has(conn.sourceNodeId)) {
+                  const producerId = conn.sourceNodeId;
+                  
+                  const producerSuggestions = suggestions.filter(s => 
+                    s.nodeId === producerId && 
+                    s.productId === productId &&
+                    s.handleType === 'output' &&
+                    s.adjustmentType === 'increase'
+                  );
+                  
+                  producerSuggestions.forEach(suggestion => {
+                    const currentCount = currentNodes.find(n => n.id === producerId)?.data?.machineCount || 0;
+                    const suggestedCount = suggestion.suggestedMachineCount;
+                    
+                    if (Math.abs(suggestedCount - currentCount) > EPSILON) {
+                      const existingUpdate = iterationUpdates.get(producerId);
+                      if (!existingUpdate || suggestedCount > existingUpdate) {
+                        iterationUpdates.set(producerId, suggestedCount);
+                        hasChanges = true;
+                      }
+                    }
+                  });
+                }
+              });
+            }
+          });
+        });
+      });
+      
+      // Apply updates for this iteration
+      if (iterationUpdates.size > 0) {
+        iterationUpdates.forEach((newCount, nodeId) => {
+          const oldCount = currentNodes.find(n => n.id === nodeId)?.data?.machineCount || 0;
+          iterationDebug.updates.push({
+            nodeId,
+            nodeName: graph.nodes[nodeId]?.recipe?.name || 'Unknown',
+            oldCount,
+            newCount
+          });
+          
+          debugInfo.finalUpdates.set(nodeId, newCount);
+        });
+        
+        // Update currentNodes for next iteration
+        currentNodes = currentNodes.map(n => {
+          const newCount = iterationUpdates.get(n.id);
+          return newCount !== undefined
+            ? { ...n, data: { ...n.data, machineCount: newCount } }
+            : n;
+        });
+      }
+      
+      debugInfo.iterations.push(iterationDebug);
+    }
+    
+    debugInfo.totalIterations = iteration;
+    
+    // Apply final updates
+    if (debugInfo.finalUpdates.size > 0) {
+      setNodes(nds => nds.map(n => {
+        const newCount = debugInfo.finalUpdates.get(n.id);
+        return newCount !== undefined
+          ? { ...n, data: { ...n.data, machineCount: newCount } }
+          : n;
+      }));
+      
+      triggerRecalculation('machineCount');
+      
+      // Show simplified debug
+      setComputeDebugInfo({
+        totalIterations: debugInfo.totalIterations,
+        converged: debugInfo.converged,
+        appliedUpdates: Array.from(debugInfo.finalUpdates.entries()).map(([nodeId, newCount]) => ({
+          nodeId,
+          nodeName: nodes.find(n => n.id === nodeId)?.data?.recipe?.name || 'Unknown',
+          oldCount: nodes.find(n => n.id === nodeId)?.data?.machineCount || 0,
+          newCount
+        })),
+        iterations: debugInfo.iterations
+      });
+      setShowComputeDebug(true);
+    } else {
+      alert('No changes needed - production line is already balanced for the target recipes.');
+    }
+  }, [targetProducts, productionSolution, nodes, edges, setNodes, triggerRecalculation]);
 
   const getAvailableRecipes = () => {
     
@@ -2115,28 +2556,165 @@ function App() {
 
       {showTargetsModal && (
         <div className="modal-overlay" onClick={() => setShowTargetsModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '800px', maxHeight: '85vh' }}>
             <h2 className="modal-title">Target Products</h2>
-            <div className="modal-content flex-col" style={{ maxHeight: '500px', marginBottom: '20px' }}>
+            <div className="modal-content flex-col" style={{ maxHeight: '70vh', marginBottom: '20px' }}>
               {targetProducts.length === 0 ? (
                 <div className="empty-state">No target products yet. Shift+Click a recipe box to mark it as a target.</div>
               ) : (
-                targetProducts.map(target => (
-                  <div key={target.id} className="target-card">
-                    <div className="flex-1">
-                      <div className="target-product-name">{getProductName(target.productId, getProduct)}</div>
-                      <div className="target-box-id">Box ID: {target.recipeBoxId}</div>
+                targetProducts.map(target => {
+                  const node = nodes.find(n => n.id === target.recipeBoxId);
+                  if (!node) return null;
+
+                  const recipe = node.data?.recipe;
+                  const machineCount = node.data?.machineCount || 0;
+                  if (!recipe) return null;
+
+                  let cycleTime = recipe.cycle_time;
+                  if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
+
+                  const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
+
+                  // Calculate current rates
+                  const currentRates = { inputs: {}, outputs: {} };
+
+                  recipe.inputs.forEach((input, idx) => {
+                    if (typeof input.quantity === 'number') {
+                      const ratePerMachine = isMineshaftDrill ? input.quantity : input.quantity / cycleTime;
+                      currentRates.inputs[idx] = ratePerMachine * machineCount;
+                    }
+                  });
+
+                  recipe.outputs.forEach((output, idx) => {
+                    const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
+                    if (typeof quantity === 'number') {
+                      const ratePerMachine = isMineshaftDrill ? quantity : quantity / cycleTime;
+                      currentRates.outputs[idx] = ratePerMachine * machineCount;
+                    }
+                  });
+
+                  const handleRateChange = (ioType, ioIndex, newRate) => {
+                    if (newRate <= 0) return;
+
+                    let newMachineCount = machineCount;
+
+                    if (ioType === 'input') {
+                      const input = recipe.inputs[ioIndex];
+                      if (input && typeof input.quantity === 'number') {
+                        const ratePerMachine = isMineshaftDrill ? input.quantity : input.quantity / cycleTime;
+                        if (ratePerMachine > 0) {
+                          newMachineCount = newRate / ratePerMachine;
+                        }
+                      }
+                    } else {
+                      const output = recipe.outputs[ioIndex];
+                      if (output) {
+                        const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
+                        if (typeof quantity === 'number') {
+                          const ratePerMachine = isMineshaftDrill ? quantity : quantity / cycleTime;
+                          if (ratePerMachine > 0) {
+                            newMachineCount = newRate / ratePerMachine;
+                          }
+                        }
+                      }
+                    }
+
+                    handleUpdateTarget(target.id, newMachineCount, {});
+                  };
+
+                  const formatRate = (rate) => {
+                    if (typeof rate !== 'number') return '0';
+                    return rate.toFixed(4);
+                  };
+
+                  return (
+                    <div key={target.id} style={{
+                      padding: '20px',
+                      background: 'var(--bg-main)',
+                      border: '2px solid var(--border-primary)',
+                      borderRadius: 'var(--radius-md)',
+                      marginBottom: '15px'
+                    }}>
+                      {/* Header */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                        <div>
+                          <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 600 }}>
+                            {recipe.name}
+                          </div>
+                          <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px' }}>
+                            Machine Count: {machineCount.toFixed(4)}
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => handleRemoveTarget(target.id)} 
+                          className="btn btn-delete"
+                          style={{ padding: '6px 12px' }}
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      {/* Two column layout */}
+                      <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: '1fr 1fr', 
+                        gap: '20px',
+                        borderTop: '1px solid var(--border-divider)',
+                        paddingTop: '15px'
+                      }}>
+                        {/* Inputs Column */}
+                        <div>
+                          <div style={{ 
+                            color: 'var(--input-text)', 
+                            fontSize: '14px', 
+                            fontWeight: 600,
+                            marginBottom: '12px',
+                            textAlign: 'center'
+                          }}>
+                            Inputs
+                          </div>
+                          {recipe.inputs.map((input, idx) => {
+                            const rate = currentRates.inputs[idx] || 0;
+                            return (
+                              <TargetRateInput
+                                key={idx}
+                                initialValue={rate}
+                                productName={getProductName(input.product_id, getProduct)}
+                                onValueCommit={(val) => handleRateChange('input', idx, val)}
+                                styleType="input"
+                              />
+                            );
+                          })}
+                        </div>
+
+                        {/* Outputs Column */}
+                        <div>
+                          <div style={{ 
+                            color: 'var(--output-text)', 
+                            fontSize: '14px', 
+                            fontWeight: 600,
+                            marginBottom: '12px',
+                            textAlign: 'center'
+                          }}>
+                            Outputs
+                          </div>
+                          {recipe.outputs.map((output, idx) => {
+                            const rate = currentRates.outputs[idx] || 0;
+                            return (
+                              <TargetRateInput
+                                key={idx}
+                                initialValue={rate}
+                                productName={getProductName(output.product_id, getProduct)}
+                                onValueCommit={(val) => handleRateChange('output', idx, val)}
+                                styleType="output"
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
-                    <div className="target-input-group">
-                      <label className="target-label">Target:</label>
-                      <input type="number" min="0" value={target.desiredAmount} 
-                        onChange={(e) => setTargetProducts(prev => prev.map(t => t.id === target.id ? { ...t, desiredAmount: parseFloat(e.target.value) || 0 } : t))} 
-                        className="input input-small" />
-                      <span className="target-label">/s</span>
-                    </div>
-                    <button onClick={() => setTargetProducts(prev => prev.filter(t => t.id !== target.id))} className="btn btn-delete">Remove</button>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
             <button onClick={() => setShowTargetsModal(false)} className="btn btn-secondary">Close</button>
@@ -2160,6 +2738,7 @@ function App() {
           <div className="pending-node-hint">Left-click to place | Right-click to cancel</div>
         </div>
       )}
+      {showComputeDebug && <ComputeDebugPanel debugInfo={computeDebugInfo} onClose={() => setShowComputeDebug(false)} />}
     </div>
   );
 }
