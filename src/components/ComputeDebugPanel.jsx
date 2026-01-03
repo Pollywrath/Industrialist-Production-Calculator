@@ -1,6 +1,103 @@
 import React, { useState } from 'react';
 import ReactDOM from 'react-dom';
 
+const formatDebugInfoAsText = (debugInfo) => {
+  if (!debugInfo) return 'No debug info available';
+  
+  let text = '=== COMPUTE MACHINES DEBUG INFO ===\n\n';
+  
+  // Summary
+  text += '--- SUMMARY ---\n';
+  text += `Total Iterations: ${debugInfo.totalIterations || 0}\n`;
+  text += `Converged: ${debugInfo.converged ? 'Yes' : 'No'}\n`;
+  text += `Stopped Reason: ${debugInfo.stoppedReason || 'unknown'}\n`;
+  text += `Applied Updates: ${debugInfo.appliedUpdates?.length || 0}\n`;
+  text += `Target Nodes: ${debugInfo.targetNodeIds?.length || 0}\n`;
+  if (debugInfo.targetNodeIds && debugInfo.targetNodeIds.length > 0) {
+    debugInfo.targetNodeIds.forEach(nodeId => {
+      text += `  - ${nodeId}\n`;
+    });
+  } else {
+    text += `  (No targets - this is unusual if compute ran)\n`;
+  }
+  text += `Graph Topology Keys: ${debugInfo.graphTopology ? Object.keys(debugInfo.graphTopology).length : 0}\n`;
+  text += '\n';
+  
+  // Graph topology (if available)
+  if (debugInfo.graphTopology && Object.keys(debugInfo.graphTopology).length > 0) {
+    text += '--- GRAPH TOPOLOGY ---\n';
+    const topology = debugInfo.graphTopology;
+    
+    Object.keys(topology).forEach(nodeId => {
+      const nodeInfo = topology[nodeId];
+      text += `\n${nodeId} (${nodeInfo.name}):\n`;
+      text += `  Machine Count: ${nodeInfo.machineCount.toFixed(4)}\n`;
+      
+      if (nodeInfo.inputs && nodeInfo.inputs.length > 0) {
+        text += `  Inputs:\n`;
+        nodeInfo.inputs.forEach(input => {
+          text += `    - ${input.productId} (needs ${input.rate.toFixed(4)}/s)\n`;
+          if (input.suppliers && input.suppliers.length > 0) {
+            input.suppliers.forEach(supplier => {
+              text += `      ← from ${supplier.nodeId} (${supplier.nodeName})\n`;
+              text += `         supplies ${supplier.rate.toFixed(4)}/s\n`;
+            });
+          } else {
+            text += `      ← NO SUPPLIERS\n`;
+          }
+        });
+      }
+      
+      if (nodeInfo.outputs && nodeInfo.outputs.length > 0) {
+        text += `  Outputs:\n`;
+        nodeInfo.outputs.forEach(output => {
+          text += `    - ${output.productId} (produces ${output.rate.toFixed(4)}/s)\n`;
+          if (output.consumers && output.consumers.length > 0) {
+            output.consumers.forEach(consumer => {
+              text += `      → to ${consumer.nodeId} (${consumer.nodeName})\n`;
+              text += `         consumes ${consumer.rate.toFixed(4)}/s\n`;
+            });
+          } else {
+            text += `      → NO CONSUMERS\n`;
+          }
+        });
+      }
+    });
+    text += '\n';
+  }
+  
+  // Iteration details
+  const hasIterations = debugInfo.iterations && debugInfo.iterations.length > 0;
+  if (hasIterations) {
+    text += '--- ITERATION DETAILS ---\n';
+    debugInfo.iterations.forEach((iter, idx) => {
+      text += `\nIteration ${iter.iteration}:\n`;
+      text += `  Updates: ${iter.updates.length}\n`;
+      text += `  Suggestions: ${iter.suggestions}\n`;
+      
+      if (iter.updates.length > 0) {
+        iter.updates.forEach(update => {
+          text += `    - ${update.nodeName} (${update.nodeId})\n`;
+          text += `      ${update.oldCount.toFixed(4)} → ${update.newCount.toFixed(4)}\n`;
+        });
+      }
+    });
+    text += '\n';
+  }
+  
+  // Applied updates summary
+  if (debugInfo.appliedUpdates && debugInfo.appliedUpdates.length > 0) {
+    text += '--- ALL APPLIED UPDATES ---\n';
+    debugInfo.appliedUpdates.forEach((update, idx) => {
+      text += `${idx + 1}. ${update.nodeName} (${update.nodeId})\n`;
+      text += `   ${update.oldCount.toFixed(4)} → ${update.newCount.toFixed(4)}\n`;
+    });
+    text += '\n';
+  }
+  
+  return text;
+};
+
 const ComputeDebugPanel = ({ debugInfo, onClose }) => {
   const [expandedTargets, setExpandedTargets] = useState(new Set([0]));
   
@@ -364,6 +461,28 @@ const ComputeDebugPanel = ({ debugInfo, onClose }) => {
         </div>
         
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <button 
+            onClick={() => {
+              const text = formatDebugInfoAsText(debugInfo);
+              navigator.clipboard.writeText(text).then(() => {
+                alert('Debug info copied to clipboard!');
+              }).catch(() => {
+                // Fallback: show in a text area for manual copy
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('Debug info copied to clipboard!');
+              });
+            }}
+            className="btn btn-secondary"
+          >
+            Copy Debug Info
+          </button>
           <button 
             onClick={() => {
               console.log('Compute debug info:', debugInfo);

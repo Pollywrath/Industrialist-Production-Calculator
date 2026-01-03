@@ -26,11 +26,12 @@ import { propagateMachineCount, propagateFromHandle, calculateMachineCountForNew
 import PropagationDebugPanel from './components/PropagationDebugPanel';
 import ComputeDebugPanel from './components/ComputeDebugPanel';
 import { buildProductionGraph } from './solvers/graphBuilder';
+import { computeMachines, setComputeDebugMode } from './solvers/computeMachinesSolver';
   
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 
-const TargetRateInput = ({ initialValue, productName, onValueCommit, styleType }) => {
+const TargetExcessInput = ({ productName, connectedFlow, currentExcess, onTargetExcessCommit, styleType }) => {
   const [localValue, setLocalValue] = useState('');
   const [isEditing, setIsEditing] = useState(false);
 
@@ -39,14 +40,14 @@ const TargetRateInput = ({ initialValue, productName, onValueCommit, styleType }
     return rate.toFixed(4);
   };
 
-  const displayValue = isEditing ? localValue : formatRate(initialValue);
+  const displayValue = isEditing ? localValue : formatRate(currentExcess);
 
   const handleCommit = () => {
     if (!isEditing) return;
     
     const val = parseFloat(localValue);
-    if (!isNaN(val) && val > 0) {
-      onValueCommit(val);
+    if (!isNaN(val)) {
+      onTargetExcessCommit(val);
     }
     setIsEditing(false);
     setLocalValue('');
@@ -74,12 +75,25 @@ const TargetRateInput = ({ initialValue, productName, onValueCommit, styleType }
       }}>
         {productName}
       </div>
+      
+      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+        Connected: {formatRate(connectedFlow)}/s
+      </div>
+      
+      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+        {styleType === 'output' ? 'Current Excess:' : 'Current Deficiency:'} {formatRate(Math.abs(currentExcess))}/s
+      </div>
+      
+      <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+        {styleType === 'output' ? 'Target Excess:' : 'Target Additional Demand:'}
+      </div>
+      
       <input
         type="text"
         value={displayValue}
         onFocus={() => {
           setIsEditing(true);
-          setLocalValue(formatRate(initialValue));
+          setLocalValue(formatRate(currentExcess));
         }}
         onChange={(e) => setLocalValue(e.target.value)}
         onBlur={handleCommit}
@@ -909,44 +923,17 @@ function App() {
       return;
     }
     
-    const oldMachineCount = nodes.find(n => n.id === nodeId)?.data?.machineCount || 0;
     const newMachineCount = suggestion.suggestedMachineCount;
     
-    // Build graph for propagation
-    const graph = buildProductionGraph(nodes, edges);
-    const flows = productionSolution?.flows;
-    
-    if (flows) {
-      // Propagate from handle (excludes directly connected nodes)
-      const newMachineCounts = propagateFromHandle(
-        nodeId, 
-        side === 'right' ? 'right' : 'left', 
-        index, 
-        oldMachineCount, 
-        newMachineCount, 
-        graph, 
-        flows
-      );
-      
-      // Apply propagated machine counts
-      setNodes(nds => nds.map(n => {
-        const propagatedCount = newMachineCounts.get(n.id);
-        if (propagatedCount !== undefined) {
-          return { ...n, data: { ...n.data, machineCount: propagatedCount } };
-        }
-        return n;
-      }));
-    } else {
-      // Fallback to just setting the suggested count
-      setNodes(nds => nds.map(n => 
-        n.id === nodeId
-          ? { ...n, data: { ...n.data, machineCount: newMachineCount } }
-          : n
-      ));
-    }
+    // Just set the suggested count on this node only (no propagation)
+    setNodes(nds => nds.map(n => 
+      n.id === nodeId
+        ? { ...n, data: { ...n.data, machineCount: newMachineCount } }
+        : n
+    ));
     
     triggerRecalculation('machineCount');
-  }, [nodes, edges, productionSolution, setNodes, triggerRecalculation]);
+  }, [setNodes, triggerRecalculation]);
 
   const handleChemicalPlantSettingsChange = useCallback((nodeId, settings) => {
     setNodes(nds => nds.map(n => {
@@ -1229,14 +1216,54 @@ function App() {
     }
   }, [targetProducts, targetIdCounter]);
 
-  const handleUpdateTarget = useCallback((targetId, newMachineCount, newRates) => {
+  const handleUpdateTarget = useCallback((targetId, ioType, ioIndex, targetExcess) => {
     const target = targetProducts.find(t => t.id === targetId);
     if (!target) return;
+
+    const node = nodes.find(n => n.id === target.recipeBoxId);
+    if (!node) return;
+
+    const recipe = node.data?.recipe;
+    if (!recipe) return;
+
+    let cycleTime = recipe.cycle_time;
+    if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
+
+    const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
+
+    // Get connected flow
+    const flows = productionSolution?.flows?.byNode[target.recipeBoxId];
+    if (!flows) return;
+
+    let connectedFlow = 0;
+    let ratePerMachine = 0;
+
+    if (ioType === 'output') {
+      const outputFlow = flows.outputFlows[ioIndex];
+      if (!outputFlow) return;
+      
+      connectedFlow = outputFlow.connected;
+      const output = recipe.outputs[ioIndex];
+      const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
+      ratePerMachine = isMineshaftDrill ? quantity : quantity / cycleTime;
+    } else {
+      const inputFlow = flows.inputFlows[ioIndex];
+      if (!inputFlow) return;
+      
+      connectedFlow = inputFlow.connected;
+      const input = recipe.inputs[ioIndex];
+      ratePerMachine = isMineshaftDrill ? input.quantity : input.quantity / cycleTime;
+    }
+
+    if (ratePerMachine <= 0) return;
+
+    // Calculate new machine count: (connected + target_excess) / rate_per_machine
+    const newMachineCount = (connectedFlow + targetExcess) / ratePerMachine;
 
     // Update the machine count of the node
     updateNodeData(target.recipeBoxId, data => ({ ...data, machineCount: newMachineCount }));
     triggerRecalculation('machineCount');
-  }, [targetProducts, triggerRecalculation]);
+  }, [targetProducts, nodes, productionSolution, triggerRecalculation]);
 
   const handleRemoveTarget = useCallback((targetId) => {
     const target = targetProducts.find(t => t.id === targetId);
@@ -1364,7 +1391,7 @@ function App() {
     }
   }, []);
 
-  const handleMachineCountUpdate = useCallback(() => {
+  const handleMachineCountUpdate = useCallback((propagate = false) => {
     let value = parseFloat(editingMachineCount);
     if (isNaN(value) || value <= 0) {
       if (newNodePendingMachineCount) {
@@ -1377,10 +1404,10 @@ function App() {
     }
     
     if (editingNodeId && !newNodePendingMachineCount) {
-      // Editing existing node - propagate changes
+      // Editing existing node
       const oldMachineCount = nodes.find(n => n.id === editingNodeId)?.data?.machineCount || 0;
       
-      if (oldMachineCount > 0 && value !== oldMachineCount) {
+      if (propagate && oldMachineCount > 0 && value !== oldMachineCount) {
         // Build graph for propagation
         const graph = buildProductionGraph(nodes, edges);
         const flows = productionSolution?.flows;
@@ -1402,6 +1429,7 @@ function App() {
           updateNodeData(editingNodeId, data => ({ ...data, machineCount: value }));
         }
       } else {
+        // No propagation - just update this node
         updateNodeData(editingNodeId, data => ({ ...data, machineCount: value }));
       }
     } else if (newNodePendingMachineCount) {
@@ -1440,320 +1468,12 @@ function App() {
       return;
     }
     
-    const EPSILON = 1e-10;
-    const MAX_ITERATIONS = 20;
+    const result = computeMachines(nodes, edges, targetProducts);
     
-    // Start with current nodes
-    let currentNodes = [...nodes];
-    const targetNodeIds = new Set(targetProducts.map(t => t.recipeBoxId));
-    
-    // Debug tracking
-    const debugInfo = {
-      iterations: [],
-      totalIterations: 0,
-      converged: false,
-      finalUpdates: new Map()
-    };
-    
-    // Function to find all upstream nodes recursively
-    const findUpstreamNodes = (nodeId, graph, visited = new Set(), result = new Set()) => {
-      if (visited.has(nodeId)) return result;
-      visited.add(nodeId);
-      
-      const node = graph.nodes[nodeId];
-      if (!node) return result;
-      
-      node.inputs.forEach(input => {
-        const connections = graph.products[input.productId]?.connections.filter(
-          conn => conn.targetNodeId === nodeId
-        ) || [];
-        
-        connections.forEach(conn => {
-          const sourceId = conn.sourceNodeId;
-          if (!targetNodeIds.has(sourceId) && !visited.has(sourceId)) {
-            result.add(sourceId);
-            findUpstreamNodes(sourceId, graph, visited, result);
-          }
-        });
-      });
-      
-      return result;
-    };
-    
-    let iteration = 0;
-    let hasChanges = true;
-    
-    while (hasChanges && iteration < MAX_ITERATIONS) {
-      iteration++;
-      hasChanges = false;
-      
-      const iterationDebug = {
-        iteration,
-        updates: [],
-        suggestions: []
-      };
-      
-      // Build fresh graph and calculate flows with current node counts
-      const graph = buildProductionGraph(currentNodes, edges);
-      const flows = productionSolution?.flows;
-      
-      if (!flows) break;
-      
-      // Recalculate solution with current state
-      const currentSolution = solveProductionNetwork(currentNodes, edges, { skipTemperature: true });
-      const suggestions = currentSolution.suggestions || [];
-      
-      iterationDebug.suggestions = suggestions.length;
-      
-      if (suggestions.length === 0) {
-        debugInfo.converged = true;
-        break;
-      }
-      
-      // Process each target
-      const iterationUpdates = new Map();
-      
-      // Helper function to calculate metrics for a node
-      const calculateNodeMetrics = (nodeId) => {
-        const node = currentNodes.find(n => n.id === nodeId);
-        if (!node) return null;
-        
-        const recipe = node.data?.recipe;
-        if (!recipe) return null;
-        
-        const machineCount = node.data?.machineCount || 0;
-        
-        // Calculate power
-        let power = 0;
-        const powerConsumption = recipe.power_consumption;
-        if (typeof powerConsumption === 'number') {
-          power = powerConsumption * machineCount;
-        } else if (typeof powerConsumption === 'object' && powerConsumption?.max) {
-          power = powerConsumption.max * machineCount;
-        }
-        
-        // Calculate pollution
-        let pollution = 0;
-        const pollutionValue = recipe.pollution;
-        if (typeof pollutionValue === 'number') {
-          pollution = pollutionValue * machineCount;
-        }
-        
-        // Count outputs (to determine if multi-output)
-        const outputCount = recipe.outputs?.length || 0;
-        
-        return { machineCount, power, pollution, outputCount };
-      };
-      
-      targetProducts.forEach((target) => {
-        const targetNodeId = target.recipeBoxId;
-        const targetNode = graph.nodes[targetNodeId];
-        if (!targetNode) return;
-        
-        // Find upstream nodes that feed this target
-        const upstreamNodes = findUpstreamNodes(targetNodeId, graph);
-        
-        // Group suggestions by product - we need to choose which producer to increase
-        const suggestionsByProduct = new Map();
-        
-        upstreamNodes.forEach(nodeId => {
-          const nodeSuggestions = suggestions.filter(s => {
-            if (s.nodeId !== nodeId) return false;
-            if (s.handleType !== 'output') return false;
-            if (s.adjustmentType !== 'increase') return false;
-            
-            const node = graph.nodes[nodeId];
-            if (!node) return false;
-            
-            const connections = graph.products[s.productId]?.connections || [];
-            const feedsTarget = connections.some(conn => 
-              conn.sourceNodeId === nodeId && conn.targetNodeId === targetNodeId
-            );
-            const feedsUpstream = connections.some(conn => 
-              conn.sourceNodeId === nodeId && upstreamNodes.has(conn.targetNodeId)
-            );
-            
-            return feedsTarget || feedsUpstream;
-          });
-          
-          nodeSuggestions.forEach(suggestion => {
-            const productId = suggestion.productId;
-            if (!suggestionsByProduct.has(productId)) {
-              suggestionsByProduct.set(productId, []);
-            }
-            suggestionsByProduct.get(productId).push({
-              ...suggestion,
-              metrics: calculateNodeMetrics(nodeId)
-            });
-          });
-        });
-        
-        // For each product, choose the best producer to increase
-        suggestionsByProduct.forEach((productSuggestions, productId) => {
-          if (productSuggestions.length === 0) return;
-          
-          // Sort by priority:
-          // 1. Prefer multi-output recipes (outputCount > 1) over single-output
-          // 2. Then minimize machine count increase
-          // 3. Then minimize power consumption
-          // 4. Then minimize pollution
-          productSuggestions.sort((a, b) => {
-            const aMetrics = a.metrics;
-            const bMetrics = b.metrics;
-            
-            if (!aMetrics || !bMetrics) return 0;
-            
-            // Priority 1: Prefer multi-output (outputCount > 1)
-            const aMultiOutput = aMetrics.outputCount > 1 ? 1 : 0;
-            const bMultiOutput = bMetrics.outputCount > 1 ? 1 : 0;
-            if (aMultiOutput !== bMultiOutput) return bMultiOutput - aMultiOutput;
-            
-            // Priority 2: Minimize machine count increase
-            const aMachineIncrease = a.suggestedMachineCount - aMetrics.machineCount;
-            const bMachineIncrease = b.suggestedMachineCount - bMetrics.machineCount;
-            if (Math.abs(aMachineIncrease - bMachineIncrease) > EPSILON) {
-              return aMachineIncrease - bMachineIncrease;
-            }
-            
-            // Priority 3: Minimize power consumption
-            const aPowerIncrease = (a.suggestedMachineCount / aMetrics.machineCount) * aMetrics.power - aMetrics.power;
-            const bPowerIncrease = (b.suggestedMachineCount / bMetrics.machineCount) * bMetrics.power - bMetrics.power;
-            if (Math.abs(aPowerIncrease - bPowerIncrease) > EPSILON) {
-              return aPowerIncrease - bPowerIncrease;
-            }
-            
-            // Priority 4: Minimize pollution
-            const aPollutionIncrease = (a.suggestedMachineCount / aMetrics.machineCount) * aMetrics.pollution - aMetrics.pollution;
-            const bPollutionIncrease = (b.suggestedMachineCount / bMetrics.machineCount) * bMetrics.pollution - bMetrics.pollution;
-            return aPollutionIncrease - bPollutionIncrease;
-          });
-          
-          // Apply only the best suggestion for this product
-          const bestSuggestion = productSuggestions[0];
-          const currentCount = currentNodes.find(n => n.id === bestSuggestion.nodeId)?.data?.machineCount || 0;
-          const suggestedCount = bestSuggestion.suggestedMachineCount;
-          
-          if (Math.abs(suggestedCount - currentCount) > EPSILON) {
-            // For multi-output nodes, we might need more than suggested if other outputs also need increases
-            const nodeId = bestSuggestion.nodeId;
-            const nodeMetrics = bestSuggestion.metrics;
-            
-            if (nodeMetrics && nodeMetrics.outputCount > 1) {
-              // Check if this node has other output suggestions
-              const allNodeSuggestions = suggestions.filter(s => 
-                s.nodeId === nodeId && 
-                s.handleType === 'output' && 
-                s.adjustmentType === 'increase'
-              );
-              
-              // Use maximum suggested count across all outputs
-              const maxSuggested = Math.max(...allNodeSuggestions.map(s => s.suggestedMachineCount));
-              
-              const existingUpdate = iterationUpdates.get(nodeId);
-              if (!existingUpdate || maxSuggested > existingUpdate) {
-                iterationUpdates.set(nodeId, maxSuggested);
-                hasChanges = true;
-              }
-            } else {
-              // Single output - use the suggestion as-is
-              const existingUpdate = iterationUpdates.get(nodeId);
-              if (!existingUpdate || suggestedCount > existingUpdate) {
-                iterationUpdates.set(nodeId, suggestedCount);
-                hasChanges = true;
-              }
-            }
-          }
-        });
-        
-        // Also handle input shortages - but only for single-input consumers
-        upstreamNodes.forEach(nodeId => {
-          const node = graph.nodes[nodeId];
-          if (!node) return;
-          
-          const inputSuggestions = suggestions.filter(s => {
-            if (s.nodeId !== nodeId) return false;
-            if (s.handleType !== 'input') return false;
-            if (s.adjustmentType !== 'increase') return false;
-            return true;
-          });
-          
-          // Only process if this is the only consumer of the input products
-          inputSuggestions.forEach(inputSuggestion => {
-            const productId = inputSuggestion.productId;
-            const productData = graph.products[productId];
-            if (!productData) return;
-            
-            // Check if this node is the only consumer of this product in the upstream chain
-            const upstreamConsumers = productData.consumers.filter(c => 
-              upstreamNodes.has(c.nodeId) || c.nodeId === targetNodeId
-            );
-            
-            if (upstreamConsumers.length === 1 && upstreamConsumers[0].nodeId === nodeId) {
-              // This is the only consumer - safe to increase
-              const connections = graph.products[productId]?.connections || [];
-              
-              connections.forEach(conn => {
-                if (conn.targetNodeId === nodeId && upstreamNodes.has(conn.sourceNodeId)) {
-                  const producerId = conn.sourceNodeId;
-                  
-                  const producerSuggestions = suggestions.filter(s => 
-                    s.nodeId === producerId && 
-                    s.productId === productId &&
-                    s.handleType === 'output' &&
-                    s.adjustmentType === 'increase'
-                  );
-                  
-                  producerSuggestions.forEach(suggestion => {
-                    const currentCount = currentNodes.find(n => n.id === producerId)?.data?.machineCount || 0;
-                    const suggestedCount = suggestion.suggestedMachineCount;
-                    
-                    if (Math.abs(suggestedCount - currentCount) > EPSILON) {
-                      const existingUpdate = iterationUpdates.get(producerId);
-                      if (!existingUpdate || suggestedCount > existingUpdate) {
-                        iterationUpdates.set(producerId, suggestedCount);
-                        hasChanges = true;
-                      }
-                    }
-                  });
-                }
-              });
-            }
-          });
-        });
-      });
-      
-      // Apply updates for this iteration
-      if (iterationUpdates.size > 0) {
-        iterationUpdates.forEach((newCount, nodeId) => {
-          const oldCount = currentNodes.find(n => n.id === nodeId)?.data?.machineCount || 0;
-          iterationDebug.updates.push({
-            nodeId,
-            nodeName: graph.nodes[nodeId]?.recipe?.name || 'Unknown',
-            oldCount,
-            newCount
-          });
-          
-          debugInfo.finalUpdates.set(nodeId, newCount);
-        });
-        
-        // Update currentNodes for next iteration
-        currentNodes = currentNodes.map(n => {
-          const newCount = iterationUpdates.get(n.id);
-          return newCount !== undefined
-            ? { ...n, data: { ...n.data, machineCount: newCount } }
-            : n;
-        });
-      }
-      
-      debugInfo.iterations.push(iterationDebug);
-    }
-    
-    debugInfo.totalIterations = iteration;
-    
-    // Apply final updates
-    if (debugInfo.finalUpdates.size > 0) {
+    if (result.success) {
+      // Apply updates to nodes
       setNodes(nds => nds.map(n => {
-        const newCount = debugInfo.finalUpdates.get(n.id);
+        const newCount = result.updates.get(n.id);
         return newCount !== undefined
           ? { ...n, data: { ...n.data, machineCount: newCount } }
           : n;
@@ -1761,23 +1481,25 @@ function App() {
       
       triggerRecalculation('machineCount');
       
-      // Show simplified debug
+      // Show debug info
       setComputeDebugInfo({
-        totalIterations: debugInfo.totalIterations,
-        converged: debugInfo.converged,
-        appliedUpdates: Array.from(debugInfo.finalUpdates.entries()).map(([nodeId, newCount]) => ({
+        totalIterations: result.iterations,
+        converged: result.converged,
+        appliedUpdates: Array.from(result.updates.entries()).map(([nodeId, newCount]) => ({
           nodeId,
           nodeName: nodes.find(n => n.id === nodeId)?.data?.recipe?.name || 'Unknown',
           oldCount: nodes.find(n => n.id === nodeId)?.data?.machineCount || 0,
           newCount
         })),
-        iterations: debugInfo.iterations
+        iterations: result.debugInfo.iterations,
+        targetNodeIds: result.debugInfo.targetNodeIds,
+        graphTopology: result.debugInfo.graphTopology
       });
       setShowComputeDebug(true);
     } else {
       alert('No changes needed - production line is already balanced for the target recipes.');
     }
-  }, [targetProducts, productionSolution, nodes, edges, setNodes, triggerRecalculation]);
+  }, [targetProducts, nodes, edges, setNodes, triggerRecalculation]);
 
   const getAvailableRecipes = () => {
     
@@ -2318,8 +2040,9 @@ function App() {
                   const newState = !debugModeEnabled;
                   setDebugModeEnabled(newState);
                   setDebugMode(newState);
+                  setComputeDebugMode(newState);
                   if (newState) {
-                    alert('Debug mode enabled. Machine count changes will now log detailed information to console.');
+                    alert('Debug mode enabled. Machine count propagation and compute operations will now log detailed information to console.');
                   }
                 }}
                 className="btn btn-secondary"
@@ -2341,18 +2064,52 @@ function App() {
       {(showMachineCountEditor || keepOverlayDuringTransition) && (
         <div className="modal-overlay" onClick={handleMachineCountCancel}>
           {showMachineCountEditor && (
-            <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '400px' }}>
+            <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '450px' }}>
               <h2 className="modal-title">Edit Machine Count</h2>
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', color: 'var(--text-primary)', fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: '10px' }}>
                   Machine Count:</label>
                 <input type="number" min="0" step="0.1" value={editingMachineCount} onChange={(e) => setEditingMachineCount(e.target.value)}
-                  onKeyPress={(e) => { if (e.key === 'Enter') handleMachineCountUpdate(); }} className="input" placeholder="Enter machine count" autoFocus />
+                  onKeyPress={(e) => { if (e.key === 'Enter') handleMachineCountUpdate(false); }} className="input" placeholder="Enter machine count" autoFocus />
                 <p style={{ marginTop: '8px', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>Must be a non-negative number (can be decimal)</p>
               </div>
+              
+              {editingNodeId && !newNodePendingMachineCount && (
+                <div style={{ 
+                  marginBottom: '20px', 
+                  padding: '12px', 
+                  background: 'rgba(212, 166, 55, 0.1)', 
+                  borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border-divider)'
+                }}>
+                  <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
+                    <div style={{ marginBottom: '8px' }}>
+                      <strong style={{ color: 'var(--text-primary)' }}>Apply:</strong> Changes only this box
+                    </div>
+                    <div>
+                      <strong style={{ color: 'var(--text-primary)' }}>Apply to All:</strong> Changes this box and propagates to connected boxes
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button onClick={handleMachineCountCancel} className="btn btn-secondary" style={{ flex: 1 }}>Cancel</button>
-                <button onClick={handleMachineCountUpdate} className="btn btn-primary" style={{ flex: 1 }}>Apply</button>
+                <button onClick={() => handleMachineCountUpdate(false)} className="btn btn-primary" style={{ flex: 1 }}>Apply</button>
+                {editingNodeId && !newNodePendingMachineCount && (
+                  <button 
+                    onClick={() => handleMachineCountUpdate(true)} 
+                    className="btn btn-primary" 
+                    style={{ 
+                      flex: 1,
+                      background: 'var(--color-primary-hover)',
+                      fontWeight: 700
+                    }}
+                    title="Apply changes and propagate to connected nodes"
+                  >
+                    Apply to All
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -2575,13 +2332,24 @@ function App() {
 
                   const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
 
-                  // Calculate current rates
-                  const currentRates = { inputs: {}, outputs: {} };
+                  // Get flow data
+                  const flows = productionSolution?.flows?.byNode[target.recipeBoxId];
+                  
+                  // Calculate current rates, connected flows, and excess/deficiency
+                  const flowData = { inputs: {}, outputs: {} };
 
                   recipe.inputs.forEach((input, idx) => {
                     if (typeof input.quantity === 'number') {
                       const ratePerMachine = isMineshaftDrill ? input.quantity : input.quantity / cycleTime;
-                      currentRates.inputs[idx] = ratePerMachine * machineCount;
+                      const totalRate = ratePerMachine * machineCount;
+                      const connectedFlow = flows?.inputFlows[idx]?.connected || 0;
+                      const deficiency = totalRate - connectedFlow; // How much MORE is needed beyond connected
+                      
+                      flowData.inputs[idx] = {
+                        totalRate,
+                        connectedFlow,
+                        deficiency: Math.max(0, deficiency)
+                      };
                     }
                   });
 
@@ -2589,42 +2357,20 @@ function App() {
                     const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
                     if (typeof quantity === 'number') {
                       const ratePerMachine = isMineshaftDrill ? quantity : quantity / cycleTime;
-                      currentRates.outputs[idx] = ratePerMachine * machineCount;
+                      const totalRate = ratePerMachine * machineCount;
+                      const connectedFlow = flows?.outputFlows[idx]?.connected || 0;
+                      const excess = totalRate - connectedFlow; // How much is LEFT OVER after connected
+                      
+                      flowData.outputs[idx] = {
+                        totalRate,
+                        connectedFlow,
+                        excess: Math.max(0, excess)
+                      };
                     }
                   });
 
-                  const handleRateChange = (ioType, ioIndex, newRate) => {
-                    if (newRate <= 0) return;
-
-                    let newMachineCount = machineCount;
-
-                    if (ioType === 'input') {
-                      const input = recipe.inputs[ioIndex];
-                      if (input && typeof input.quantity === 'number') {
-                        const ratePerMachine = isMineshaftDrill ? input.quantity : input.quantity / cycleTime;
-                        if (ratePerMachine > 0) {
-                          newMachineCount = newRate / ratePerMachine;
-                        }
-                      }
-                    } else {
-                      const output = recipe.outputs[ioIndex];
-                      if (output) {
-                        const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
-                        if (typeof quantity === 'number') {
-                          const ratePerMachine = isMineshaftDrill ? quantity : quantity / cycleTime;
-                          if (ratePerMachine > 0) {
-                            newMachineCount = newRate / ratePerMachine;
-                          }
-                        }
-                      }
-                    }
-
-                    handleUpdateTarget(target.id, newMachineCount, {});
-                  };
-
-                  const formatRate = (rate) => {
-                    if (typeof rate !== 'number') return '0';
-                    return rate.toFixed(4);
+                  const handleTargetExcessChange = (ioType, ioIndex, targetExcess) => {
+                    handleUpdateTarget(target.id, ioType, ioIndex, targetExcess);
                   };
 
                   return (
@@ -2674,13 +2420,15 @@ function App() {
                             Inputs
                           </div>
                           {recipe.inputs.map((input, idx) => {
-                            const rate = currentRates.inputs[idx] || 0;
+                            const data = flowData.inputs[idx];
+                            if (!data) return null;
                             return (
-                              <TargetRateInput
+                              <TargetExcessInput
                                 key={idx}
-                                initialValue={rate}
                                 productName={getProductName(input.product_id, getProduct)}
-                                onValueCommit={(val) => handleRateChange('input', idx, val)}
+                                connectedFlow={data.connectedFlow}
+                                currentExcess={data.deficiency}
+                                onTargetExcessCommit={(val) => handleTargetExcessChange('input', idx, val)}
                                 styleType="input"
                               />
                             );
@@ -2699,13 +2447,15 @@ function App() {
                             Outputs
                           </div>
                           {recipe.outputs.map((output, idx) => {
-                            const rate = currentRates.outputs[idx] || 0;
+                            const data = flowData.outputs[idx];
+                            if (!data) return null;
                             return (
-                              <TargetRateInput
+                              <TargetExcessInput
                                 key={idx}
-                                initialValue={rate}
                                 productName={getProductName(output.product_id, getProduct)}
-                                onValueCommit={(val) => handleRateChange('output', idx, val)}
+                                connectedFlow={data.connectedFlow}
+                                currentExcess={data.excess}
+                                onTargetExcessCommit={(val) => handleTargetExcessChange('output', idx, val)}
                                 styleType="output"
                               />
                             );

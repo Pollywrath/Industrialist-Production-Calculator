@@ -1,6 +1,110 @@
 const EPSILON = 1e-10;
 
 /**
+ * Detect if a node is part of a production cycle
+ * Returns the loop amplification factor (how much extra production is needed due to the loop)
+ */
+const detectProductionCycle = (graph, nodeId, productId) => {
+  const visited = new Set();
+  const path = new Set();
+  const cycleNodes = new Set();
+  
+  const dfs = (currentNode, currentProduct, depth = 0) => {
+    if (depth > 50) return false; // Prevent infinite recursion
+    
+    const key = `${currentNode}:${currentProduct}`;
+    
+    if (path.has(key)) {
+      // Cycle detected - collect all nodes in the cycle
+      return true;
+    }
+    
+    if (visited.has(key)) return false;
+    
+    visited.add(key);
+    path.add(key);
+    
+    const node = graph.nodes[currentNode];
+    if (!node) {
+      path.delete(key);
+      return false;
+    }
+    
+    // Find which inputs consume this product
+    node.inputs.forEach((input, inputIndex) => {
+      if (input.productId === currentProduct) {
+        // This node consumes the product - now check what it produces
+        node.outputs.forEach((output, outputIndex) => {
+          const connections = graph.products[output.productId]?.connections.filter(
+            conn => conn.sourceNodeId === currentNode && conn.sourceOutputIndex === outputIndex
+          ) || [];
+          
+          connections.forEach(conn => {
+            const isCycle = dfs(conn.targetNodeId, output.productId, depth + 1);
+            if (isCycle) {
+              cycleNodes.add(currentNode);
+              cycleNodes.add(conn.targetNodeId);
+            }
+          });
+        });
+      }
+    });
+    
+    path.delete(key);
+    return cycleNodes.size > 0;
+  };
+  
+  dfs(nodeId, productId);
+  
+  if (cycleNodes.size === 0) {
+    return { inCycle: false, amplificationFactor: 1.0 };
+  }
+  
+  // Calculate amplification factor for the cycle
+  // For each node in the cycle, calculate net production/consumption
+  let totalLoopGain = 0;
+  
+  cycleNodes.forEach(cycleNodeId => {
+    const cycleNode = graph.nodes[cycleNodeId];
+    if (!cycleNode) return;
+    
+    // Find if this node produces and consumes any products in the cycle
+    cycleNode.inputs.forEach(input => {
+      const matchingOutput = cycleNode.outputs.find(out => out.productId === input.productId);
+      if (matchingOutput) {
+        // This node has a product that loops back
+        const inputRate = cycleNode.isMineshaftDrill 
+          ? input.quantity 
+          : input.quantity / (cycleNode.cycleTime || 1);
+        
+        const quantity = matchingOutput.originalQuantity !== undefined 
+          ? matchingOutput.originalQuantity 
+          : matchingOutput.quantity;
+        const outputRate = cycleNode.isMineshaftDrill 
+          ? quantity 
+          : quantity / (cycleNode.cycleTime || 1);
+        
+        if (outputRate > EPSILON) {
+          // Loop gain = how much of output feeds back as input
+          totalLoopGain += inputRate / outputRate;
+        }
+      }
+    });
+  });
+  
+  // Amplification factor = 1 / (1 - loop_gain)
+  // If loop_gain approaches 1, amplification approaches infinity
+  const loopGain = Math.min(totalLoopGain / cycleNodes.size, 0.95); // Cap at 0.95 for stability
+  const amplificationFactor = 1 / (1 - loopGain);
+  
+  return { 
+    inCycle: true, 
+    amplificationFactor,
+    cycleNodes: Array.from(cycleNodes)
+  };
+};
+
+/**
  * Find all outputs that could help supply a deficient input through connection chains
  * This includes both direct connections and indirect paths through competing consumers
  */
@@ -169,6 +273,12 @@ export const calculateSuggestions = (graph, flows) => {
       // Find all outputs that could help this deficient input
       const candidateOutputs = findOutputsForDeficientInput(graph, flows, nodeId, inputIndex);
       
+      // DEBUG: Log candidate outputs
+      if (shortage > 0.1) {
+        console.log(`[Suggestions] Node ${nodeId} input ${inputIndex} (${input.productId}) has shortage ${shortage.toFixed(4)}`);
+        console.log(`  Found ${candidateOutputs.size} candidate outputs:`, Array.from(candidateOutputs.keys()));
+      }
+      
       candidateOutputs.forEach((outputInfo, outputKey) => {
         const outputNode = graph.nodes[outputInfo.nodeId];
         if (!outputNode) return;
@@ -180,7 +290,11 @@ export const calculateSuggestions = (graph, flows) => {
         if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
         
         const output = outputNode.outputs[outputInfo.outputIndex];
+        if (!output) return;
+        
         const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
+        if (typeof quantity !== 'number') return;
+        
         const ratePerMachine = outputNode.isMineshaftDrill ? quantity : quantity / cycleTime;
         
         if (typeof ratePerMachine !== 'number' || ratePerMachine <= EPSILON) return;
@@ -189,9 +303,44 @@ export const calculateSuggestions = (graph, flows) => {
         const outputFlow = flows.byNode[outputInfo.nodeId]?.outputFlows[outputInfo.outputIndex];
         if (!outputFlow) return;
         
-        // Always suggest increasing output to help supply deficient inputs
-        // The suggestion shows how much increase would satisfy the shortage
-        const increase = shortage / ratePerMachine;
+        // Check if this node is part of a production cycle
+        const producerNode = graph.nodes[outputInfo.nodeId];
+        const cycleInfo = detectProductionCycle(graph, outputInfo.nodeId, output.productId);
+        
+        let increase;
+        if (cycleInfo.inCycle && producerNode) {
+          // Node is part of a multi-node cycle - apply amplification factor
+          const baseIncrease = shortage / ratePerMachine;
+          increase = baseIncrease * cycleInfo.amplificationFactor;
+        } else {
+          // Check for simple self-feeding
+          const isSelfFeeding = producerNode?.inputs.some(inp => inp.productId === output.productId);
+          
+          if (isSelfFeeding && producerNode) {
+            // Self-feeding loop detected - need to account for increased consumption
+            const selfInput = producerNode.inputs.find(inp => inp.productId === output.productId);
+            if (selfInput) {
+              const inputRatePerMachine = producerNode.isMineshaftDrill 
+                ? selfInput.quantity 
+                : selfInput.quantity / (producerNode.cycleTime || 1);
+              
+              // Net production per machine = output - input
+              const netRatePerMachine = ratePerMachine - inputRatePerMachine;
+              
+              if (netRatePerMachine > EPSILON) {
+                increase = shortage / netRatePerMachine;
+              } else {
+                return;
+              }
+            } else {
+              increase = shortage / ratePerMachine;
+            }
+          } else {
+            // Normal case - not in cycle or self-feeding
+            increase = shortage / ratePerMachine;
+          }
+        }
+        
         const newCount = currentMachineCount + increase;
         
         suggestions.push({
@@ -206,14 +355,43 @@ export const calculateSuggestions = (graph, flows) => {
           deltaFlow: shortage,
           currentMachineCount,
           suggestedMachineCount: newCount,
-          machineDelta: increase
+          machineDelta: increase,
+          inCycle: cycleInfo.inCycle,
+          cycleAmplification: cycleInfo.amplificationFactor
         });
       });
       
       // Also suggest decreasing this input's consumer to match available supply
       const ratePerMachine = node.isMineshaftDrill ? input.quantity : input.quantity / (node.cycleTime || 1);
       if (typeof ratePerMachine === 'number' && ratePerMachine > EPSILON) {
-        const reduction = shortage / ratePerMachine;
+        // Check if this is a self-feeding decrease
+        const isSelfFeeding = node.outputs.some(out => out.productId === input.productId);
+        
+        let reduction;
+        if (isSelfFeeding) {
+          // Self-feeding - need to account for reduced production as well
+          const selfOutput = node.outputs.find(out => out.productId === input.productId);
+          if (selfOutput) {
+            const quantity = selfOutput.originalQuantity !== undefined ? selfOutput.originalQuantity : selfOutput.quantity;
+            const outputRatePerMachine = node.isMineshaftDrill ? quantity : quantity / (node.cycleTime || 1);
+            
+            // Net consumption per machine = input - output
+            const netConsumptionPerMachine = ratePerMachine - outputRatePerMachine;
+            
+            if (netConsumptionPerMachine > EPSILON) {
+              // This node is a net consumer - reducing it helps
+              reduction = shortage / netConsumptionPerMachine;
+            } else {
+              // This node is a net producer - don't suggest reduction
+              return;
+            }
+          } else {
+            reduction = shortage / ratePerMachine;
+          }
+        } else {
+          reduction = shortage / ratePerMachine;
+        }
+        
         const newCount = (node.machineCount || 0) - reduction;
         
         if (newCount > EPSILON) {
@@ -229,7 +407,8 @@ export const calculateSuggestions = (graph, flows) => {
             deltaFlow: -shortage,
             currentMachineCount: node.machineCount || 0,
             suggestedMachineCount: newCount,
-            machineDelta: -reduction
+            machineDelta: -reduction,
+            isSelfFeeding
           });
         }
       }
@@ -261,7 +440,33 @@ export const calculateSuggestions = (graph, flows) => {
       if (typeof ratePerMachine !== 'number' || ratePerMachine <= EPSILON) return;
       
       // Suggest decreasing this output (producer)
-      const reduction = excess / ratePerMachine;
+      // Check for self-feeding
+      const isSelfFeeding = node.inputs.some(inp => inp.productId === output.productId);
+      
+      let reduction;
+      if (isSelfFeeding) {
+        // Self-feeding - account for reduced consumption too
+        const selfInput = node.inputs.find(inp => inp.productId === output.productId);
+        if (selfInput) {
+          const inputRatePerMachine = node.isMineshaftDrill 
+            ? selfInput.quantity 
+            : selfInput.quantity / (node.cycleTime || 1);
+          
+          const netRatePerMachine = ratePerMachine - inputRatePerMachine;
+          
+          if (netRatePerMachine > EPSILON) {
+            reduction = excess / netRatePerMachine;
+          } else {
+            // Can't reduce excess via this node
+            return;
+          }
+        } else {
+          reduction = excess / ratePerMachine;
+        }
+      } else {
+        reduction = excess / ratePerMachine;
+      }
+      
       const newCount = currentMachineCount - reduction;
       
       if (newCount > EPSILON) {
@@ -277,7 +482,8 @@ export const calculateSuggestions = (graph, flows) => {
           deltaFlow: -excess,
           currentMachineCount,
           suggestedMachineCount: newCount,
-          machineDelta: -reduction
+          machineDelta: -reduction,
+          isSelfFeeding
         });
       }
       
@@ -306,8 +512,40 @@ export const calculateSuggestions = (graph, flows) => {
         
         if (typeof consumerRatePerMachine !== 'number' || consumerRatePerMachine <= EPSILON) return;
         
-        // Suggest increasing consumer to use the excess
-        const increase = excess / consumerRatePerMachine;
+        // Check if THIS SPECIFIC input is self-fed (not just if node has any self-feeding loop)
+        const selfFeedingConnection = graph.products[consumerInput.productId]?.connections.find(
+          c => c.sourceNodeId === conn.targetNodeId && 
+               c.targetNodeId === conn.targetNodeId && 
+               c.targetInputIndex === conn.targetInputIndex
+        );
+        const isSelfFeeding = !!selfFeedingConnection;
+        
+        let increase;
+        if (isSelfFeeding) {
+          // Self-feeding consumer - account for increased production
+          const selfOutput = consumerNode.outputs.find(out => out.productId === consumerInput.productId);
+          if (selfOutput) {
+            const quantity = selfOutput.originalQuantity !== undefined ? selfOutput.originalQuantity : selfOutput.quantity;
+            const outputRatePerMachine = consumerNode.isMineshaftDrill 
+              ? quantity 
+              : quantity / (consumerNode.cycleTime || 1);
+            
+            // Net consumption per machine = input - output
+            const netConsumptionPerMachine = consumerRatePerMachine - outputRatePerMachine;
+            
+            if (netConsumptionPerMachine > EPSILON) {
+              increase = excess / netConsumptionPerMachine;
+            } else {
+              // This node doesn't net consume - skip suggestion
+              return;
+            }
+          } else {
+            increase = excess / consumerRatePerMachine;
+          }
+        } else {
+          increase = excess / consumerRatePerMachine;
+        }
+        
         const newConsumerCount = consumerMachineCount + increase;
         
         suggestions.push({
@@ -322,7 +560,8 @@ export const calculateSuggestions = (graph, flows) => {
           deltaFlow: excess,
           currentMachineCount: consumerMachineCount,
           suggestedMachineCount: newConsumerCount,
-          machineDelta: increase
+          machineDelta: increase,
+          isSelfFeeding
         });
       });
     });

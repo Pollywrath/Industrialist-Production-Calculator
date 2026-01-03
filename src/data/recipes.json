@@ -8926,7 +8926,7 @@
       "machine_id": "m_exhaust_stack",
       "cycle_time": 5,
       "power_consumption": 0,
-      "pollution": 86.5,
+      "pollution": 86.4,
       "inputs": [
         {
           "product_id": "p_exhaust",
