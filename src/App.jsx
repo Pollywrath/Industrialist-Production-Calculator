@@ -22,11 +22,10 @@ import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, 
   getRecipesForMachine, canDrillUseProduct, canLogicAssemblerUseProduct, canTreeFarmUseProduct, applyTemperatureToOutputs, 
   initializeRecipeTemperatures } from './utils/appUtilities';
 import { configureSpecialRecipe, calculateMachineCountForAutoConnect, getSpecialRecipeInputs, getSpecialRecipeOutputs, isSpecialRecipe } from './utils/recipeBoxCreation';
-import { propagateMachineCount, propagateFromHandle, calculateMachineCountForNewConnection, setDebugMode } from './utils/machineCountPropagator';
-import PropagationDebugPanel from './components/PropagationDebugPanel';
+import { propagateMachineCount, propagateFromHandle, calculateMachineCountForNewConnection } from './utils/machineCountPropagator';
 import ComputeDebugPanel from './components/ComputeDebugPanel';
 import { buildProductionGraph } from './solvers/graphBuilder';
-import { computeMachines, setComputeDebugMode } from './solvers/computeMachinesSolver';
+import { computeMachines, getLastComputeDebugInfo } from './solvers/computeMachinesSolver';
   
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
@@ -178,7 +177,6 @@ function App() {
   const [recipeMachineCounts, setRecipeMachineCounts] = useState({});
   const [pendingNode, setPendingNode] = useState(null); // For middle-click duplication
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [debugModeEnabled, setDebugModeEnabled] = useState(false);
   const reactFlowWrapper = useRef(null);
   const reactFlowInstance = useRef(null);
   const fileInputRef = useRef(null);
@@ -1459,8 +1457,8 @@ function App() {
     setNewNodePendingMachineCount(null);
   }, [newNodePendingMachineCount, deleteRecipeBoxAndTarget]);
 
-  const [computeDebugInfo, setComputeDebugInfo] = useState(null);
   const [showComputeDebug, setShowComputeDebug] = useState(false);
+  const [computeDebugInfo, setComputeDebugInfo] = useState(null);
 
   const handleCompute = useCallback(() => {
     if (targetProducts.length === 0) {
@@ -1482,19 +1480,22 @@ function App() {
       triggerRecalculation('machineCount');
       
       // Show debug info
-      setComputeDebugInfo({
-        totalIterations: result.iterations,
-        converged: result.converged,
-        appliedUpdates: Array.from(result.updates.entries()).map(([nodeId, newCount]) => ({
-          nodeId,
-          nodeName: nodes.find(n => n.id === nodeId)?.data?.recipe?.name || 'Unknown',
-          oldCount: nodes.find(n => n.id === nodeId)?.data?.machineCount || 0,
-          newCount
-        })),
-        iterations: result.debugInfo.iterations,
-        targetNodeIds: result.debugInfo.targetNodeIds,
-        graphTopology: result.debugInfo.graphTopology
-      });
+      const lastDebugInfo = getLastComputeDebugInfo();
+      if (lastDebugInfo) {
+        setComputeDebugInfo({
+          totalIterations: result.iterations,
+          converged: result.converged,
+          appliedUpdates: Array.from(result.updates.entries()).map(([nodeId, newCount]) => ({
+            nodeId,
+            nodeName: nodes.find(n => n.id === nodeId)?.data?.recipe?.name || 'Unknown',
+            oldCount: nodes.find(n => n.id === nodeId)?.data?.machineCount || 0,
+            newCount
+          })),
+          iterations: lastDebugInfo.iterations,
+          targetNodeIds: lastDebugInfo.targetNodeIds,
+          graphTopology: lastDebugInfo.graphTopology
+        });
+      }
       setShowComputeDebug(true);
     } else {
       alert('No changes needed - production line is already balanced for the target recipes.');
@@ -2035,24 +2036,6 @@ function App() {
               <button onClick={handleExportCanvas} className="btn btn-secondary">Export Canvas</button>
               <button onClick={handleRestoreDefaults} className="btn btn-secondary">Restore Defaults</button>
               <button onClick={() => setShowThemeEditor(true)} className="btn btn-secondary">Theme Editor</button>
-              <button 
-                onClick={() => {
-                  const newState = !debugModeEnabled;
-                  setDebugModeEnabled(newState);
-                  setDebugMode(newState);
-                  setComputeDebugMode(newState);
-                  if (newState) {
-                    alert('Debug mode enabled. Machine count propagation and compute operations will now log detailed information to console.');
-                  }
-                }}
-                className="btn btn-secondary"
-                style={{ 
-                  background: debugModeEnabled ? 'var(--color-primary)' : 'var(--bg-secondary)',
-                  color: debugModeEnabled ? 'var(--color-primary-dark)' : 'var(--color-primary)'
-                }}
-              >
-                {debugModeEnabled ? '🐛 Debug ON' : '🐛 Debug OFF'}
-              </button>
               <button onClick={() => window.open('https://github.com/Pollywrath/Industrialist-Production-Calculator', '_blank')} className="btn btn-secondary">Source Code</button>
             </div>
           </div>

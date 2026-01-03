@@ -5,13 +5,6 @@
 
 const EPSILON = 1e-10;
 
-// Debug mode
-export let DEBUG_MODE = false;
-export const setDebugMode = (enabled) => { DEBUG_MODE = enabled; };
-
-let lastDebugInfo = null;
-export const getLastDebugInfo = () => lastDebugInfo;
-
 /**
  * Calculate machines needed to produce/consume a given rate
  */
@@ -40,26 +33,11 @@ const calculateMachinesForRate = (node, rate, productId, isOutput) => {
  * Propagate machine count changes using ratio-based scaling
  */
 export const propagateMachineCount = (sourceNodeId, oldMachineCount, newMachineCount, graph, flows) => {
-  const debugInfo = {
-    sourceNodeId,
-    oldMachineCount,
-    newMachineCount,
-    changes: [],
-    warnings: []
-  };
-  
   if (oldMachineCount <= EPSILON) {
-    lastDebugInfo = debugInfo;
     return new Map([[sourceNodeId, newMachineCount]]);
   }
   
   const ratio = newMachineCount / oldMachineCount;
-  
-  if (DEBUG_MODE) {
-    console.log('%c[Propagation Start]', 'color: #4a9eff; font-weight: bold');
-    console.log(`Source: ${sourceNodeId} (${graph.nodes[sourceNodeId]?.recipe?.name || 'Unknown'})`);
-    console.log(`Count: ${oldMachineCount.toFixed(4)} → ${newMachineCount.toFixed(4)} (${ratio.toFixed(4)}x)`);
-  }
   
   const newCounts = new Map();
   newCounts.set(sourceNodeId, newMachineCount);
@@ -176,35 +154,8 @@ export const propagateMachineCount = (sourceNodeId, oldMachineCount, newMachineC
         const newCount = oldCount * finalRatio;
         newCounts.set(nodeId, newCount);
         hasChanges = true;
-        
-        if (iteration === 1) {
-          debugInfo.changes.push({
-            nodeId,
-            nodeName: node.recipe?.name || 'Unknown',
-            oldCount,
-            newCount,
-            ratio: finalRatio,
-            requirements
-          });
-        }
       }
     });
-  }
-  
-  // Log final results
-  if (DEBUG_MODE) {
-    debugInfo.changes.forEach(change => {
-      console.log(`\n${change.nodeName}:`);
-      console.log(`  ${change.oldCount.toFixed(4)} → ${change.newCount.toFixed(4)} (${change.ratio.toFixed(4)}x)`);
-      console.log('  Requirements:', change.requirements);
-    });
-  }
-  
-  lastDebugInfo = debugInfo;
-  
-  if (DEBUG_MODE) {
-    console.log(`\n%c[Complete] (${iteration} iterations)`, 'color: #4a9eff; font-weight: bold');
-    console.log(`Nodes affected: ${newCounts.size}`);
   }
   
   return newCounts;
