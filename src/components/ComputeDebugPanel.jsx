@@ -4,132 +4,65 @@ import ReactDOM from 'react-dom';
 const formatDebugInfoAsText = (debugInfo) => {
   if (!debugInfo) return 'No debug info available';
   
-  let text = '=== COMPUTE MACHINES DEBUG INFO ===\n\n';
-  
-  // Before/After Comparison
-  if (debugInfo.beforeState && debugInfo.afterState) {
-    text += '--- BEFORE vs AFTER ---\n';
-    text += `\nBefore - Excess: ${debugInfo.beforeState.excess.length}, Deficiency: ${debugInfo.beforeState.deficiency.length}\n`;
-    text += `After  - Excess: ${debugInfo.afterState.excess.length}, Deficiency: ${debugInfo.afterState.deficiency.length}\n`;
-    
-    if (debugInfo.beforeState.excess.length > 0) {
-      text += `\nBefore Excess Products:\n`;
-      debugInfo.beforeState.excess.forEach(item => {
-        text += `  - ${item.product.name}: ${item.excessRate.toFixed(4)}/s\n`;
-      });
-    }
-    
-    if (debugInfo.afterState.excess.length > 0) {
-      text += `\nAfter Excess Products:\n`;
-      debugInfo.afterState.excess.forEach(item => {
-        text += `  - ${item.product.name}: ${item.excessRate.toFixed(4)}/s\n`;
-      });
-    }
-    
-    if (debugInfo.beforeState.deficiency.length > 0) {
-      text += `\nBefore Deficiencies:\n`;
-      debugInfo.beforeState.deficiency.forEach(item => {
-        text += `  - ${item.product.name}: ${item.deficiencyRate.toFixed(4)}/s\n`;
-      });
-    }
-    
-    if (debugInfo.afterState.deficiency.length > 0) {
-      text += `\nAfter Deficiencies:\n`;
-      debugInfo.afterState.deficiency.forEach(item => {
-        text += `  - ${item.product.name}: ${item.deficiencyRate.toFixed(4)}/s\n`;
-      });
-    }
-    
-    text += '\n';
-  }
+  let text = '=== COMPUTE DEBUG ===\n';
   
   // Summary
-  text += '--- SUMMARY ---\n';
-  text += `Total Iterations: ${debugInfo.totalIterations || 0}\n`;
-  text += `Converged: ${debugInfo.converged ? 'Yes' : 'No'}\n`;
-  text += `Stopped Reason: ${debugInfo.stoppedReason || 'unknown'}\n`;
-  text += `Applied Updates: ${debugInfo.appliedUpdates?.length || 0}\n`;
-  text += `Target Nodes: ${debugInfo.targetNodeIds?.length || 0}\n`;
-  if (debugInfo.targetNodeIds && debugInfo.targetNodeIds.length > 0) {
-    debugInfo.targetNodeIds.forEach(nodeId => {
-      text += `  - ${nodeId}\n`;
-    });
-  } else {
-    text += `  (No targets - this is unusual if compute ran)\n`;
-  }
-  text += `Graph Topology Keys: ${debugInfo.graphTopology ? Object.keys(debugInfo.graphTopology).length : 0}\n`;
-  text += '\n';
+  text += `Iterations: ${debugInfo.totalIterations || 0} | Converged: ${debugInfo.converged ? 'Yes' : 'No'} | Updates: ${debugInfo.appliedUpdates?.length || 0}\n`;
+  text += `Stopped: ${debugInfo.stoppedReason || 'unknown'}\n`;
+  text += `Targets: ${debugInfo.targetNodeIds?.length || 0}\n\n`;
   
-  // Graph topology (if available)
-  if (debugInfo.graphTopology && Object.keys(debugInfo.graphTopology).length > 0) {
-    text += '--- GRAPH TOPOLOGY ---\n';
-    const topology = debugInfo.graphTopology;
+  // Before/After
+  if (debugInfo.beforeState && debugInfo.afterState) {
+    text += `BEFORE: Excess=${debugInfo.beforeState.excess.length} Deficiency=${debugInfo.beforeState.deficiency.length}\n`;
+    text += `AFTER: Excess=${debugInfo.afterState.excess.length} Deficiency=${debugInfo.afterState.deficiency.length}\n\n`;
     
-    Object.keys(topology).forEach(nodeId => {
-      const nodeInfo = topology[nodeId];
-      text += `\n${nodeId} (${nodeInfo.name}):\n`;
-      text += `  Machine Count: ${nodeInfo.machineCount.toFixed(4)}\n`;
-      
-      if (nodeInfo.inputs && nodeInfo.inputs.length > 0) {
-        text += `  Inputs:\n`;
-        nodeInfo.inputs.forEach(input => {
-          text += `    - ${input.productId} (needs ${input.rate.toFixed(4)}/s)\n`;
-          if (input.suppliers && input.suppliers.length > 0) {
-            input.suppliers.forEach(supplier => {
-              text += `      ← from ${supplier.nodeId} (${supplier.nodeName})\n`;
-              text += `         supplies ${supplier.rate.toFixed(4)}/s\n`;
-            });
-          } else {
-            text += `      ← NO SUPPLIERS\n`;
-          }
-        });
+    if (debugInfo.beforeState.excess.length > 0 || debugInfo.afterState.excess.length > 0) {
+      text += 'Excess Changes:\n';
+      const beforeExcess = debugInfo.beforeState.excess.slice(0, 3);
+      const afterExcess = debugInfo.afterState.excess.slice(0, 3);
+      beforeExcess.forEach(item => text += `  B: ${item.product.name} ${item.excessRate.toFixed(2)}/s\n`);
+      afterExcess.forEach(item => text += `  A: ${item.product.name} ${item.excessRate.toFixed(2)}/s\n`);
+      if (debugInfo.beforeState.excess.length > 3 || debugInfo.afterState.excess.length > 3) {
+        text += `  (+ more)\n`;
       }
-      
-      if (nodeInfo.outputs && nodeInfo.outputs.length > 0) {
-        text += `  Outputs:\n`;
-        nodeInfo.outputs.forEach(output => {
-          text += `    - ${output.productId} (produces ${output.rate.toFixed(4)}/s)\n`;
-          if (output.consumers && output.consumers.length > 0) {
-            output.consumers.forEach(consumer => {
-              text += `      → to ${consumer.nodeId} (${consumer.nodeName})\n`;
-              text += `         consumes ${consumer.rate.toFixed(4)}/s\n`;
-            });
-          } else {
-            text += `      → NO CONSUMERS\n`;
-          }
-        });
+      text += '\n';
+    }
+    
+    if (debugInfo.beforeState.deficiency.length > 0 || debugInfo.afterState.deficiency.length > 0) {
+      text += 'Deficiency Changes:\n';
+      const beforeDef = debugInfo.beforeState.deficiency.slice(0, 3);
+      const afterDef = debugInfo.afterState.deficiency.slice(0, 3);
+      beforeDef.forEach(item => text += `  B: ${item.product.name} ${item.deficiencyRate.toFixed(2)}/s\n`);
+      afterDef.forEach(item => text += `  A: ${item.product.name} ${item.deficiencyRate.toFixed(2)}/s\n`);
+      if (debugInfo.beforeState.deficiency.length > 3 || debugInfo.afterState.deficiency.length > 3) {
+        text += `  (+ more)\n`;
       }
-    });
-    text += '\n';
+      text += '\n';
+    }
   }
   
-  // Iteration details
+  // Iteration summary
   const hasIterations = debugInfo.iterations && debugInfo.iterations.length > 0;
   if (hasIterations) {
-    text += '--- ITERATION DETAILS ---\n';
-    debugInfo.iterations.forEach((iter, idx) => {
-      text += `\nIteration ${iter.iteration}:\n`;
-      text += `  Updates: ${iter.updates.length}\n`;
-      text += `  Suggestions: ${iter.suggestions}\n`;
-      
+    text += 'Iterations:\n';
+    debugInfo.iterations.forEach(iter => {
+      text += `  ${iter.iteration}: ${iter.updates.length} updates, ${iter.suggestions} suggestions\n`;
       if (iter.updates.length > 0) {
-        iter.updates.forEach(update => {
-          text += `    - ${update.nodeName} (${update.nodeId})\n`;
-          text += `      ${update.oldCount.toFixed(4)} → ${update.newCount.toFixed(4)}\n`;
+        iter.updates.slice(0, 3).forEach(u => {
+          text += `    ${u.nodeName}: ${u.oldCount.toFixed(2)}→${u.newCount.toFixed(2)}\n`;
         });
+        if (iter.updates.length > 3) text += `    (+ ${iter.updates.length - 3} more)\n`;
       }
     });
     text += '\n';
   }
   
-  // Applied updates summary
+  // Applied updates
   if (debugInfo.appliedUpdates && debugInfo.appliedUpdates.length > 0) {
-    text += '--- ALL APPLIED UPDATES ---\n';
-    debugInfo.appliedUpdates.forEach((update, idx) => {
-      text += `${idx + 1}. ${update.nodeName} (${update.nodeId})\n`;
-      text += `   ${update.oldCount.toFixed(4)} → ${update.newCount.toFixed(4)}\n`;
+    text += 'All Updates:\n';
+    debugInfo.appliedUpdates.forEach((u, i) => {
+      text += `  ${i + 1}. ${u.nodeName}: ${u.oldCount.toFixed(2)}→${u.newCount.toFixed(2)}\n`;
     });
-    text += '\n';
   }
   
   return text;
@@ -620,15 +553,6 @@ const ComputeDebugPanel = ({ debugInfo, onClose }) => {
             className="btn btn-secondary"
           >
             Copy Debug Info
-          </button>
-          <button 
-            onClick={() => {
-              console.log('Compute debug info:', debugInfo);
-              alert('Debug info logged to console');
-            }}
-            className="btn btn-secondary"
-          >
-            Log to Console
           </button>
           <button onClick={onClose} className="btn btn-primary" style={{ flex: 1 }}>
             Close
