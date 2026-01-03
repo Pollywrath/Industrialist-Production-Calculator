@@ -6,6 +6,43 @@ const formatDebugInfoAsText = (debugInfo) => {
   
   let text = '=== COMPUTE MACHINES DEBUG INFO ===\n\n';
   
+  // Before/After Comparison
+  if (debugInfo.beforeState && debugInfo.afterState) {
+    text += '--- BEFORE vs AFTER ---\n';
+    text += `\nBefore - Excess: ${debugInfo.beforeState.excess.length}, Deficiency: ${debugInfo.beforeState.deficiency.length}\n`;
+    text += `After  - Excess: ${debugInfo.afterState.excess.length}, Deficiency: ${debugInfo.afterState.deficiency.length}\n`;
+    
+    if (debugInfo.beforeState.excess.length > 0) {
+      text += `\nBefore Excess Products:\n`;
+      debugInfo.beforeState.excess.forEach(item => {
+        text += `  - ${item.product.name}: ${item.excessRate.toFixed(4)}/s\n`;
+      });
+    }
+    
+    if (debugInfo.afterState.excess.length > 0) {
+      text += `\nAfter Excess Products:\n`;
+      debugInfo.afterState.excess.forEach(item => {
+        text += `  - ${item.product.name}: ${item.excessRate.toFixed(4)}/s\n`;
+      });
+    }
+    
+    if (debugInfo.beforeState.deficiency.length > 0) {
+      text += `\nBefore Deficiencies:\n`;
+      debugInfo.beforeState.deficiency.forEach(item => {
+        text += `  - ${item.product.name}: ${item.deficiencyRate.toFixed(4)}/s\n`;
+      });
+    }
+    
+    if (debugInfo.afterState.deficiency.length > 0) {
+      text += `\nAfter Deficiencies:\n`;
+      debugInfo.afterState.deficiency.forEach(item => {
+        text += `  - ${item.product.name}: ${item.deficiencyRate.toFixed(4)}/s\n`;
+      });
+    }
+    
+    text += '\n';
+  }
+  
   // Summary
   text += '--- SUMMARY ---\n';
   text += `Total Iterations: ${debugInfo.totalIterations || 0}\n`;
@@ -136,6 +173,107 @@ const ComputeDebugPanel = ({ debugInfo, onClose }) => {
         <h2 className="modal-title">Compute Machines Debug</h2>
         
         <div className="modal-content" style={{ maxHeight: '70vh' }}>
+          {/* Before/After Comparison */}
+          {debugInfo.beforeState && debugInfo.afterState && (
+            <div style={{ 
+              padding: '15px', 
+              background: 'var(--bg-main)', 
+              borderRadius: 'var(--radius-md)',
+              marginBottom: '20px',
+              border: '2px solid var(--border-primary)'
+            }}>
+              <h3 style={{ color: 'var(--color-primary)', fontSize: '16px', marginBottom: '10px' }}>Before vs After</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', color: 'var(--text-primary)' }}>Before</div>
+                  <div style={{ fontSize: '13px', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--output-text)' }}>Excess: {debugInfo.beforeState.excess.length}</span>
+                  </div>
+                  <div style={{ fontSize: '13px' }}>
+                    <span style={{ color: 'var(--input-text)' }}>Deficiency: {debugInfo.beforeState.deficiency.length}</span>
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px', color: 'var(--text-primary)' }}>After</div>
+                  <div style={{ fontSize: '13px', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--output-text)' }}>Excess: {debugInfo.afterState.excess.length}</span>
+                  </div>
+                  <div style={{ fontSize: '13px' }}>
+                    <span style={{ color: 'var(--input-text)' }}>Deficiency: {debugInfo.afterState.deficiency.length}</span>
+                  </div>
+                </div>
+              </div>
+              
+              {(debugInfo.beforeState.excess.length > 0 || debugInfo.afterState.excess.length > 0) && (
+                <div style={{ marginTop: '15px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--output-text)' }}>
+                    Excess Products
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      {debugInfo.beforeState.excess.slice(0, 5).map((item, idx) => (
+                        <div key={idx} style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                          {item.product.name}: {item.excessRate.toFixed(2)}/s
+                        </div>
+                      ))}
+                      {debugInfo.beforeState.excess.length > 5 && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          +{debugInfo.beforeState.excess.length - 5} more
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      {debugInfo.afterState.excess.slice(0, 5).map((item, idx) => (
+                        <div key={idx} style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                          {item.product.name}: {item.excessRate.toFixed(2)}/s
+                        </div>
+                      ))}
+                      {debugInfo.afterState.excess.length > 5 && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          +{debugInfo.afterState.excess.length - 5} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {(debugInfo.beforeState.deficiency.length > 0 || debugInfo.afterState.deficiency.length > 0) && (
+                <div style={{ marginTop: '15px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '6px', color: 'var(--input-text)' }}>
+                    Deficient Products
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      {debugInfo.beforeState.deficiency.slice(0, 5).map((item, idx) => (
+                        <div key={idx} style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                          {item.product.name}: {item.deficiencyRate.toFixed(2)}/s
+                        </div>
+                      ))}
+                      {debugInfo.beforeState.deficiency.length > 5 && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          +{debugInfo.beforeState.deficiency.length - 5} more
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      {debugInfo.afterState.deficiency.slice(0, 5).map((item, idx) => (
+                        <div key={idx} style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '2px' }}>
+                          {item.product.name}: {item.deficiencyRate.toFixed(2)}/s
+                        </div>
+                      ))}
+                      {debugInfo.afterState.deficiency.length > 5 && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                          +{debugInfo.afterState.deficiency.length - 5} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          
           {/* Summary */}
           <div style={{ 
             padding: '15px', 
