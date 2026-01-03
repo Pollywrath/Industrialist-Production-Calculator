@@ -1,3 +1,5 @@
+import { HEAT_SOURCES } from '../utils/temperatureHandler';
+
 const EPSILON = 1e-10;
 
 /**
@@ -5,6 +7,16 @@ const EPSILON = 1e-10;
  * Returns the loop amplification factor (how much extra production is needed due to the loop)
  */
 const detectProductionCycle = (graph, nodeId, productId) => {
+  // Special case: Heat sources are temperature transformers, not production cycles
+  // They use the same product ID for input/output but don't create loops
+  const node = graph.nodes[nodeId];
+  const machineId = node?.recipe?.machine_id;
+  const isHeatSource = machineId && HEAT_SOURCES[machineId];
+  
+  if (isHeatSource) {
+    return { inCycle: false, amplificationFactor: 1.0 };
+  }
+  
   const visited = new Set();
   const path = new Set();
   const cycleNodes = new Set();
@@ -273,12 +285,6 @@ export const calculateSuggestions = (graph, flows) => {
       // Find all outputs that could help this deficient input
       const candidateOutputs = findOutputsForDeficientInput(graph, flows, nodeId, inputIndex);
       
-      // DEBUG: Log candidate outputs
-      if (shortage > 0.1) {
-        console.log(`[Suggestions] Node ${nodeId} input ${inputIndex} (${input.productId}) has shortage ${shortage.toFixed(4)}`);
-        console.log(`  Found ${candidateOutputs.size} candidate outputs:`, Array.from(candidateOutputs.keys()));
-      }
-      
       candidateOutputs.forEach((outputInfo, outputKey) => {
         const outputNode = graph.nodes[outputInfo.nodeId];
         if (!outputNode) return;
@@ -314,7 +320,10 @@ export const calculateSuggestions = (graph, flows) => {
           increase = baseIncrease * cycleInfo.amplificationFactor;
         } else {
           // Check for simple self-feeding
-          const isSelfFeeding = producerNode?.inputs.some(inp => inp.productId === output.productId);
+          // Special case: Heat sources are temperature transformers, not self-feeding
+          const producerMachineId = producerNode?.recipe?.machine_id;
+          const isProducerHeatSource = producerMachineId && HEAT_SOURCES[producerMachineId];
+          const isSelfFeeding = !isProducerHeatSource && producerNode?.inputs.some(inp => inp.productId === output.productId);
           
           if (isSelfFeeding && producerNode) {
             // Self-feeding loop detected - need to account for increased consumption
@@ -365,7 +374,12 @@ export const calculateSuggestions = (graph, flows) => {
       const ratePerMachine = node.isMineshaftDrill ? input.quantity : input.quantity / (node.cycleTime || 1);
       if (typeof ratePerMachine === 'number' && ratePerMachine > EPSILON) {
         // Check if this is a self-feeding decrease
-        const isSelfFeeding = node.outputs.some(out => out.productId === input.productId);
+        // Special case: Boilers use the same product (water) for coolant input and cooled output
+        // The coolant input is at index 1, and it should NEVER be treated as self-feeding
+        const isBoilerCoolantInput = node.recipe?.machine_id === 'm_boiler' && inputIndex === 1;
+        
+        // Don't treat boiler coolant input as self-feeding
+        const isSelfFeeding = !isBoilerCoolantInput && node.outputs.some(out => out.productId === input.productId);
         
         let reduction;
         if (isSelfFeeding) {
@@ -408,6 +422,7 @@ export const calculateSuggestions = (graph, flows) => {
             currentMachineCount: node.machineCount || 0,
             suggestedMachineCount: newCount,
             machineDelta: -reduction,
+            isBoilerCoolantInput,
             isSelfFeeding
           });
         }
@@ -441,7 +456,12 @@ export const calculateSuggestions = (graph, flows) => {
       
       // Suggest decreasing this output (producer)
       // Check for self-feeding
-      const isSelfFeeding = node.inputs.some(inp => inp.productId === output.productId);
+      // Special case: Heat sources (boilers, gas burners, etc.) transform water temperature
+      // They use the same product ID for input/output but are NOT self-feeding
+      const machineId = node.recipe?.machine_id;
+      const isHeatSourceOutput = machineId && HEAT_SOURCES[machineId] && 
+        ['p_water', 'p_filtered_water', 'p_distilled_water', 'p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam'].includes(output.productId);
+      const isSelfFeeding = !isHeatSourceOutput && node.inputs.some(inp => inp.productId === output.productId);
       
       let reduction;
       if (isSelfFeeding) {
@@ -518,7 +538,12 @@ export const calculateSuggestions = (graph, flows) => {
                c.targetNodeId === conn.targetNodeId && 
                c.targetInputIndex === conn.targetInputIndex
         );
-        const isSelfFeeding = !!selfFeedingConnection;
+        
+        // Special case: Boilers use the same product (water) for coolant input and cooled output
+        // The coolant input (index 1) should not be treated as self-feeding even if water is used for both
+        const consumerRecipe = graph.nodes[conn.targetNodeId]?.recipe;
+        const isBoilerCoolantInput = consumerRecipe?.machine_id === 'm_boiler' && conn.targetInputIndex === 1;
+        const isSelfFeeding = !!selfFeedingConnection && !isBoilerCoolantInput;
         
         let increase;
         if (isSelfFeeding) {
