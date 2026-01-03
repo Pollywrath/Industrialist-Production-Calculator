@@ -3,120 +3,6 @@ import { HEAT_SOURCES } from '../utils/temperatureHandler';
 const EPSILON = 1e-10;
 
 /**
- * Detect if a node is part of a production cycle
- * Returns the loop amplification factor (how much extra production is needed due to the loop)
- */
-const detectProductionCycle = (graph, nodeId, productId) => {
-  // Special case: Heat sources are temperature transformers, not production cycles
-  // They use the same product ID for input/output but don't create loops
-  const node = graph.nodes[nodeId];
-  const machineId = node?.recipe?.machine_id;
-  const isHeatSource = machineId && HEAT_SOURCES[machineId];
-  
-  if (isHeatSource) {
-    return { inCycle: false, amplificationFactor: 1.0 };
-  }
-  
-  const visited = new Set();
-  const path = new Set();
-  const cycleNodes = new Set();
-  
-  const dfs = (currentNode, currentProduct, depth = 0) => {
-    if (depth > 50) return false; // Prevent infinite recursion
-    
-    const key = `${currentNode}:${currentProduct}`;
-    
-    if (path.has(key)) {
-      // Cycle detected - collect all nodes in the cycle
-      return true;
-    }
-    
-    if (visited.has(key)) return false;
-    
-    visited.add(key);
-    path.add(key);
-    
-    const node = graph.nodes[currentNode];
-    if (!node) {
-      path.delete(key);
-      return false;
-    }
-    
-    // Find which inputs consume this product
-    node.inputs.forEach((input, inputIndex) => {
-      if (input.productId === currentProduct) {
-        // This node consumes the product - now check what it produces
-        node.outputs.forEach((output, outputIndex) => {
-          const connections = graph.products[output.productId]?.connections.filter(
-            conn => conn.sourceNodeId === currentNode && conn.sourceOutputIndex === outputIndex
-          ) || [];
-          
-          connections.forEach(conn => {
-            const isCycle = dfs(conn.targetNodeId, output.productId, depth + 1);
-            if (isCycle) {
-              cycleNodes.add(currentNode);
-              cycleNodes.add(conn.targetNodeId);
-            }
-          });
-        });
-      }
-    });
-    
-    path.delete(key);
-    return cycleNodes.size > 0;
-  };
-  
-  dfs(nodeId, productId);
-  
-  if (cycleNodes.size === 0) {
-    return { inCycle: false, amplificationFactor: 1.0 };
-  }
-  
-  // Calculate amplification factor for the cycle
-  // For each node in the cycle, calculate net production/consumption
-  let totalLoopGain = 0;
-  
-  cycleNodes.forEach(cycleNodeId => {
-    const cycleNode = graph.nodes[cycleNodeId];
-    if (!cycleNode) return;
-    
-    // Find if this node produces and consumes any products in the cycle
-    cycleNode.inputs.forEach(input => {
-      const matchingOutput = cycleNode.outputs.find(out => out.productId === input.productId);
-      if (matchingOutput) {
-        // This node has a product that loops back
-        const inputRate = cycleNode.isMineshaftDrill 
-          ? input.quantity 
-          : input.quantity / (cycleNode.cycleTime || 1);
-        
-        const quantity = matchingOutput.originalQuantity !== undefined 
-          ? matchingOutput.originalQuantity 
-          : matchingOutput.quantity;
-        const outputRate = cycleNode.isMineshaftDrill 
-          ? quantity 
-          : quantity / (cycleNode.cycleTime || 1);
-        
-        if (outputRate > EPSILON) {
-          // Loop gain = how much of output feeds back as input
-          totalLoopGain += inputRate / outputRate;
-        }
-      }
-    });
-  });
-  
-  // Amplification factor = 1 / (1 - loop_gain)
-  // If loop_gain approaches 1, amplification approaches infinity
-  const loopGain = Math.min(totalLoopGain / cycleNodes.size, 0.95); // Cap at 0.95 for stability
-  const amplificationFactor = 1 / (1 - loopGain);
-  
-  return { 
-    inCycle: true, 
-    amplificationFactor,
-    cycleNodes: Array.from(cycleNodes)
-  };
-};
-
-/**
  * Find all outputs that could help supply a deficient input through connection chains
  * This includes both direct connections and indirect paths through competing consumers
  */
@@ -309,47 +195,7 @@ export const calculateSuggestions = (graph, flows) => {
         const outputFlow = flows.byNode[outputInfo.nodeId]?.outputFlows[outputInfo.outputIndex];
         if (!outputFlow) return;
         
-        // Check if this node is part of a production cycle
-        const producerNode = graph.nodes[outputInfo.nodeId];
-        const cycleInfo = detectProductionCycle(graph, outputInfo.nodeId, output.productId);
-        
-        let increase;
-        if (cycleInfo.inCycle && producerNode) {
-          // Node is part of a multi-node cycle - apply amplification factor
-          const baseIncrease = shortage / ratePerMachine;
-          increase = baseIncrease * cycleInfo.amplificationFactor;
-        } else {
-          // Check for simple self-feeding
-          // Special case: Heat sources are temperature transformers, not self-feeding
-          const producerMachineId = producerNode?.recipe?.machine_id;
-          const isProducerHeatSource = producerMachineId && HEAT_SOURCES[producerMachineId];
-          const isSelfFeeding = !isProducerHeatSource && producerNode?.inputs.some(inp => inp.productId === output.productId);
-          
-          if (isSelfFeeding && producerNode) {
-            // Self-feeding loop detected - need to account for increased consumption
-            const selfInput = producerNode.inputs.find(inp => inp.productId === output.productId);
-            if (selfInput) {
-              const inputRatePerMachine = producerNode.isMineshaftDrill 
-                ? selfInput.quantity 
-                : selfInput.quantity / (producerNode.cycleTime || 1);
-              
-              // Net production per machine = output - input
-              const netRatePerMachine = ratePerMachine - inputRatePerMachine;
-              
-              if (netRatePerMachine > EPSILON) {
-                increase = shortage / netRatePerMachine;
-              } else {
-                return;
-              }
-            } else {
-              increase = shortage / ratePerMachine;
-            }
-          } else {
-            // Normal case - not in cycle or self-feeding
-            increase = shortage / ratePerMachine;
-          }
-        }
-        
+        const increase = shortage / ratePerMachine;
         const newCount = currentMachineCount + increase;
         
         suggestions.push({
@@ -364,48 +210,14 @@ export const calculateSuggestions = (graph, flows) => {
           deltaFlow: shortage,
           currentMachineCount,
           suggestedMachineCount: newCount,
-          machineDelta: increase,
-          inCycle: cycleInfo.inCycle,
-          cycleAmplification: cycleInfo.amplificationFactor
+          machineDelta: increase
         });
       });
       
       // Also suggest decreasing this input's consumer to match available supply
       const ratePerMachine = node.isMineshaftDrill ? input.quantity : input.quantity / (node.cycleTime || 1);
       if (typeof ratePerMachine === 'number' && ratePerMachine > EPSILON) {
-        // Check if this is a self-feeding decrease
-        // Special case: Boilers use the same product (water) for coolant input and cooled output
-        // The coolant input is at index 1, and it should NEVER be treated as self-feeding
-        const isBoilerCoolantInput = node.recipe?.machine_id === 'm_boiler' && inputIndex === 1;
-        
-        // Don't treat boiler coolant input as self-feeding
-        const isSelfFeeding = !isBoilerCoolantInput && node.outputs.some(out => out.productId === input.productId);
-        
-        let reduction;
-        if (isSelfFeeding) {
-          // Self-feeding - need to account for reduced production as well
-          const selfOutput = node.outputs.find(out => out.productId === input.productId);
-          if (selfOutput) {
-            const quantity = selfOutput.originalQuantity !== undefined ? selfOutput.originalQuantity : selfOutput.quantity;
-            const outputRatePerMachine = node.isMineshaftDrill ? quantity : quantity / (node.cycleTime || 1);
-            
-            // Net consumption per machine = input - output
-            const netConsumptionPerMachine = ratePerMachine - outputRatePerMachine;
-            
-            if (netConsumptionPerMachine > EPSILON) {
-              // This node is a net consumer - reducing it helps
-              reduction = shortage / netConsumptionPerMachine;
-            } else {
-              // This node is a net producer - don't suggest reduction
-              return;
-            }
-          } else {
-            reduction = shortage / ratePerMachine;
-          }
-        } else {
-          reduction = shortage / ratePerMachine;
-        }
-        
+        const reduction = shortage / ratePerMachine;
         const newCount = (node.machineCount || 0) - reduction;
         
         if (newCount > EPSILON) {
@@ -421,9 +233,7 @@ export const calculateSuggestions = (graph, flows) => {
             deltaFlow: -shortage,
             currentMachineCount: node.machineCount || 0,
             suggestedMachineCount: newCount,
-            machineDelta: -reduction,
-            isBoilerCoolantInput,
-            isSelfFeeding
+            machineDelta: -reduction
           });
         }
       }
@@ -455,38 +265,7 @@ export const calculateSuggestions = (graph, flows) => {
       if (typeof ratePerMachine !== 'number' || ratePerMachine <= EPSILON) return;
       
       // Suggest decreasing this output (producer)
-      // Check for self-feeding
-      // Special case: Heat sources (boilers, gas burners, etc.) transform water temperature
-      // They use the same product ID for input/output but are NOT self-feeding
-      const machineId = node.recipe?.machine_id;
-      const isHeatSourceOutput = machineId && HEAT_SOURCES[machineId] && 
-        ['p_water', 'p_filtered_water', 'p_distilled_water', 'p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam'].includes(output.productId);
-      const isSelfFeeding = !isHeatSourceOutput && node.inputs.some(inp => inp.productId === output.productId);
-      
-      let reduction;
-      if (isSelfFeeding) {
-        // Self-feeding - account for reduced consumption too
-        const selfInput = node.inputs.find(inp => inp.productId === output.productId);
-        if (selfInput) {
-          const inputRatePerMachine = node.isMineshaftDrill 
-            ? selfInput.quantity 
-            : selfInput.quantity / (node.cycleTime || 1);
-          
-          const netRatePerMachine = ratePerMachine - inputRatePerMachine;
-          
-          if (netRatePerMachine > EPSILON) {
-            reduction = excess / netRatePerMachine;
-          } else {
-            // Can't reduce excess via this node
-            return;
-          }
-        } else {
-          reduction = excess / ratePerMachine;
-        }
-      } else {
-        reduction = excess / ratePerMachine;
-      }
-      
+      const reduction = excess / ratePerMachine;
       const newCount = currentMachineCount - reduction;
       
       if (newCount > EPSILON) {
@@ -502,8 +281,7 @@ export const calculateSuggestions = (graph, flows) => {
           deltaFlow: -excess,
           currentMachineCount,
           suggestedMachineCount: newCount,
-          machineDelta: -reduction,
-          isSelfFeeding
+          machineDelta: -reduction
         });
       }
       
@@ -532,45 +310,7 @@ export const calculateSuggestions = (graph, flows) => {
         
         if (typeof consumerRatePerMachine !== 'number' || consumerRatePerMachine <= EPSILON) return;
         
-        // Check if THIS SPECIFIC input is self-fed (not just if node has any self-feeding loop)
-        const selfFeedingConnection = graph.products[consumerInput.productId]?.connections.find(
-          c => c.sourceNodeId === conn.targetNodeId && 
-               c.targetNodeId === conn.targetNodeId && 
-               c.targetInputIndex === conn.targetInputIndex
-        );
-        
-        // Special case: Boilers use the same product (water) for coolant input and cooled output
-        // The coolant input (index 1) should not be treated as self-feeding even if water is used for both
-        const consumerRecipe = graph.nodes[conn.targetNodeId]?.recipe;
-        const isBoilerCoolantInput = consumerRecipe?.machine_id === 'm_boiler' && conn.targetInputIndex === 1;
-        const isSelfFeeding = !!selfFeedingConnection && !isBoilerCoolantInput;
-        
-        let increase;
-        if (isSelfFeeding) {
-          // Self-feeding consumer - account for increased production
-          const selfOutput = consumerNode.outputs.find(out => out.productId === consumerInput.productId);
-          if (selfOutput) {
-            const quantity = selfOutput.originalQuantity !== undefined ? selfOutput.originalQuantity : selfOutput.quantity;
-            const outputRatePerMachine = consumerNode.isMineshaftDrill 
-              ? quantity 
-              : quantity / (consumerNode.cycleTime || 1);
-            
-            // Net consumption per machine = input - output
-            const netConsumptionPerMachine = consumerRatePerMachine - outputRatePerMachine;
-            
-            if (netConsumptionPerMachine > EPSILON) {
-              increase = excess / netConsumptionPerMachine;
-            } else {
-              // This node doesn't net consume - skip suggestion
-              return;
-            }
-          } else {
-            increase = excess / consumerRatePerMachine;
-          }
-        } else {
-          increase = excess / consumerRatePerMachine;
-        }
-        
+        const increase = excess / consumerRatePerMachine;
         const newConsumerCount = consumerMachineCount + increase;
         
         suggestions.push({
@@ -585,8 +325,7 @@ export const calculateSuggestions = (graph, flows) => {
           deltaFlow: excess,
           currentMachineCount: consumerMachineCount,
           suggestedMachineCount: newConsumerCount,
-          machineDelta: increase,
-          isSelfFeeding
+          machineDelta: increase
         });
       });
     });
