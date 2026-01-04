@@ -15,7 +15,7 @@ const calculateMachinesForRate = (node, rate, productId, isOutput) => {
   if (isOutput) {
     // Producing this product
     const output = node.outputs.find(o => o.productId === productId);
-    if (!output || typeof output.quantity !== 'number' || output.quantity <= 0) return 0;
+    if (!output || typeof output.quantity !== 'number' || output.quantity < 0) return 0;
     
     const ratePerMachine = node.isMineshaftDrill ? output.quantity : output.quantity / cycleTime;
     return rate / ratePerMachine;
@@ -25,6 +25,7 @@ const calculateMachinesForRate = (node, rate, productId, isOutput) => {
     if (!input || typeof input.quantity !== 'number' || input.quantity <= 0) return 0;
     
     const ratePerMachine = node.isMineshaftDrill ? input.quantity : input.quantity / cycleTime;
+    if (ratePerMachine < EPSILON) return 0;
     return rate / ratePerMachine;
   }
 };
@@ -33,7 +34,7 @@ const calculateMachinesForRate = (node, rate, productId, isOutput) => {
  * Propagate machine count changes using ratio-based scaling
  */
 export const propagateMachineCount = (sourceNodeId, oldMachineCount, newMachineCount, graph, flows) => {
-  if (oldMachineCount <= EPSILON) {
+  if (oldMachineCount < EPSILON) {
     return new Map([[sourceNodeId, newMachineCount]]);
   }
   
@@ -97,7 +98,7 @@ export const propagateMachineCount = (sourceNodeId, oldMachineCount, newMachineC
       if (!node) return;
       
       const oldCount = node.machineCount || 0;
-      if (oldCount <= EPSILON) return;
+      if (oldCount < EPSILON) return;
       
       const ratioVotes = [];
       const requirements = [];

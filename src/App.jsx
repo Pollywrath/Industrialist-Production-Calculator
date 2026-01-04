@@ -1390,14 +1390,14 @@ function App() {
 
   const handleMachineCountUpdate = useCallback((propagate = false) => {
     let value = parseFloat(editingMachineCount);
-    if (isNaN(value) || value <= 0) {
+    if (isNaN(value) || value < 0) {
       if (newNodePendingMachineCount) {
-        // If value is 0 or invalid for new node, prompt user
-        alert('Machine count must be greater than 0. Please enter a valid number.');
+        // If value is negative or invalid for new node, prompt user
+        alert('Machine count must be 0 or greater. Please enter a valid number.');
         return; // Don't close, let user try again
       }
-      // For existing nodes, default to 1
-      value = 1;
+      // For existing nodes, default to 0 (allow disabling)
+      value = 0;
     }
     
     if (editingNodeId && !newNodePendingMachineCount) {

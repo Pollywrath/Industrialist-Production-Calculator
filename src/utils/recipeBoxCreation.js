@@ -15,7 +15,7 @@ export const calculateMachineCountForAutoConnect = (recipe, targetNode, autoConn
   if (!autoConnect || !targetNode) return 1;
   
   const targetRecipe = targetNode.data.recipe;
-  const targetMachineCount = targetNode.data.machineCount || 1;
+  const targetMachineCount = targetNode.data.machineCount || 0;
   const targetMachine = getMachine(targetRecipe.machine_id);
   
   let targetCycleTime = targetRecipe.cycle_time;
