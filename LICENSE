@@ -41,13 +41,16 @@ The following game data and constants are derived from the Industrialist game an
 - `src/data/products.json`
 - `src/data/machines.json`
 - `src/data/recipes.json`
-- Constants in `src/data/mineshaftDrill.js`:
-- Constants in `src/data/logicAssembler.js`:
-- Constants in `src/data/treeFarm.js`:
-- Constants in `src/data/industrialFirebox.js`:
-- Constants in `src/data/chemicalPlant.js`:
-- Constants in `src/utils/temperatureDependentCycles.js`:
-- Constants in `src/utils/temperatureHandler.js`:
+- Constants in `src/data/mineshaftDrill.js`
+- Constants in `src/data/logicAssembler.js`
+- Constants in `src/data/treeFarm.js`
+- Constants in `src/data/industrialFirebox.js`
+- Constants in `src/data/chemicalPlant.js`
+- Constants in `src/data/undergroundWasteFacility.js`
+- Constants in `src/data/liquidDump.js`
+- Constants in `src/data/liquidBurner.js`
+- Constants in `src/utils/temperatureDependentCycles.js`
+- Constants in `src/utils/temperatureHandler.js`
 
 ### Attribution:
 All game data is sourced from the [Industrialist Wiki](https://industrialist.miraheze.org/).

@@ -4,13 +4,14 @@ A visual production planning tool for the Industrialist game. Create interactive
 
 ## Features
 
-### Core Functionality
-- **Visual Recipe Planning**: Drag-and-drop interface for building production chains
-- **Smart Connections**: Automatically connect compatible inputs and outputs with intelligent routing
-- **Production Analysis**: Track excess products, deficiencies, and profit calculations in real-time
-- **Machine Count Editing**: Double-click nodes to set precise machine counts, or double-click handles to auto-balance production
-- **Target Production Goals**: Set production targets for specific products to optimize your factory
-- **Persistent Storage**: Your work is automatically saved in browser storage
+- **Visual Production Planning**: Build interactive flowcharts with drag-and-drop recipe nodes
+- **Auto-Balancing**: Double-click handles to instantly balance machine counts, or use "Apply to All" to propagate changes through connected chains
+- **LP Optimization**: Set production targets and let the Linear Programming solver compute optimal machine counts across your entire network
+- **Special Recipes**: Support for Mineshaft Drill, Logic Assembler, Tree Farm, Industrial Firebox, Chemical Plant, Underground Waste Facility, and Liquid Dump/Burner
+- **Temperature System**: Heat source support with temperature tracking, boiler configuration, and temperature-dependent cycle times
+- **Analysis**: Real-time excess/deficiency detection, profit calculation, pollution tracking, and flow visualization
+- **Full Customization**: Theme editor with 8+ presets, import/export custom data, favorite recipes, and multiple display modes
+- **Persistent Storage**: Automatic browser storage saves your work
 
 ### Special Recipe Support
 - **Mineshaft Drill**: Configure drill heads, consumable acids, machine oil, and target depth with automatic deterioration calculations
@@ -19,22 +20,19 @@ A visual production planning tool for the Industrialist game. Create interactive
 - **Industrial Firebox**: Variable fuel support (Coal, Coke Fuel, Planks, Oak Log) with energy-based cycle times
 - **Chemical Plant**: Speed and efficiency factor adjustments with multiplicative resource calculations
 
-### Advanced Systems
-- **Temperature System**: Full support for heat sources, boilers, and temperature-dependent production cycles
+### Other Systems
+- **Temperature System**: Suupport for heat sources, boilers, and temperature-dependent production cycles
   - Geothermal Wells, Fireboxes, Electric Water Heaters, Gas Burners
   - Boiler heat loss configuration
   - Temperature tracking through production chains
   - Temperature-dependent cycle times for Industrial Drill, Alloyer, Coal Liquefaction, Steam Cracking, Water Treatment
 - **Pollution Tracking**: Global pollution affects tree growth rates and residue production from Air Separation Units
 - **Display Modes**: Toggle between per-second/per-cycle and per-machine/total views
-- **Flow Analysis**: Advanced production flow solver with excess/deficiency detection
+- **Flow Analysis**: Production flow solver with excess/deficiency detection
 - **Custom Data**: Import/export custom recipes, products, and machines via JSON
 
 ### Customization
 - **Theme Editor**: Built-in theme customization with multiple presets
-  - 8+ pre-built themes (Golden Industrial, Dracula, Nord, Solarized, Cyberpunk, etc.)
-  - Full color customization for every UI element
-  - Edge path and style options (Bezier, Straight, Orthogonal with animated/static/solid styles)
 - **Favorite Recipes**: Mark frequently used recipes for quick access
 - **Machine Statistics**: View total machine costs and counts by type
 
@@ -74,6 +72,12 @@ A visual production planning tool for the Industrialist game. Create interactive
 ### Requirements
 - **Node.js**: v16 or higher
 - **npm** or **yarn**: Package manager
+
+### Dependencies
+- **React 18**: UI framework
+- **ReactFlow 12**: Visual flow editor
+- **javascript-lp-solver**: Linear programming optimization
+- **Vite**: Build tool and dev server
 
 ### Local Setup
 
@@ -168,12 +172,6 @@ Industrialist-Production-Calculator/
 ├── LICENSE
 └── README.md
 ```
-
-## Upcoming Features
-
-### In Development
-- **Compute Machines Button**: Automatic calculation of optimal machine counts to meet all production targets simultaneously
-- **Machine Multiplier Propagation**: Change one recipe's machine count and automatically scale all connected recipes proportionally throughout your entire production chain
 
 ## License
 
