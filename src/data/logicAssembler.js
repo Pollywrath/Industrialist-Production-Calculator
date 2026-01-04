@@ -37,7 +37,7 @@ export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled, tic
   const totalStages = innerPower + (stage.outerStage - 1) * 6;
   const totalSteps = STEPS_PER_STAGE * totalStages;
   const avgStepTime = machineOilEnabled ? AVG_STEP_TIME_WITH_OIL : AVG_STEP_TIME;
-  const tickCircuitDelayInSeconds = tickCircuitDelay / 30;
+  const tickCircuitDelayInSeconds = tickCircuitDelay / 6;
   const cycleTime = totalStages * STEPS_PER_STAGE * (avgStepTime + tickCircuitDelayInSeconds) + BASE_CYCLE_TIME;
   
   const logicPlates = BASE_MATERIALS.logic_plates * totalStages;

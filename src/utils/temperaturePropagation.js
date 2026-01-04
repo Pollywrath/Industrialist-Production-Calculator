@@ -10,30 +10,53 @@ import { hasTempDependentCycle, TEMP_DEPENDENT_MACHINES } from './temperatureDep
 export const propagateTemperatures = (graph, flows) => {
   const outputTemperatures = new Map(); // nodeId:outputIndex -> temperature
   const inputTemperatures = new Map(); // nodeId:inputIndex -> temperature
-  const processedNodes = new Set();
-  const geothermalChains = new Map(); // nodeId -> chain count
   
-  // Topological sort with cycle detection
-  const sorted = topologicalSort(graph);
+  // Detect cycles and get topological order
+  const { sorted, cycleNodes } = topologicalSortWithCycles(graph);
   
-  // Process nodes in topological order
-  sorted.forEach(nodeId => {
+  // Initialize all temperatures to defaults
+  Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     if (!node) return;
+    
+    node.inputs.forEach((input, inputIndex) => {
+      inputTemperatures.set(`${nodeId}:${inputIndex}`, DEFAULT_WATER_TEMPERATURE);
+    });
+    
+    node.outputs.forEach((output, outputIndex) => {
+      outputTemperatures.set(`${nodeId}:${outputIndex}`, DEFAULT_WATER_TEMPERATURE);
+    });
+  });
+  
+  // Function to calculate temperatures for a single node
+  const calculateNodeTemperatures = (nodeId, inCycle = false) => {
+    const node = graph.nodes[nodeId];
+    if (!node) return false;
     
     const machine = { id: node.recipe.machine_id };
     const heatSource = HEAT_SOURCES[machine.id];
     
+    let hasChanges = false;
+    
     // Calculate input temperatures from connected outputs
     node.inputs.forEach((input, inputIndex) => {
-      const temperature = calculateInputTemperature(
+      const newTemp = calculateInputTemperature(
         graph,
         flows,
         nodeId,
         inputIndex,
-        outputTemperatures
+        outputTemperatures,
+        !inCycle // Only use defaults if NOT in cycle
       );
-      inputTemperatures.set(`${nodeId}:${inputIndex}`, temperature);
+      
+      // If in cycle and newTemp is null, use the old value to continue iterating
+      const oldTemp = inputTemperatures.get(`${nodeId}:${inputIndex}`);
+      const finalTemp = newTemp !== null ? newTemp : oldTemp;
+      
+      if (Math.abs(finalTemp - oldTemp) > 0.01) {
+        inputTemperatures.set(`${nodeId}:${inputIndex}`, finalTemp);
+        hasChanges = true;
+      }
     });
     
     // Calculate output temperatures based on machine type
@@ -51,18 +74,11 @@ export const propagateTemperatures = (graph, flows) => {
           );
           
           if (waterInputIndex >= 0) {
-            const inputTemp = inputTemperatures.get(`${nodeId}:${waterInputIndex}`) || DEFAULT_WATER_TEMPERATURE;
+            const inputTemp = inputTemperatures.get(`${nodeId}:${waterInputIndex}`);
+            const finalInputTemp = inputTemp !== undefined && inputTemp !== null ? inputTemp : DEFAULT_WATER_TEMPERATURE;
             
-            // Check chain count
-            const chainCount = calculateGeothermalChain(graph, nodeId, outputTemperatures);
-            geothermalChains.set(nodeId, chainCount);
-            
-            if (chainCount < heatSource.maxChains) {
-              temperature = Math.min(inputTemp + heatSource.tempIncrease, heatSource.maxTemp);
-            } else {
-              // Max chains reached, output at input temperature
-              temperature = inputTemp;
-            }
+            // Always add temperature increase, capped at max
+            temperature = Math.min(finalInputTemp + heatSource.tempIncrease, heatSource.maxTemp);
           }
         } else if (heatSource.type === 'configurable') {
           // Electric water heater - uses configured temperature
@@ -109,8 +125,10 @@ export const propagateTemperatures = (graph, flows) => {
           );
           
           if (waterInputIndex >= 0) {
-            const inputTemp = inputTemperatures.get(`${nodeId}:${waterInputIndex}`) || DEFAULT_WATER_TEMPERATURE;
-            temperature = inputTemp;
+            const inputTemp = inputTemperatures.get(`${nodeId}:${waterInputIndex}`);
+            if (inputTemp !== undefined && inputTemp !== null) {
+              temperature = inputTemp;
+            }
           }
         }
       }
@@ -118,101 +136,134 @@ export const propagateTemperatures = (graph, flows) => {
       outputTemperatures.set(`${nodeId}:${outputIndex}`, temperature);
     });
     
-    processedNodes.add(nodeId);
+    return hasChanges;
+  };
+  
+  // Process non-cycle nodes first
+  sorted.forEach(nodeId => {
+    if (!cycleNodes.has(nodeId)) {
+      calculateNodeTemperatures(nodeId);
+    }
   });
+  
+  // For nodes in cycles, iterate until temperatures stabilize
+  if (cycleNodes.size > 0) {
+    const MAX_ITERATIONS = 50;
+    let iteration = 0;
+    let hasChanges = true;
+    
+    while (hasChanges && iteration < MAX_ITERATIONS) {
+      hasChanges = false;
+      
+      cycleNodes.forEach(nodeId => {
+        if (calculateNodeTemperatures(nodeId, true)) {
+          hasChanges = true;
+        }
+      });
+      
+      iteration++;
+    }
+    
+    // After cycle converges, recalculate non-cycle nodes that depend on cycle nodes
+    // This handles cases like gw3 receiving from gw2 (which is in a cycle with gw1)
+    const nodesToRecalculate = new Set();
+    
+    // Find all non-cycle nodes that receive input from cycle nodes
+    sorted.forEach(nodeId => {
+      if (cycleNodes.has(nodeId)) return;
+      
+      const node = graph.nodes[nodeId];
+      if (!node) return;
+      
+      // Check if any input comes from a cycle node
+      node.inputs.forEach((input, inputIndex) => {
+        const productData = graph.products[input.productId];
+        if (!productData) return;
+        
+        const connections = productData.connections.filter(
+          conn => conn.targetNodeId === nodeId && conn.targetInputIndex === inputIndex
+        );
+        
+        connections.forEach(conn => {
+          if (cycleNodes.has(conn.sourceNodeId)) {
+            nodesToRecalculate.add(nodeId);
+          }
+        });
+      });
+    });
+    
+    // Recalculate these nodes with updated temperatures from cycle
+    nodesToRecalculate.forEach(nodeId => {
+      calculateNodeTemperatures(nodeId, false);
+    });
+  }
   
   return {
     outputTemperatures,
-    inputTemperatures,
-    geothermalChains
+    inputTemperatures
   };
 };
 
 /**
  * Calculate input temperature from connected outputs, weighted by flow
  */
-const calculateInputTemperature = (graph, flows, nodeId, inputIndex, outputTemperatures) => {
+const calculateInputTemperature = (graph, flows, nodeId, inputIndex, outputTemperatures, useDefaults = true) => {
   const productData = graph.products[graph.nodes[nodeId].inputs[inputIndex].productId];
-  if (!productData) return DEFAULT_WATER_TEMPERATURE;
+  if (!productData) return useDefaults ? DEFAULT_WATER_TEMPERATURE : null;
   
   // Find all connections to this input
   const connections = productData.connections.filter(
     conn => conn.targetNodeId === nodeId && conn.targetInputIndex === inputIndex
   );
   
-  if (connections.length === 0) return DEFAULT_WATER_TEMPERATURE;
+  if (connections.length === 0) return useDefaults ? DEFAULT_WATER_TEMPERATURE : null;
   
   // Calculate weighted average based on flow
   let totalFlow = 0;
   let weightedTemp = 0;
+  let hasAnyTemp = false;
   
   connections.forEach(conn => {
-    const sourceTemp = outputTemperatures.get(`${conn.sourceNodeId}:${conn.sourceOutputIndex}`) || DEFAULT_WATER_TEMPERATURE;
-    const connectionFlow = flows.byConnection[conn.id]?.flowRate || 0;
-    
-    totalFlow += connectionFlow;
-    weightedTemp += sourceTemp * connectionFlow;
+    const sourceTemp = outputTemperatures.get(`${conn.sourceNodeId}:${conn.sourceOutputIndex}`);
+    if (sourceTemp !== undefined && sourceTemp !== null) {
+      hasAnyTemp = true;
+      const connectionFlow = flows.byConnection[conn.id]?.flowRate || 0;
+      totalFlow += connectionFlow;
+      weightedTemp += sourceTemp * connectionFlow;
+    }
   });
   
-  if (totalFlow === 0) return DEFAULT_WATER_TEMPERATURE;
+  if (!hasAnyTemp) return useDefaults ? DEFAULT_WATER_TEMPERATURE : null;
+  if (totalFlow === 0) return useDefaults ? DEFAULT_WATER_TEMPERATURE : null;
   
   return Math.round((weightedTemp / totalFlow) * 1e10) / 1e10;
 };
 
 /**
- * Calculate how many geothermal wells are chained before this one
- */
-const calculateGeothermalChain = (graph, nodeId, outputTemperatures) => {
-  const node = graph.nodes[nodeId];
-  if (!node) return 0;
-  
-  // Find water input
-  const waterInputIndex = node.inputs.findIndex(inp => 
-    ['p_water', 'p_filtered_water', 'p_distilled_water'].includes(inp.productId)
-  );
-  
-  if (waterInputIndex < 0) return 0;
-  
-  // Find what's connected to this input
-  const productData = graph.products[node.inputs[waterInputIndex].productId];
-  if (!productData) return 0;
-  
-  const connections = productData.connections.filter(
-    conn => conn.targetNodeId === nodeId && conn.targetInputIndex === waterInputIndex
-  );
-  
-  if (connections.length === 0) return 0;
-  
-  // Check if source is also a geothermal well
-  let maxChain = 0;
-  connections.forEach(conn => {
-    const sourceNode = graph.nodes[conn.sourceNodeId];
-    if (sourceNode && sourceNode.recipe.machine_id === 'm_geothermal_well') {
-      // Recursively calculate chain count
-      const sourceChain = calculateGeothermalChain(graph, conn.sourceNodeId, outputTemperatures);
-      maxChain = Math.max(maxChain, sourceChain + 1);
-    }
-  });
-  
-  return maxChain;
-};
-
-/**
  * Topological sort with cycle detection
+ * Returns sorted nodes and set of nodes involved in cycles
  */
-const topologicalSort = (graph) => {
+const topologicalSortWithCycles = (graph) => {
   const sorted = [];
   const visited = new Set();
   const inProgress = new Set();
+  const cycleNodes = new Set();
   
-  const visit = (nodeId) => {
+  const visit = (nodeId, path = []) => {
     if (visited.has(nodeId)) return;
+    
     if (inProgress.has(nodeId)) {
-      // Cycle detected - just continue (we'll handle loops by using previous iteration's values)
+      // Cycle detected - mark all nodes in the cycle
+      const cycleStart = path.indexOf(nodeId);
+      for (let i = cycleStart; i < path.length; i++) {
+        cycleNodes.add(path[i]);
+      }
+      cycleNodes.add(nodeId);
       return;
     }
     
     inProgress.add(nodeId);
+    const newPath = [...path, nodeId];
     
     const node = graph.nodes[nodeId];
     if (node) {
@@ -226,7 +277,7 @@ const topologicalSort = (graph) => {
           
           connections.forEach(conn => {
             if (!visited.has(conn.sourceNodeId)) {
-              visit(conn.sourceNodeId);
+              visit(conn.sourceNodeId, newPath);
             }
           });
         }
@@ -245,7 +296,7 @@ const topologicalSort = (graph) => {
     }
   });
   
-  return sorted;
+  return { sorted, cycleNodes };
 };
 
 /**
