@@ -548,5 +548,20 @@
       "id": "m_geothermal_well",
       "name": "Geothermal Well",
       "cost": 1500
+    },
+    {
+      "id": "m_underground_waste_facility",
+      "name": "Underground Waste Facility",
+      "cost": 2500000
+    },
+    {
+      "id": "m_liquid_dump",
+      "name": "Liquid Dump",
+      "cost": 500
+    },
+    {
+      "id": "m_liquid_burner",
+      "name": "Liquid Burner",
+      "cost": 1000
     }
 ]

@@ -11,6 +11,9 @@ import IndustrialFireboxSettings from './IndustrialFireboxSettings';
 import TemperatureSettings from './TemperatureSettings';
 import BoilerSettings from './BoilerSettings';
 import ChemicalPlantSettings from './ChemicalPlantSettings';
+import UndergroundWasteFacilitySettings from './UndergroundWasteFacilitySettings';
+import LiquidDumpSettings from './LiquidDumpSettings';
+import LiquidBurnerSettings from './LiquidBurnerSettings';
 
 const RECT_HEIGHT = 44, RECT_GAP = 8, BOTTOM_PADDING = 20, SIDE_PADDING = 10, COLUMN_GAP = 20, MIN_WIDTH = 320;
 
@@ -37,13 +40,19 @@ const CustomNode = memo(({ data, id }) => {
   const [showTemperatureSettings, setShowTemperatureSettings] = useState(false);
   const [showBoilerSettings, setShowBoilerSettings] = useState(false);
   const [showChemicalPlantSettings, setShowChemicalPlantSettings] = useState(false);
+  const [showWasteFacilitySettings, setShowWasteFacilitySettings] = useState(false);
+  const [showLiquidDumpSettings, setShowLiquidDumpSettings] = useState(false);
+  const [showLiquidBurnerSettings, setShowLiquidBurnerSettings] = useState(false);
   
   if (!recipe?.inputs || !recipe?.outputs || !machine) return null;
   
   const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
   const isLogicAssembler = recipe.isLogicAssembler || recipe.id === 'r_logic_assembler';
   const isTreeFarm = recipe.isTreeFarm || recipe.id === 'r_tree_farm';
-  const isSpecialRecipe = isMineshaftDrill || isLogicAssembler || isTreeFarm;
+  const isWasteFacility = recipe.isWasteFacility || recipe.id === 'r_underground_waste_facility';
+  const isLiquidDump = recipe.isLiquidDump || recipe.id === 'r_liquid_dump';
+  const isLiquidBurner = recipe.isLiquidBurner || recipe.id === 'r_liquid_burner';
+  const isSpecialRecipe = isMineshaftDrill || isLogicAssembler || isTreeFarm || isWasteFacility || isLiquidDump || isLiquidBurner;
   const hasTemperatureConfig = needsTemperatureConfig(machine.id);
   const hasBoilerConfig = needsBoilerConfig(machine.id);
   const heatSource = HEAT_SOURCES[machine.id];
@@ -121,7 +130,36 @@ const CustomNode = memo(({ data, id }) => {
   };
 
   const displayCycleTime = formatDisplayCycleTime(cycleTime);
-  const powerConsumption = formatPowerConsumption(recipe.power_consumption);
+  
+  // Apply machine count to power and pollution if in total mode
+  let adjustedPowerConsumption = recipe.power_consumption;
+  let displayPollution = recipe.pollution;
+  
+  if (machineDisplayMode === 'total' && typeof machineCount === 'number' && machineCount > 0) {
+    // Scale power consumption
+    if (typeof recipe.power_consumption === 'number') {
+      adjustedPowerConsumption = recipe.power_consumption * machineCount;
+    } else if (typeof recipe.power_consumption === 'object' && recipe.power_consumption !== null && recipe.power_consumption !== 'Variable') {
+      if ('drilling' in recipe.power_consumption && 'idle' in recipe.power_consumption) {
+        adjustedPowerConsumption = {
+          drilling: typeof recipe.power_consumption.drilling === 'number' ? recipe.power_consumption.drilling * machineCount : recipe.power_consumption.drilling,
+          idle: typeof recipe.power_consumption.idle === 'number' ? recipe.power_consumption.idle * machineCount : recipe.power_consumption.idle
+        };
+      } else if ('max' in recipe.power_consumption && 'average' in recipe.power_consumption) {
+        adjustedPowerConsumption = {
+          max: typeof recipe.power_consumption.max === 'number' ? recipe.power_consumption.max * machineCount : recipe.power_consumption.max,
+          average: typeof recipe.power_consumption.average === 'number' ? recipe.power_consumption.average * machineCount : recipe.power_consumption.average
+        };
+      }
+    }
+    
+    // Scale pollution
+    if (typeof recipe.pollution === 'number') {
+      displayPollution = recipe.pollution * machineCount;
+    }
+  }
+  
+  const powerConsumption = formatPowerConsumption(adjustedPowerConsumption);
   const hasDualPower = typeof powerConsumption === 'object' && powerConsumption !== null &&
     (('drilling' in powerConsumption && 'idle' in powerConsumption) || ('max' in powerConsumption && 'average' in powerConsumption));
   
@@ -240,6 +278,21 @@ const CustomNode = memo(({ data, id }) => {
             onDoubleClick={(e) => e.stopPropagation()}
             className="drill-settings-button" title="Configure Chemical Plant">⚗️</button>
         )}
+        {isWasteFacility && (
+          <button onClick={(e) => { e.stopPropagation(); setShowWasteFacilitySettings(true); }} 
+            onDoubleClick={(e) => e.stopPropagation()}
+            className="drill-settings-button" title="Configure Waste Facility">🗑️</button>
+        )}
+        {isLiquidDump && (
+          <button onClick={(e) => { e.stopPropagation(); setShowLiquidDumpSettings(true); }} 
+            onDoubleClick={(e) => e.stopPropagation()}
+            className="drill-settings-button" title="Liquid Dump Info">💧</button>
+        )}
+        {isLiquidBurner && (
+          <button onClick={(e) => { e.stopPropagation(); setShowLiquidBurnerSettings(true); }} 
+            onDoubleClick={(e) => e.stopPropagation()}
+            className="drill-settings-button" title="Liquid Burner Info">🔥</button>
+        )}
         {hasTemperatureConfig && (
           <button onClick={(e) => { e.stopPropagation(); setShowTemperatureSettings(true); }} 
             onDoubleClick={(e) => e.stopPropagation()}
@@ -274,7 +327,7 @@ const CustomNode = memo(({ data, id }) => {
             ) : (
               <div className="node-stat-row"><span className="node-stat-label">Power:</span> {formatPowerConsumption(recipe.power_consumption)}</div>
             )}
-            <div className="node-stat-row"><span className="node-stat-label">Pollution:</span> {formatPollution(recipe.pollution)}</div>
+            <div className="node-stat-row"><span className="node-stat-label">Pollution:</span> {formatPollution(displayPollution)}</div>
           </div>
 
           <div className="node-machine-info">
@@ -292,7 +345,7 @@ const CustomNode = memo(({ data, id }) => {
               input={recipe.inputs[i]} onClick={onInputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
             <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} 
               onClick={onInputClick} nodeId={id} productId={recipe.inputs[i].product_id} flows={data.flows} 
-              onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} />
+              onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={recipe.inputs[i]} />
           </React.Fragment>
         ))}
 
@@ -302,7 +355,7 @@ const CustomNode = memo(({ data, id }) => {
               input={recipe.outputs[i]} onClick={onOutputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
             <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} 
               onClick={onOutputClick} nodeId={id} productId={recipe.outputs[i].product_id} flows={data.flows} 
-              onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} />
+              onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={recipe.outputs[i]} />
           </React.Fragment>
         ))}
       </div>
@@ -338,6 +391,21 @@ const CustomNode = memo(({ data, id }) => {
           recipe={recipe} onSettingsChange={onChemicalPlantSettingsChange} 
           onClose={() => setShowChemicalPlantSettings(false)} />
       )}
+      {showWasteFacilitySettings && (
+        <UndergroundWasteFacilitySettings nodeId={id} currentSettings={recipe.wasteFacilitySettings || {}} 
+          onSettingsChange={data.onWasteFacilitySettingsChange} 
+          onClose={() => setShowWasteFacilitySettings(false)} />
+      )}
+      {showLiquidDumpSettings && (
+        <LiquidDumpSettings nodeId={id} currentSettings={recipe.liquidDumpSettings || {}} recipe={recipe} 
+          onSettingsChange={data.onLiquidDumpSettingsChange}
+          onClose={() => setShowLiquidDumpSettings(false)} />
+      )}
+      {showLiquidBurnerSettings && (
+        <LiquidBurnerSettings nodeId={id} currentSettings={recipe.liquidBurnerSettings || {}} recipe={recipe} 
+          onSettingsChange={data.onLiquidBurnerSettingsChange}
+          onClose={() => setShowLiquidBurnerSettings(false)} />
+      )}
     </>
   );
 }, (prevProps, nextProps) => {
@@ -370,7 +438,7 @@ export default CustomNode;
 
 const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId, formatQuantity }) => {
   const isLeft = side === 'left';
-  const productName = getProductName(input.product_id, getProduct);
+  const productName = getProductName(input.product_id, getProduct, input.acceptedType);
   const displayQuantity = formatQuantity(input.quantity);
   
   return (
@@ -389,7 +457,7 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
   );
 };
 
-const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, onHandleDoubleClick, suggestions }) => {
+const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, onHandleDoubleClick, suggestions, input }) => {
   // Use relaxed epsilon to handle floating-point precision from LP solver
   const EPSILON = 1e-6;
   
@@ -422,6 +490,11 @@ const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, 
     }
   }
   
+  // Determine shape based on product type
+  const product = getProduct(productId);
+  const isFluid = product?.type === 'fluid' || productId === 'p_any_fluid';
+  const borderRadius = isFluid ? '50%' : '2px'; // Circle for fluids, square for items
+  
   return (
     <Handle
       type={side === 'left' ? 'target' : 'source'}
@@ -429,7 +502,11 @@ const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, 
       id={`${side}-${index}`}
       style={{ 
         background: handleColor, 
-        width: '12px', height: '12px', border: '2px solid #1a1a1a', top: `${position}%` 
+        width: '12px', 
+        height: '12px', 
+        border: '2px solid #1a1a1a', 
+        top: `${position}%`,
+        borderRadius
       }}
       onClick={(e) => {
         if (onClick && e.ctrlKey) {

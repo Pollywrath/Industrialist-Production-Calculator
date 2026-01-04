@@ -149,206 +149,7 @@ const findInputsForExcessOutput = (graph, flows, sourceNodeId, sourceOutputIndex
   return candidates;
 };
 
-/**
- * Detect if a node is part of a feedback loop
- */
-const detectLoop = (nodeId, graph, visited = new Set(), path = new Set()) => {
-  if (path.has(nodeId)) return true; // Loop detected
-  if (visited.has(nodeId)) return false;
-  
-  visited.add(nodeId);
-  path.add(nodeId);
-  
-  const node = graph.nodes[nodeId];
-  if (!node) return false;
-  
-  // Check all outputs' consumers
-  for (const output of node.outputs) {
-    const connections = graph.products[output.productId]?.connections.filter(
-      conn => conn.sourceNodeId === nodeId
-    ) || [];
-    
-    for (const conn of connections) {
-      if (detectLoop(conn.targetNodeId, graph, visited, path)) {
-        return true;
-      }
-    }
-  }
-  
-  path.delete(nodeId);
-  return false;
-};
-
-/**
- * Check if an output feeds back to the same node through a loop
- * Uses path-based cycle detection
- */
-const checkOutputFeedsLoop = (startNodeId, outputIndex, graph) => {
-  const startNode = graph.nodes[startNodeId];
-  if (!startNode) return false;
-  
-  const output = startNode.outputs[outputIndex];
-  if (!output) return false;
-  
-  // BFS to trace all paths from this output
-  const queue = [{ nodeId: startNodeId, outputIndex, depth: 0 }];
-  const visited = new Set(); // Nodes we've fully explored
-  
-  while (queue.length > 0) {
-    const { nodeId, outputIndex: outIdx, depth } = queue.shift();
-    
-    const node = graph.nodes[nodeId];
-    if (!node) continue;
-    
-    const nodeOutput = node.outputs[outIdx];
-    if (!nodeOutput) continue;
-    
-    const productData = graph.products[nodeOutput.productId];
-    if (!productData) continue;
-    
-    const visitKey = `${nodeId}:${outIdx}`;
-    if (visited.has(visitKey)) continue;
-    visited.add(visitKey);
-    
-    // Find all consumers of this output
-    const connections = productData.connections.filter(
-      conn => conn.sourceNodeId === nodeId && conn.sourceOutputIndex === outIdx
-    );
-    
-    for (const conn of connections) {
-      const consumer = graph.nodes[conn.targetNodeId];
-      if (!consumer) continue;
-      
-      // Check if this consumer is the start node (loop detected!)
-      if (conn.targetNodeId === startNodeId) {
-        return true;
-      }
-      
-      // Add all outputs of this consumer to the queue
-      for (let i = 0; i < consumer.outputs.length; i++) {
-        queue.push({ nodeId: conn.targetNodeId, outputIndex: i, depth: depth + 1 });
-      }
-    }
-  }
-  return false;
-};
-
-/**
- * Check if a consumer is part of the loop chain (helper for equilibrium)
- */
-const isConsumerInLoopChain = (startNodeId, consumerNodeId, graph) => {
-  // BFS from consumer to see if it leads back to start
-  const queue = [consumerNodeId];
-  const visited = new Set([consumerNodeId]);
-  
-  while (queue.length > 0) {
-    const nodeId = queue.shift();
-    const node = graph.nodes[nodeId];
-    if (!node) continue;
-    
-    // Check all outputs of this node
-    for (let i = 0; i < node.outputs.length; i++) {
-      const output = node.outputs[i];
-      const productData = graph.products[output.productId];
-      if (!productData) continue;
-      
-      const connections = productData.connections.filter(
-        conn => conn.sourceNodeId === nodeId && conn.sourceOutputIndex === i
-      );
-      
-      for (const conn of connections) {
-        // If this connects back to start, it's in the loop!
-        if (conn.targetNodeId === startNodeId) {
-          return true;
-        }
-        
-        // Continue searching
-        if (!visited.has(conn.targetNodeId)) {
-          visited.add(conn.targetNodeId);
-          queue.push(conn.targetNodeId);
-        }
-      }
-    }
-  }
-  
-  return false;
-};
-
-/**
- * Calculate loop equilibrium for an output with external + internal demand
- */
-const calculateOutputLoopEquilibrium = (nodeId, outputIndex, externalDemand, graph, flows) => {
-  const node = graph.nodes[nodeId];
-  if (!node) return externalDemand;
-  
-  const output = node.outputs[outputIndex];
-  if (!output) return externalDemand;
-  
-  const outputFlow = flows.byNode[nodeId]?.outputFlows[outputIndex];
-  if (!outputFlow) return externalDemand;
-  
-  const productData = graph.products[output.productId];
-  if (!productData) return externalDemand;
-  
-  // Find connections from this output
-  const connections = productData.connections.filter(
-    conn => conn.sourceNodeId === nodeId && conn.sourceOutputIndex === outputIndex
-  );
-  
-  let currentLoopDemand = 0;
-  let currentExternalDemand = 0;
-  let externalConsumers = 0;
-  let loopConsumers = 0;
-  
-  for (const conn of connections) {
-    const consumer = graph.nodes[conn.targetNodeId];
-    if (!consumer) continue;
-    
-    const consumerInputFlow = flows.byNode[conn.targetNodeId]?.inputFlows[conn.targetInputIndex];
-    if (!consumerInputFlow) continue;
-    
-    // Check if this consumer is part of the loop chain
-    const inLoopChain = isConsumerInLoopChain(nodeId, conn.targetNodeId, graph);
-    
-    if (inLoopChain) {
-      currentLoopDemand += consumerInputFlow.needed;
-      loopConsumers++;
-    } else {
-      currentExternalDemand += consumerInputFlow.needed;
-      externalConsumers++;
-    }
-  }
-  
-  // ONLY apply equilibrium if this output has BOTH loop AND external consumers
-  if (loopConsumers > 0 && externalConsumers > 0) {
-    // The shortage represents NEW demand that needs to be met
-    // Current state: producing enough for currentLoopDemand + currentExternalDemand
-    // New state: need to produce enough for currentLoopDemand + currentExternalDemand + newExternalDemand
-    
-    const totalCurrentProduction = outputFlow.produced;
-    
-    // Calculate what fraction of current production goes to the loop
-    const loopRatio = totalCurrentProduction > EPSILON ? currentLoopDemand / totalCurrentProduction : 0;
-    
-    if (loopRatio > 0.05) { // Any significant loop (>5%)
-      // Calculate current external production (what's going to non-loop consumers)
-      const currentExternalProduction = totalCurrentProduction - currentLoopDemand;
-      
-      // New external production needed = current external + new shortage
-      const newExternalProduction = currentExternalProduction + externalDemand;
-      
-      // Apply equilibrium formula: P_total = P_external / (1 - loop_ratio)
-      const newTotalProduction = newExternalProduction / (1 - loopRatio);
-      
-      // The ADDITIONAL production needed beyond current
-      const additionalProduction = newTotalProduction - totalCurrentProduction;
-      
-      return additionalProduction;
-    }
-    return externalDemand;
-  }
-  return externalDemand;
-};
+// Loop detection logic removed - suggestions now use direct calculations only
 
 /**
  * Calculate machine count adjustment suggestions based on connection topology
@@ -398,15 +199,8 @@ export const calculateSuggestions = (graph, flows) => {
         const outputFlow = flows.byNode[outputInfo.nodeId]?.outputFlows[outputInfo.outputIndex];
         if (!outputFlow) return;
         
-        // Check if this output feeds a loop
-        const feedsLoop = checkOutputFeedsLoop(outputInfo.nodeId, outputInfo.outputIndex, graph);
-        
-        // Calculate adjusted shortage accounting for loop equilibrium
-        const adjustedShortage = feedsLoop
-          ? calculateOutputLoopEquilibrium(outputInfo.nodeId, outputInfo.outputIndex, shortage, graph, flows)
-          : shortage;
-        
-        const increase = adjustedShortage / ratePerMachine;
+        // Calculate increase needed (direct calculation, no loop adjustment)
+        const increase = shortage / ratePerMachine;
         const newCount = currentMachineCount + increase;
         
         // Check if this supplier has other outputs that would be affected
@@ -443,10 +237,10 @@ export const calculateSuggestions = (graph, flows) => {
           handleIndex: outputInfo.outputIndex,
           productId: output.productId,
           adjustmentType: 'increase',
-          reason: feedsLoop ? 'loop_demand' : 'connected_shortage',
+          reason: 'connected_shortage',
           currentFlow: outputFlow.produced,
-          targetFlow: outputFlow.produced + adjustedShortage,
-          deltaFlow: adjustedShortage,
+          targetFlow: outputFlow.produced + shortage,
+          deltaFlow: shortage,
           currentMachineCount,
           suggestedMachineCount: newCount,
           machineDelta: increase,
@@ -505,67 +299,8 @@ export const calculateSuggestions = (graph, flows) => {
       
       if (typeof ratePerMachine !== 'number' || ratePerMachine <= EPSILON) return;
       
-      // Check if this output feeds a loop and has external consumers
-      const feedsLoop = checkOutputFeedsLoop(nodeId, outputIndex, graph);
-      
-      let adjustedExcess = excess;
-      
-      if (feedsLoop) {
-        // Calculate how much we can safely reduce while maintaining loop
-        const productData = graph.products[output.productId];
-        if (productData) {
-          const connections = productData.connections.filter(
-            conn => conn.sourceNodeId === nodeId && conn.sourceOutputIndex === outputIndex
-          );
-          
-          let currentLoopDemand = 0;
-          let currentExternalDemand = 0;
-          let externalConsumers = 0;
-          
-          for (const conn of connections) {
-            const consumer = graph.nodes[conn.targetNodeId];
-            if (!consumer) continue;
-            
-            const consumerInputFlow = flows.byNode[conn.targetNodeId]?.inputFlows[conn.targetInputIndex];
-            if (!consumerInputFlow) continue;
-            
-            const inLoopChain = isConsumerInLoopChain(nodeId, conn.targetNodeId, graph);
-            
-            if (inLoopChain) {
-              currentLoopDemand += consumerInputFlow.needed;
-            } else {
-              currentExternalDemand += consumerInputFlow.needed;
-              externalConsumers++;
-            }
-          }
-          
-          // Only apply equilibrium if there are both loop and external consumers
-          if (currentLoopDemand > EPSILON && externalConsumers > 0) {
-            const totalCurrentProduction = outputFlow.produced;
-            const loopRatio = totalCurrentProduction > EPSILON ? currentLoopDemand / totalCurrentProduction : 0;
-            
-            if (loopRatio > 0.05) {
-              // Calculate equilibrium for reduction
-              // Current external production (what's actually going external)
-              const currentExternalProduction = totalCurrentProduction - currentLoopDemand;
-              
-              // We want to reduce external by 'excess' amount
-              const newExternalProduction = currentExternalProduction - excess;
-              
-              // New total production needed to maintain loop
-              const newTotalProduction = newExternalProduction / (1 - loopRatio);
-              
-              // The reduction we can safely make
-              const safeReduction = totalCurrentProduction - newTotalProduction;
-              adjustedExcess = safeReduction;
-              
-            }
-          }
-        }
-      }
-      
-      // Suggest decreasing this output (producer)
-      const reduction = adjustedExcess / ratePerMachine;
+      // Suggest decreasing this output (producer) - direct calculation
+      const reduction = excess / ratePerMachine;
       const newCount = currentMachineCount - reduction;
       
       if (newCount > EPSILON) {
@@ -575,10 +310,10 @@ export const calculateSuggestions = (graph, flows) => {
           handleIndex: outputIndex,
           productId: output.productId,
           adjustmentType: 'decrease',
-          reason: feedsLoop ? 'excess_with_loop' : 'excess',
+          reason: 'excess',
           currentFlow: outputFlow.produced,
-          targetFlow: outputFlow.produced - adjustedExcess,
-          deltaFlow: -adjustedExcess,
+          targetFlow: outputFlow.produced - excess,
+          deltaFlow: -excess,
           currentMachineCount,
           suggestedMachineCount: newCount,
           machineDelta: -reduction

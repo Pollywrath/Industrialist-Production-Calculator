@@ -5,6 +5,9 @@ import { DEPTH_OUTPUTS, calculateDrillMetrics, buildDrillInputs, buildDrillOutpu
 import { MICROCHIP_STAGES, calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from '../data/logicAssembler';
 import { calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs } from '../data/treeFarm';
 import { calculateFireboxMetrics, buildFireboxInputs, isIndustrialFireboxRecipe } from '../data/industrialFirebox';
+import { calculateWasteFacilityMetrics, buildWasteFacilityInputs } from '../data/undergroundWasteFacility';
+import { calculateLiquidDumpPollution, buildLiquidDumpInputs } from '../data/liquidDump';
+import { calculateLiquidBurnerPollution, buildLiquidBurnerInputs } from '../data/liquidBurner';
 import { applyTemperatureToOutputs, initializeRecipeTemperatures } from './appUtilities';
 import { DEFAULT_STEAM_TEMPERATURE } from './temperatureHandler';
 
@@ -256,6 +259,117 @@ export const configureSpecialRecipe = (recipe, autoConnect, selectedProduct, las
     return configuredRecipe;
   }
   
+  // Handle underground waste facility
+  if (recipe.isWasteFacility || recipe.id === 'r_underground_waste_facility') {
+    let defaultItemProductId = 'p_any_item';
+    let defaultFluidProductId = 'p_any_fluid';
+    
+    const searchedProductId = autoConnect?.productId || selectedProduct?.id;
+    
+    if (searchedProductId) {
+      // If selecting concrete blocks or lead ingots, don't modify defaults (will auto-connect to proper input)
+      if (searchedProductId === 'p_concrete_block' || searchedProductId === 'p_lead_ingot') {
+        defaultItemProductId = 'p_fission_byproducts';
+        defaultFluidProductId = 'p_depleted_uf6_waste';
+      } else {
+        const product = getProduct(searchedProductId);
+        if (product?.type === 'item') {
+          defaultItemProductId = searchedProductId;
+          defaultFluidProductId = 'p_any_fluid';
+        } else if (product?.type === 'fluid') {
+          defaultItemProductId = 'p_any_item';
+          defaultFluidProductId = searchedProductId;
+        }
+      }
+    } else {
+      // Default values when created from machine menu
+      defaultItemProductId = 'p_fission_byproducts';
+      defaultFluidProductId = 'p_depleted_uf6_waste';
+    }
+    
+    const wasteFacilityInputs = buildWasteFacilityInputs(0, 0, defaultItemProductId, defaultFluidProductId, 'p_concrete_block');
+    const metrics = calculateWasteFacilityMetrics(0, 0);
+    
+    configuredRecipe = {
+      ...configuredRecipe,
+      inputs: wasteFacilityInputs,
+      outputs: [],
+      wasteFacilitySettings: { 
+        itemProductId: defaultItemProductId,
+        fluidProductId: defaultFluidProductId,
+        itemFlowRate: 0,
+        fluidFlowRate: 0
+      },
+      cycle_time: metrics.cycleTime,
+      power_consumption: 1000000,
+      pollution: 0
+    };
+    
+    return configuredRecipe;
+  }
+  
+  // Handle liquid dump
+  if (recipe.isLiquidDump || recipe.id === 'r_liquid_dump') {
+    let fluidProductIds = ['p_water', 'p_residue'];
+    
+    const searchedProductId = autoConnect?.productId || selectedProduct?.id;
+    if (searchedProductId) {
+      const product = getProduct(searchedProductId);
+      if (product?.type === 'fluid') {
+        // Set all inputs to the selected fluid
+        fluidProductIds = [searchedProductId, searchedProductId];
+      }
+    }
+    
+    const liquidDumpInputs = buildLiquidDumpInputs(fluidProductIds);
+    const pollution = calculateLiquidDumpPollution(liquidDumpInputs);
+    
+    configuredRecipe = {
+      ...configuredRecipe,
+      inputs: liquidDumpInputs,
+      outputs: [],
+      liquidDumpSettings: {
+        fluidProductIds
+      },
+      cycle_time: 1,
+      power_consumption: 0,
+      pollution
+    };
+    
+    return configuredRecipe;
+  }
+  
+  // Handle liquid burner
+  if (recipe.isLiquidBurner || recipe.id === 'r_liquid_burner') {
+    let fluidProductIds = ['p_water', 'p_filtered_water', 'p_distilled_water', 'p_steam', 'p_oxygen', 'p_hydrogen', 'p_residue', 'p_depleted_uf6_waste'];
+    
+    const searchedProductId = autoConnect?.productId || selectedProduct?.id;
+    if (searchedProductId) {
+      const product = getProduct(searchedProductId);
+      if (product?.type === 'fluid') {
+        // Set all inputs to the selected fluid
+        fluidProductIds = Array(8).fill(searchedProductId);
+      }
+    }
+    
+    const liquidBurnerInputs = buildLiquidBurnerInputs(fluidProductIds);
+    const pollution = calculateLiquidBurnerPollution(liquidBurnerInputs);
+    
+    configuredRecipe = {
+      ...configuredRecipe,
+      inputs: liquidBurnerInputs,
+      outputs: [],
+      liquidBurnerSettings: {
+        fluidProductIds
+      },
+      cycle_time: 1,
+      power_consumption: 0,
+      pollution
+    };
+    
+    return configuredRecipe;
+  }
+  
   return configuredRecipe;
 };
 
@@ -285,6 +399,14 @@ export const getSpecialRecipeInputs = (recipeId) => {
   ];
   if (fireboxRecipesWithFuel.includes(recipeId)) {
     return ['p_coal', 'p_coke_fuel', 'p_planks', 'p_oak_log'];
+  }
+  
+  if (recipeId === 'r_underground_waste_facility') {
+    return ['p_any_item', 'p_any_fluid', 'p_concrete_blocks', 'p_lead_ingot'];
+  }
+  
+  if (recipeId === 'r_liquid_dump' || recipeId === 'r_liquid_burner') {
+    return ['p_any_fluid'];
   }
   
   return [];
@@ -320,5 +442,8 @@ export const isSpecialRecipe = (recipe) => {
   return recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill' ||
          recipe.isLogicAssembler || recipe.id === 'r_logic_assembler' ||
          recipe.isTreeFarm || recipe.id === 'r_tree_farm' ||
+         recipe.isWasteFacility || recipe.id === 'r_underground_waste_facility' ||
+         recipe.isLiquidDump || recipe.id === 'r_liquid_dump' ||
+         recipe.isLiquidBurner || recipe.id === 'r_liquid_burner' ||
          (recipe.machine_id === 'm_industrial_firebox' && isIndustrialFireboxRecipe(recipe.id));
 };

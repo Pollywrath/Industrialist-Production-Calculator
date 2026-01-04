@@ -16,6 +16,9 @@ import { DEFAULT_LOGIC_ASSEMBLER_RECIPE, MICROCHIP_STAGES, calculateLogicAssembl
 import { DEFAULT_TREE_FARM_RECIPE, calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs } from './data/treeFarm';
 import { FUEL_PRODUCTS, calculateFireboxMetrics, buildFireboxInputs, isIndustrialFireboxRecipe } from './data/industrialFirebox';
 import { applyChemicalPlantSettings, DEFAULT_CHEMICAL_PLANT_SETTINGS } from './data/chemicalPlant';
+import { DEFAULT_WASTE_FACILITY_RECIPE, calculateWasteFacilityMetrics, buildWasteFacilityInputs } from './data/undergroundWasteFacility';
+import { DEFAULT_LIQUID_DUMP_RECIPE, calculateLiquidDumpPollution, buildLiquidDumpInputs } from './data/liquidDump';
+import { DEFAULT_LIQUID_BURNER_RECIPE, calculateLiquidBurnerPollution, buildLiquidBurnerInputs } from './data/liquidBurner';
 import { solveProductionNetwork, getExcessProducts, getDeficientProducts } from './solvers/productionSolver';
 import { clearFlowCache } from './solvers/flowCalculator';
 import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, getRecipesProducingProductFiltered, 
@@ -173,6 +176,7 @@ function App() {
   const [lastAssemblerConfig, setLastAssemblerConfig] = useState(null);
   const [lastTreeFarmConfig, setLastTreeFarmConfig] = useState(null);
   const [lastFireboxConfig, setLastFireboxConfig] = useState(null);
+  const [lastWasteFacilityConfig, setLastWasteFacilityConfig] = useState(null);
   const [recipeMachineCounts, setRecipeMachineCounts] = useState({});
   const [pendingNode, setPendingNode] = useState(null); // For middle-click duplication
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -256,6 +260,7 @@ function App() {
       setLastAssemblerConfig(savedState.lastAssemblerConfig || null);
       setLastTreeFarmConfig(savedState.lastTreeFarmConfig || null);
       setLastFireboxConfig(savedState.lastFireboxConfig || null);
+      setLastWasteFacilityConfig(savedState.lastWasteFacilityConfig || null);
       setNodeId(savedState.nodeId || 0);
       setTargetIdCounter(savedState.targetIdCounter || 0);
     }
@@ -287,9 +292,9 @@ function App() {
     })));
   }, [edgeSettings, setEdges]);
   useEffect(() => { 
-    const stateToSave = { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig };
+    const stateToSave = { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig };
     localStorage.setItem('industrialist_canvas_state', JSON.stringify(stateToSave));
-  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig]);
+  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig]);
 
   const calculateTotalStats = useCallback(() => {
     let totalPower = 0, totalPollution = 0, totalModelCount = 0;
@@ -570,26 +575,104 @@ function App() {
             
             for (let i = 0; i < nodesWithTemp.length; i++) {
               const node = nodesWithTemp[i];
-              newNodes[i] = {
-                ...node,
-                data: {
-                  ...node.data,
-                  flows: productionSolution.flows.byNode[node.id] || null,
-                  suggestions: productionSolution.suggestions || []
-                }
-              };
+              const recipe = node.data?.recipe;
+              
+              // Update waste facility cycle times based on flows
+              if (recipe?.isWasteFacility) {
+                const flows = productionSolution.flows.byNode[node.id];
+                const itemFlow = Math.min(flows?.inputFlows[0]?.connected || 0, 240);
+                const fluidFlow = Math.min(flows?.inputFlows[1]?.connected || 0, 240);
+                
+                const settings = recipe.wasteFacilitySettings || {};
+                const metrics = calculateWasteFacilityMetrics(itemFlow, fluidFlow);
+                
+                // Rebuild inputs with updated quantities
+                const updatedInputs = buildWasteFacilityInputs(
+                  itemFlow,
+                  fluidFlow,
+                  recipe.inputs[0].product_id,
+                  recipe.inputs[1].product_id
+                );
+                
+                newNodes[i] = {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    recipe: {
+                      ...recipe,
+                      inputs: updatedInputs,
+                      cycle_time: metrics.cycleTime,
+                      wasteFacilitySettings: {
+                        ...settings,
+                        itemFlowRate: itemFlow,
+                        fluidFlowRate: fluidFlow
+                      }
+                    },
+                    flows: productionSolution.flows.byNode[node.id] || null,
+                    suggestions: productionSolution.suggestions || []
+                  }
+                };
+              } else {
+                newNodes[i] = {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    flows: productionSolution.flows.byNode[node.id] || null,
+                    suggestions: productionSolution.suggestions || []
+                  }
+                };
+              }
             }
           } else {
             for (let i = 0; i < nds.length; i++) {
               const node = nds[i];
-              newNodes[i] = {
-                ...node,
-                data: {
-                  ...node.data,
-                  flows: productionSolution.flows.byNode[node.id] || null,
-                  suggestions: productionSolution.suggestions || []
-                }
-              };
+              const recipe = node.data?.recipe;
+              
+              // Update waste facility cycle times based on flows
+              if (recipe?.isWasteFacility) {
+                const flows = productionSolution.flows.byNode[node.id];
+                const itemFlow = Math.min(flows?.inputFlows[0]?.connected || 0, 240);
+                const fluidFlow = Math.min(flows?.inputFlows[1]?.connected || 0, 240);
+                
+                const settings = recipe.wasteFacilitySettings || {};
+                const metrics = calculateWasteFacilityMetrics(itemFlow, fluidFlow);
+                
+                // Rebuild inputs with updated quantities
+                const updatedInputs = buildWasteFacilityInputs(
+                  itemFlow,
+                  fluidFlow,
+                  recipe.inputs[0].product_id,
+                  recipe.inputs[1].product_id
+                );
+                
+                newNodes[i] = {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    recipe: {
+                      ...recipe,
+                      inputs: updatedInputs,
+                      cycle_time: metrics.cycleTime,
+                      wasteFacilitySettings: {
+                        ...settings,
+                        itemFlowRate: itemFlow,
+                        fluidFlowRate: fluidFlow
+                      }
+                    },
+                    flows: productionSolution.flows.byNode[node.id] || null,
+                    suggestions: productionSolution.suggestions || []
+                  }
+                };
+              } else {
+                newNodes[i] = {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    flows: productionSolution.flows.byNode[node.id] || null,
+                    suggestions: productionSolution.suggestions || []
+                  }
+                };
+              }
             }
           }
           
@@ -709,13 +792,122 @@ function App() {
     const sourceNode = nodes.find(n => n.id === params.source);
     const targetNode = nodes.find(n => n.id === params.target);
     if (!sourceNode || !targetNode) return;
-    const sourceProductId = sourceNode.data.recipe.outputs[parseInt(params.sourceHandle.split('-')[1])]?.product_id;
-    const targetProductId = targetNode.data.recipe.inputs[parseInt(params.targetHandle.split('-')[1])]?.product_id;
-    if (sourceProductId !== targetProductId) return;
+    
+    const sourceOutput = sourceNode.data.recipe.outputs[parseInt(params.sourceHandle.split('-')[1])];
+    const targetInput = targetNode.data.recipe.inputs[parseInt(params.targetHandle.split('-')[1])];
+    
+    if (!sourceOutput || !targetInput) return;
+    
+    const sourceProductId = sourceOutput.product_id;
+    const targetProductId = targetInput.product_id;
+    
+    // Handle any product inputs - validate type matching
+    if (targetInput.isAnyProduct) {
+      const sourceProduct = getProduct(sourceProductId);
+      const acceptedType = targetInput.acceptedType;
+      
+      if (acceptedType && sourceProduct?.type !== acceptedType) {
+        // Type mismatch - cannot connect
+        return;
+      }
+      
+      // Update target input to use the actual product
+      setNodes(nds => nds.map(n => {
+        if (n.id === targetNode.id) {
+          const updatedInputs = [...n.data.recipe.inputs];
+          const inputIndex = parseInt(params.targetHandle.split('-')[1]);
+          updatedInputs[inputIndex] = {
+            ...updatedInputs[inputIndex],
+            product_id: sourceProductId,
+            isAnyProduct: false
+          };
+          
+          // For waste facility, recalculate requirements
+          if (n.data.recipe.isWasteFacility) {
+            const settings = n.data.recipe.wasteFacilitySettings || {};
+            const flows = productionSolution?.flows?.byNode[params.source];
+            const sourceOutputIndex = parseInt(params.sourceHandle.split('-')[1]);
+            const sourceOutputFlow = flows?.outputFlows[sourceOutputIndex];
+            const availableFlow = sourceOutputFlow ? (sourceOutputFlow.produced - sourceOutputFlow.connected) : 0;
+            
+            // Cap at 240/s max per input
+            const cappedFlow = Math.min(availableFlow, 240);
+            
+            const inputIndex = parseInt(params.targetHandle.split('-')[1]);
+            if (inputIndex === 0) {
+              // Item input
+              settings.itemFlowRate = cappedFlow;
+            } else if (inputIndex === 1) {
+              // Fluid input
+              settings.fluidFlowRate = cappedFlow;
+            }
+            
+            const metrics = calculateWasteFacilityMetrics(
+              settings.itemFlowRate || 0,
+              settings.fluidFlowRate || 0
+            );
+            
+            const allInputs = buildWasteFacilityInputs(
+              settings.itemFlowRate || 0,
+              settings.fluidFlowRate || 0,
+              inputIndex === 0 ? sourceProductId : updatedInputs[0].product_id,
+              inputIndex === 1 ? sourceProductId : updatedInputs[1].product_id
+            );
+            
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                recipe: {
+                  ...n.data.recipe,
+                  inputs: allInputs,
+                  cycle_time: metrics.cycleTime,
+                  wasteFacilitySettings: settings
+                }
+              }
+            };
+          }
+          
+          // For liquid dump/burner, recalculate pollution
+          if (n.data.recipe.isLiquidDump || n.data.recipe.isLiquidBurner) {
+            const pollution = n.data.recipe.isLiquidDump 
+              ? calculateLiquidDumpPollution(updatedInputs)
+              : calculateLiquidBurnerPollution(updatedInputs);
+            
+            return {
+              ...n,
+              data: {
+                ...n.data,
+                recipe: {
+                  ...n.data.recipe,
+                  inputs: updatedInputs,
+                  pollution
+                }
+              }
+            };
+          }
+          
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              recipe: {
+                ...n.data.recipe,
+                inputs: updatedInputs
+              }
+            }
+          };
+        }
+        return n;
+      }));
+    } else if (sourceProductId !== targetProductId) {
+      return;
+    }
+    
     setEdges((eds) => addEdge({ ...params, type: 'custom', animated: false, data: edgeSettings }, eds));
     clearFlowCache();
     triggerRecalculation('connection');
-  }, [setEdges, nodes, edgeSettings, triggerRecalculation]);
+  }, [setEdges, nodes, edgeSettings, triggerRecalculation, setNodes, productionSolution]);
 
   const resetSelector = () => {
     setShowRecipeSelector(false); setSelectedProduct(null); setSelectedMachine(null); setSelectorMode('product');
@@ -957,6 +1149,85 @@ function App() {
     triggerRecalculation('settings');
   }, [setNodes, triggerRecalculation]);
 
+  const handleWasteFacilitySettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
+    setLastWasteFacilityConfig({
+      itemProductId: settings.itemProductId,
+      fluidProductId: settings.fluidProductId
+    });
+    
+    setNodes(nds => nds.map(n => {
+      if (n.id !== nodeId) return n;
+      
+      // Get current flow rates from existing settings
+      const currentSettings = n.data.recipe.wasteFacilitySettings || {};
+      const itemFlowRate = currentSettings.itemFlowRate || 0;
+      const fluidFlowRate = currentSettings.fluidFlowRate || 0;
+      
+      // Calculate metrics with current flow rates
+      const metrics = calculateWasteFacilityMetrics(itemFlowRate, fluidFlowRate);
+      
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          recipe: {
+            ...n.data.recipe,
+            inputs: inputs.length > 0 ? inputs : n.data.recipe.inputs,
+            wasteFacilitySettings: { ...settings, itemFlowRate, fluidFlowRate },
+            cycle_time: metrics.cycleTime
+          },
+          leftHandles: Math.max(inputs.length, 1)
+        }
+      };
+    }));
+    cleanupInvalidConnections(nodeId, inputs, outputs);
+    triggerRecalculation('settings');
+  }, [cleanupInvalidConnections, triggerRecalculation, setNodes]);
+
+  const handleLiquidDumpSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
+    setNodes(nds => nds.map(n => {
+      if (n.id !== nodeId) return n;
+      
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          recipe: {
+            ...n.data.recipe,
+            inputs: inputs.length > 0 ? inputs : n.data.recipe.inputs,
+            liquidDumpSettings: settings,
+            pollution: calculateLiquidDumpPollution(inputs)
+          },
+          leftHandles: Math.max(inputs.length, 1)
+        }
+      };
+    }));
+    cleanupInvalidConnections(nodeId, inputs, outputs);
+    triggerRecalculation('settings');
+  }, [cleanupInvalidConnections, triggerRecalculation, setNodes]);
+
+  const handleLiquidBurnerSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
+    setNodes(nds => nds.map(n => {
+      if (n.id !== nodeId) return n;
+      
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          recipe: {
+            ...n.data.recipe,
+            inputs: inputs.length > 0 ? inputs : n.data.recipe.inputs,
+            liquidBurnerSettings: settings,
+            pollution: calculateLiquidBurnerPollution(inputs)
+          },
+          leftHandles: Math.max(inputs.length, 1)
+        }
+      };
+    }));
+    cleanupInvalidConnections(nodeId, inputs, outputs);
+    triggerRecalculation('settings');
+  }, [cleanupInvalidConnections, triggerRecalculation, setNodes]);
+
   const createRecipeBox = useCallback((recipe, overrideMachineCount = null) => {
     
     const machine = getMachine(recipe.machine_id);
@@ -1129,8 +1400,8 @@ function App() {
         machineCount: calculatedMachineCount, 
         displayMode, 
         machineDisplayMode,
-        leftHandles: recipeWithTemp.inputs.length, 
-        rightHandles: recipeWithTemp.outputs.length, 
+        leftHandles: Math.max(recipeWithTemp.inputs.length, 1), 
+        rightHandles: Math.max(recipeWithTemp.outputs.length, 1),
         onInputClick: openRecipeSelectorForInput, 
         onOutputClick: openRecipeSelectorForOutput,
         onDrillSettingsChange: handleDrillSettingsChange, 
@@ -1140,6 +1411,9 @@ function App() {
         onTemperatureSettingsChange: handleTemperatureSettingsChange, 
         onBoilerSettingsChange: handleBoilerSettingsChange, 
         onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange, 
+        onWasteFacilitySettingsChange: handleWasteFacilitySettingsChange,
+        onLiquidDumpSettingsChange: handleLiquidDumpSettingsChange,
+        onLiquidBurnerSettingsChange: handleLiquidBurnerSettingsChange,
         onMiddleClick: onNodeMiddleClick,
         onHandleDoubleClick: handleHandleDoubleClick,
         globalPollution, 
@@ -1157,7 +1431,21 @@ function App() {
       if (autoConnectTarget && calculatedMachineCount > 0) {
         setTimeout(() => {
           const searchKey = autoConnectTarget.isOutput ? 'inputs' : 'outputs';
-          const index = recipeWithTemp[searchKey].findIndex(item => item.product_id === autoConnectTarget.productId);
+          let index = -1;
+          
+          // Special handling for waste facility concrete/lead inputs
+          if ((recipeWithTemp.isWasteFacility || recipeWithTemp.id === 'r_underground_waste_facility') && !autoConnectTarget.isOutput) {
+            if (autoConnectTarget.productId === 'p_concrete_block') {
+              index = 2; // 3rd input
+            } else if (autoConnectTarget.productId === 'p_lead_ingot') {
+              index = 3; // 4th input
+            } else {
+              index = recipeWithTemp[searchKey].findIndex(item => item.product_id === autoConnectTarget.productId);
+            }
+          } else {
+            index = recipeWithTemp[searchKey].findIndex(item => item.product_id === autoConnectTarget.productId);
+          }
+          
           if (index !== -1) {
             const sourceHandleIndex = autoConnectTarget.isOutput ? autoConnectTarget.outputIndex : index;
             const targetHandleIndex = autoConnectTarget.isOutput ? index : autoConnectTarget.inputIndex;
@@ -1377,6 +1665,7 @@ function App() {
     setNodes((nds) => [...nds, newNode]);
     setNodeId((id) => id + 1);
     setPendingNode(null);
+    triggerRecalculation('node');
   }, [pendingNode, nodeId, displayMode, machineDisplayMode, openRecipeSelectorForInput, openRecipeSelectorForOutput,
     handleDrillSettingsChange, handleLogicAssemblerSettingsChange, handleTreeFarmSettingsChange,
     handleIndustrialFireboxSettingsChange, handleTemperatureSettingsChange, handleBoilerSettingsChange,
@@ -1485,17 +1774,37 @@ function App() {
     
     if (!selectedProduct) return [];
     
+    const product = getProduct(selectedProduct.id);
     const producers = getRecipesProducingProductFiltered(selectedProduct.id);
     const consumers = getRecipesUsingProduct(selectedProduct.id);
     
     // Check special recipes
-    const specialRecipes = [DEFAULT_DRILL_RECIPE, DEFAULT_LOGIC_ASSEMBLER_RECIPE, DEFAULT_TREE_FARM_RECIPE];
+    const specialRecipes = [DEFAULT_DRILL_RECIPE, DEFAULT_LOGIC_ASSEMBLER_RECIPE, DEFAULT_TREE_FARM_RECIPE, 
+      DEFAULT_WASTE_FACILITY_RECIPE, DEFAULT_LIQUID_DUMP_RECIPE, DEFAULT_LIQUID_BURNER_RECIPE];
     const specialProducers = specialRecipes.filter(sr => 
       getSpecialRecipeOutputs(sr.id).includes(selectedProduct.id)
     );
-    const specialConsumers = specialRecipes.filter(sr => 
-      getSpecialRecipeInputs(sr.id).includes(selectedProduct.id)
-    );
+    
+    // Special consumers need type-based matching for waste facility, liquid dump, and burner
+    const specialConsumers = specialRecipes.filter(sr => {
+      const inputs = getSpecialRecipeInputs(sr.id);
+      
+      // Exact match for inputs
+      if (inputs.includes(selectedProduct.id)) return true;
+      
+      // Type-based matching for special recipes
+      if (product) {
+        // Waste facility accepts any item or fluid
+        if (sr.id === 'r_underground_waste_facility') return true;
+        
+        // Liquid dump and burner accept any fluid
+        if ((sr.id === 'r_liquid_dump' || sr.id === 'r_liquid_burner') && product.type === 'fluid') {
+          return true;
+        }
+      }
+      
+      return false;
+    });
     
     if (recipeFilter === 'producers') {
       return [...producers, ...specialProducers];
@@ -1655,10 +1964,12 @@ function App() {
           setLastAssemblerConfig(imported.canvas.lastAssemblerConfig || null);
           setLastTreeFarmConfig(imported.canvas.lastTreeFarmConfig || null);
           setLastFireboxConfig(imported.canvas.lastFireboxConfig || null);
+          setLastWasteFacilityConfig(imported.canvas.lastWasteFacilityConfig || null);
           setNodeId(imported.canvas.nodeId || 0);
           setTargetIdCounter(imported.canvas.targetIdCounter || 0);
           
           clearFlowCache();
+          triggerRecalculation('node');
           alert('Canvas import successful!');
         }
         
@@ -1697,7 +2008,8 @@ function App() {
       lastDrillConfig, 
       lastAssemblerConfig, 
       lastTreeFarmConfig, 
-      lastFireboxConfig 
+      lastFireboxConfig,
+      lastWasteFacilityConfig
     };
     const blob = new Blob([JSON.stringify({ canvas }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -1709,13 +2021,13 @@ function App() {
   }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig]);
 
   const handleExport = useCallback(() => {
-    const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig } }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig } }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `industrialist-export-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
   }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig]);
 
   const handleRestoreDefaults = useCallback(() => {
     if (window.confirm('Restore all data to defaults? This will clear the canvas and reset all products, machines, and recipes.')) {
-      restoreDefaults(); setNodes([]); setEdges([]); setNodeId(0); setTargetProducts([]); setTargetIdCounter(0); setSoldProducts({}); setFavoriteRecipes([]); setLastDrillConfig(null); setLastAssemblerConfig(null); setLastTreeFarmConfig(null); setLastFireboxConfig(null); window.location.reload();
+      restoreDefaults(); setNodes([]); setEdges([]); setNodeId(0); setTargetProducts([]); setTargetIdCounter(0); setSoldProducts({}); setFavoriteRecipes([]); setLastDrillConfig(null); setLastAssemblerConfig(null); setLastTreeFarmConfig(null); setLastFireboxConfig(null); setLastWasteFacilityConfig(null); window.location.reload();
     }
   }, [setNodes, setEdges]);
 
@@ -1760,7 +2072,9 @@ function App() {
   });
 
   const filteredMachines = machines.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-    (m.id === 'm_mineshaft_drill' || m.id === 'm_logic_assembler' || m.id === 'm_tree_farm' || getRecipesForMachine(m.id).length > 0)).sort((a, b) => a.name.localeCompare(b.name));
+    (m.id === 'm_mineshaft_drill' || m.id === 'm_logic_assembler' || m.id === 'm_tree_farm' || 
+     m.id === 'm_underground_waste_facility' || m.id === 'm_liquid_dump' || m.id === 'm_liquid_burner' || 
+     getRecipesForMachine(m.id).length > 0)).sort((a, b) => a.name.localeCompare(b.name));
 
   const handleMachineSelect = (machine) => {
   if (machine.id === 'm_mineshaft_drill') {
@@ -1771,6 +2085,15 @@ function App() {
     resetSelector();
   } else if (machine.id === 'm_tree_farm') {
     createRecipeBox(DEFAULT_TREE_FARM_RECIPE, 1);
+    resetSelector();
+  } else if (machine.id === 'm_underground_waste_facility') {
+    createRecipeBox(DEFAULT_WASTE_FACILITY_RECIPE, 1);
+    resetSelector();
+  } else if (machine.id === 'm_liquid_dump') {
+    createRecipeBox(DEFAULT_LIQUID_DUMP_RECIPE, 1);
+    resetSelector();
+  } else if (machine.id === 'm_liquid_burner') {
+    createRecipeBox(DEFAULT_LIQUID_BURNER_RECIPE, 1);
     resetSelector();
   } else {
     setSelectedMachine(machine);

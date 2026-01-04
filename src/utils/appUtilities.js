@@ -1,9 +1,12 @@
-import { recipes } from '../data/dataLoader';
+import { recipes, getProduct } from '../data/dataLoader';
 import { DEPTH_OUTPUTS } from '../data/mineshaftDrill';
 import { MICROCHIP_STAGES } from '../data/logicAssembler';
 import { HEAT_SOURCES, calculateOutputTemperature, DEFAULT_BOILER_INPUT_TEMPERATURE, 
   DEFAULT_WATER_TEMPERATURE, DEFAULT_STEAM_TEMPERATURE, getDefaultTemperatureSettings, isTemperatureProduct } from '../utils/temperatureHandler';
 import { hasTempDependentCycle, TEMP_DEPENDENT_MACHINES } from '../utils/temperatureDependentCycles';
+import { DEFAULT_WASTE_FACILITY_RECIPE } from '../data/undergroundWasteFacility';
+import { DEFAULT_LIQUID_DUMP_RECIPE } from '../data/liquidDump';
+import { DEFAULT_LIQUID_BURNER_RECIPE } from '../data/liquidBurner';
 
 export const smartFormat = (num) => typeof num === 'number' ? Math.round(num * 10000) / 10000 : num;
 
@@ -22,14 +25,27 @@ export const formatPowerDisplay = (power) => {
 };
 
 export const getRecipesUsingProduct = (productId) => {
-  // Import FUEL_PRODUCTS at the top of the file if not already imported
   const fuelProductIds = ['p_coal', 'p_coke_fuel', 'p_planks', 'p_oak_log'];
   const fireboxRecipesWithFuel = [
     'r_industrial_firebox_01', 'r_industrial_firebox_02', 'r_industrial_firebox_03',
     'r_industrial_firebox_04', 'r_industrial_firebox_05', 'r_industrial_firebox_06'
   ];
   
-  return recipes.filter(r => {
+  const product = getProduct(productId);
+  const specialRecipes = [];
+  
+  // Add waste facility for any item or fluid
+  if (product) {
+    specialRecipes.push(DEFAULT_WASTE_FACILITY_RECIPE);
+  }
+  
+  // Add liquid dump and burner for any fluid
+  if (product?.type === 'fluid') {
+    specialRecipes.push(DEFAULT_LIQUID_DUMP_RECIPE);
+    specialRecipes.push(DEFAULT_LIQUID_BURNER_RECIPE);
+  }
+  
+  const standardRecipes = recipes.filter(r => {
     if (['r_mineshaft_drill_01', 'r_logic_assembler_01'].includes(r.id)) return false;
     
     // Check if recipe directly uses this product
@@ -42,6 +58,8 @@ export const getRecipesUsingProduct = (productId) => {
     
     return directlyUsesProduct || isFuelForFirebox;
   });
+  
+  return [...standardRecipes, ...specialRecipes];
 };
 
 export const getRecipesProducingProductFiltered = (productId) => 
@@ -50,7 +68,24 @@ export const getRecipesProducingProductFiltered = (productId) =>
     r.outputs.some(o => o.product_id === productId && o.product_id !== 'p_variableproduct')
   );
 
-export const getRecipesForMachine = (machineId) => recipes.filter(r => r.machine_id === machineId);
+export const getRecipesForMachine = (machineId) => {
+  const standardRecipes = recipes.filter(r => r.machine_id === machineId);
+  
+  // Add special recipes for their machines
+  if (machineId === 'm_underground_waste_facility') {
+    return [DEFAULT_WASTE_FACILITY_RECIPE];
+  }
+  
+  if (machineId === 'm_liquid_dump') {
+    return [DEFAULT_LIQUID_DUMP_RECIPE];
+  }
+  
+  if (machineId === 'm_liquid_burner') {
+    return [DEFAULT_LIQUID_BURNER_RECIPE];
+  }
+  
+  return standardRecipes;
+};
 
 export const canDrillUseProduct = (productId) => 
   ['p_copper_drill_head', 'p_iron_drill_head', 'p_steel_drill_head', 'p_tungsten_carbide_drill_head',

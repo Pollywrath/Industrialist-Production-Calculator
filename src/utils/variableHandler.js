@@ -1,8 +1,14 @@
 const isVariable = (value) => value === 'Variable' || (typeof value === 'string' && value.toLowerCase().includes('variable'));
 const isVariableProduct = (productId) => productId === 'p_variableproduct';
 
-export const getProductName = (productId, getProductFn) => {
-  if (isVariableProduct(productId)) return 'Variable Product';
+export const getProductName = (productId, getProductFn, acceptedType) => {
+  if (isVariableProduct(productId)) {
+    if (acceptedType === 'item') return 'Variable Item';
+    if (acceptedType === 'fluid') return 'Variable Fluid';
+    return 'Variable Product';
+  }
+  if (productId === 'p_any_item') return 'Variable Item';
+  if (productId === 'p_any_fluid') return 'Variable Fluid';
   const product = getProductFn(productId);
   return product ? product.name : 'Unknown Product';
 };
@@ -46,7 +52,7 @@ export const formatPowerConsumption = (power) => {
 
 export const formatPollution = (pollution) => {
   if (isVariable(pollution)) return 'Variable';
-  if (typeof pollution === 'number') return `${pollution}%/hr`;
+  if (typeof pollution === 'number') return `${pollution.toFixed(3)}%/hr`;
   if (typeof pollution === 'string') return pollution.includes('%') ? pollution : `${pollution}%/hr`;
   return pollution;
 };
