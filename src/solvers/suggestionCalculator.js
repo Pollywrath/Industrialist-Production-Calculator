@@ -190,8 +190,6 @@ const checkOutputFeedsLoop = (startNodeId, outputIndex, graph) => {
   const output = startNode.outputs[outputIndex];
   if (!output) return false;
   
-  console.log(`[Loop Check START] Node ${startNodeId} output ${outputIndex} (${output.productId})`);
-  
   // BFS to trace all paths from this output
   const queue = [{ nodeId: startNodeId, outputIndex, depth: 0 }];
   const visited = new Set(); // Nodes we've fully explored
@@ -217,17 +215,12 @@ const checkOutputFeedsLoop = (startNodeId, outputIndex, graph) => {
       conn => conn.sourceNodeId === nodeId && conn.sourceOutputIndex === outIdx
     );
     
-    console.log(`${'  '.repeat(depth)}[Depth ${depth}] Node ${nodeId} output ${outIdx} (${nodeOutput.productId}): ${connections.length} consumers`);
-    
     for (const conn of connections) {
       const consumer = graph.nodes[conn.targetNodeId];
       if (!consumer) continue;
       
-      console.log(`${'  '.repeat(depth + 1)}Consumer: ${conn.targetNodeId} (${consumer.recipe?.name || 'Unknown'})`);
-      
       // Check if this consumer is the start node (loop detected!)
       if (conn.targetNodeId === startNodeId) {
-        console.log(`${'  '.repeat(depth + 1)}âœ… LOOP DETECTED: Consumer IS the start node!`);
         return true;
       }
       
@@ -237,8 +230,6 @@ const checkOutputFeedsLoop = (startNodeId, outputIndex, graph) => {
       }
     }
   }
-  
-  console.log(`  âŒ No loop detected after full traversal`);
   return false;
 };
 
@@ -299,8 +290,6 @@ const calculateOutputLoopEquilibrium = (nodeId, outputIndex, externalDemand, gra
   const productData = graph.products[output.productId];
   if (!productData) return externalDemand;
   
-  console.log(`[Loop Equilibrium] Node ${nodeId} output ${outputIndex} (${output.productId}), external demand: ${externalDemand.toFixed(4)}`);
-  
   // Find connections from this output
   const connections = productData.connections.filter(
     conn => conn.sourceNodeId === nodeId && conn.sourceOutputIndex === outputIndex
@@ -318,25 +307,17 @@ const calculateOutputLoopEquilibrium = (nodeId, outputIndex, externalDemand, gra
     const consumerInputFlow = flows.byNode[conn.targetNodeId]?.inputFlows[conn.targetInputIndex];
     if (!consumerInputFlow) continue;
     
-    console.log(`  Consumer ${conn.targetNodeId}: needs ${consumerInputFlow.needed.toFixed(4)}/s`);
-    
     // Check if this consumer is part of the loop chain
     const inLoopChain = isConsumerInLoopChain(nodeId, conn.targetNodeId, graph);
     
     if (inLoopChain) {
       currentLoopDemand += consumerInputFlow.needed;
       loopConsumers++;
-      console.log(`    âœ… Part of loop chain! Loop demand: ${consumerInputFlow.needed.toFixed(4)}/s`);
     } else {
       currentExternalDemand += consumerInputFlow.needed;
       externalConsumers++;
-      console.log(`    âŒ External consumer (not in loop)`);
     }
   }
-  
-  console.log(`  Loop consumers: ${loopConsumers}, External consumers: ${externalConsumers}`);
-  console.log(`  Current loop demand: ${currentLoopDemand.toFixed(4)}/s, Current external: ${currentExternalDemand.toFixed(4)}/s`);
-  console.log(`  NEW external demand (shortage): ${externalDemand.toFixed(4)}/s`);
   
   // ONLY apply equilibrium if this output has BOTH loop AND external consumers
   if (loopConsumers > 0 && externalConsumers > 0) {
@@ -348,8 +329,6 @@ const calculateOutputLoopEquilibrium = (nodeId, outputIndex, externalDemand, gra
     
     // Calculate what fraction of current production goes to the loop
     const loopRatio = totalCurrentProduction > EPSILON ? currentLoopDemand / totalCurrentProduction : 0;
-    
-    console.log(`  Loop ratio: ${(loopRatio * 100).toFixed(2)}% of current production`);
     
     if (loopRatio > 0.05) { // Any significant loop (>5%)
       // Calculate current external production (what's going to non-loop consumers)
@@ -364,20 +343,10 @@ const calculateOutputLoopEquilibrium = (nodeId, outputIndex, externalDemand, gra
       // The ADDITIONAL production needed beyond current
       const additionalProduction = newTotalProduction - totalCurrentProduction;
       
-      console.log(`  Current external production: ${currentExternalProduction.toFixed(4)}/s`);
-      console.log(`  New external production: ${newExternalProduction.toFixed(4)}/s`);
-      console.log(`  Equilibrium: new total production = ${newTotalProduction.toFixed(4)}/s`);
-      console.log(`  Current production = ${totalCurrentProduction.toFixed(4)}/s`);
-      console.log(`  Additional needed: ${additionalProduction.toFixed(4)}/s`);
       return additionalProduction;
     }
-    
-    // Small loop, just use the shortage directly
-    console.log(`  Small loop ratio, using shortage directly`);
     return externalDemand;
   }
-  
-  console.log(`  No loop adjustment needed`);
   return externalDemand;
 };
 
@@ -437,12 +406,8 @@ export const calculateSuggestions = (graph, flows) => {
           ? calculateOutputLoopEquilibrium(outputInfo.nodeId, outputInfo.outputIndex, shortage, graph, flows)
           : shortage;
         
-        console.log(`[Suggestion] Node ${outputInfo.nodeId} output ${outputInfo.outputIndex}: shortage=${shortage.toFixed(4)}, adjusted=${adjustedShortage.toFixed(4)}, feedsLoop=${feedsLoop}`);
-        
         const increase = adjustedShortage / ratePerMachine;
         const newCount = currentMachineCount + increase;
-        
-        console.log(`  Current machines: ${currentMachineCount.toFixed(4)}, Suggested: ${newCount.toFixed(4)} (increase: ${increase.toFixed(4)})`);
         
         // Check if this supplier has other outputs that would be affected
         const hasConstrainedOutputs = outputNode.outputs.length > 1 && outputNode.outputs.some((otherOutput, idx) => {
@@ -594,11 +559,6 @@ export const calculateSuggestions = (graph, flows) => {
               const safeReduction = totalCurrentProduction - newTotalProduction;
               adjustedExcess = safeReduction;
               
-              console.log(`[Excess Loop Equilibrium] Node ${nodeId} output ${outputIndex}`);
-              console.log(`  Loop ratio: ${(loopRatio * 100).toFixed(2)}%`);
-              console.log(`  Current production: ${totalCurrentProduction.toFixed(4)}/s`);
-              console.log(`  Raw excess: ${excess.toFixed(4)}/s`);
-              console.log(`  Adjusted excess (with loop): ${adjustedExcess.toFixed(4)}/s`);
             }
           }
         }

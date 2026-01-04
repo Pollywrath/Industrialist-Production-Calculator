@@ -242,10 +242,10 @@ const calculateProductConnectionFlows = (graph, productId, connections) => {
   return result;
 };
 
-// Clamp tiny values to zero - use 15 decimal precision for flow calculations
+// Clamp tiny values to zero - use relaxed precision for LP solver compatibility
 const clampFlow = (flow) => {
-  const EPSILON = 1e-15;
-  return Math.abs(flow) < EPSILON ? 0 : Math.round(flow * 1e15) / 1e15;
+  const EPSILON = 1e-12;
+  return Math.abs(flow) < EPSILON ? 0 : Math.round(flow * 1e12) / 1e12;
 };
 
 // Build optimized flow network with integer indices

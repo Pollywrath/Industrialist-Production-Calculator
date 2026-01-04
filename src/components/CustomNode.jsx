@@ -390,8 +390,8 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
 };
 
 const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, onHandleDoubleClick, suggestions }) => {
-  // Use same epsilon as excess/deficiency calculations (10 decimal precision)
-  const EPSILON = 1e-10;
+  // Use relaxed epsilon to handle floating-point precision from LP solver
+  const EPSILON = 1e-6;
   
   // Get colors from CSS variables (theme)
   const cssVars = getComputedStyle(document.documentElement);

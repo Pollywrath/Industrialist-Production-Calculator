@@ -23,9 +23,8 @@ import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, 
   initializeRecipeTemperatures } from './utils/appUtilities';
 import { configureSpecialRecipe, calculateMachineCountForAutoConnect, getSpecialRecipeInputs, getSpecialRecipeOutputs, isSpecialRecipe } from './utils/recipeBoxCreation';
 import { propagateMachineCount, propagateFromHandle, calculateMachineCountForNewConnection } from './utils/machineCountPropagator';
-import ComputeDebugPanel from './components/ComputeDebugPanel';
 import { buildProductionGraph } from './solvers/graphBuilder';
-import { computeMachines, getLastComputeDebugInfo } from './solvers/computeMachinesSolver';
+import { computeMachines } from './solvers/computeMachinesSolver';
   
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
@@ -1457,9 +1456,6 @@ function App() {
     setNewNodePendingMachineCount(null);
   }, [newNodePendingMachineCount, deleteRecipeBoxAndTarget]);
 
-  const [showComputeDebug, setShowComputeDebug] = useState(false);
-  const [computeDebugInfo, setComputeDebugInfo] = useState(null);
-
   const handleCompute = useCallback(() => {
     if (targetProducts.length === 0) {
       alert('No target recipes. Please add target recipes (Shift+Click a node) before computing.');
@@ -1479,26 +1475,9 @@ function App() {
       
       triggerRecalculation('machineCount');
       
-      // Show debug info
-      const lastDebugInfo = getLastComputeDebugInfo();
-      if (lastDebugInfo) {
-        setComputeDebugInfo({
-          totalIterations: result.iterations,
-          converged: result.converged,
-          appliedUpdates: Array.from(result.updates.entries()).map(([nodeId, newCount]) => ({
-            nodeId,
-            nodeName: nodes.find(n => n.id === nodeId)?.data?.recipe?.name || 'Unknown',
-            oldCount: nodes.find(n => n.id === nodeId)?.data?.machineCount || 0,
-            newCount
-          })),
-          iterations: lastDebugInfo.iterations,
-          targetNodeIds: lastDebugInfo.targetNodeIds,
-          graphTopology: lastDebugInfo.graphTopology
-        });
-      }
-      setShowComputeDebug(true);
+      alert(`Success! Updated ${result.updates.size} nodes to balance production.\n\nCheck console for detailed LP solver output.`);
     } else {
-      alert('No changes needed - production line is already balanced for the target recipes.');
+      alert(result.message || 'No changes needed - production line is already balanced.');
     }
   }, [targetProducts, nodes, edges, setNodes, triggerRecalculation]);
 
@@ -2471,8 +2450,7 @@ function App() {
           <div className="pending-node-hint">Left-click to place | Right-click to cancel</div>
         </div>
       )}
-      {showComputeDebug && <ComputeDebugPanel debugInfo={computeDebugInfo} onClose={() => setShowComputeDebug(false)} />}
-    </div>
+      </div>
   );
 }
 
