@@ -10,13 +10,14 @@ const WATER_VARIANTS = [
   'p_high_pressure_steam'
 ];
 
-export const calculateLiquidBurnerPollution = (fluidInputs) => {
+export const calculateLiquidBurnerPollution = (fluidInputs, flowRates = null) => {
   let totalPollution = 0;
   
-  fluidInputs.forEach(input => {
+  fluidInputs.forEach((input, index) => {
     if (!input.product_id || input.product_id === 'p_any_fluid') return;
     
-    const flowRate = input.quantity || 0;
+    // Use actual flow rate if provided, otherwise use max capacity
+    const flowRate = flowRates && flowRates[index] !== undefined ? flowRates[index] : (input.quantity || 0);
     
     if (WATER_VARIANTS.includes(input.product_id)) {
       // Water variants: 0 pollution

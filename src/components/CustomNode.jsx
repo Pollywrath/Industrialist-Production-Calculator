@@ -325,7 +325,7 @@ const CustomNode = memo(({ data, id }) => {
                 </>
               )
             ) : (
-              <div className="node-stat-row"><span className="node-stat-label">Power:</span> {formatPowerConsumption(recipe.power_consumption)}</div>
+              <div className="node-stat-row"><span className="node-stat-label">Power:</span> {powerConsumption}</div>
             )}
             <div className="node-stat-row"><span className="node-stat-label">Pollution:</span> {formatPollution(displayPollution)}</div>
           </div>
@@ -442,7 +442,7 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
   const displayQuantity = formatQuantity(input.quantity);
   
   return (
-    <div onClick={(e) => { if (onClick) { e.stopPropagation(); onClick(input.product_id, nodeId, index); } }}
+    <div onClick={(e) => { if (onClick) { e.stopPropagation(); onClick(input.product_id, nodeId, index, e); } }}
       title={`${displayQuantity}x ${productName}`}
       className={`node-rect ${isLeft ? 'input' : 'output'} ${onClick ? 'clickable' : ''}`}
       style={{

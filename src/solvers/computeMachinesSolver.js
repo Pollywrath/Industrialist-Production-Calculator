@@ -33,6 +33,20 @@ export const computeMachines = (nodes, edges, targetProducts) => {
   const lpResult = solveFullGraph(graph, targetNodeIds);
   
   if (!lpResult.feasible) {
+    if (lpResult.unsustainableLoops) {
+      const loopDescriptions = lpResult.unsustainableLoops.map(loop => 
+        loop.nodeNames.join(' → ')
+      ).join('\n  ');
+      
+      return {
+        success: false,
+        updates: new Map(),
+        converged: false,
+        iterations: 0,
+        message: `Unsustainable loops detected:\n  ${loopDescriptions}\n\nThese machines form cycles with no external input source.`
+      };
+    }
+    
     return {
       success: false,
       updates: new Map(),

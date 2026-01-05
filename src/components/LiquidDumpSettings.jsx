@@ -7,6 +7,7 @@ const LiquidDumpSettings = ({ nodeId, currentSettings, recipe, onSettingsChange,
   const [fluidProductIds, setFluidProductIds] = useState(
     currentSettings?.fluidProductIds || Array(2).fill('p_any_fluid')
   );
+  const [searchTerm, setSearchTerm] = useState('');
   const bubbleRef = React.useRef(null);
 
   const handleWheel = (e) => {
@@ -43,8 +44,18 @@ const LiquidDumpSettings = ({ nodeId, currentSettings, recipe, onSettingsChange,
   };
 
   const resetSettings = () => {
-    setFluidProductIds(Array(8).fill('p_any_fluid'));
+    setFluidProductIds(Array(2).fill('p_any_fluid'));
+    setSearchTerm('');
   };
+
+  const fluidProducts = products
+    .filter(p => {
+      if (p.type !== 'fluid') return false;
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const isSelected = fluidProductIds.includes(p.id);
+      return matchesSearch || isSelected;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return ReactDOM.createPortal(
     <div className="drill-settings-overlay" onClick={onClose}>
@@ -52,6 +63,18 @@ const LiquidDumpSettings = ({ nodeId, currentSettings, recipe, onSettingsChange,
         <h3 className="drill-settings-title">Liquid Dump Info</h3>
 
         <div className="drill-settings-content">
+          <div className="drill-setting-group">
+            <label className="drill-setting-label">Search Products:</label>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search fluids..."
+              className="input"
+              style={{ marginBottom: '15px' }}
+            />
+          </div>
+
           {[0, 1].map(index => (
             <div key={index} className="drill-setting-group">
               <label className="drill-setting-label">Input {index + 1} Product:</label>
@@ -61,7 +84,7 @@ const LiquidDumpSettings = ({ nodeId, currentSettings, recipe, onSettingsChange,
                 className="select"
               >
                 <option value="p_any_fluid">Any Fluid</option>
-                {products.filter(p => p.type === 'fluid').map(p => (
+                {fluidProducts.map(p => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>

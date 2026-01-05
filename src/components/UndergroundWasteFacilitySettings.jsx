@@ -6,6 +6,8 @@ import { getProduct, products } from '../data/dataLoader';
 const UndergroundWasteFacilitySettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) => {
   const [itemProductId, setItemProductId] = useState(currentSettings?.itemProductId || 'p_any_item');
   const [fluidProductId, setFluidProductId] = useState(currentSettings?.fluidProductId || 'p_any_fluid');
+  const [itemSearchTerm, setItemSearchTerm] = useState('');
+  const [fluidSearchTerm, setFluidSearchTerm] = useState('');
   const bubbleRef = React.useRef(null);
 
   const handleWheel = (e) => {
@@ -45,7 +47,27 @@ const UndergroundWasteFacilitySettings = ({ nodeId, currentSettings, onSettingsC
   const resetSettings = () => {
     setItemProductId('p_any_item');
     setFluidProductId('p_any_fluid');
+    setItemSearchTerm('');
+    setFluidSearchTerm('');
   };
+
+  const itemProducts = products
+    .filter(p => {
+      if (p.type !== 'item') return false;
+      const matchesSearch = p.name.toLowerCase().includes(itemSearchTerm.toLowerCase());
+      const isSelected = p.id === itemProductId;
+      return matchesSearch || isSelected;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const fluidProducts = products
+    .filter(p => {
+      if (p.type !== 'fluid') return false;
+      const matchesSearch = p.name.toLowerCase().includes(fluidSearchTerm.toLowerCase());
+      const isSelected = p.id === fluidProductId;
+      return matchesSearch || isSelected;
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   return ReactDOM.createPortal(
     <div className="drill-settings-overlay" onClick={onClose}>
@@ -54,6 +76,18 @@ const UndergroundWasteFacilitySettings = ({ nodeId, currentSettings, onSettingsC
 
         <div className="drill-settings-content">
           <div className="drill-setting-group">
+            <label className="drill-setting-label">Search Items:</label>
+            <input
+              type="text"
+              value={itemSearchTerm}
+              onChange={(e) => setItemSearchTerm(e.target.value)}
+              placeholder="Search items..."
+              className="input"
+              style={{ marginBottom: '10px' }}
+            />
+          </div>
+
+          <div className="drill-setting-group">
             <label className="drill-setting-label">Item Input Product:</label>
             <select 
               value={itemProductId} 
@@ -61,10 +95,22 @@ const UndergroundWasteFacilitySettings = ({ nodeId, currentSettings, onSettingsC
               className="select"
             >
               <option value="p_any_item">Any Item</option>
-              {products.filter(p => p.type === 'item').map(p => (
+              {itemProducts.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>
+          </div>
+
+          <div className="drill-setting-group" style={{ marginTop: '15px' }}>
+            <label className="drill-setting-label">Search Fluids:</label>
+            <input
+              type="text"
+              value={fluidSearchTerm}
+              onChange={(e) => setFluidSearchTerm(e.target.value)}
+              placeholder="Search fluids..."
+              className="input"
+              style={{ marginBottom: '10px' }}
+            />
           </div>
 
           <div className="drill-setting-group">
@@ -75,7 +121,7 @@ const UndergroundWasteFacilitySettings = ({ nodeId, currentSettings, onSettingsC
               className="select"
             >
               <option value="p_any_fluid">Any Fluid</option>
-              {products.filter(p => p.type === 'fluid').map(p => (
+              {fluidProducts.map(p => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
             </select>

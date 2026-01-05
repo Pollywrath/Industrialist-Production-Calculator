@@ -612,6 +612,50 @@ function App() {
                     suggestions: productionSolution.suggestions || []
                   }
                 };
+              }
+              // Update liquid dump pollution based on flows
+              else if (recipe?.isLiquidDump) {
+                const flows = productionSolution.flows.byNode[node.id];
+                const flowRates = recipe.inputs.map((input, idx) => 
+                  Math.min(flows?.inputFlows[idx]?.connected || 0, 15)
+                );
+                
+                const pollution = calculateLiquidDumpPollution(recipe.inputs, flowRates);
+                
+                newNodes[i] = {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    recipe: {
+                      ...recipe,
+                      pollution
+                    },
+                    flows: productionSolution.flows.byNode[node.id] || null,
+                    suggestions: productionSolution.suggestions || []
+                  }
+                };
+              }
+              // Update liquid burner pollution based on flows
+              else if (recipe?.isLiquidBurner) {
+                const flows = productionSolution.flows.byNode[node.id];
+                const flowRates = recipe.inputs.map((input, idx) => 
+                  Math.min(flows?.inputFlows[idx]?.connected || 0, 15)
+                );
+                
+                const pollution = calculateLiquidBurnerPollution(recipe.inputs, flowRates);
+                
+                newNodes[i] = {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    recipe: {
+                      ...recipe,
+                      pollution
+                    },
+                    flows: productionSolution.flows.byNode[node.id] || null,
+                    suggestions: productionSolution.suggestions || []
+                  }
+                };
               } else {
                 newNodes[i] = {
                   ...node,
@@ -658,6 +702,50 @@ function App() {
                         itemFlowRate: itemFlow,
                         fluidFlowRate: fluidFlow
                       }
+                    },
+                    flows: productionSolution.flows.byNode[node.id] || null,
+                    suggestions: productionSolution.suggestions || []
+                  }
+                };
+              }
+              // Update liquid dump pollution based on flows
+              else if (recipe?.isLiquidDump) {
+                const flows = productionSolution.flows.byNode[node.id];
+                const flowRates = recipe.inputs.map((input, idx) => 
+                  Math.min(flows?.inputFlows[idx]?.connected || 0, 15)
+                );
+                
+                const pollution = calculateLiquidDumpPollution(recipe.inputs, flowRates);
+                
+                newNodes[i] = {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    recipe: {
+                      ...recipe,
+                      pollution
+                    },
+                    flows: productionSolution.flows.byNode[node.id] || null,
+                    suggestions: productionSolution.suggestions || []
+                  }
+                };
+              }
+              // Update liquid burner pollution based on flows
+              else if (recipe?.isLiquidBurner) {
+                const flows = productionSolution.flows.byNode[node.id];
+                const flowRates = recipe.inputs.map((input, idx) => 
+                  Math.min(flows?.inputFlows[idx]?.connected || 0, 15)
+                );
+                
+                const pollution = calculateLiquidBurnerPollution(recipe.inputs, flowRates);
+                
+                newNodes[i] = {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    recipe: {
+                      ...recipe,
+                      pollution
                     },
                     flows: productionSolution.flows.byNode[node.id] || null,
                     suggestions: productionSolution.suggestions || []
@@ -939,9 +1027,28 @@ function App() {
       triggerRecalculation('connection');
       return;
     }
+    
+    // Check if source node is a heat source - use ref to get current nodes
+    const sourceNode = nodesRef.current.find(n => n.id === nodeId);
+    const machineId = sourceNode?.data?.recipe?.machine_id;
+    const isHeatSource = machineId && HEAT_SOURCES[machineId];
+    
     const product = getProduct(productId);
-    if (product) { setShowRecipeSelector(true); setSelectedProduct(product); setAutoConnectTarget({ nodeId, outputIndex, productId, isOutput: true }); setSelectorOpenedFrom('rectangle'); setRecipeFilter('consumers'); }
+    if (product) { 
+      setShowRecipeSelector(true); 
+      setSelectedProduct(product); 
+      setAutoConnectTarget({ 
+        nodeId, 
+        outputIndex, 
+        productId, 
+        isOutput: true,
+        isFromHeatSource: !!isHeatSource 
+      }); 
+      setSelectorOpenedFrom('rectangle'); 
+      setRecipeFilter('consumers'); 
+    }
   }, [setEdges]);
+
 
   const cleanupInvalidConnections = useCallback((nodeId, inputs, outputs) => {
     setEdges((eds) => {
@@ -1440,6 +1547,33 @@ function App() {
             } else if (autoConnectTarget.productId === 'p_lead_ingot') {
               index = 3; // 4th input
             } else {
+              index = recipeWithTemp[searchKey].findIndex(item => item.product_id === autoConnectTarget.productId);
+            }
+          }
+          // Special handling for heat sources connecting to boilers
+          else if (autoConnectTarget.isOutput && autoConnectTarget.isFromHeatSource) {
+            // Check if the NEW recipe being created is a boiler
+            const newMachine = getMachine(recipeWithTemp.machine_id);
+            const isBoiler = newMachine && HEAT_SOURCES[newMachine.id]?.type === 'boiler';
+            
+            if (isBoiler && recipeWithTemp.inputs.length >= 2) {
+              const firstInput = recipeWithTemp.inputs[0]?.product_id;
+              const secondInput = recipeWithTemp.inputs[1]?.product_id;
+              
+              // If both inputs are the same product AND match the source product, prefer second input
+              if (firstInput === secondInput && secondInput === autoConnectTarget.productId) {
+                index = 1; // Connect to coolant input
+              } 
+              // If only second input matches, connect to it
+              else if (secondInput === autoConnectTarget.productId) {
+                index = 1;
+              }
+              // Otherwise find first matching input
+              else {
+                index = recipeWithTemp[searchKey].findIndex(item => item.product_id === autoConnectTarget.productId);
+              }
+            } else {
+              // Normal connection for non-boilers
               index = recipeWithTemp[searchKey].findIndex(item => item.product_id === autoConnectTarget.productId);
             }
           } else {

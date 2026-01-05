@@ -31,20 +31,7 @@ export const getRecipesUsingProduct = (productId) => {
     'r_industrial_firebox_04', 'r_industrial_firebox_05', 'r_industrial_firebox_06'
   ];
   
-  const product = getProduct(productId);
-  const specialRecipes = [];
-  
-  // Add waste facility for any item or fluid
-  if (product) {
-    specialRecipes.push(DEFAULT_WASTE_FACILITY_RECIPE);
-  }
-  
-  // Add liquid dump and burner for any fluid
-  if (product?.type === 'fluid') {
-    specialRecipes.push(DEFAULT_LIQUID_DUMP_RECIPE);
-    specialRecipes.push(DEFAULT_LIQUID_BURNER_RECIPE);
-  }
-  
+  // Don't add special recipes here - they're handled in getAvailableRecipes
   const standardRecipes = recipes.filter(r => {
     if (['r_mineshaft_drill_01', 'r_logic_assembler_01'].includes(r.id)) return false;
     
@@ -59,7 +46,7 @@ export const getRecipesUsingProduct = (productId) => {
     return directlyUsesProduct || isFuelForFirebox;
   });
   
-  return [...standardRecipes, ...specialRecipes];
+  return standardRecipes;
 };
 
 export const getRecipesProducingProductFiltered = (productId) => 

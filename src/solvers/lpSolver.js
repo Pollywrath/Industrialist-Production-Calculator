@@ -406,9 +406,236 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
 };
 
 /**
+ * Detect unsustainable loops using Tarjan's algorithm for strongly connected components
+ */
+const detectUnsustainableLoops = (graph) => {
+  const nodeIds = Object.keys(graph.nodes);
+  const nodeIndex = new Map();
+  nodeIds.forEach((id, idx) => nodeIndex.set(id, idx));
+  
+  const n = nodeIds.length;
+  const index = new Int32Array(n).fill(-1);
+  const lowlink = new Int32Array(n);
+  const onStack = new Uint8Array(n);
+  const stack = [];
+  let indexCounter = 0;
+  const sccs = [];
+  
+  const strongConnect = (v) => {
+    index[v] = indexCounter;
+    lowlink[v] = indexCounter;
+    indexCounter++;
+    stack.push(v);
+    onStack[v] = 1;
+    
+    const nodeId = nodeIds[v];
+    const node = graph.nodes[nodeId];
+    
+    // Check all outputs and their consumers
+    node.outputs.forEach(output => {
+      const productData = graph.products[output.productId];
+      if (!productData) return;
+      
+      productData.connections.forEach(conn => {
+        if (conn.sourceNodeId !== nodeId) return;
+        
+        const wIndex = nodeIndex.get(conn.targetNodeId);
+        if (wIndex === undefined) return;
+        
+        if (index[wIndex] === -1) {
+          strongConnect(wIndex);
+          lowlink[v] = Math.min(lowlink[v], lowlink[wIndex]);
+        } else if (onStack[wIndex]) {
+          lowlink[v] = Math.min(lowlink[v], index[wIndex]);
+        }
+      });
+    });
+    
+    if (lowlink[v] === index[v]) {
+      const scc = [];
+      let w;
+      do {
+        w = stack.pop();
+        onStack[w] = 0;
+        scc.push(nodeIds[w]);
+      } while (w !== v);
+      
+      if (scc.length > 1) {
+        sccs.push(scc);
+      }
+    }
+  };
+  
+  for (let v = 0; v < n; v++) {
+    if (index[v] === -1) {
+      strongConnect(v);
+    }
+  }
+  
+  // Check if any SCC is unsustainable
+  const unsustainableLoops = [];
+  
+  sccs.forEach(scc => {
+    const sccSet = new Set(scc);
+    let hasExternalInput = false;
+    
+    // Check if any node in the SCC has an input from outside the SCC
+    for (const nodeId of scc) {
+      const node = graph.nodes[nodeId];
+      
+      for (const input of node.inputs) {
+        const productData = graph.products[input.productId];
+        if (!productData) continue;
+        
+        // Check if any producer of this product is outside the SCC
+        const hasExternalProducer = productData.producers.some(
+          producer => !sccSet.has(producer.nodeId)
+        );
+        
+        if (hasExternalProducer) {
+          hasExternalInput = true;
+          break;
+        }
+      }
+      
+      if (hasExternalInput) break;
+    }
+    
+    // If no external input, this is an unsustainable loop
+    if (!hasExternalInput) {
+      unsustainableLoops.push({
+        nodes: scc,
+        nodeNames: scc.map(id => graph.nodes[id]?.recipe?.name || id)
+      });
+    }
+  });
+  
+  // Check for self-feeding nodes (not already in multi-node SCCs)
+  const nodesInSCCs = new Set();
+  sccs.forEach(scc => scc.forEach(nodeId => nodesInSCCs.add(nodeId)));
+  
+  nodeIds.forEach(nodeId => {
+    // Skip if already part of a multi-node cycle
+    if (nodesInSCCs.has(nodeId)) return;
+    
+    const node = graph.nodes[nodeId];
+    if (!node) return;
+    
+    // Check if this node feeds itself
+    const selfFedProducts = new Map(); // productId -> { inputRate, outputRate }
+    
+    node.inputs.forEach(input => {
+      const productData = graph.products[input.productId];
+      if (!productData) return;
+      
+      // Check if this node produces this product
+      const selfProducer = productData.producers.find(
+        producer => producer.nodeId === nodeId
+      );
+      
+      if (selfProducer) {
+        selfFedProducts.set(input.productId, {
+          inputRate: input.rate,
+          outputRate: selfProducer.rate
+        });
+      }
+    });
+    
+    if (selfFedProducts.size > 0) {
+      let isUnsustainable = false;
+      
+      // Check each self-fed product
+      for (const [productId, rates] of selfFedProducts) {
+        const productData = graph.products[productId];
+        const EPSILON = 1e-10;
+        
+        // If output > input: Always sustainable (net positive production)
+        if (rates.outputRate > rates.inputRate + EPSILON) {
+          continue; // This product is fine
+        }
+        
+        // If output < input: Need external sources
+        if (rates.outputRate < rates.inputRate - EPSILON) {
+          // Check if there are other producers for this product
+          const hasExternalProducer = productData.producers.some(
+            producer => producer.nodeId !== nodeId
+          );
+          
+          if (!hasExternalProducer) {
+            // No external source for net negative self-feeding = unsustainable
+            isUnsustainable = true;
+            break;
+          }
+          // If there are external producers, continue checking (they handle the deficit)
+          continue;
+        }
+        
+        // If output == input (net neutral): Check demand and supply
+        if (Math.abs(rates.outputRate - rates.inputRate) < EPSILON) {
+          // Check if there are other consumers demanding this product
+          const hasOtherConsumers = productData.consumers.some(
+            consumer => consumer.nodeId !== nodeId
+          );
+          
+          // Check if there are other producers supplying this product
+          const hasOtherProducers = productData.producers.some(
+            producer => producer.nodeId !== nodeId
+          );
+          
+          // No other demand or suppliers: Sustainable (self-contained loop)
+          if (!hasOtherConsumers && !hasOtherProducers) {
+            continue;
+          }
+          
+          // There are demands but no additional suppliers: Unsustainable
+          if (hasOtherConsumers && !hasOtherProducers) {
+            isUnsustainable = true;
+            break;
+          }
+          
+          // There's an extra supplier: Sustainable
+          if (hasOtherProducers) {
+            continue;
+          }
+        }
+      }
+      
+      if (isUnsustainable) {
+        unsustainableLoops.push({
+          nodes: [nodeId],
+          nodeNames: [node.recipe?.name || nodeId],
+          isSelfFeeding: true
+        });
+      }
+    }
+  });
+  
+  return unsustainableLoops;
+};
+
+/**
  * Solve the full graph LP model
  */
 export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
+  // Detect unsustainable loops before solving
+  const unsustainableLoops = detectUnsustainableLoops(graph);
+  
+  if (unsustainableLoops.length > 0) {
+    if (DEBUG_LP) {
+      console.log('%c[LP Solver] Unsustainable Loops Detected', 'color: #e74c3c; font-weight: bold');
+      unsustainableLoops.forEach((loop, idx) => {
+        console.log(`  Loop ${idx + 1}: ${loop.nodeNames.join(' → ')}`);
+        console.log(`    These nodes form a cycle with no external input source`);
+      });
+    }
+    
+    return {
+      feasible: false,
+      unsustainableLoops,
+      message: 'Unsustainable loops detected - these machines depend on each other with no external input source'
+    };
+  }
+  
   const model = buildFullGraphModel(graph, targetNodeIds);
   
   if (DEBUG_LP) {
@@ -551,7 +778,7 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
 export const extractMachineUpdates = (lpResult, graph) => {
   const updates = new Map();
   
-  if (!lpResult.feasible) {
+  if (!lpResult.feasible || lpResult.unsustainableLoops) {
     return updates;
   }
   
