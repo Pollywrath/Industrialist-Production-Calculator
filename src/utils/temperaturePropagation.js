@@ -1,5 +1,5 @@
 import { HEAT_SOURCES, DEFAULT_WATER_TEMPERATURE, DEFAULT_BOILER_INPUT_TEMPERATURE } from './temperatureHandler';
-import { hasTempDependentCycle, TEMP_DEPENDENT_MACHINES } from './temperatureDependentCycles';
+import { hasTempDependentCycle, TEMP_DEPENDENT_MACHINES, getTempDependentCycleTime } from './temperatureDependentCycles';
 
 /**
  * Propagate temperatures through the production network
@@ -309,6 +309,7 @@ export const applyTemperaturesToNodes = (nodes, temperatureData, graph) => {
     
     const machine = { id: node.data.recipe.machine_id };
     const heatSource = HEAT_SOURCES[machine.id];
+    const isTempDependent = hasTempDependentCycle(machine.id);
     
     // Update output temperatures
     const updatedOutputs = node.data.recipe.outputs.map((output, outputIndex) => {
@@ -335,7 +336,7 @@ export const applyTemperaturesToNodes = (nodes, temperatureData, graph) => {
     // Update input temperatures for temperature-dependent machines
     let updatedRecipe = { ...node.data.recipe, outputs: updatedOutputs };
     
-    if (hasTempDependentCycle(machine.id)) {
+    if (isTempDependent) {
       const tempInfo = TEMP_DEPENDENT_MACHINES[machine.id];
       if (tempInfo?.type === 'steam_input') {
         // Find steam input
@@ -347,6 +348,27 @@ export const applyTemperaturesToNodes = (nodes, temperatureData, graph) => {
           const steamTemp = temperatureData.inputTemperatures.get(`${node.id}:${steamInputIndex}`);
           if (steamTemp !== undefined && steamTemp !== null) {
             updatedRecipe = { ...updatedRecipe, tempDependentInputTemp: steamTemp };
+            
+            // Special handling for Water Treatment Plant
+            if (machine.id === 'm_water_treatment_plant') {
+              const cycleTime = getTempDependentCycleTime(machine.id, steamTemp, 1);
+              
+              // Steam INPUT (second input) is CONSTANT at 90/s, so quantity = 90 * cycleTime
+              const steamInputQuantity = 90 * cycleTime;
+              
+              // Water input (first input) and distilled output remain the same per cycle
+              
+              updatedRecipe = {
+                ...updatedRecipe,
+                inputs: updatedRecipe.inputs.map((input, idx) => {
+                  if (idx === 1 && ['p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam'].includes(input.product_id)) {
+                    // Second input: steam is constant 90/s, so quantity = 90 * cycleTime
+                    return { ...input, quantity: steamInputQuantity, originalQuantity: 90 };
+                  }
+                  return input;
+                })
+              };
+            }
           }
         }
       }

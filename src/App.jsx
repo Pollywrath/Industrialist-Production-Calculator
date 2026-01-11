@@ -1177,11 +1177,52 @@ function App() {
   }, [triggerRecalculation]);
 
   const handleTemperatureSettingsChange = useCallback((nodeId, settings, outputs, powerConsumption) => {
-    setNodes(nds => nds.map(n => 
-      n.id === nodeId 
-        ? { ...n, data: { ...n.data, recipe: { ...n.data.recipe, outputs, temperatureSettings: settings, power_consumption: powerConsumption !== null && powerConsumption !== undefined ? powerConsumption : n.data.recipe.power_consumption } } }
-        : n
-    ));
+    setNodes(nds => nds.map(n => {
+      if (n.id !== nodeId) return n;
+      
+      const machine = getMachine(n.data.recipe.machine_id);
+      const isTempDependent = hasTempDependentCycle(machine?.id);
+      let updatedRecipe = { 
+        ...n.data.recipe, 
+        outputs, 
+        temperatureSettings: settings, 
+        power_consumption: powerConsumption !== null && powerConsumption !== undefined ? powerConsumption : n.data.recipe.power_consumption 
+      };
+      
+      // Special handling for Water Treatment Plant
+      if (machine?.id === 'm_water_treatment_plant' && isTempDependent) {
+        const inputTemp = settings.temperature || DEFAULT_STEAM_TEMPERATURE;
+        const cycleTime = getTempDependentCycleTime(machine.id, inputTemp, 1);
+        
+        // Steam is always 90/s, so quantity = 90 * cycleTime
+        const steamQuantity = 90 * cycleTime;
+        
+        // Water/distilled inputs scale with cycle time
+        const baseWaterQuantity = 17.6;
+        const baseDistilledQuantity = 17.6;
+        
+        updatedRecipe = {
+          ...updatedRecipe,
+          inputs: updatedRecipe.inputs.map(input => {
+            if (input.product_id === 'p_water') {
+              return { ...input, quantity: baseWaterQuantity * cycleTime, originalQuantity: baseWaterQuantity };
+            }
+            if (input.product_id === 'p_distilled_water') {
+              return { ...input, quantity: baseDistilledQuantity * cycleTime, originalQuantity: baseDistilledQuantity };
+            }
+            return input;
+          }),
+          outputs: updatedRecipe.outputs.map(output => {
+            if (output.product_id === 'p_steam') {
+              return { ...output, quantity: steamQuantity, originalQuantity: 90 };
+            }
+            return output;
+          })
+        };
+      }
+      
+      return { ...n, data: { ...n.data, recipe: updatedRecipe } };
+    }));
     triggerRecalculation('temperatureSettings');
   }, [setNodes, triggerRecalculation]);
 
@@ -1644,10 +1685,7 @@ function App() {
 
     const recipe = node.data?.recipe;
     if (!recipe) return;
-
-    let cycleTime = recipe.cycle_time;
-    if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
-
+    
     const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
 
     // Get connected flow
@@ -2743,10 +2781,22 @@ function App() {
                   if (!node) return null;
 
                   const recipe = node.data?.recipe;
+                  const machine = node.data?.machine;
                   const machineCount = node.data?.machineCount || 0;
                   if (!recipe) return null;
 
                   let cycleTime = recipe.cycle_time;
+                  if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
+                  
+                  // Apply temperature-dependent cycle time if applicable
+                  const isTempDependent = hasTempDependentCycle(machine?.id);
+                  if (isTempDependent) {
+                    const tempInfo = TEMP_DEPENDENT_MACHINES[machine.id];
+                    if (tempInfo?.type === 'steam_input' && recipeUsesSteam(recipe)) {
+                      const inputTemp = recipe.tempDependentInputTemp ?? DEFAULT_STEAM_TEMPERATURE;
+                      cycleTime = getTempDependentCycleTime(machine.id, inputTemp, cycleTime);
+                    }
+                  }
                   if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
 
                   const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
@@ -2773,7 +2823,7 @@ function App() {
                   });
 
                   recipe.outputs.forEach((output, idx) => {
-                    const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
+                    const quantity = output.quantity;
                     if (typeof quantity === 'number') {
                       const ratePerMachine = isMineshaftDrill ? quantity : quantity / cycleTime;
                       const totalRate = ratePerMachine * machineCount;

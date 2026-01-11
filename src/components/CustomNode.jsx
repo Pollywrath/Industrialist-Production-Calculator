@@ -87,25 +87,36 @@ const CustomNode = memo(({ data, id }) => {
     const isBoiler = heatSource.type === 'boiler';
     const outputsWater = recipe.outputs?.some(o => ['p_water', 'p_filtered_water', 'p_distilled_water'].includes(o.product_id));
     const outputsSteam = recipe.outputs?.some(o => ['p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam'].includes(o.product_id));
+    const inputsWater = recipe.inputs?.some(o => ['p_water', 'p_filtered_water', 'p_distilled_water'].includes(o.product_id));
     
-    recipe.outputs?.forEach((output, index) => {
-      if (isTemperatureProduct(output.product_id) && output.temperature != null) {
-        const isWater = ['p_water', 'p_filtered_water', 'p_distilled_water'].includes(output.product_id);
-        const isSteam = ['p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam'].includes(output.product_id);
-        
-        // For boilers, only show steam temperature
-        if (isBoiler) {
-          if (isSteam && outputsSteam) {
-            temperatureData.outputs.push({ temp: output.temperature, index });
-          }
-        } else {
-          // For other heat sources, show all temperature products
-          if ((isWater && outputsWater) || (isSteam && outputsSteam)) {
-            temperatureData.outputs.push({ temp: output.temperature, index });
+    // Special case: Industrial firebox sodium carbonate recipe (r_industrial_firebox_07) - no temperature indicator
+    const isSodiumCarbonateRecipe = recipe.id === 'r_industrial_firebox_07';
+    
+    // Industrial firebox should only show temperature if water is in inputs or outputs
+    const isIndustrialFirebox = machine.id === 'm_industrial_firebox';
+    const shouldShowFireboxTemp = isIndustrialFirebox && !isSodiumCarbonateRecipe && (inputsWater || outputsWater);
+    
+    // For non-firebox heat sources or firebox with water
+    if (!isIndustrialFirebox || shouldShowFireboxTemp) {
+      recipe.outputs?.forEach((output, index) => {
+        if (isTemperatureProduct(output.product_id) && output.temperature != null) {
+          const isWater = ['p_water', 'p_filtered_water', 'p_distilled_water'].includes(output.product_id);
+          const isSteam = ['p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam'].includes(output.product_id);
+          
+          // For boilers, only show steam temperature
+          if (isBoiler) {
+            if (isSteam && outputsSteam) {
+              temperatureData.outputs.push({ temp: output.temperature, index });
+            }
+          } else {
+            // For other heat sources, show all temperature products
+            if ((isWater && outputsWater) || (isSteam && outputsSteam)) {
+              temperatureData.outputs.push({ temp: output.temperature, index });
+            }
           }
         }
-      }
-    });
+      });
+    }
   }
 
   const formatDisplayQuantity = (quantity) => {
@@ -242,8 +253,8 @@ const CustomNode = memo(({ data, id }) => {
           </div>
         )}
 
-        {/* Show input temperature for temp-dependent machines */}
-        {isTempDependent && tempDependentInfo?.type === 'steam_input' && (
+        {/* Show input temperature for temp-dependent machines that use steam */}
+        {isTempDependent && tempDependentInfo?.type === 'steam_input' && recipeUsesSteam(recipe) && (
           <div onDoubleClick={(e) => e.stopPropagation()} style={{
             position: 'absolute', top: '10px', left: '10px', background: 'var(--bg-secondary)',
             border: '2px solid var(--input-border)', borderRadius: 'var(--radius-sm)',

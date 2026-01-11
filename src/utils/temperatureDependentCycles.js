@@ -78,9 +78,12 @@ export function steamCrackingSeconds(tempC) {
  * Formula: 64 / (0.176 * |Temperature|)
  * Equivalent to: 363.636... / Temperature
  * 
+ * Steam output is fixed at 90/s, so steam quantity per cycle = 90 * cycleTime
+ * Water/distilled inputs scale with cycle time to maintain balance
+ * 
  * - tempC: numeric, temperature in °C
  * 
- * Returns seconds per 64 units, or Infinity if temperature is zero/undefined.
+ * Returns cycle time in seconds, or Infinity if temperature is zero/undefined.
  */
 export function waterCycleTimePerUnit(tempC) {
   return tempC <= 0 ? Infinity : 64 / (0.176 * Math.abs(tempC));
