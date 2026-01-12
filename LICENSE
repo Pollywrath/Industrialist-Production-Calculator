@@ -5,11 +5,11 @@ This project uses a dual-license structure:
 ## MIT License (Code)
 
 All source code, including but not limited to:
-- React components
-- JavaScript logic and utilities
+- React components (`.jsx` files)
+- JavaScript utilities (`.js` files except game data constants)
 - CSS styling
 - Build configuration
-- Application logic in all `.js` and `.jsx` files (excluding game data constants)
+- Application logic
 
 Copyright (c) 2025 Pollywrath
 
@@ -35,22 +35,65 @@ SOFTWARE.
 
 ## Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0) - Game Data
 
-The following game data and constants are derived from the Industrialist game and are licensed under CC BY-NC-SA 4.0:
+The following game data and constants are derived from the Industrialist game and licensed under CC BY-NC-SA 4.0:
 
-### Covered Files and Data:
+### Covered Files:
 - `src/data/products.json`
 - `src/data/machines.json`
 - `src/data/recipes.json`
-- Constants in `src/data/mineshaftDrill.js`
-- Constants in `src/data/logicAssembler.js`
-- Constants in `src/data/treeFarm.js`
-- Constants in `src/data/industrialFirebox.js`
-- Constants in `src/data/chemicalPlant.js`
-- Constants in `src/data/undergroundWasteFacility.js`
-- Constants in `src/data/liquidDump.js`
-- Constants in `src/data/liquidBurner.js`
-- Constants in `src/utils/temperatureDependentCycles.js`
-- Constants in `src/utils/temperatureHandler.js`
+
+### Covered Constants (within JavaScript files):
+- `src/data/mineshaftDrill.js`:
+  - `DRILL_HEADS`, `CONSUMABLES`, `DEPTH_OUTPUTS` arrays
+  - All numeric constants (CONSUMABLE_RATES, REPLACEMENT_TIME, POWER_DRILLING, etc.)
+  - Deterioration formulas (`getDrillHeadMultiplier`, `getAcidMultiplier`)
+
+- `src/data/logicAssembler.js`:
+  - `MICROCHIP_STAGES` array
+  - All numeric constants (STEPS_PER_STAGE, AVG_STEP_TIME, POWER_STORAGE_REQUIREMENT, etc.)
+  - `BASE_MATERIALS` object
+
+- `src/data/treeFarm.js`:
+  - All numeric constants (HARVEST_CYCLE_TIME, LOGS_PER_TREE, HARVESTER_POWER, etc.)
+  - `DEFAULT_TREE_FARM_CONFIG` object
+  - `getGrowthTime` function (pollution-based growth times)
+
+- `src/data/industrialFirebox.js`:
+  - `FUEL_PRODUCTS` array (fuel types and energy values)
+  - `RECIPE_ENERGY_REQUIREMENTS` object
+  - `RECIPE_ADDITIONAL_WAIT` object
+
+- `src/data/chemicalPlant.js`:
+  - Speed/efficiency multiplier formulas (`calculateChemicalPlantMetrics`)
+  - `DEFAULT_CHEMICAL_PLANT_SETTINGS` object
+
+- `src/data/undergroundWasteFacility.js`:
+  - All numeric constants (STORAGE_CAPACITY, CONCRETE_BLOCKS_PER_FILL, POWER_CONSUMPTION, etc.)
+  - Flow scaling formulas
+
+- `src/data/liquidDump.js`:
+  - All numeric constants (MAX_FLOW_PER_INPUT, INPUT_COUNT)
+  - `WATER_VARIANTS` array
+  - Pollution calculation formula (`calculateLiquidDumpPollution`)
+
+- `src/data/liquidBurner.js`:
+  - All numeric constants (MAX_FLOW_PER_INPUT, INPUT_COUNT)
+  - `WATER_VARIANTS` array
+  - Pollution calculation formula (`calculateLiquidBurnerPollution`)
+
+- `src/utils/temperatureHandler.js`:
+  - `TEMPERATURE_PRODUCTS` array
+  - `HEAT_SOURCES` object (all heat source definitions and temperature values)
+  - Temperature default constants (DEFAULT_WATER_TEMPERATURE, DEFAULT_BOILER_INPUT_TEMPERATURE, etc.)
+
+- `src/utils/temperatureDependentCycles.js`:
+  - `TEMP_DEPENDENT_MACHINES` object
+  - All temperature-dependent cycle time formulas:
+    - `industrialDrillSeconds`
+    - `alloyerSeconds`
+    - `coalLiquefactionSeconds`
+    - `steamCrackingSeconds`
+    - `waterCycleTimePerUnit`
 
 ### Attribution:
 All game data is sourced from the [Industrialist Wiki](https://industrialist.miraheze.org/).
@@ -71,6 +114,6 @@ Full license text: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
 
 ## Summary
 
-- **Use the code freely** (MIT License) for any purpose, including commercial projects
-- **Game data is for non-commercial use only** (CC BY-NC-SA 4.0) and must maintain attribution
-- When using this project, ensure you comply with both licenses for their respective components
+- **Code**: Freely usable (MIT License) for any purpose, including commercial
+- **Game Data**: Non-commercial only (CC BY-NC-SA 4.0) with attribution required
+- When using this project, ensure compliance with both licenses for their respective components
