@@ -613,14 +613,18 @@ function App() {
                   }
                 };
               }
-              // Update liquid dump pollution based on flows
+              // Update liquid dump pollution based on actual flow rates (per machine)
               else if (recipe?.isLiquidDump) {
                 const flows = productionSolution.flows.byNode[node.id];
-                const flowRates = recipe.inputs.map((input, idx) => 
-                  Math.min(flows?.inputFlows[idx]?.connected || 0, 15)
-                );
+                const machineCount = node.data?.machineCount || 1;
                 
-                const pollution = calculateLiquidDumpPollution(recipe.inputs, flowRates);
+                // Calculate flow per machine (divide total flow by machine count)
+                const flowRatesPerMachine = recipe.inputs.map((input, idx) => {
+                  const totalFlow = Math.min(flows?.inputFlows[idx]?.connected || 0, 15 * machineCount);
+                  return totalFlow / machineCount;
+                });
+                
+                const pollution = calculateLiquidDumpPollution(recipe.inputs, flowRatesPerMachine);
                 
                 newNodes[i] = {
                   ...node,
@@ -635,14 +639,18 @@ function App() {
                   }
                 };
               }
-              // Update liquid burner pollution based on flows
+              // Update liquid burner pollution based on actual flow rates (per machine)
               else if (recipe?.isLiquidBurner) {
                 const flows = productionSolution.flows.byNode[node.id];
-                const flowRates = recipe.inputs.map((input, idx) => 
-                  Math.min(flows?.inputFlows[idx]?.connected || 0, 15)
-                );
+                const machineCount = node.data?.machineCount || 1;
                 
-                const pollution = calculateLiquidBurnerPollution(recipe.inputs, flowRates);
+                // Calculate flow per machine (divide total flow by machine count)
+                const flowRatesPerMachine = recipe.inputs.map((input, idx) => {
+                  const totalFlow = Math.min(flows?.inputFlows[idx]?.connected || 0, 15 * machineCount);
+                  return totalFlow / machineCount;
+                });
+                
+                const pollution = calculateLiquidBurnerPollution(recipe.inputs, flowRatesPerMachine);
                 
                 newNodes[i] = {
                   ...node,
@@ -708,14 +716,18 @@ function App() {
                   }
                 };
               }
-              // Update liquid dump pollution based on flows
+              // Update liquid dump pollution based on actual flow rates (per machine)
               else if (recipe?.isLiquidDump) {
                 const flows = productionSolution.flows.byNode[node.id];
-                const flowRates = recipe.inputs.map((input, idx) => 
-                  Math.min(flows?.inputFlows[idx]?.connected || 0, 15)
-                );
+                const machineCount = node.data?.machineCount || 1;
                 
-                const pollution = calculateLiquidDumpPollution(recipe.inputs, flowRates);
+                // Calculate flow per machine (divide total flow by machine count)
+                const flowRatesPerMachine = recipe.inputs.map((input, idx) => {
+                  const totalFlow = Math.min(flows?.inputFlows[idx]?.connected || 0, 15 * machineCount);
+                  return totalFlow / machineCount;
+                });
+                
+                const pollution = calculateLiquidDumpPollution(recipe.inputs, flowRatesPerMachine);
                 
                 newNodes[i] = {
                   ...node,
@@ -730,14 +742,18 @@ function App() {
                   }
                 };
               }
-              // Update liquid burner pollution based on flows
+              // Update liquid burner pollution based on actual flow rates (per machine)
               else if (recipe?.isLiquidBurner) {
                 const flows = productionSolution.flows.byNode[node.id];
-                const flowRates = recipe.inputs.map((input, idx) => 
-                  Math.min(flows?.inputFlows[idx]?.connected || 0, 15)
-                );
+                const machineCount = node.data?.machineCount || 1;
                 
-                const pollution = calculateLiquidBurnerPollution(recipe.inputs, flowRates);
+                // Calculate flow per machine (divide total flow by machine count)
+                const flowRatesPerMachine = recipe.inputs.map((input, idx) => {
+                  const totalFlow = Math.min(flows?.inputFlows[idx]?.connected || 0, 15 * machineCount);
+                  return totalFlow / machineCount;
+                });
+                
+                const pollution = calculateLiquidBurnerPollution(recipe.inputs, flowRatesPerMachine);
                 
                 newNodes[i] = {
                   ...node,
@@ -1685,7 +1701,7 @@ function App() {
 
     const recipe = node.data?.recipe;
     if (!recipe) return;
-    
+
     const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
 
     // Get connected flow
