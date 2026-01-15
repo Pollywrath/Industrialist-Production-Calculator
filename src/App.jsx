@@ -1700,9 +1700,25 @@ function App() {
     if (!node) return;
 
     const recipe = node.data?.recipe;
+    const machine = node.data?.machine;
     if (!recipe) return;
 
     const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
+
+    // Calculate cycle time (same logic as in the modal)
+    let cycleTime = recipe.cycle_time;
+    if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
+    
+    // Apply temperature-dependent cycle time if applicable
+    const isTempDependent = hasTempDependentCycle(machine?.id);
+    if (isTempDependent) {
+      const tempInfo = TEMP_DEPENDENT_MACHINES[machine.id];
+      if (tempInfo?.type === 'steam_input' && recipeUsesSteam(recipe)) {
+        const inputTemp = recipe.tempDependentInputTemp ?? DEFAULT_STEAM_TEMPERATURE;
+        cycleTime = getTempDependentCycleTime(machine.id, inputTemp, cycleTime);
+      }
+    }
+    if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
 
     // Get connected flow
     const flows = productionSolution?.flows?.byNode[target.recipeBoxId];
