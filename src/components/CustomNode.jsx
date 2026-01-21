@@ -350,25 +350,33 @@ const CustomNode = memo(({ data, id }) => {
           </div>
         </div>
 
-        {leftPositions.map((pos, i) => (
-          <React.Fragment key={`left-${i}`}>
-            <NodeRect side="left" index={i} position={pos} width={leftWidth} isOnly={!hasRight} 
-              input={recipe.inputs[i]} onClick={onInputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
-            <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} 
-              onClick={onInputClick} nodeId={id} productId={recipe.inputs[i].product_id} flows={data.flows} 
-              onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={recipe.inputs[i]} />
-          </React.Fragment>
-        ))}
+        {leftPositions.map((pos, i) => {
+          const input = recipe.inputs[i];
+          if (!input) return null;
+          return (
+            <React.Fragment key={`left-${id}-${i}-${input.product_id}`}>
+              <NodeRect side="left" index={i} position={pos} width={leftWidth} isOnly={!hasRight} 
+                input={input} onClick={onInputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
+              <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} 
+                onClick={onInputClick} nodeId={id} productId={input.product_id} flows={data.flows} 
+                onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={input} />
+            </React.Fragment>
+          );
+        })}
 
-        {rightPositions.map((pos, i) => (
-          <React.Fragment key={`right-${i}`}>
-            <NodeRect side="right" index={i} position={pos} width={rightWidth} isOnly={!hasLeft} 
-              input={recipe.outputs[i]} onClick={onOutputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
-            <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} 
-              onClick={onOutputClick} nodeId={id} productId={recipe.outputs[i].product_id} flows={data.flows} 
-              onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={recipe.outputs[i]} />
-          </React.Fragment>
-        ))}
+        {rightPositions.map((pos, i) => {
+          const output = recipe.outputs[i];
+          if (!output) return null;
+          return (
+            <React.Fragment key={`right-${id}-${i}-${output.product_id}`}>
+              <NodeRect side="right" index={i} position={pos} width={rightWidth} isOnly={!hasLeft} 
+                input={output} onClick={onOutputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
+              <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} 
+                onClick={onOutputClick} nodeId={id} productId={output.product_id} flows={data.flows} 
+                onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={output} />
+            </React.Fragment>
+          );
+        })}
       </div>
 
       {showDrillSettings && (

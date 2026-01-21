@@ -2201,8 +2201,18 @@ function App() {
   }, [products, machines, recipes]);
 
   const handleExportCanvas = useCallback(() => {
+    // Strip transient runtime data (flows, suggestions) from nodes before export
+    const cleanedNodes = nodes.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        flows: undefined,
+        suggestions: undefined
+      }
+    }));
+    
     const canvas = { 
-      nodes, 
+      nodes: cleanedNodes, 
       edges, 
       targetProducts, 
       nodeId, 
@@ -2225,7 +2235,17 @@ function App() {
   }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig]);
 
   const handleExport = useCallback(() => {
-    const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig } }, null, 2)], { type: 'application/json' });
+    // Strip transient runtime data from nodes before export
+    const cleanedNodes = nodes.map(node => ({
+      ...node,
+      data: {
+        ...node.data,
+        flows: undefined,
+        suggestions: undefined
+      }
+    }));
+    
+    const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes: cleanedNodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig } }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `industrialist-export-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
   }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig]);
 
@@ -2535,7 +2555,22 @@ function App() {
           <div className={`menu-container ${menuOpen ? '' : 'closed'}`}>
             <button onClick={() => setMenuOpen(!menuOpen)} className="btn btn-secondary btn-menu-toggle">{menuOpen ? '>' : '<'}</button>
             <div className="menu-buttons">
-              <button onClick={() => { setNodes([]); setEdges([]); setNodeId(0); setTargetProducts([]); setTargetIdCounter(0); setSoldProducts({}); setLastDrillConfig(null); setLastAssemblerConfig(null); clearFlowCache(); }} 
+              <button onClick={() => { 
+                setNodes([]); 
+                setEdges([]); 
+                setNodeId(0); 
+                setTargetProducts([]); 
+                setTargetIdCounter(0); 
+                setSoldProducts({}); 
+                setFavoriteRecipes([]);
+                setLastDrillConfig(null); 
+                setLastAssemblerConfig(null); 
+                setLastTreeFarmConfig(null);
+                setLastFireboxConfig(null);
+                setLastWasteFacilityConfig(null);
+                clearFlowCache(); 
+                triggerRecalculation('node');
+              }} 
                 className="btn btn-secondary">Clear All</button>
               <button onClick={handleImport} className="btn btn-secondary">Import JSON</button>
               <button onClick={handleExportData} className="btn btn-secondary">Export Data</button>
