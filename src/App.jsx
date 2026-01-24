@@ -145,6 +145,7 @@ function App() {
   const [sortBy, setSortBy] = useState('name_asc');
   const [filterType, setFilterType] = useState('all');
   const [recipeFilter, setRecipeFilter] = useState('all');
+  const [machineTierFilter, setMachineTierFilter] = useState('all');
   const [autoConnectTarget, setAutoConnectTarget] = useState(null);
   const [targetProducts, setTargetProducts] = useState([]);
   const [showTargetsModal, setShowTargetsModal] = useState(false);
@@ -333,7 +334,7 @@ function App() {
         if (!isNaN(pollutionNum) && isFinite(pollutionNum)) totalPollution += pollutionNum * machineCount;
         
         // Model count = (Trees + Harvesters + Sprinklers + WaterTanks*3 + Controller + Outputs*3 + powerFactor) * machineCount
-        const powerFactor = Math.ceil(powerValue / 1500000) * 2;
+        const powerFactor = recipe.power_type === 'HV' ? 2 : Math.ceil(powerValue / 1500000) * 2;
         const treeFarmModelCount = settings.trees + settings.harvesters + settings.sprinklers + 
                                     (waterTanks * 3) + settings.controller + (settings.outputs * 3) + powerFactor;
         const roundedMachineCount = Math.ceil(machineCount);
@@ -351,7 +352,7 @@ function App() {
       if (!isNaN(pollutionNum) && isFinite(pollutionNum)) totalPollution += pollutionNum * machineCount;
       const inputOutputCount = (recipe.inputs?.length || 0) + (recipe.outputs?.length || 0);
       // Calculate model count: machineCount * (1 + powerFactor + inputOutputFactor)
-      const powerFactor = Math.ceil(powerValue / 1500000) * 2;
+      const powerFactor = recipe.power_type === 'HV' ? 2 : Math.ceil(powerValue / 1500000) * 2;
       const inputOutputFactor = inputOutputCount * 2;
       const roundedMachineCount = Math.ceil(machineCount);
       totalModelCount += roundedMachineCount * (1 + powerFactor + inputOutputFactor);
@@ -1016,7 +1017,7 @@ function App() {
   const resetSelector = () => {
     setShowRecipeSelector(false); setSelectedProduct(null); setSelectedMachine(null); setSelectorMode('product');
     setSearchTerm(''); setSortBy('name_asc'); setFilterType('all'); setRecipeFilter('all'); setAutoConnectTarget(null); setSelectorOpenedFrom('button');
-    setRecipeMachineCounts({});
+    setRecipeMachineCounts({}); setMachineTierFilter('all');
   };
 
   const openRecipeSelector = useCallback(() => { setShowRecipeSelector(true); setAutoConnectTarget(null); setSelectorOpenedFrom('button'); }, []);
@@ -1198,11 +1199,19 @@ function App() {
       
       const machine = getMachine(n.data.recipe.machine_id);
       const isTempDependent = hasTempDependentCycle(machine?.id);
+      
+      // Determine power type for Electric Water Heater based on temperature
+      let powerType = n.data.recipe.power_type;
+      if (machine?.id === 'm_electric_water_heater') {
+        powerType = settings.temperature >= 320 ? 'HV' : 'MV';
+      }
+      
       let updatedRecipe = { 
         ...n.data.recipe, 
         outputs, 
         temperatureSettings: settings, 
-        power_consumption: powerConsumption !== null && powerConsumption !== undefined ? powerConsumption : n.data.recipe.power_consumption 
+        power_consumption: powerConsumption !== null && powerConsumption !== undefined ? powerConsumption : n.data.recipe.power_consumption,
+        power_type: powerType
       };
       
       // Special handling for Water Treatment Plant
@@ -1998,15 +2007,35 @@ function App() {
       
       // Type-based matching for special recipes
       if (product) {
-        // Waste facility accepts any item or fluid
-        if (sr.id === 'r_underground_waste_facility') return true;
+        // Waste facility accepts concrete/lead for consumers, or any item/fluid for disposal
+        if (sr.id === 'r_underground_waste_facility') {
+          if (['p_concrete_block', 'p_lead_ingot'].includes(selectedProduct.id)) {
+            return true; // Will appear in consumers
+          }
+          return false; // Will only appear in disposal
+        }
         
-        // Liquid dump and burner accept any fluid
-        if ((sr.id === 'r_liquid_dump' || sr.id === 'r_liquid_burner') && product.type === 'fluid') {
-          return true;
+        // Liquid dump and burner only in disposal category
+        if (sr.id === 'r_liquid_dump' || sr.id === 'r_liquid_burner') {
+          return false;
         }
       }
       
+      return false;
+    });
+    
+    // Disposal recipes
+    const disposalRecipes = specialRecipes.filter(sr => {
+      if (sr.id === 'r_liquid_dump' || sr.id === 'r_liquid_burner') {
+        return product?.type === 'fluid';
+      }
+      if (sr.id === 'r_underground_waste_facility') {
+        // Appears in disposal for any item or fluid (except concrete/lead which are in consumers)
+        if (['p_concrete_block', 'p_lead_ingot'].includes(selectedProduct.id)) {
+          return false;
+        }
+        return true;
+      }
       return false;
     });
     
@@ -2016,10 +2045,13 @@ function App() {
     if (recipeFilter === 'consumers') {
       return [...consumers, ...specialConsumers];
     }
+    if (recipeFilter === 'disposal') {
+      return disposalRecipes;
+    }
     
     // All recipes - combine and deduplicate
     return Array.from(new Map(
-      [...producers, ...consumers, ...specialProducers, ...specialConsumers]
+      [...producers, ...consumers, ...specialProducers, ...specialConsumers, ...disposalRecipes]
         .map(r => [r.id, r])
     ).values());
   };
@@ -2295,10 +2327,14 @@ function App() {
     return (b.rp_multiplier === 'Variable' ? -Infinity : b.rp_multiplier) - (a.rp_multiplier === 'Variable' ? -Infinity : a.rp_multiplier);
   });
 
-  const filteredMachines = machines.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()) && 
-    (m.id === 'm_mineshaft_drill' || m.id === 'm_logic_assembler' || m.id === 'm_tree_farm' || 
-     m.id === 'm_underground_waste_facility' || m.id === 'm_liquid_dump' || m.id === 'm_liquid_burner' || 
-     getRecipesForMachine(m.id).length > 0)).sort((a, b) => a.name.localeCompare(b.name));
+  const filteredMachines = machines.filter(m => {
+    const nameMatch = m.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const hasRecipes = m.id === 'm_mineshaft_drill' || m.id === 'm_logic_assembler' || m.id === 'm_tree_farm' || 
+                       m.id === 'm_underground_waste_facility' || m.id === 'm_liquid_dump' || m.id === 'm_liquid_burner' || 
+                       getRecipesForMachine(m.id).length > 0;
+    const tierMatch = machineTierFilter === 'all' || (m.tier !== undefined && m.tier.toString() === machineTierFilter);
+    return nameMatch && hasRecipes && tierMatch;
+  }).sort((a, b) => a.name.localeCompare(b.name));
 
   const handleMachineSelect = (machine) => {
   if (machine.id === 'm_mineshaft_drill') {
@@ -2523,9 +2559,17 @@ function App() {
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '15px' }}>
                             {machineStats.stats.map(stat => (
                               <div key={stat.machineId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px',
-                                background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '2px solid var(--border-light)' }}>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>{stat.machine.name}</div>
+                          background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '2px solid var(--border-light)' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ 
+                              color: stat.machine.tier === 1 ? 'var(--tier-1-color)' :
+                                     stat.machine.tier === 2 ? 'var(--tier-2-color)' :
+                                     stat.machine.tier === 3 ? 'var(--tier-3-color)' :
+                                     stat.machine.tier === 4 ? 'var(--tier-4-color)' :
+                                     stat.machine.tier === 5 ? 'var(--tier-5-color)' : 'var(--tier-5-color)',
+                              fontSize: 'var(--font-size-sm)', 
+                              fontWeight: 600 
+                            }}>{stat.machine.name}</div>
                                   <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-xs)', marginTop: '2px' }}>
                                     Count: {stat.count} × ${metricFormat(stat.cost)}</div>
                                 </div>
@@ -2684,11 +2728,27 @@ function App() {
                   </>
                 ) : (
                   <>
-                    <div className="mb-lg"><input type="text" placeholder="Search machines..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input" /></div>
+                    <div className="mb-lg" style={{ display: 'flex', gap: '10px' }}>
+                      <input type="text" placeholder="Search machines..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="input" style={{ flex: 3 }} />
+                      <select value={machineTierFilter} onChange={(e) => setMachineTierFilter(e.target.value)} className="select" style={{ flex: 1 }}>
+                        <option value="all">All Tiers</option>
+                        <option value="1">Tier 1</option>
+                        <option value="2">Tier 2</option>
+                        <option value="3">Tier 3</option>
+                        <option value="4">Tier 4</option>
+                        <option value="5">Tier 5</option>
+                      </select>
+                    </div>
                     <div className="modal-content flex-col" style={{ maxHeight: '400px' }}>
                       {filteredMachines.length === 0 ? <div className="empty-state">No machines found</div> : filteredMachines.map(machine => (
                         <div key={machine.id} onClick={() => handleMachineSelect(machine)} className="recipe-card" style={{ cursor: 'pointer' }}>
-                          <div className="recipe-machine">{machine.name}</div>
+                          <div className="recipe-machine" style={{
+                            color: machine.tier === 1 ? 'var(--tier-1-color)' :
+                                   machine.tier === 2 ? 'var(--tier-2-color)' :
+                                   machine.tier === 3 ? 'var(--tier-3-color)' :
+                                   machine.tier === 4 ? 'var(--tier-4-color)' :
+                                   machine.tier === 5 ? 'var(--tier-5-color)' : 'var(--tier-5-color)'
+                          }}>{machine.name}</div>
                           <div className="recipe-details" style={{ color: '#999' }}>
                             {machine.id === 'm_mineshaft_drill' || machine.id === 'm_logic_assembler' || machine.id === 'm_tree_farm' ? 'Click to create box' : `${getRecipesForMachine(machine.id).length} recipe(s)`}
                           </div>
@@ -2704,8 +2764,10 @@ function App() {
                 {selectedProduct && (
                   <div className="mb-lg">
                     <select value={recipeFilter} onChange={(e) => setRecipeFilter(e.target.value)} className="select">
-                      <option value="all">All Recipes</option><option value="producers">Producers (Outputs {selectedProduct.name})</option>
+                      <option value="all">All Recipes</option>
+                      <option value="producers">Producers (Outputs {selectedProduct.name})</option>
                       <option value="consumers">Consumers (Uses {selectedProduct.name})</option>
+                      <option value="disposal">Disposal</option>
                     </select>
                   </div>
                 )}
@@ -2818,7 +2880,18 @@ function App() {
                           resetSelector();
                         }
                       }}>
-                        <div className="recipe-machine">{machine.name}</div>
+                        <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginBottom: '4px' }}>
+                          <div className="recipe-machine" style={{
+                            color: machine.tier === 1 ? 'var(--tier-1-color)' :
+                                   machine.tier === 2 ? 'var(--tier-2-color)' :
+                                   machine.tier === 3 ? 'var(--tier-3-color)' :
+                                   machine.tier === 4 ? 'var(--tier-4-color)' :
+                                   machine.tier === 5 ? 'var(--tier-5-color)' : 'var(--tier-5-color)'
+                          }}>{machine.name}</div>
+                          {recipe.power_type === 'HV' && (
+                            <div style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 500 }}>HV</div>
+                          )}
+                        </div>
                         <div className="recipe-details"><span className="recipe-label-input">Inputs: </span>
                           <span>{recipe.inputs.map(input => formatIngredient(input, getProduct)).join(', ')}</span></div>
                         <div className="recipe-details"><span className="recipe-label-output">Outputs: </span>

@@ -174,6 +174,9 @@ const CustomNode = memo(({ data, id }) => {
   const hasDualPower = typeof powerConsumption === 'object' && powerConsumption !== null &&
     (('drilling' in powerConsumption && 'idle' in powerConsumption) || ('max' in powerConsumption && 'average' in powerConsumption));
   
+  // Add HV suffix if power type is HV
+  const powerSuffix = recipe.power_type === 'HV' ? ' HV' : '';
+  
   const leftCount = recipe.inputs.length;
   const rightCount = recipe.outputs.length;
   const maxCount = Math.max(leftCount, rightCount, 1);
@@ -326,23 +329,29 @@ const CustomNode = memo(({ data, id }) => {
             {hasDualPower ? (
               ('drilling' in powerConsumption) ? (
                 <>
-                  <div className="node-stat-row"><span className="node-stat-label">Power (Drilling):</span> {powerConsumption.drilling}</div>
-                  <div className="node-stat-row"><span className="node-stat-label">Power (Idle):</span> {powerConsumption.idle}</div>
+                  <div className="node-stat-row"><span className="node-stat-label">Power (Drilling):</span> {powerConsumption.drilling}{powerSuffix}</div>
+                  <div className="node-stat-row"><span className="node-stat-label">Power (Idle):</span> {powerConsumption.idle}{powerSuffix}</div>
                 </>
               ) : (
                 <>
-                  <div className="node-stat-row"><span className="node-stat-label">Power (Max):</span> {powerConsumption.max}</div>
-                  <div className="node-stat-row"><span className="node-stat-label">Power (Avg):</span> {powerConsumption.average}</div>
+                  <div className="node-stat-row"><span className="node-stat-label">Power (Max):</span> {powerConsumption.max}{powerSuffix}</div>
+                  <div className="node-stat-row"><span className="node-stat-label">Power (Avg):</span> {powerConsumption.average}{powerSuffix}</div>
                 </>
               )
             ) : (
-              <div className="node-stat-row"><span className="node-stat-label">Power:</span> {powerConsumption}</div>
+              <div className="node-stat-row"><span className="node-stat-label">Power:</span> {powerConsumption}{powerSuffix}</div>
             )}
             <div className="node-stat-row"><span className="node-stat-label">Pollution:</span> {formatPollution(displayPollution)}</div>
           </div>
 
           <div className="node-machine-info">
-            <div className="node-machine-name" title={machine.name}>{machine.name}</div>
+            <div className="node-machine-name" title={machine.name} style={{
+              color: machine.tier === 1 ? 'var(--tier-1-color)' :
+                     machine.tier === 2 ? 'var(--tier-2-color)' :
+                     machine.tier === 3 ? 'var(--tier-3-color)' :
+                     machine.tier === 4 ? 'var(--tier-4-color)' :
+                     machine.tier === 5 ? 'var(--tier-5-color)' : 'var(--tier-5-color)'
+            }}>{machine.name}</div>
             <div className="node-machine-count" style={machineCountStyle}
               title={machineDisplayMode === 'total' ? "Machine count (display mode: Total)" : "Double-click node to edit"}>
               {formattedMachineCount}

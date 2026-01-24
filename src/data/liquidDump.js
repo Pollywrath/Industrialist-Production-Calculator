@@ -57,6 +57,7 @@ export const DEFAULT_LIQUID_DUMP_RECIPE = {
   machine_id: 'm_liquid_dump',
   cycle_time: 1,
   power_consumption: 0,
+  power_type: 'None',
   pollution: 0, // Calculated dynamically
   inputs: [
     { product_id: 'p_variableproduct', quantity: 15, isAnyProduct: true, acceptedType: 'fluid', maxFlow: MAX_FLOW_PER_INPUT },

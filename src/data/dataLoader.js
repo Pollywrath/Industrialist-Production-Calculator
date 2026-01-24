@@ -39,6 +39,9 @@ export const getRecipe = (recipeId) => recipes.find(r => r.id === recipeId);
 export const getRecipesProducingProduct = (productId) => 
   recipes.filter(r => r.outputs.some(o => o.product_id === productId));
 
+export const getDisposalRecipes = () => 
+  recipes.filter(r => ['r_underground_waste_facility', 'r_liquid_dump', 'r_liquid_burner'].includes(r.id));
+
 const updateArray = (arr, newData, key) => {
   arr.length = 0;
   arr.push(...newData);

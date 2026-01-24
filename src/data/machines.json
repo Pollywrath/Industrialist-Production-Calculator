@@ -2,566 +2,709 @@
   {
       "id": "m_advanced_coal_drill",
       "name": "Advanced Coal Drill",
-      "cost": 1000
+      "cost": 1000,
+      "tier": 2
     },
     {
       "id": "m_advanced_copper_drill",
       "name": "Advanced Copper Drill",
-      "cost": 520
+      "cost": 520,
+      "tier": 2
     },
     {
       "id": "m_coal_drill",
       "name": "Coal Drill",
-      "cost": 50
+      "cost": 50,
+      "tier": 1
     },
     {
       "id": "m_copper_drill",
       "name": "Copper Drill",
-      "cost": 190
+      "cost": 190,
+      "tier": 1
     },
     {
       "id": "m_industrial_drill",
       "name": "Industrial Drill",
-      "cost": 100000
+      "cost": 100000,
+      "tier": 3
     },
     {
       "id": "m_iron_drill",
       "name": "Iron Drill",
-      "cost": 350
+      "cost": 350,
+      "tier": 2
     },
     {
       "id": "m_lithium_ore_drill",
       "name": "Lithium Ore Drill",
-      "cost": 250000
+      "cost": 250000,
+      "tier": 3
     },
     {
       "id": "m_quarry",
       "name": "Quarry",
-      "cost": 1500
+      "cost": 1500,
+      "tier": 2
     },
     {
       "id": "m_sand_excavator",
       "name": "Sand Excavator",
-      "cost": 10000
+      "cost": 10000,
+      "tier": 3
     },
     {
       "id": "m_soil_excavator",
       "name": "Soil Excavator",
-      "cost": 250000
+      "cost": 250000,
+      "tier": 3
     },
     {
       "id": "m_air_separation_unit",
       "name": "Air Separation Unit",
-      "cost": 1500000
+      "cost": 1500000,
+      "tier": 3
     },
     {
       "id": "m_large_pumpjack",
       "name": "Large Pumpjack",
-      "cost": 120000
+      "cost": 120000,
+      "tier": 3
     },
     {
       "id": "m_lithium_brine_extractor",
       "name": "Lithium Brine Extractor",
-      "cost": 100000
+      "cost": 100000,
+      "tier": 3
     },
     {
       "id": "m_natural_gas_well",
       "name": "Natural Gas Well",
-      "cost": 60000
+      "cost": 60000,
+      "tier": 3
     },
     {
       "id": "m_oil_fracking_tower",
       "name": "Oil Fracking Tower",
-      "cost": 500000
+      "cost": 500000,
+      "tier": 3
     },
     {
       "id": "m_oil_rig",
       "name": "Oil Rig",
-      "cost": 1200
+      "cost": 1200,
+      "tier": 2
     },
     {
       "id": "m_water_pump",
       "name": "Water Pump",
-      "cost": 60
+      "cost": 60,
+      "tier": 1
     },
     {
       "id": "m_water_pump2",
       "name": "Water Pump2",
-      "cost": 6000
+      "cost": 6000,
+      "tier": 2
     },
     {
       "id": "m_advanced_assembler",
       "name": "Advanced Assembler",
-      "cost": 150000
+      "cost": 150000,
+      "tier": 4
     },
     {
       "id": "m_craft_assembler",
       "name": "Craft Assembler",
-      "cost": 1000
+      "cost": 1000,
+      "tier": 1
     },
     {
       "id": "m_precision_assembler",
       "name": "Precision Assembler",
-      "cost": 1000000
+      "cost": 1000000,
+      "tier": 4
     },
     {
       "id": "m_blast_furnace",
       "name": "Blast Furnace",
-      "cost": 60000
+      "cost": 60000,
+      "tier": 3
     },
     {
       "id": "m_alloyer",
       "name": "Alloyer",
-      "cost": 999999
+      "cost": 999999,
+      "tier": 3
     },
     {
       "id": "m_blast_furnace_mk2",
       "name": "Blast Furnace MK2",
-      "cost": 5000000
+      "cost": 5000000,
+      "tier": 3
     },
     {
       "id": "m_battery_charger",
       "name": "Battery Charger",
-      "cost": 100000
+      "cost": 100000,
+      "tier": 3
     },
     {
       "id": "m_electric_furnace",
       "name": "Electric Furnace",
-      "cost": 190
+      "cost": 190,
+      "tier": 1
     },
     {
       "id": "m_industrial_electric_furnace",
       "name": "Industrial Electric Furnace",
-      "cost": 1000000
+      "cost": 1000000,
+      "tier": 3
     },
     {
       "id": "m_industrial_kiln",
       "name": "Industrial Kiln",
-      "cost": 7500
+      "cost": 7500,
+      "tier": 2
     },
     {
       "id": "m_kiln",
       "name": "Kiln",
-      "cost": 3200
+      "cost": 3200,
+      "tier": 2
     },
     {
       "id": "m_chemical_reactor",
       "name": "Chemical Reactor",
-      "cost": 750000
+      "cost": 750000,
+      "tier": 3
     },
     {
       "id": "m_condenser",
       "name": "Condenser",
-      "cost": 75000
+      "cost": 75000,
+      "tier": 3
     },
     {
       "id": "m_liquid_boiler",
       "name": "Liquid Boiler",
-      "cost": 900
+      "cost": 900,
+      "tier": 2
     },
     {
       "id": "m_paper_mill",
       "name": "Paper Mill",
-      "cost": 80000
+      "cost": 80000,
+      "tier": 2
     },
     {
       "id": "m_plastic_production_facility",
       "name": "Plastic Production Facility",
-      "cost": 100000
+      "cost": 100000,
+      "tier": 3
     },
     {
       "id": "m_pressurized_water_filter",
       "name": "Pressurized Water Filter",
-      "cost": 350000
+      "cost": 350000,
+      "tier": 3
     },
     {
       "id": "m_vaporizer",
       "name": "Vaporizer",
-      "cost": 10000
+      "cost": 10000,
+      "tier": 3
     },
     {
       "id": "m_foundry",
       "name": "Foundry",
-      "cost": 2000000
+      "cost": 2000000,
+      "tier": 4
     },
     {
       "id": "m_industrial_plastic_molder",
       "name": "Industrial Plastic Molder",
-      "cost": 200000
+      "cost": 200000,
+      "tier": 3
     },
     {
       "id": "m_ingot_molder",
       "name": "Ingot Molder",
-      "cost": 150
+      "cost": 150,
+      "tier": 1
     },
     {
       "id": "m_plastic_molding_machine",
       "name": "Plastic Molding Machine",
-      "cost": 100000
+      "cost": 100000,
+      "tier": 3
     },
     {
       "id": "m_advanced_oxidation_plant",
       "name": "Advanced Oxidation Plant",
-      "cost": 2000000
+      "cost": 2000000,
+      "tier": 4
     },
     {
       "id": "m_atmospheric_distillation_plant",
       "name": "Atmospheric Distillation Plant",
-      "cost": 1000000
+      "cost": 1000000,
+      "tier": 3
     },
     {
       "id": "m_bottling_plant",
       "name": "Bottling Plant",
-      "cost": 100000
+      "cost": 100000,
+      "tier": 3
     },
     {
       "id": "m_chemical_plant",
       "name": "Chemical Plant",
-      "cost": 2340000
+      "cost": 2340000,
+      "tier": 4
     },
     {
       "id": "m_coal_liquefaction_plant",
       "name": "Coal Liquefaction Plant",
-      "cost": 750000
+      "cost": 750000,
+      "tier": 3
     },
     {
       "id": "m_concrete_plant",
       "name": "Concrete Plant",
-      "cost": 2000
+      "cost": 2000,
+      "tier": 2
     },
     {
       "id": "m_electrolysis_plant",
       "name": "Electrolysis Plant",
-      "cost": 650000
+      "cost": 650000,
+      "tier": 4
     },
     {
       "id": "m_filtration_plant",
       "name": "Filtration Plant",
-      "cost": 20000
+      "cost": 20000,
+      "tier": 2
     },
     {
       "id": "m_lng_plant",
       "name": "LNG Plant",
-      "cost": 1250000
+      "cost": 1250000,
+      "tier": 3
     },
     {
       "id": "m_oxidation_plant",
       "name": "Oxidation Plant",
-      "cost": 200000
+      "cost": 200000,
+      "tier": 3
     },
     {
       "id": "m_steam_cracking_plant",
       "name": "Steam Cracking Plant",
-      "cost": 150000
+      "cost": 150000,
+      "tier": 3
     },
     {
       "id": "m_water_treatment_plant",
       "name": "Water Treatment Plant",
-      "cost": 700001
+      "cost": 700001,
+      "tier": 4
     },
     {
       "id": "m_grinder",
       "name": "Grinder",
-      "cost": 10000
+      "cost": 10000,
+      "tier": 2
     },
     {
       "id": "m_grinder_mk2",
       "name": "Grinder MK2",
-      "cost": 125000
+      "cost": 125000,
+      "tier": 3
     },
     {
       "id": "m_industrial_roller",
       "name": "Industrial Roller",
-      "cost": 150000
+      "cost": 150000,
+      "tier": 3
     },
     {
       "id": "m_industrial_sawmill",
       "name": "Industrial Sawmill",
-      "cost": 75000
+      "cost": 75000,
+      "tier": 3
     },
     {
       "id": "m_lathe",
       "name": "Lathe",
-      "cost": 5000000
+      "cost": 5000000,
+      "tier": 4
     },
     {
       "id": "m_press",
       "name": "Press",
-      "cost": 409
+      "cost": 409,
+      "tier": 1
     },
     {
       "id": "m_press_mk2",
       "name": "Press MK2",
-      "cost": 333333
+      "cost": 333333,
+      "tier": 3
     },
     {
       "id": "m_raw_mill",
       "name": "Raw Mill",
-      "cost": 1250
+      "cost": 1250,
+      "tier": 2
     },
     {
       "id": "m_roller",
       "name": "Roller",
-      "cost": 411
+      "cost": 411,
+      "tier": 1
     },
     {
       "id": "m_roller_mk2",
       "name": "Roller MK2",
-      "cost": 150000
+      "cost": 150000,
+      "tier": 3
     },
     {
       "id": "m_sawmill",
       "name": "Sawmill",
-      "cost": 800
+      "cost": 800,
+      "tier": 1
     },
     {
       "id": "m_trommel",
       "name": "Trommel",
-      "cost": 1000000
+      "cost": 1000000,
+      "tier": 3
     },
     {
       "id": "m_diesel_refinery",
       "name": "Diesel Refinery",
-      "cost": 1000
+      "cost": 1000,
+      "tier": 2
     },
     {
       "id": "m_gas_refinery",
       "name": "Gas Refinery",
-      "cost": 175000
+      "cost": 175000,
+      "tier": 3
     },
     {
       "id": "m_gold_acid_refinery",
       "name": "Gold Acid Refinery",
-      "cost": 1000000
+      "cost": 1000000,
+      "tier": 3
     },
     {
       "id": "m_industrial_diesel_refinery",
       "name": "Industrial Diesel Refinery",
-      "cost": 150000
+      "cost": 150000,
+      "tier": 3
     },
     {
       "id": "m_plastic_refinery",
       "name": "Plastic Refinery",
-      "cost": 100000
+      "cost": 100000,
+      "tier": 3
     },
     {
       "id": "m_advanced_oil_separator",
       "name": "Advanced Oil Separator",
-      "cost": 1250000
+      "cost": 1250000,
+      "tier": 3
     },
     {
       "id": "m_crude_oil_separator",
       "name": "Crude Oil Separator",
-      "cost": 1500
+      "cost": 1500,
+      "tier": 2
     },
     {
       "id": "m_gas_centrifuge",
       "name": "Gas Centrifuge",
-      "cost": 3000000
+      "cost": 3000000,
+      "tier": 4
     },
     {
       "id": "m_industrial_oil_separator",
       "name": "Industrial Oil Separator",
-      "cost": 150000
+      "cost": 150000,
+      "tier": 3
     },
     {
       "id": "m_ore_enrichment_facility",
       "name": "Ore Enrichment Facility",
-      "cost": 4000000
+      "cost": 4000000,
+      "tier": 4
     },
     {
       "id": "m_coal_power_plant",
       "name": "Coal Power Plant",
-      "cost": 10001984
+      "cost": 10001984,
+      "tier": 4
     },
     {
       "id": "m_exhaust_stack",
       "name": "Exhaust Stack",
-      "cost": 220000
+      "cost": 220000,
+      "tier": 4
     },
     {
       "id": "m_heat_exchanger",
       "name": "Heat Exchanger",
-      "cost": 2718281
+      "cost": 2718281,
+      "tier": 4
     },
     {
       "id": "m_nuclear_power_plant",
       "name": "Nuclear Power Plant",
-      "cost": 200000000
+      "cost": 200000000,
+      "tier": 4
     },
     {
       "id": "m_polisher",
       "name": "Polisher",
-      "cost": 1200000
+      "cost": 1200000,
+      "tier": 4
     },
     {
       "id": "m_steam_condenser",
       "name": "Steam Condenser",
-      "cost": 2400000
+      "cost": 2400000,
+      "tier": 4
     },
     {
       "id": "m_vertical_heat_exchanger",
       "name": "Vertical Heat Exchanger",
-      "cost": 2718281
+      "cost": 2718281,
+      "tier": 4
     },
     {
       "id": "m_coal_generator",
       "name": "Coal Generator",
-      "cost": 160
+      "cost": 160,
+      "tier": 1
     },
     {
       "id": "m_compact_coal_power_plant",
       "name": "Compact Coal Power Plant",
-      "cost": 550
+      "cost": 550,
+      "tier": 1
     },
     {
       "id": "m_diesel_generator",
       "name": "Diesel Generator",
-      "cost": 4500
+      "cost": 4500,
+      "tier": 2
     },
     {
       "id": "m_electric_water_heater",
       "name": "Electric Water Heater",
-      "cost": 100020
+      "cost": 100020,
+      "tier": 3
     },
     {
       "id": "m_firebox",
       "name": "Firebox",
-      "cost": 550
+      "cost": 550,
+      "tier": 2
     },
     {
       "id": "m_gas_burner",
       "name": "Gas Burner",
-      "cost": 100000
+      "cost": 100000,
+      "tier": 3
     },
     {
       "id": "m_gasoline_generator",
       "name": "Gasoline Generator",
-      "cost": 900
+      "cost": 900,
+      "tier": 2
     },
     {
       "id": "m_industrial_firebox",
       "name": "Industrial Firebox",
-      "cost": 250000
+      "cost": 250000,
+      "tier": 3
     },
     {
       "id": "m_large_diesel_engine",
       "name": "Large Diesel Engine",
-      "cost": 100000
+      "cost": 100000,
+      "tier": 3
     },
     {
       "id": "m_large_turbine",
       "name": "Large Turbine",
-      "cost": 4000
+      "cost": 4000,
+      "tier": 2
     },
     {
       "id": "m_boiler",
       "name": "Boiler",
-      "cost": 900
+      "cost": 900,
+      "tier": 2
     },
     {
       "id": "m_tree_farm_controller",
       "name": "Tree Farm Controller",
-      "cost": 750
+      "cost": 750,
+      "tier": 1
     },
     {
       "id": "m_tree",
       "name": "Tree",
-      "cost": 80
+      "cost": 80,
+      "tier": 1
     },
     {
       "id": "m_tree_harvester",
       "name": "Tree Harvester",
-      "cost": 650
+      "cost": 650,
+      "tier": 1
     },
     {
       "id": "m_tree_farm_sprinkler",
       "name": "Tree Farm Sprinkler",
-      "cost": 200
+      "cost": 200,
+      "tier": 1
     },
     {
       "id": "m_tree_farm_water_tank",
       "name": "Tree Farm Water Tank",
-      "cost": 500
+      "cost": 500,
+      "tier": 1
     },
     {
       "id": "m_tree_farm_output",
       "name": "Tree Farm Output",
-      "cost": 200
+      "cost": 200,
+      "tier": 1
     },
     {
       "id": "m_tree_farm",
       "name": "Tree Farm",
-      "cost": "Variable"
+      "cost": "Variable",
+      "tier": 1
     },
     {
       "id": "m_turbine_input",
       "name": "Turbine Input",
-      "cost": 150000
+      "cost": 150000,
+      "tier": 4
     },
     {
       "id": "m_high_pressure_turbine",
       "name": "High Pressure Turbine",
-      "cost": 1000000
+      "cost": 1000000,
+      "tier": 4
     },
     {
       "id": "m_intermediate_pressure_turbine",
       "name": "Intermediate Pressure Turbine",
-      "cost": 500000
+      "cost": 500000,
+      "tier": 4
     },
     {
       "id": "m_low_pressure_turbine",
       "name": "Low Pressure Turbine",
-      "cost": 1000000
+      "cost": 1000000,
+      "tier": 4
     },
     {
       "id": "m_turbine_generator",
       "name": "Turbine Generator",
-      "cost": 5000000
+      "cost": 5000000,
+      "tier": 4
     },
     {
       "id": "m_turbine_output",
       "name": "Turbine Output",
-      "cost": 150000
+      "cost": 150000,
+      "tier": 4
     },
     {
       "id": "m_modular_turbine",
       "name": "Modular Turbine",
-      "cost": "Variable"
+      "cost": "Variable",
+      "tier": 4
     },
     {
       "id": "m_scrubber",
       "name": "Scrubber",
-      "cost": 30000
+      "cost": 30000,
+      "tier": 3
     },
     {
       "id": "m_logic_assembler",
       "name": "Logic Assembler",
-      "cost": 25000000
+      "cost": 25000000,
+      "tier": 4
     },
     {
       "id": "m_mineshaft_drill",
       "name": "Mineshaft Drill",
-      "cost": 1100000
+      "cost": 1100000,
+      "tier": 4
     },
     {
       "id": "m_geothermal_well",
       "name": "Geothermal Well",
-      "cost": 1500
+      "cost": 1500,
+      "tier": 2
     },
     {
       "id": "m_underground_waste_facility",
       "name": "Underground Waste Facility",
-      "cost": 2500000
+      "cost": 2500000,
+      "tier": 4
     },
     {
       "id": "m_liquid_dump",
       "name": "Liquid Dump",
-      "cost": 500
+      "cost": 500,
+      "tier": 2
     },
     {
       "id": "m_liquid_burner",
       "name": "Liquid Burner",
-      "cost": 1000
+      "cost": 1000,
+      "tier": 2
+    },
+    {
+      "id": "m_truck_depot",
+      "name": "Truck Depot",
+      "cost": 100,
+      "tier": 1
+    },
+    {
+      "id": "m_van_depot",
+      "name": "Van Depot",
+      "cost": 160,
+      "tier": 2
+    },
+    {
+      "id": "m_huge_truck_depot",
+      "name": "Huge Truck Depot",
+      "cost": 3200,
+      "tier": 3
+    },
+    {
+      "id": "m_liquid_truck_depot",
+      "name": "Liquid Truck Depot",
+      "cost": 500,
+      "tier": 2
+    },
+    {
+      "id": "m_large_liquid_truck_depot",
+      "name": "Large Liquid Truck Depot",
+      "cost": 50000,
+      "tier": 3
     }
 ]

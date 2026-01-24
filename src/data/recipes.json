@@ -5,6 +5,7 @@
       "machine_id": "m_advanced_coal_drill",
       "cycle_time": 12,
       "power_consumption": 9000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [],
       "outputs": [
@@ -20,6 +21,7 @@
       "machine_id": "m_advanced_copper_drill",
       "cycle_time": 12,
       "power_consumption": 6000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [],
       "outputs": [
@@ -35,6 +37,7 @@
       "machine_id": "m_coal_drill",
       "cycle_time": 4,
       "power_consumption": 120,
+      "power_type": "MV",
       "pollution": 0.864,
       "inputs": [],
       "outputs": [
@@ -50,6 +53,7 @@
       "machine_id": "m_copper_drill",
       "cycle_time": 9,
       "power_consumption": 360,
+      "power_type": "MV",
       "pollution": 0.108,
       "inputs": [],
       "outputs": [
@@ -65,6 +69,7 @@
       "machine_id": "m_industrial_drill",
       "cycle_time": 8,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -85,6 +90,7 @@
       "machine_id": "m_industrial_drill",
       "cycle_time": 8,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -105,6 +111,7 @@
       "machine_id": "m_industrial_drill",
       "cycle_time": 8,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -125,6 +132,7 @@
       "machine_id": "m_iron_drill",
       "cycle_time": 15,
       "power_consumption": 1200,
+      "power_type": "MV",
       "pollution": 0.432,
       "inputs": [],
       "outputs": [
@@ -140,6 +148,7 @@
       "machine_id": "m_lithium_ore_drill",
       "cycle_time": 10,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -160,6 +169,7 @@
       "machine_id": "m_quarry",
       "cycle_time": 20,
       "power_consumption": 50000,
+      "power_type": "MV",
       "pollution": 0.5,
       "inputs": [],
       "outputs": [
@@ -179,6 +189,7 @@
       "machine_id": "m_quarry",
       "cycle_time": 20,
       "power_consumption": 50000,
+      "power_type": "MV",
       "pollution": 0.5,
       "inputs": [],
       "outputs": [
@@ -194,6 +205,7 @@
       "machine_id": "m_quarry",
       "cycle_time": 20,
       "power_consumption": 50000,
+      "power_type": "MV",
       "pollution": 0.5,
       "inputs": [],
       "outputs": [
@@ -209,6 +221,7 @@
       "machine_id": "m_quarry",
       "cycle_time": 20,
       "power_consumption": 50000,
+      "power_type": "MV",
       "pollution": 0.5,
       "inputs": [
         {
@@ -233,6 +246,7 @@
       "machine_id": "m_quarry",
       "cycle_time": 20,
       "power_consumption": 50000,
+      "power_type": "MV",
       "pollution": 0.5,
       "inputs": [
         {
@@ -253,6 +267,7 @@
       "machine_id": "m_quarry",
       "cycle_time": 20,
       "power_consumption": 50000,
+      "power_type": "MV",
       "pollution": 0.5,
       "inputs": [
         {
@@ -273,6 +288,7 @@
       "machine_id": "m_sand_excavator",
       "cycle_time": 2,
       "power_consumption": 300000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [],
       "outputs": [
@@ -288,6 +304,7 @@
       "machine_id": "m_soil_excavator",
       "cycle_time": 1,
       "power_consumption": 300000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -308,6 +325,7 @@
       "machine_id": "m_air_separation_unit",
       "cycle_time": 1,
       "power_consumption": 20000000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [],
       "outputs": [
@@ -335,6 +353,7 @@
       "machine_id": "m_large_pumpjack",
       "cycle_time": 1,
       "power_consumption": 30000,
+      "power_type": "MV",
       "pollution": 1.44,
       "inputs": [],
       "outputs": [
@@ -350,6 +369,7 @@
       "machine_id": "m_large_pumpjack",
       "cycle_time": 1,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 1.44,
       "inputs": [
         {
@@ -370,6 +390,7 @@
       "machine_id": "m_large_pumpjack",
       "cycle_time": 1,
       "power_consumption": 30000,
+      "power_type": "MV",
       "pollution": 1.44,
       "inputs": [
         {
@@ -390,6 +411,7 @@
       "machine_id": "m_large_pumpjack",
       "cycle_time": 1,
       "power_consumption": 30000,
+      "power_type": "MV",
       "pollution": 1.44,
       "inputs": [
         {
@@ -410,6 +432,7 @@
       "machine_id": "m_lithium_brine_extractor",
       "cycle_time": 120,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -434,6 +457,7 @@
       "machine_id": "m_natural_gas_well",
       "cycle_time": 1,
       "power_consumption": 45000,
+      "power_type": "MV",
       "pollution": 0.432,
       "inputs": [],
       "outputs": [
@@ -449,6 +473,7 @@
       "machine_id": "m_oil_fracking_tower",
       "cycle_time": 8,
       "power_consumption": 62500,
+      "power_type": "MV",
       "pollution": 0.0013,
       "inputs": [
         {
@@ -481,6 +506,7 @@
       "machine_id": "m_oil_fracking_tower",
       "cycle_time": 8,
       "power_consumption": 62500,
+      "power_type": "MV",
       "pollution": 0.0013,
       "inputs": [
         {
@@ -513,6 +539,7 @@
       "machine_id": "m_oil_rig",
       "cycle_time": 1,
       "power_consumption": 3000,
+      "power_type": "MV",
       "pollution": 0.0288,
       "inputs": [],
       "outputs": [
@@ -528,6 +555,7 @@
       "machine_id": "m_water_pump",
       "cycle_time": 1,
       "power_consumption": 600,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [],
       "outputs": [
@@ -543,6 +571,7 @@
       "machine_id": "m_water_pump2",
       "cycle_time": 6,
       "power_consumption": 700,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [],
       "outputs": [
@@ -558,6 +587,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -582,6 +612,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -606,6 +637,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -630,6 +662,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 1,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -654,6 +687,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 10,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -682,6 +716,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -710,6 +745,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -734,6 +770,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -758,6 +795,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -782,6 +820,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 10,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -810,6 +849,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 10,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -838,6 +878,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 10,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -866,6 +907,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -898,6 +940,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -930,6 +973,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -954,6 +998,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -978,6 +1023,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1010,6 +1056,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1046,6 +1093,7 @@
       "machine_id": "m_advanced_assembler",
       "cycle_time": 8,
       "power_consumption": 125000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1070,6 +1118,7 @@
       "machine_id": "m_craft_assembler",
       "cycle_time": 15,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1094,6 +1143,7 @@
       "machine_id": "m_craft_assembler",
       "cycle_time": 15,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1118,6 +1168,7 @@
       "machine_id": "m_craft_assembler",
       "cycle_time": 15,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1142,6 +1193,7 @@
       "machine_id": "m_craft_assembler",
       "cycle_time": 15,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1166,6 +1218,7 @@
       "machine_id": "m_craft_assembler",
       "cycle_time": 15,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1190,6 +1243,7 @@
       "machine_id": "m_craft_assembler",
       "cycle_time": 15,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1214,6 +1268,7 @@
       "machine_id": "m_craft_assembler",
       "cycle_time": 15,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1238,6 +1293,7 @@
       "machine_id": "m_craft_assembler",
       "cycle_time": 15,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1262,6 +1318,7 @@
       "machine_id": "m_precision_assembler",
       "cycle_time": 5,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1290,6 +1347,7 @@
       "machine_id": "m_precision_assembler",
       "cycle_time": 5,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1314,6 +1372,7 @@
       "machine_id": "m_precision_assembler",
       "cycle_time": 5,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1338,6 +1397,7 @@
       "machine_id": "m_precision_assembler",
       "cycle_time": 5,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1362,6 +1422,7 @@
       "machine_id": "m_precision_assembler",
       "cycle_time": 30,
       "power_consumption": 167000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1394,6 +1455,7 @@
       "machine_id": "m_precision_assembler",
       "cycle_time": 5,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1418,6 +1480,7 @@
       "machine_id": "m_precision_assembler",
       "cycle_time": 5,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1442,6 +1505,7 @@
       "machine_id": "m_precision_assembler",
       "cycle_time": 5,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1470,6 +1534,7 @@
       "machine_id": "m_precision_assembler",
       "cycle_time": 5,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1494,6 +1559,7 @@
       "machine_id": "m_precision_assembler",
       "cycle_time": 20,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1522,6 +1588,7 @@
       "machine_id": "m_precision_assembler",
       "cycle_time": 20,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -1550,6 +1617,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1574,6 +1642,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1598,6 +1667,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1622,6 +1692,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1646,6 +1717,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1670,6 +1742,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1694,6 +1767,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1718,6 +1792,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1742,6 +1817,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1766,6 +1842,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1790,6 +1867,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1814,6 +1892,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1838,6 +1917,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1862,6 +1942,7 @@
       "machine_id": "m_blast_furnace",
       "cycle_time": 5,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -1886,6 +1967,7 @@
       "machine_id": "m_alloyer",
       "cycle_time": 20,
       "power_consumption": 150000,
+      "power_type": "MV",
       "pollution": 0.324,
       "inputs": [
         {
@@ -1914,6 +1996,7 @@
       "machine_id": "m_alloyer",
       "cycle_time": 20,
       "power_consumption": 150000,
+      "power_type": "MV",
       "pollution": 0.324,
       "inputs": [
         {
@@ -1942,6 +2025,7 @@
       "machine_id": "m_alloyer",
       "cycle_time": 20,
       "power_consumption": 150000,
+      "power_type": "MV",
       "pollution": 0.324,
       "inputs": [
         {
@@ -1970,6 +2054,7 @@
       "machine_id": "m_blast_furnace_mk2",
       "cycle_time": 20,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0.36,
       "inputs": [
         {
@@ -1994,6 +2079,7 @@
       "machine_id": "m_blast_furnace_mk2",
       "cycle_time": 20,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0.36,
       "inputs": [
         {
@@ -2018,6 +2104,7 @@
       "machine_id": "m_blast_furnace_mk2",
       "cycle_time": 20,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0.36,
       "inputs": [
         {
@@ -2042,6 +2129,7 @@
       "machine_id": "m_blast_furnace_mk2",
       "cycle_time": 20,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0.36,
       "inputs": [
         {
@@ -2066,6 +2154,7 @@
       "machine_id": "m_electric_furnace",
       "cycle_time": 3,
       "power_consumption": 400,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2086,6 +2175,7 @@
       "machine_id": "m_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 240,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2106,6 +2196,7 @@
       "machine_id": "m_electric_furnace",
       "cycle_time": 10,
       "power_consumption": 120,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2126,6 +2217,7 @@
       "machine_id": "m_electric_furnace",
       "cycle_time": 6,
       "power_consumption": 200,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2146,6 +2238,7 @@
       "machine_id": "m_electric_furnace",
       "cycle_time": 3,
       "power_consumption": 400,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2166,6 +2259,7 @@
       "machine_id": "m_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 240,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2186,6 +2280,7 @@
       "machine_id": "m_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 240,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2206,6 +2301,7 @@
       "machine_id": "m_industrial_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2226,6 +2322,7 @@
       "machine_id": "m_industrial_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2246,6 +2343,7 @@
       "machine_id": "m_industrial_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2266,6 +2364,7 @@
       "machine_id": "m_industrial_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2286,6 +2385,7 @@
       "machine_id": "m_industrial_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2306,6 +2406,7 @@
       "machine_id": "m_industrial_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2326,6 +2427,7 @@
       "machine_id": "m_industrial_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2346,6 +2448,7 @@
       "machine_id": "m_industrial_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2366,6 +2469,7 @@
       "machine_id": "m_industrial_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2386,6 +2490,7 @@
       "machine_id": "m_industrial_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2406,6 +2511,7 @@
       "machine_id": "m_industrial_electric_furnace",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0.158,
       "inputs": [
         {
@@ -2426,6 +2532,7 @@
       "machine_id": "m_industrial_kiln",
       "cycle_time": 20,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.86,
       "inputs": [
         {
@@ -2450,6 +2557,7 @@
       "machine_id": "m_industrial_kiln",
       "cycle_time": 20,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.86,
       "inputs": [
         {
@@ -2474,6 +2582,7 @@
       "machine_id": "m_industrial_kiln",
       "cycle_time": 20,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.86,
       "inputs": [
         {
@@ -2498,6 +2607,7 @@
       "machine_id": "m_industrial_kiln",
       "cycle_time": 20,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.86,
       "inputs": [
         {
@@ -2522,6 +2632,7 @@
       "machine_id": "m_industrial_kiln",
       "cycle_time": 20,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.86,
       "inputs": [
         {
@@ -2546,6 +2657,7 @@
       "machine_id": "m_industrial_kiln",
       "cycle_time": 20,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.86,
       "inputs": [
         {
@@ -2570,6 +2682,7 @@
       "machine_id": "m_industrial_kiln",
       "cycle_time": 20,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.86,
       "inputs": [
         {
@@ -2594,6 +2707,7 @@
       "machine_id": "m_industrial_kiln",
       "cycle_time": 20,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.86,
       "inputs": [
         {
@@ -2618,6 +2732,7 @@
       "machine_id": "m_industrial_kiln",
       "cycle_time": 20,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0.86,
       "inputs": [
         {
@@ -2642,6 +2757,7 @@
       "machine_id": "m_battery_charger",
       "cycle_time": 11,
       "power_consumption": 318000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -2662,6 +2778,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 6,
       "power_consumption": 500000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -2690,6 +2807,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 6,
       "power_consumption": 500000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -2714,6 +2832,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 3,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -2742,6 +2861,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 3,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -2770,6 +2890,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 6,
       "power_consumption": 500000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -2794,6 +2915,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 6,
       "power_consumption": 500000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -2818,6 +2940,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 6,
       "power_consumption": 500000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -2842,6 +2965,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 2,
       "power_consumption": 1500000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -2866,6 +2990,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 4,
       "power_consumption": 750000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -2894,6 +3019,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 2,
       "power_consumption": 1500000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -2922,6 +3048,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 4,
       "power_consumption": 1500000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -2950,6 +3077,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 5,
       "power_consumption": 600000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -2978,6 +3106,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 5,
       "power_consumption": 600000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -3006,6 +3135,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 5,
       "power_consumption": 600000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -3034,6 +3164,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 5,
       "power_consumption": 600000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -3062,6 +3193,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 5,
       "power_consumption": 600000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -3086,6 +3218,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 5,
       "power_consumption": 600000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -3110,6 +3243,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 6,
       "power_consumption": 500000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -3138,6 +3272,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 6,
       "power_consumption": 500000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -3166,6 +3301,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 4,
       "power_consumption": 750000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -3190,6 +3326,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 4,
       "power_consumption": 750000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -3218,6 +3355,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 4,
       "power_consumption": 750000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -3246,6 +3384,7 @@
       "machine_id": "m_chemical_reactor",
       "cycle_time": 4,
       "power_consumption": 750000,
+      "power_type": "MV",
       "pollution": 1.62,
       "inputs": [
         {
@@ -3274,6 +3413,7 @@
       "machine_id": "m_condenser",
       "cycle_time": 1,
       "power_consumption": 21000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3302,6 +3442,7 @@
       "machine_id": "m_liquid_boiler",
       "cycle_time": 1,
       "power_consumption": 10000,
+      "power_type": "MV",
       "pollution": 0.184,
       "inputs": [
         {
@@ -3322,6 +3463,7 @@
       "machine_id": "m_liquid_boiler",
       "cycle_time": 1,
       "power_consumption": 10000,
+      "power_type": "MV",
       "pollution": 0.184,
       "inputs": [
         {
@@ -3342,6 +3484,7 @@
       "machine_id": "m_paper_mill",
       "cycle_time": 4,
       "power_consumption": 62500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3362,6 +3505,7 @@
       "machine_id": "m_paper_mill",
       "cycle_time": 2,
       "power_consumption": 125000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3386,6 +3530,7 @@
       "machine_id": "m_plastic_production_facility",
       "cycle_time": 6,
       "power_consumption": 80000,
+      "power_type": "MV",
       "pollution": 0.432,
       "inputs": [
         {
@@ -3410,6 +3555,7 @@
       "machine_id": "m_pressurized_water_filter",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3438,6 +3584,7 @@
       "machine_id": "m_pressurized_water_filter",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3466,6 +3613,7 @@
       "machine_id": "m_pressurized_water_filter",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3494,6 +3642,7 @@
       "machine_id": "m_pressurized_water_filter",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3522,6 +3671,7 @@
       "machine_id": "m_pressurized_water_filter",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3550,6 +3700,7 @@
       "machine_id": "m_pressurized_water_filter",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3578,6 +3729,7 @@
       "machine_id": "m_pressurized_water_filter",
       "cycle_time": 5,
       "power_consumption": 200000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3606,6 +3758,7 @@
       "machine_id": "m_vaporizer",
       "cycle_time": 1,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3626,6 +3779,7 @@
       "machine_id": "m_vaporizer",
       "cycle_time": 1,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3646,6 +3800,7 @@
       "machine_id": "m_vaporizer",
       "cycle_time": 1,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3666,6 +3821,7 @@
       "machine_id": "m_foundry",
       "cycle_time": 182,
       "power_consumption": 6000000,
+      "power_type": "HV",
       "pollution": 0.5,
       "inputs": [
         {
@@ -3694,6 +3850,7 @@
       "machine_id": "m_foundry",
       "cycle_time": 182,
       "power_consumption": 6000000,
+      "power_type": "HV",
       "pollution": 0.29,
       "inputs": [
         {
@@ -3722,6 +3879,7 @@
       "machine_id": "m_foundry",
       "cycle_time": 182,
       "power_consumption": 6000000,
+      "power_type": "HV",
       "pollution": 0.5,
       "inputs": [
         {
@@ -3750,6 +3908,7 @@
       "machine_id": "m_foundry",
       "cycle_time": 182,
       "power_consumption": 6000000,
+      "power_type": "HV",
       "pollution": 0.29,
       "inputs": [
         {
@@ -3778,6 +3937,7 @@
       "machine_id": "m_foundry",
       "cycle_time": 182,
       "power_consumption": 6000000,
+      "power_type": "HV",
       "pollution": 0.5,
       "inputs": [
         {
@@ -3806,6 +3966,7 @@
       "machine_id": "m_foundry",
       "cycle_time": 182,
       "power_consumption": 6000000,
+      "power_type": "HV",
       "pollution": 0.29,
       "inputs": [
         {
@@ -3834,6 +3995,7 @@
       "machine_id": "m_foundry",
       "cycle_time": 182,
       "power_consumption": 6000000,
+      "power_type": "HV",
       "pollution": 0.5,
       "inputs": [
         {
@@ -3862,6 +4024,7 @@
       "machine_id": "m_foundry",
       "cycle_time": 182,
       "power_consumption": 6000000,
+      "power_type": "HV",
       "pollution": 0.29,
       "inputs": [
         {
@@ -3890,6 +4053,7 @@
       "machine_id": "m_foundry",
       "cycle_time": 182,
       "power_consumption": 6000000,
+      "power_type": "HV",
       "pollution": 0.5,
       "inputs": [
         {
@@ -3918,6 +4082,7 @@
       "machine_id": "m_foundry",
       "cycle_time": 182,
       "power_consumption": 6000000,
+      "power_type": "HV",
       "pollution": 0.29,
       "inputs": [
         {
@@ -3946,6 +4111,7 @@
       "machine_id": "m_ingot_molder",
       "cycle_time": 4,
       "power_consumption": 150,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3966,6 +4132,7 @@
       "machine_id": "m_ingot_molder",
       "cycle_time": 4,
       "power_consumption": 150,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -3986,6 +4153,7 @@
       "machine_id": "m_ingot_molder",
       "cycle_time": 4,
       "power_consumption": 150,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4006,6 +4174,7 @@
       "machine_id": "m_ingot_molder",
       "cycle_time": 4,
       "power_consumption": 150,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4026,6 +4195,7 @@
       "machine_id": "m_ingot_molder",
       "cycle_time": 4,
       "power_consumption": 150,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4046,6 +4216,7 @@
       "machine_id": "m_ingot_molder",
       "cycle_time": 4,
       "power_consumption": 150,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4066,6 +4237,7 @@
       "machine_id": "m_ingot_molder",
       "cycle_time": 4,
       "power_consumption": 150,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4086,6 +4258,7 @@
       "machine_id": "m_ingot_molder",
       "cycle_time": 4,
       "power_consumption": 150,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4106,6 +4279,7 @@
       "machine_id": "m_ingot_molder",
       "cycle_time": 4,
       "power_consumption": 150,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4126,6 +4300,7 @@
       "machine_id": "m_ingot_molder",
       "cycle_time": 4,
       "power_consumption": 150,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4146,6 +4321,7 @@
       "machine_id": "m_plastic_molding_machine",
       "cycle_time": 7,
       "power_consumption": 14000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4166,6 +4342,7 @@
       "machine_id": "m_plastic_molding_machine",
       "cycle_time": 7,
       "power_consumption": 14000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4186,6 +4363,7 @@
       "machine_id": "m_advanced_oxidation_plant",
       "cycle_time": 40,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4214,6 +4392,7 @@
       "machine_id": "m_advanced_oxidation_plant",
       "cycle_time": 40,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4242,6 +4421,7 @@
       "machine_id": "m_advanced_oxidation_plant",
       "cycle_time": 2,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4272,7 +4452,7 @@
         },
         {
           "product_id": "p_residue",
-          "quantity": 0
+          "quantity": 20
         }
       ]
     },
@@ -4282,6 +4462,7 @@
       "machine_id": "m_advanced_oxidation_plant",
       "cycle_time": 2,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4312,7 +4493,7 @@
         },
         {
           "product_id": "p_residue",
-          "quantity": 0
+          "quantity": 15
         }
       ]
     },
@@ -4322,6 +4503,7 @@
       "machine_id": "m_advanced_oxidation_plant",
       "cycle_time": 6,
       "power_consumption": 2000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4350,6 +4532,7 @@
       "machine_id": "m_advanced_oxidation_plant",
       "cycle_time": 2,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4374,6 +4557,7 @@
       "machine_id": "m_advanced_oxidation_plant",
       "cycle_time": 2,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4398,6 +4582,7 @@
       "machine_id": "m_advanced_oxidation_plant",
       "cycle_time": 2,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4422,6 +4607,7 @@
       "machine_id": "m_advanced_oxidation_plant",
       "cycle_time": 2,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4446,6 +4632,7 @@
       "machine_id": "m_atmospheric_distillation_plant",
       "cycle_time": 8,
       "power_consumption": 625000,
+      "power_type": "MV",
       "pollution": 6.48,
       "inputs": [
         {
@@ -4490,6 +4677,7 @@
       "machine_id": "m_atmospheric_distillation_plant",
       "cycle_time": 8,
       "power_consumption": 625000,
+      "power_type": "MV",
       "pollution": 6.48,
       "inputs": [
         {
@@ -4514,6 +4702,7 @@
       "machine_id": "m_bottling_plant",
       "cycle_time": 3.5,
       "power_consumption": 2860,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4538,6 +4727,7 @@
       "machine_id": "m_bottling_plant",
       "cycle_time": 3.5,
       "power_consumption": 2860,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4562,6 +4752,7 @@
       "machine_id": "m_bottling_plant",
       "cycle_time": 3.5,
       "power_consumption": 2860,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4586,6 +4777,7 @@
       "machine_id": "m_bottling_plant",
       "cycle_time": 3.5,
       "power_consumption": 2860,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4610,6 +4802,7 @@
       "machine_id": "m_bottling_plant",
       "cycle_time": 3.5,
       "power_consumption": 2860,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4634,6 +4827,7 @@
       "machine_id": "m_coal_liquefaction_plant",
       "cycle_time": 40,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 6.48,
       "inputs": [
         {
@@ -4670,6 +4864,7 @@
       "machine_id": "m_concrete_plant",
       "cycle_time": 10,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0.4,
       "inputs": [
         {
@@ -4694,6 +4889,7 @@
       "machine_id": "m_concrete_plant",
       "cycle_time": 10,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0.4,
       "inputs": [
         {
@@ -4722,6 +4918,7 @@
       "machine_id": "m_concrete_plant",
       "cycle_time": 10,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0.4,
       "inputs": [
         {
@@ -4750,6 +4947,7 @@
       "machine_id": "m_concrete_plant",
       "cycle_time": 10,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0.4,
       "inputs": [
         {
@@ -4778,6 +4976,7 @@
       "machine_id": "m_concrete_plant",
       "cycle_time": 10,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0.4,
       "inputs": [
         {
@@ -4802,6 +5001,7 @@
       "machine_id": "m_concrete_plant",
       "cycle_time": 10,
       "power_consumption": 4000,
+      "power_type": "MV",
       "pollution": 0.4,
       "inputs": [
         {
@@ -4826,6 +5026,7 @@
       "machine_id": "m_electrolysis_plant",
       "cycle_time": 30,
       "power_consumption": 750000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -4850,6 +5051,7 @@
       "machine_id": "m_electrolysis_plant",
       "cycle_time": 30,
       "power_consumption": 750000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -4874,6 +5076,7 @@
       "machine_id": "m_electrolysis_plant",
       "cycle_time": 30,
       "power_consumption": 750000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -4898,6 +5101,7 @@
       "machine_id": "m_filtration_plant",
       "cycle_time": 2,
       "power_consumption": 7500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4918,6 +5122,7 @@
       "machine_id": "m_filtration_plant",
       "cycle_time": 2,
       "power_consumption": 7500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4938,6 +5143,7 @@
       "machine_id": "m_filtration_plant",
       "cycle_time": 2,
       "power_consumption": 7500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4958,6 +5164,7 @@
       "machine_id": "m_filtration_plant",
       "cycle_time": 2,
       "power_consumption": 7500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4978,6 +5185,7 @@
       "machine_id": "m_filtration_plant",
       "cycle_time": 2,
       "power_consumption": 7500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -4998,6 +5206,7 @@
       "machine_id": "m_filtration_plant",
       "cycle_time": 2,
       "power_consumption": 7500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5018,6 +5227,7 @@
       "machine_id": "m_lng_plant",
       "cycle_time": 1,
       "power_consumption": 2250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5038,6 +5248,7 @@
       "machine_id": "m_oxidation_plant",
       "cycle_time": 20,
       "power_consumption": 500000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5058,6 +5269,7 @@
       "machine_id": "m_oxidation_plant",
       "cycle_time": 20,
       "power_consumption": 500000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5078,6 +5290,7 @@
       "machine_id": "m_oxidation_plant",
       "cycle_time": 20,
       "power_consumption": 500000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5098,6 +5311,7 @@
       "machine_id": "m_oxidation_plant",
       "cycle_time": 12,
       "power_consumption": 833000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5118,6 +5332,7 @@
       "machine_id": "m_oxidation_plant",
       "cycle_time": 5,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5142,6 +5357,7 @@
       "machine_id": "m_oxidation_plant",
       "cycle_time": 5,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5166,6 +5382,7 @@
       "machine_id": "m_oxidation_plant",
       "cycle_time": 5,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5190,6 +5407,7 @@
       "machine_id": "m_oxidation_plant",
       "cycle_time": 3,
       "power_consumption": 1670000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5214,6 +5432,7 @@
       "machine_id": "m_steam_cracking_plant",
       "cycle_time": 21.67507568,
       "power_consumption": 60000,
+      "power_type": "MV",
       "pollution": 0.432,
       "inputs": [
         {
@@ -5242,6 +5461,7 @@
       "machine_id": "m_steam_cracking_plant",
       "cycle_time": 21.67507568,
       "power_consumption": 60000,
+      "power_type": "MV",
       "pollution": 0.432,
       "inputs": [
         {
@@ -5270,6 +5490,7 @@
       "machine_id": "m_steam_cracking_plant",
       "cycle_time": 21.67507568,
       "power_consumption": 60000,
+      "power_type": "MV",
       "pollution": 0.432,
       "inputs": [
         {
@@ -5298,6 +5519,7 @@
       "machine_id": "m_steam_cracking_plant",
       "cycle_time": 3,
       "power_consumption": 60000,
+      "power_type": "MV",
       "pollution": 0.432,
       "inputs": [
         {
@@ -5326,6 +5548,7 @@
       "machine_id": "m_steam_cracking_plant",
       "cycle_time": 3,
       "power_consumption": 60000,
+      "power_type": "MV",
       "pollution": 0.432,
       "inputs": [
         {
@@ -5354,6 +5577,7 @@
       "machine_id": "m_water_treatment_plant",
       "cycle_time": 3.6363636363636363636363,
       "power_consumption": 2000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5378,6 +5602,7 @@
       "machine_id": "m_water_treatment_plant",
       "cycle_time": 3.6363636363636363636363,
       "power_consumption": 2000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5402,6 +5627,7 @@
       "machine_id": "m_water_treatment_plant",
       "cycle_time": 3.6363636363636363636363,
       "power_consumption": 2000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5426,6 +5652,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5446,6 +5673,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5470,6 +5698,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5490,6 +5719,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5510,6 +5740,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5530,6 +5761,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5550,6 +5782,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5570,6 +5803,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5590,6 +5824,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5610,6 +5845,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5634,6 +5870,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5654,6 +5891,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5674,6 +5912,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5698,6 +5937,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5718,6 +5958,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5742,6 +5983,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5762,6 +6004,7 @@
       "machine_id": "m_grinder",
       "cycle_time": 12,
       "power_consumption": 33000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5782,6 +6025,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5806,6 +6050,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5826,6 +6071,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5846,6 +6092,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5866,6 +6113,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5886,6 +6134,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5906,6 +6155,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5926,6 +6176,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5946,6 +6197,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5970,6 +6222,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -5990,6 +6243,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6014,6 +6268,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6034,6 +6289,7 @@
       "machine_id": "m_grinder_mk2",
       "cycle_time": 16,
       "power_consumption": 1250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6054,6 +6310,7 @@
       "machine_id": "m_kiln",
       "cycle_time": 60,
       "power_consumption": 750000,
+      "power_type": "MV",
       "pollution": 0.144,
       "inputs": [
         {
@@ -6074,7 +6331,8 @@
       "machine_id": "m_industrial_plastic_molder",
       "cycle_time": 12,
       "power_consumption": 20000,
-      "pollution": "TBAr",
+      "power_type": "MV",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_plastic_pellets",
@@ -6094,7 +6352,8 @@
       "machine_id": "m_industrial_plastic_molder",
       "cycle_time": 12,
       "power_consumption": 20000,
-      "pollution": "TBAr",
+      "power_type": "MV",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_plastic_pellets",
@@ -6114,7 +6373,8 @@
       "machine_id": "m_industrial_plastic_molder",
       "cycle_time": 12,
       "power_consumption": 20000,
-      "pollution": "TBAr",
+      "power_type": "MV",
+      "pollution": 0,
       "inputs": [
         {
           "product_id": "p_hardened_plastic_pellets",
@@ -6134,6 +6394,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 100000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6158,6 +6419,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 5,
       "power_consumption": 1000000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6182,6 +6444,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 500000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6206,6 +6469,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 500000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6230,6 +6494,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 500000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6270,6 +6535,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 100000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6298,6 +6564,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 100000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6322,6 +6589,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 10,
       "power_consumption": 250000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6350,6 +6618,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 10,
       "power_consumption": 250000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6378,6 +6647,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 1000000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6406,6 +6676,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 1100000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6438,6 +6709,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 2000000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6470,6 +6742,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 2500000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6502,6 +6775,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 1500000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6534,6 +6808,7 @@
       "machine_id": "m_chemical_plant",
       "cycle_time": 1,
       "power_consumption": 1500000,
+      "power_type": "HV",
       "pollution": 0.72,
       "inputs": [
         {
@@ -6566,6 +6841,7 @@
       "machine_id": "m_industrial_roller",
       "cycle_time": 6,
       "power_consumption": 750,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6586,6 +6862,7 @@
       "machine_id": "m_industrial_roller",
       "cycle_time": 6,
       "power_consumption": 1125,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6606,6 +6883,7 @@
       "machine_id": "m_industrial_roller",
       "cycle_time": 6,
       "power_consumption": 9375,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6626,6 +6904,7 @@
       "machine_id": "m_industrial_roller",
       "cycle_time": 6,
       "power_consumption": 9375,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6646,6 +6925,7 @@
       "machine_id": "m_industrial_roller",
       "cycle_time": 6,
       "power_consumption": 1125,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6666,6 +6946,7 @@
       "machine_id": "m_industrial_roller",
       "cycle_time": 6,
       "power_consumption": 1125,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6686,6 +6967,7 @@
       "machine_id": "m_industrial_roller",
       "cycle_time": 6,
       "power_consumption": 11250,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6706,6 +6988,7 @@
       "machine_id": "m_industrial_roller",
       "cycle_time": 6,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6726,6 +7009,7 @@
       "machine_id": "m_industrial_sawmill",
       "cycle_time": 10,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -6750,6 +7034,7 @@
       "machine_id": "m_industrial_sawmill",
       "cycle_time": 10,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -6774,6 +7059,7 @@
       "machine_id": "m_industrial_sawmill",
       "cycle_time": 10,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -6798,6 +7084,7 @@
       "machine_id": "m_industrial_sawmill",
       "cycle_time": 10,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -6822,6 +7109,7 @@
       "machine_id": "m_lathe",
       "cycle_time": 60,
       "power_consumption": 500000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -6842,6 +7130,7 @@
       "machine_id": "m_lathe",
       "cycle_time": 160,
       "power_consumption": 500000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -6862,6 +7151,7 @@
       "machine_id": "m_lathe",
       "cycle_time": 200,
       "power_consumption": 500000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -6882,6 +7172,7 @@
       "machine_id": "m_lathe",
       "cycle_time": 240,
       "power_consumption": 500000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -6902,6 +7193,7 @@
       "machine_id": "m_lathe",
       "cycle_time": 30,
       "power_consumption": 100000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -6922,6 +7214,7 @@
       "machine_id": "m_press",
       "cycle_time": 4,
       "power_consumption": 1000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6942,6 +7235,7 @@
       "machine_id": "m_press",
       "cycle_time": 4,
       "power_consumption": 2000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6962,6 +7256,7 @@
       "machine_id": "m_press",
       "cycle_time": 4,
       "power_consumption": 12500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -6982,6 +7277,7 @@
       "machine_id": "m_press",
       "cycle_time": 4,
       "power_consumption": 6250,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7002,6 +7298,7 @@
       "machine_id": "m_press",
       "cycle_time": 4,
       "power_consumption": 6250,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7022,6 +7319,7 @@
       "machine_id": "m_press_mk2",
       "cycle_time": 8,
       "power_consumption": 50000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7042,6 +7340,7 @@
       "machine_id": "m_press_mk2",
       "cycle_time": 8,
       "power_consumption": 75000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7062,6 +7361,7 @@
       "machine_id": "m_press_mk2",
       "cycle_time": 4,
       "power_consumption": 25000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7082,6 +7382,7 @@
       "machine_id": "m_press_mk2",
       "cycle_time": 4,
       "power_consumption": 250000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7102,6 +7403,7 @@
       "machine_id": "m_press_mk2",
       "cycle_time": 4,
       "power_consumption": 75000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7122,6 +7424,7 @@
       "machine_id": "m_press_mk2",
       "cycle_time": 4,
       "power_consumption": 40000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7142,6 +7445,7 @@
       "machine_id": "m_raw_mill",
       "cycle_time": 20,
       "power_consumption": 2500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7174,6 +7478,7 @@
       "machine_id": "m_raw_mill",
       "cycle_time": 20,
       "power_consumption": 2500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7198,6 +7503,7 @@
       "machine_id": "m_raw_mill",
       "cycle_time": 20,
       "power_consumption": 2500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7218,6 +7524,7 @@
       "machine_id": "m_roller",
       "cycle_time": 8,
       "power_consumption": 500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7238,6 +7545,7 @@
       "machine_id": "m_roller",
       "cycle_time": 8,
       "power_consumption": 750,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7258,6 +7566,7 @@
       "machine_id": "m_roller",
       "cycle_time": 8,
       "power_consumption": 6250,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7278,6 +7587,7 @@
       "machine_id": "m_roller",
       "cycle_time": 8,
       "power_consumption": 6250,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7298,6 +7608,7 @@
       "machine_id": "m_roller",
       "cycle_time": 8,
       "power_consumption": 750,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7318,6 +7629,7 @@
       "machine_id": "m_roller",
       "cycle_time": 8,
       "power_consumption": 7500,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7338,6 +7650,7 @@
       "machine_id": "m_roller_mk2",
       "cycle_time": 8,
       "power_consumption": 25000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7358,6 +7671,7 @@
       "machine_id": "m_roller_mk2",
       "cycle_time": 8,
       "power_consumption": 50000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7378,6 +7692,7 @@
       "machine_id": "m_roller_mk2",
       "cycle_time": 8,
       "power_consumption": 75000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7398,6 +7713,7 @@
       "machine_id": "m_roller_mk2",
       "cycle_time": 8,
       "power_consumption": 25000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7418,6 +7734,7 @@
       "machine_id": "m_sawmill",
       "cycle_time": 20,
       "power_consumption": 3000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7438,6 +7755,7 @@
       "machine_id": "m_sawmill",
       "cycle_time": 20,
       "power_consumption": 3000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7458,6 +7776,7 @@
       "machine_id": "m_sawmill",
       "cycle_time": 20,
       "power_consumption": 3000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7478,6 +7797,7 @@
       "machine_id": "m_sawmill",
       "cycle_time": 20,
       "power_consumption": 3000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7498,6 +7818,7 @@
       "machine_id": "m_trommel",
       "cycle_time": 28,
       "power_consumption": 17900,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7534,6 +7855,7 @@
       "machine_id": "m_trommel",
       "cycle_time": 28,
       "power_consumption": 17900,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7570,6 +7892,7 @@
       "machine_id": "m_trommel",
       "cycle_time": 28,
       "power_consumption": 17900,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7606,6 +7929,7 @@
       "machine_id": "m_trommel",
       "cycle_time": 28,
       "power_consumption": 17900,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7634,6 +7958,7 @@
       "machine_id": "m_trommel",
       "cycle_time": 28,
       "power_consumption": 17900,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -7662,6 +7987,7 @@
       "machine_id": "m_diesel_refinery",
       "cycle_time": 1,
       "power_consumption": 1000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -7686,6 +8012,7 @@
       "machine_id": "m_diesel_refinery",
       "cycle_time": 1,
       "power_consumption": 1000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -7710,6 +8037,7 @@
       "machine_id": "m_diesel_refinery",
       "cycle_time": 1,
       "power_consumption": 1000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -7734,6 +8062,7 @@
       "machine_id": "m_diesel_refinery",
       "cycle_time": 1,
       "power_consumption": 1000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -7758,6 +8087,7 @@
       "machine_id": "m_gas_refinery",
       "cycle_time": 1,
       "power_consumption": 60000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -7782,6 +8112,7 @@
       "machine_id": "m_gold_acid_refinery",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -7814,6 +8145,7 @@
       "machine_id": "m_gold_acid_refinery",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -7846,6 +8178,7 @@
       "machine_id": "m_gold_acid_refinery",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -7878,6 +8211,7 @@
       "machine_id": "m_gold_acid_refinery",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -7910,6 +8244,7 @@
       "machine_id": "m_gold_acid_refinery",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -7942,6 +8277,7 @@
       "machine_id": "m_gold_acid_refinery",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -7974,6 +8310,7 @@
       "machine_id": "m_gold_acid_refinery",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -8006,6 +8343,7 @@
       "machine_id": "m_gold_acid_refinery",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -8038,6 +8376,7 @@
       "machine_id": "m_gold_acid_refinery",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -8070,6 +8409,7 @@
       "machine_id": "m_gold_acid_refinery",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -8102,6 +8442,7 @@
       "machine_id": "m_gold_acid_refinery",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -8134,6 +8475,7 @@
       "machine_id": "m_plastic_refinery",
       "cycle_time": 4,
       "power_consumption": 60000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -8158,6 +8500,7 @@
       "machine_id": "m_plastic_refinery",
       "cycle_time": 4,
       "power_consumption": 60000,
+      "power_type": "MV",
       "pollution": 0.216,
       "inputs": [
         {
@@ -8182,6 +8525,7 @@
       "machine_id": "m_industrial_diesel_refinery",
       "cycle_time": 1,
       "power_consumption": 750000,
+      "power_type": "MV",
       "pollution": 0.32,
       "inputs": [
         {
@@ -8210,6 +8554,7 @@
       "machine_id": "m_industrial_diesel_refinery",
       "cycle_time": 1,
       "power_consumption": 750000,
+      "power_type": "MV",
       "pollution": 0.32,
       "inputs": [
         {
@@ -8238,6 +8583,7 @@
       "machine_id": "m_industrial_diesel_refinery",
       "cycle_time": 1,
       "power_consumption": 750000,
+      "power_type": "MV",
       "pollution": 0.32,
       "inputs": [
         {
@@ -8266,6 +8612,7 @@
       "machine_id": "m_industrial_diesel_refinery",
       "cycle_time": 1,
       "power_consumption": 750000,
+      "power_type": "MV",
       "pollution": 0.32,
       "inputs": [
         {
@@ -8294,6 +8641,7 @@
       "machine_id": "m_advanced_oil_separator",
       "cycle_time": 10,
       "power_consumption": 2500000,
+      "power_type": "MV",
       "pollution": 0.324,
       "inputs": [
         {
@@ -8330,6 +8678,7 @@
       "machine_id": "m_advanced_oil_separator",
       "cycle_time": 10,
       "power_consumption": 2500000,
+      "power_type": "MV",
       "pollution": 0.324,
       "inputs": [
         {
@@ -8358,6 +8707,7 @@
       "machine_id": "m_advanced_oil_separator",
       "cycle_time": 10,
       "power_consumption": 2500000,
+      "power_type": "MV",
       "pollution": 0.324,
       "inputs": [
         {
@@ -8386,6 +8736,7 @@
       "machine_id": "m_advanced_oil_separator",
       "cycle_time": 10,
       "power_consumption": 2500000,
+      "power_type": "MV",
       "pollution": 0.324,
       "inputs": [
         {
@@ -8418,6 +8769,7 @@
       "machine_id": "m_crude_oil_separator",
       "cycle_time": 1,
       "power_consumption": 2200,
+      "power_type": "MV",
       "pollution": 0.432,
       "inputs": [
         {
@@ -8446,6 +8798,7 @@
       "machine_id": "m_gas_centrifuge",
       "cycle_time": 1,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -8474,6 +8827,7 @@
       "machine_id": "m_gas_centrifuge",
       "cycle_time": 1,
       "power_consumption": 1000000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -8502,6 +8856,7 @@
       "machine_id": "m_industrial_oil_separator",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.32,
       "inputs": [
         {
@@ -8534,6 +8889,7 @@
       "machine_id": "m_industrial_oil_separator",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.32,
       "inputs": [
         {
@@ -8566,6 +8922,7 @@
       "machine_id": "m_industrial_oil_separator",
       "cycle_time": 5,
       "power_consumption": 100000,
+      "power_type": "MV",
       "pollution": 0.32,
       "inputs": [
         {
@@ -8594,6 +8951,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 10,
       "power_consumption": 500000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -8630,6 +8988,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 10,
       "power_consumption": 500000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -8666,6 +9025,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 10,
       "power_consumption": 500000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -8702,6 +9062,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 10,
       "power_consumption": 500000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -8738,6 +9099,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 4,
       "power_consumption": 500000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -8774,6 +9136,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 4,
       "power_consumption": 1000000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -8810,6 +9173,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 2,
       "power_consumption": 2000000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -8842,6 +9206,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 15,
       "power_consumption": 800000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -8870,6 +9235,7 @@
       "machine_id": "m_ore_enrichment_facility",
       "cycle_time": 15,
       "power_consumption": 800000,
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -8898,6 +9264,7 @@
       "machine_id": "m_coal_power_plant",
       "cycle_time": "Variable",
       "power_consumption": "Variable",
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -8926,6 +9293,7 @@
       "machine_id": "m_exhaust_stack",
       "cycle_time": 5,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 86.4,
       "inputs": [
         {
@@ -8945,6 +9313,7 @@
       "machine_id": "m_exhaust_stack",
       "cycle_time": 5,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 691.2,
       "inputs": [
         {
@@ -8960,6 +9329,7 @@
       "machine_id": "m_heat_exchanger",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -8988,6 +9358,7 @@
       "machine_id": "m_heat_exchanger",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -9016,6 +9387,7 @@
       "machine_id": "m_nuclear_power_plant",
       "cycle_time": "Variable",
       "power_consumption": "Variable",
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -9048,6 +9420,7 @@
       "machine_id": "m_nuclear_power_plant",
       "cycle_time": "Variable",
       "power_consumption": "Variable",
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -9080,6 +9453,7 @@
       "machine_id": "m_nuclear_power_plant",
       "cycle_time": "Variable",
       "power_consumption": "Variable",
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -9112,6 +9486,7 @@
       "machine_id": "m_polisher",
       "cycle_time": 1,
       "power_consumption": 500000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -9140,6 +9515,7 @@
       "machine_id": "m_steam_condenser",
       "cycle_time": 1,
       "power_consumption": 500000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -9168,6 +9544,7 @@
       "machine_id": "m_vertical_heat_exchanger",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -9196,6 +9573,7 @@
       "machine_id": "m_vertical_heat_exchanger",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -9224,6 +9602,7 @@
       "machine_id": "m_coal_generator",
       "cycle_time": 1,
       "power_consumption": -7000,
+      "power_type": "MV",
       "pollution": 0.27,
       "inputs": [
         {
@@ -9248,6 +9627,7 @@
       "machine_id": "m_compact_coal_power_plant",
       "cycle_time": 3.33,
       "power_consumption": -13500,
+      "power_type": "MV",
       "pollution": 0.821,
       "inputs": [
         {
@@ -9263,6 +9643,7 @@
       "machine_id": "m_diesel_generator",
       "cycle_time": 5,
       "power_consumption": -55200,
+      "power_type": "MV",
       "pollution": 0.648,
       "inputs": [
         {
@@ -9278,6 +9659,7 @@
       "machine_id": "m_diesel_generator",
       "cycle_time": 6,
       "power_consumption": -66000,
+      "power_type": "MV",
       "pollution": 0.648,
       "inputs": [
         {
@@ -9293,6 +9675,7 @@
       "machine_id": "m_diesel_generator",
       "cycle_time": 7.67,
       "power_consumption": -78000,
+      "power_type": "MV",
       "pollution": 0.648,
       "inputs": [
         {
@@ -9308,6 +9691,7 @@
       "machine_id": "m_diesel_generator",
       "cycle_time": 10.33,
       "power_consumption": -90000,
+      "power_type": "MV",
       "pollution": 0.648,
       "inputs": [
         {
@@ -9323,6 +9707,7 @@
       "machine_id": "m_electric_water_heater",
       "cycle_time": 1,
       "power_consumption": "Variable",
+      "power_type": "Variable",
       "pollution": 0,
       "inputs": [
         {
@@ -9343,6 +9728,7 @@
       "machine_id": "m_electric_water_heater",
       "cycle_time": 1,
       "power_consumption": "Variable",
+      "power_type": "Variable",
       "pollution": 0,
       "inputs": [
         {
@@ -9363,6 +9749,7 @@
       "machine_id": "m_electric_water_heater",
       "cycle_time": 1,
       "power_consumption": "Variable",
+      "power_type": "Variable",
       "pollution": 0,
       "inputs": [
         {
@@ -9383,6 +9770,7 @@
       "machine_id": "m_firebox",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 1.08,
       "inputs": [
         {
@@ -9407,6 +9795,7 @@
       "machine_id": "m_firebox",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 1.08,
       "inputs": [
         {
@@ -9431,6 +9820,7 @@
       "machine_id": "m_firebox",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 1.08,
       "inputs": [
         {
@@ -9455,6 +9845,7 @@
       "machine_id": "m_gas_burner",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0.173,
       "inputs": [
         {
@@ -9479,6 +9870,7 @@
       "machine_id": "m_gas_burner",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -9503,6 +9895,7 @@
       "machine_id": "m_gas_burner",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0.173,
       "inputs": [
         {
@@ -9527,6 +9920,7 @@
       "machine_id": "m_gas_burner",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -9551,6 +9945,7 @@
       "machine_id": "m_gas_burner",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0.173,
       "inputs": [
         {
@@ -9575,6 +9970,7 @@
       "machine_id": "m_gas_burner",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -9599,6 +9995,7 @@
       "machine_id": "m_gasoline_generator",
       "cycle_time": 2,
       "power_consumption": -12000,
+      "power_type": "MV",
       "pollution": 0.648,
       "inputs": [
         {
@@ -9614,6 +10011,7 @@
       "machine_id": "m_gasoline_generator",
       "cycle_time": 10,
       "power_consumption": -24000,
+      "power_type": "MV",
       "pollution": 0.648,
       "inputs": [
         {
@@ -9629,6 +10027,7 @@
       "machine_id": "m_gasoline_generator",
       "cycle_time": 5,
       "power_consumption": -100000,
+      "power_type": "MV",
       "pollution": 0.648,
       "inputs": [
         {
@@ -9644,6 +10043,7 @@
       "machine_id": "m_industrial_firebox",
       "cycle_time": "Variable",
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 1.8,
       "inputs": [
         {
@@ -9668,6 +10068,7 @@
       "machine_id": "m_industrial_firebox",
       "cycle_time": "Variable",
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 1.8,
       "inputs": [
         {
@@ -9692,6 +10093,7 @@
       "machine_id": "m_industrial_firebox",
       "cycle_time": "Variable",
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 1.8,
       "inputs": [
         {
@@ -9716,6 +10118,7 @@
       "machine_id": "m_industrial_firebox",
       "cycle_time": "Variable",
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 1.8,
       "inputs": [
         {
@@ -9740,6 +10143,7 @@
       "machine_id": "m_industrial_firebox",
       "cycle_time": "Variable",
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 1.8,
       "inputs": [
         {
@@ -9764,6 +10168,7 @@
       "machine_id": "m_industrial_firebox",
       "cycle_time": "Variable",
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 1.8,
       "inputs": [
         {
@@ -9792,6 +10197,7 @@
       "machine_id": "m_industrial_firebox",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 1.8,
       "inputs": [
         {
@@ -9816,6 +10222,7 @@
       "machine_id": "m_large_diesel_engine",
       "cycle_time": 10,
       "power_consumption": -5000000,
+      "power_type": "MV",
       "pollution": 0.648,
       "inputs": [
         {
@@ -9835,6 +10242,7 @@
       "machine_id": "m_large_diesel_engine",
       "cycle_time": 10,
       "power_consumption": -5000000,
+      "power_type": "MV",
       "pollution": 0.648,
       "inputs": [
         {
@@ -9854,6 +10262,7 @@
       "machine_id": "m_large_diesel_engine",
       "cycle_time": 10,
       "power_consumption": -5000000,
+      "power_type": "MV",
       "pollution": 0.648,
       "inputs": [
         {
@@ -9873,6 +10282,7 @@
       "machine_id": "m_large_diesel_engine",
       "cycle_time": 10,
       "power_consumption": -5000000,
+      "power_type": "MV",
       "pollution": 0.648,
       "inputs": [
         {
@@ -9892,6 +10302,7 @@
       "machine_id": "m_large_turbine",
       "cycle_time": 1,
       "power_consumption": "Variable",
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -9912,6 +10323,7 @@
       "machine_id": "m_boiler",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -9940,6 +10352,7 @@
       "machine_id": "m_boiler",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -9968,6 +10381,7 @@
       "machine_id": "m_boiler",
       "cycle_time": 1,
       "power_consumption": 0,
+      "power_type": "None",
       "pollution": 0,
       "inputs": [
         {
@@ -9996,6 +10410,7 @@
       "machine_id": "m_modular_turbine",
       "cycle_time": 1,
       "power_consumption": "Variable",
+      "power_type": "HV",
       "pollution": 0,
       "inputs": [
         {
@@ -10016,6 +10431,7 @@
       "machine_id": "m_scrubber",
       "cycle_time": 4,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": "-3.24",
       "inputs": [
         {
@@ -10036,6 +10452,7 @@
       "machine_id": "m_scrubber",
       "cycle_time": 4,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": "-3.57",
       "inputs": [
         {
@@ -10056,6 +10473,7 @@
       "machine_id": "m_scrubber",
       "cycle_time": 4,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": "-6.29",
       "inputs": [
         {
@@ -10076,6 +10494,7 @@
       "machine_id": "m_scrubber",
       "cycle_time": 4,
       "power_consumption": 15000,
+      "power_type": "MV",
       "pollution": "6.48",
       "inputs": [
         {
@@ -10096,6 +10515,7 @@
       "machine_id": "m_geothermal_well",
       "cycle_time": 1,
       "power_consumption": 3000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -10116,6 +10536,7 @@
       "machine_id": "m_geothermal_well",
       "cycle_time": 1,
       "power_consumption": 3000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {
@@ -10136,6 +10557,7 @@
       "machine_id": "m_geothermal_well",
       "cycle_time": 1,
       "power_consumption": 3000,
+      "power_type": "MV",
       "pollution": 0,
       "inputs": [
         {

@@ -9,6 +9,7 @@ const DEFAULT_THEME = {
   nodeBg: '#1a1a1a', nodeBorder: '#d4a637', nodeTargetBg: '#2d2416', nodeTargetBorder: '#f5d56a',
   handleInputSupplied: '#22c55e', handleInputDeficient: '#ef4444', handleOutputConnected: '#ef4444', handleOutputExcess: '#22c55e',
   statPositive: '#86efac', statNegative: '#fca5a5', settingsInputLabel: '#86efac', settingsOutputLabel: '#fca5a5',
+  tier1Color: '#888888', tier2Color: '#4ade80', tier3Color: '#60a5fa', tier4Color: '#c084fc', tier5Color: '#fbbf24',
   edgePath: 'orthogonal', edgeStyle: 'animated'
 };
 
@@ -23,6 +24,7 @@ const THEME_PRESETS = [
     nodeBg: '#44475a', nodeBorder: '#bd93f9', nodeTargetBg: '#5a4a6a', nodeTargetBorder: '#ff79c6',
     handleInputSupplied: '#50fa7b', handleInputDeficient: '#ff5555', handleOutputConnected: '#ff5555', handleOutputExcess: '#50fa7b',
     statPositive: '#50fa7b', statNegative: '#ff5555', settingsInputLabel: '#50fa7b', settingsOutputLabel: '#ff79c6',
+    tier1Color: '#999999', tier2Color: '#50fa7b', tier3Color: '#8be9fd', tier4Color: '#bd93f9', tier5Color: '#f1fa8c',
     edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'nord', name: 'Nord', description: 'Cool arctic bluish palette', theme: {
     colorPrimary: '#88c0d0', colorPrimaryHover: '#8fbcbb', colorPrimaryDark: '#2e3440', colorSecondary: '#3b4252',
@@ -33,6 +35,7 @@ const THEME_PRESETS = [
     nodeBg: '#3b4252', nodeBorder: '#88c0d0', nodeTargetBg: '#4c5a68', nodeTargetBorder: '#8fbcbb',
     handleInputSupplied: '#a3be8c', handleInputDeficient: '#bf616a', handleOutputConnected: '#bf616a', handleOutputExcess: '#a3be8c',
     statPositive: '#a3be8c', statNegative: '#bf616a', settingsInputLabel: '#a3be8c', settingsOutputLabel: '#d08770',
+    tier1Color: '#999999', tier2Color: '#a3be8c', tier3Color: '#88c0d0', tier4Color: '#b48ead', tier5Color: '#ebcb8b',
     edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'solarized-dark', name: 'Solarized Dark', description: 'Precision dark theme with balanced contrast', theme: {
     colorPrimary: '#268bd2', colorPrimaryHover: '#2aa198', colorPrimaryDark: '#002b36', colorSecondary: '#073642',
@@ -43,6 +46,7 @@ const THEME_PRESETS = [
     nodeBg: '#073642', nodeBorder: '#268bd2', nodeTargetBg: '#0f4a52', nodeTargetBorder: '#2aa198',
     handleInputSupplied: '#859900', handleInputDeficient: '#dc322f', handleOutputConnected: '#dc322f', handleOutputExcess: '#859900',
     statPositive: '#859900', statNegative: '#dc322f', settingsInputLabel: '#859900', settingsOutputLabel: '#cb4b16',
+    tier1Color: '#93a1a1', tier2Color: '#859900', tier3Color: '#268bd2', tier4Color: '#6c71c4', tier5Color: '#b58900',
     edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'solarized-light', name: 'Solarized Light', description: 'For those who want to burn their eyes out', theme: {
     colorPrimary: '#268bd2', colorPrimaryHover: '#2aa198', colorPrimaryDark: '#fdf6e3', colorSecondary: '#eee8d5',
@@ -53,6 +57,7 @@ const THEME_PRESETS = [
     nodeBg: '#eee8d5', nodeBorder: '#268bd2', nodeTargetBg: '#d9d2c2', nodeTargetBorder: '#2aa198',
     handleInputSupplied: '#859900', handleInputDeficient: '#dc322f', handleOutputConnected: '#dc322f', handleOutputExcess: '#859900',
     statPositive: '#859900', statNegative: '#dc322f', settingsInputLabel: '#859900', settingsOutputLabel: '#cb4b16',
+    tier1Color: '#839496', tier2Color: '#859900', tier3Color: '#268bd2', tier4Color: '#6c71c4', tier5Color: '#b58900',
     edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'midnight', name: 'Midnight Blue', description: 'Deep blue dark theme', theme: {
     colorPrimary: '#4a9eff', colorPrimaryHover: '#70b4ff', colorPrimaryDark: '#0a0e1a', colorSecondary: '#151a2e',
@@ -63,6 +68,7 @@ const THEME_PRESETS = [
     nodeBg: '#151a2e', nodeBorder: '#4a9eff', nodeTargetBg: '#1e2a45', nodeTargetBorder: '#70b4ff',
     handleInputSupplied: '#64ffda', handleInputDeficient: '#ff6b9d', handleOutputConnected: '#ff6b9d', handleOutputExcess: '#64ffda',
     statPositive: '#64ffda', statNegative: '#ff6b9d', settingsInputLabel: '#64ffda', settingsOutputLabel: '#ffa7c4',
+    tier1Color: '#9099b0', tier2Color: '#64ffda', tier3Color: '#4a9eff', tier4Color: '#c792ea', tier5Color: '#ffcb6b',
     edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'forest', name: 'Forest Green', description: 'Natural green theme', theme: {
     colorPrimary: '#5fb573', colorPrimaryHover: '#7fc794', colorPrimaryDark: '#0a1a0f', colorSecondary: '#152820',
@@ -73,6 +79,7 @@ const THEME_PRESETS = [
     nodeBg: '#152820', nodeBorder: '#5fb573', nodeTargetBg: '#243a2d', nodeTargetBorder: '#7fc794',
     handleInputSupplied: '#66bb6a', handleInputDeficient: '#ef5350', handleOutputConnected: '#ef5350', handleOutputExcess: '#66bb6a',
     statPositive: '#a5d6a7', statNegative: '#ff8a80', settingsInputLabel: '#a5d6a7', settingsOutputLabel: '#ff8a80',
+    tier1Color: '#9e9e9e', tier2Color: '#66bb6a', tier3Color: '#42a5f5', tier4Color: '#ab47bc', tier5Color: '#ffca28',
     edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'sunset', name: 'Sunset Orange', description: 'Warm sunset-inspired theme, steampunk-esque', theme: {
     colorPrimary: '#ff8c42', colorPrimaryHover: '#ffaa6f', colorPrimaryDark: '#1a0f0a', colorSecondary: '#281912',
@@ -83,6 +90,7 @@ const THEME_PRESETS = [
     nodeBg: '#281912', nodeBorder: '#ff8c42', nodeTargetBg: '#3d2a1a', nodeTargetBorder: '#ffaa6f',
     handleInputSupplied: '#a3e048', handleInputDeficient: '#ff5555', handleOutputConnected: '#ff5555', handleOutputExcess: '#a3e048',
     statPositive: '#c6f68d', statNegative: '#ff8787', settingsInputLabel: '#c6f68d', settingsOutputLabel: '#ff8787',
+    tier1Color: '#a89984', tier2Color: '#a3e048', tier3Color: '#83a598', tier4Color: '#d3869b', tier5Color: '#fabd2f',
     edgePath: 'orthogonal', edgeStyle: 'animated' }},
   { id: 'cyberpunk', name: 'Cyberpunk', description: 'Neon-inspired futuristic theme', theme: {
     colorPrimary: '#00ff9f', colorPrimaryHover: '#00ffbf', colorPrimaryDark: '#0a0a15', colorSecondary: '#1a1a2e',
@@ -93,6 +101,7 @@ const THEME_PRESETS = [
     nodeBg: '#1a1a2e', nodeBorder: '#00ff9f', nodeTargetBg: '#2a2a45', nodeTargetBorder: '#00ffbf',
     handleInputSupplied: '#00ff9f', handleInputDeficient: '#ff006e', handleOutputConnected: '#ff006e', handleOutputExcess: '#00ff9f',
     statPositive: '#00ffbf', statNegative: '#ff4d9d', settingsInputLabel: '#00ffbf', settingsOutputLabel: '#ff4d9d',
+    tier1Color: '#9999aa', tier2Color: '#00ff9f', tier3Color: '#00d4ff', tier4Color: '#d946ef', tier5Color: '#ffd700',
     edgePath: 'orthogonal', edgeStyle: 'animated' }}
 ];
 
@@ -154,7 +163,11 @@ const ThemeEditor = ({ onClose }) => {
       { key: 'handleOutputConnected', label: 'Output Connected' }, { key: 'handleOutputExcess', label: 'Output Excess' }]},
     { title: 'Statistics & Settings', colors: [
       { key: 'statPositive', label: 'Positive Stats' }, { key: 'statNegative', label: 'Negative Stats' },
-      { key: 'settingsInputLabel', label: 'Settings Input Label' }, { key: 'settingsOutputLabel', label: 'Settings Output Label' }]}
+      { key: 'settingsInputLabel', label: 'Settings Input Label' }, { key: 'settingsOutputLabel', label: 'Settings Output Label' }]},
+    { title: 'Machine Tier Colors', colors: [
+      { key: 'tier1Color', label: 'Tier 1 (Grey)' }, { key: 'tier2Color', label: 'Tier 2 (Green)' },
+      { key: 'tier3Color', label: 'Tier 3 (Blue)' }, { key: 'tier4Color', label: 'Tier 4 (Purple)' },
+      { key: 'tier5Color', label: 'Tier 5 (Yellow)' }]}
   ];
 
   const edgePathOptions = [

@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom';
 import { calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from '../data/logicAssembler';
 
 const outerStages = [1, 2, 3, 4, 5, 6, 7, 8];
-const innerStages = [2, 4, 8, 16, 32, 64];
 const POWER_STORAGE_REQUIREMENT = 500000;
 
 const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onClose }) => {
@@ -69,15 +68,27 @@ const LogicAssemblerSettings = ({ nodeId, currentSettings, onSettingsChange, onC
           <div className="drill-setting-group">
             <label className="drill-setting-label">Target Microchip:</label>
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-              <select value={outerStage} onChange={(e) => setOuterStage(e.target.value)} 
+              <select value={outerStage} onChange={(e) => {
+                const newOuter = e.target.value;
+                setOuterStage(newOuter);
+                // If switching to outer stage 2+, force inner to 64
+                if (newOuter && parseInt(newOuter) > 1) {
+                  setInnerStage('64');
+                }
+              }} 
                 className="select" style={{ flex: 1 }}>
                 <option value="">Outer</option>
                 {outerStages.map(stage => <option key={stage} value={stage}>{stage}x</option>)}
               </select>
               <select value={innerStage} onChange={(e) => setInnerStage(e.target.value)} 
-                className="select" style={{ flex: 1 }}>
+                className="select" style={{ flex: 1 }}
+                disabled={outerStage && parseInt(outerStage) > 1}>
                 <option value="">Inner</option>
-                {innerStages.map(stage => <option key={stage} value={stage}>{stage}x</option>)}
+                {(outerStage && parseInt(outerStage) > 1) ? (
+                  <option value="64">64x</option>
+                ) : (
+                  [2, 4, 8, 16, 32, 64].map(stage => <option key={stage} value={stage}>{stage}x</option>)
+                )}
               </select>
               <span style={{ color: '#f5d56a', fontWeight: 600, whiteSpace: 'nowrap' }}>Microchip</span>
             </div>

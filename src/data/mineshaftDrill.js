@@ -297,6 +297,7 @@ export const DEFAULT_DRILL_RECIPE = {
   machine_id: 'm_mineshaft_drill',
   cycle_time: 1,
   power_consumption: 'Variable',
+  power_type: 'HV',
   pollution: 'Variable',
   inputs: [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
   outputs: [{ product_id: 'p_variableproduct', quantity: 'Variable' }],

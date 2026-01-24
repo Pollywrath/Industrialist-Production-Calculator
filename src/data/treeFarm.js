@@ -101,6 +101,7 @@ export const DEFAULT_TREE_FARM_RECIPE = {
   machine_id: 'm_tree_farm',
   cycle_time: 1,
   power_consumption: 'Variable',
+  power_type: 'MV',
   pollution: 0,
   inputs: [{ product_id: 'p_water', quantity: 'Variable' }],
   outputs: [{ product_id: 'p_oak_log', quantity: 'Variable' }],

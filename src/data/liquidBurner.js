@@ -57,6 +57,7 @@ export const DEFAULT_LIQUID_BURNER_RECIPE = {
   machine_id: 'm_liquid_burner',
   cycle_time: 1,
   power_consumption: 0,
+  power_type: 'None',
   pollution: 0, // Calculated dynamically
   inputs: Array(INPUT_COUNT).fill(null).map(() => ({
     product_id: 'p_variableproduct',

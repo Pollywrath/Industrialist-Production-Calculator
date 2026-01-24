@@ -89,6 +89,7 @@ export const DEFAULT_WASTE_FACILITY_RECIPE = {
   machine_id: 'm_underground_waste_facility',
   cycle_time: 29.166666666666668,
   power_consumption: POWER_CONSUMPTION,
+  power_type: 'MV',
   pollution: 0,
   inputs: [
     { product_id: 'p_variableproduct', quantity: STORAGE_CAPACITY, isAnyProduct: true, acceptedType: 'item' },

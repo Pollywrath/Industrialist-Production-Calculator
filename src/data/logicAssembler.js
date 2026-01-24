@@ -14,14 +14,24 @@ const BASE_MATERIALS = {
 
 export const generateMicrochipStages = () => {
   const stages = [];
-  for (let outer = 1; outer <= 8; outer++) {
-    for (let innerPower = 1; innerPower <= 6; innerPower++) {
-      const inner = Math.pow(2, innerPower);
-      const name = outer === 1 ? `${inner}x Microchip` : `${outer}x${inner}x Microchip`;
-      const productId = outer === 1 ? `p_${inner}x_microchip` : `p_${outer}x${inner}x_microchip`;
-      stages.push({ outerStage: outer, innerStage: inner, innerPower, name, productId });
-    }
+  
+  // Outer stage 1: All inner stages (2x, 4x, 8x, 16x, 32x, 64x)
+  for (let innerPower = 1; innerPower <= 6; innerPower++) {
+    const inner = Math.pow(2, innerPower);
+    const name = `${inner}x Microchip`;
+    const productId = `p_${inner}x_microchip`;
+    stages.push({ outerStage: 1, innerStage: inner, innerPower, name, productId });
   }
+  
+  // Outer stages 2-8: Only 64x inner stage
+  for (let outer = 2; outer <= 8; outer++) {
+    const inner = 64;
+    const innerPower = 6;
+    const name = `${outer}x64x Microchip`;
+    const productId = `p_${outer}x64x_microchip`;
+    stages.push({ outerStage: outer, innerStage: inner, innerPower, name, productId });
+  }
+  
   return stages;
 };
 
@@ -92,6 +102,7 @@ export const DEFAULT_LOGIC_ASSEMBLER_RECIPE = {
   machine_id: 'm_logic_assembler',
   cycle_time: 'Variable',
   power_consumption: 'Variable',
+  power_type: 'MV',
   pollution: 0,
   inputs: [
     { product_id: 'p_logic_plate', quantity: 'Variable' },

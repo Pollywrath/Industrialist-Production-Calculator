@@ -65,6 +65,13 @@
   --settings-input-label: #86efac;
   --settings-output-label: #fca5a5;
   
+  /* Machine Tier Colors */
+  --tier-1-color: #888888;
+  --tier-2-color: #4ade80;
+  --tier-3-color: #60a5fa;
+  --tier-4-color: #c084fc;
+  --tier-5-color: #fbbf24;
+  
   /* Edge Settings */
   --edge-path: orthogonal;
   --edge-style: animated;

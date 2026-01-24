@@ -35,6 +35,14 @@ export const getRecipesUsingProduct = (productId) => {
   const standardRecipes = recipes.filter(r => {
     if (['r_mineshaft_drill_01', 'r_logic_assembler_01'].includes(r.id)) return false;
     
+    // Exclude disposal recipes (except underground waste facility for concrete/lead)
+    const isDisposalRecipe = ['r_liquid_dump', 'r_liquid_burner'].includes(r.id);
+    const isWasteFacilityForStructural = r.id === 'r_underground_waste_facility' && 
+      ['p_concrete_block', 'p_lead_ingot'].includes(productId);
+    
+    if (isDisposalRecipe) return false;
+    if (r.id === 'r_underground_waste_facility' && !isWasteFacilityForStructural) return false;
+    
     // Check if recipe directly uses this product
     const directlyUsesProduct = r.inputs.some(i => i.product_id === productId && i.product_id !== 'p_variableproduct');
     
@@ -43,7 +51,7 @@ export const getRecipesUsingProduct = (productId) => {
       fireboxRecipesWithFuel.includes(r.id) &&
       r.inputs.some(i => i.product_id === 'p_variableproduct');
     
-    return directlyUsesProduct || isFuelForFirebox;
+    return directlyUsesProduct || isFuelForFirebox || isWasteFacilityForStructural;
   });
   
   return standardRecipes;
