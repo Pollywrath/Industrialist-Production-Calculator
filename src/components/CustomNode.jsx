@@ -4,16 +4,7 @@ import { getProduct } from '../data/dataLoader';
 import { getProductName, formatPowerConsumption, formatPollution } from '../utils/variableHandler';
 import { isTemperatureProduct, formatTemperature, needsTemperatureConfig, needsBoilerConfig, HEAT_SOURCES, DEFAULT_STEAM_TEMPERATURE } from '../utils/temperatureHandler';
 import { hasTempDependentCycle, getTempDependentCycleTime, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getSteamInputIndex } from '../utils/temperatureDependentCycles';
-import DrillSettings from './DrillSettings';
-import LogicAssemblerSettings from './LogicAssemblerSettings';
-import TreeFarmSettings from './TreeFarmSettings';
-import IndustrialFireboxSettings from './IndustrialFireboxSettings';
-import TemperatureSettings from './TemperatureSettings';
-import BoilerSettings from './BoilerSettings';
-import ChemicalPlantSettings from './ChemicalPlantSettings';
-import UndergroundWasteFacilitySettings from './UndergroundWasteFacilitySettings';
-import LiquidDumpSettings from './LiquidDumpSettings';
-import LiquidBurnerSettings from './LiquidBurnerSettings';
+import UnifiedSettings from './UnifiedSettings';
 
 const RECT_HEIGHT = 44, RECT_GAP = 8, BOTTOM_PADDING = 20, SIDE_PADDING = 10, COLUMN_GAP = 20, MIN_WIDTH = 320;
 
@@ -33,16 +24,7 @@ const CustomNode = memo(({ data, id }) => {
     onDrillSettingsChange, onLogicAssemblerSettingsChange, onTreeFarmSettingsChange, onIndustrialFireboxSettingsChange, 
     onTemperatureSettingsChange, onBoilerSettingsChange, onChemicalPlantSettingsChange, globalPollution, flows } = data;
   
-  const [showDrillSettings, setShowDrillSettings] = useState(false);
-  const [showAssemblerSettings, setShowAssemblerSettings] = useState(false);
-  const [showTreeFarmSettings, setShowTreeFarmSettings] = useState(false);
-  const [showFireboxSettings, setShowFireboxSettings] = useState(false);
-  const [showTemperatureSettings, setShowTemperatureSettings] = useState(false);
-  const [showBoilerSettings, setShowBoilerSettings] = useState(false);
-  const [showChemicalPlantSettings, setShowChemicalPlantSettings] = useState(false);
-  const [showWasteFacilitySettings, setShowWasteFacilitySettings] = useState(false);
-  const [showLiquidDumpSettings, setShowLiquidDumpSettings] = useState(false);
-  const [showLiquidBurnerSettings, setShowLiquidBurnerSettings] = useState(false);
+  const [settingsModal, setSettingsModal] = useState(null);
   
   if (!recipe?.inputs || !recipe?.outputs || !machine) return null;
   
@@ -268,54 +250,54 @@ const CustomNode = memo(({ data, id }) => {
         )}
 
         {isMineshaftDrill && (
-          <button onClick={(e) => { e.stopPropagation(); setShowDrillSettings(true); }} 
+          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('drill'); }} 
             onDoubleClick={(e) => e.stopPropagation()}
             className="drill-settings-button" title="Configure Drill">⚙️</button>
         )}
         {isLogicAssembler && (
-          <button onClick={(e) => { e.stopPropagation(); setShowAssemblerSettings(true); }} 
+          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('assembler'); }} 
             onDoubleClick={(e) => e.stopPropagation()}
             className="drill-settings-button" title="Configure Assembler">⚙️</button>
         )}
         {isTreeFarm && (
-          <button onClick={(e) => { e.stopPropagation(); setShowTreeFarmSettings(true); }} 
+          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('treeFarm'); }} 
             onDoubleClick={(e) => e.stopPropagation()}
-            className="drill-settings-button" title="Configure Tree Farm">🌲</button>
+            className="drill-settings-button" title="Configure Tree Farm">⚙️</button>
         )}
         {isIndustrialFirebox && (
-          <button onClick={(e) => { e.stopPropagation(); setShowFireboxSettings(true); }} 
+          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('firebox'); }} 
             onDoubleClick={(e) => e.stopPropagation()}
-            className="drill-settings-button" title="Configure Firebox">🔥</button>
+            className="drill-settings-button" title="Configure Firebox">⚙️</button>
         )}
         {isChemicalPlant && (
-          <button onClick={(e) => { e.stopPropagation(); setShowChemicalPlantSettings(true); }} 
+          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('chemicalPlant'); }} 
             onDoubleClick={(e) => e.stopPropagation()}
-            className="drill-settings-button" title="Configure Chemical Plant">⚗️</button>
+            className="drill-settings-button" title="Configure Chemical Plant">⚙️</button>
         )}
         {isWasteFacility && (
-          <button onClick={(e) => { e.stopPropagation(); setShowWasteFacilitySettings(true); }} 
+          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('wasteFacility'); }} 
             onDoubleClick={(e) => e.stopPropagation()}
-            className="drill-settings-button" title="Configure Waste Facility">🗑️</button>
+            className="drill-settings-button" title="Configure Waste Facility">⚙️</button>
         )}
         {isLiquidDump && (
-          <button onClick={(e) => { e.stopPropagation(); setShowLiquidDumpSettings(true); }} 
+          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('liquidDump'); }} 
             onDoubleClick={(e) => e.stopPropagation()}
-            className="drill-settings-button" title="Liquid Dump Info">💧</button>
+            className="drill-settings-button" title="Liquid Dump Info">⚙️</button>
         )}
         {isLiquidBurner && (
-          <button onClick={(e) => { e.stopPropagation(); setShowLiquidBurnerSettings(true); }} 
+          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('liquidBurner'); }} 
             onDoubleClick={(e) => e.stopPropagation()}
-            className="drill-settings-button" title="Liquid Burner Info">🔥</button>
+            className="drill-settings-button" title="Liquid Burner Info">⚙️</button>
         )}
         {hasTemperatureConfig && (
-          <button onClick={(e) => { e.stopPropagation(); setShowTemperatureSettings(true); }} 
+          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('temperature'); }} 
             onDoubleClick={(e) => e.stopPropagation()}
-            className="drill-settings-button" title="Configure Temperature">🌡️</button>
+            className="drill-settings-button" title="Configure Temperature">⚙️</button>
         )}
         {hasBoilerConfig && (
-          <button onClick={(e) => { e.stopPropagation(); setShowBoilerSettings(true); }} 
+          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('boiler'); }} 
             onDoubleClick={(e) => e.stopPropagation()}
-            className="drill-settings-button" title="Configure Boiler" style={{ right: '10px' }}>🔧</button>
+            className="drill-settings-button" title="Configure Boiler" style={{ right: '10px' }}>⚙️</button>
         )}
 
         <div className="node-recipe-name" title={recipe.name} style={{ 
@@ -388,51 +370,40 @@ const CustomNode = memo(({ data, id }) => {
         })}
       </div>
 
-      {showDrillSettings && (
-        <DrillSettings nodeId={id} currentSettings={recipe.drillSettings || {}} 
-          onSettingsChange={onDrillSettingsChange} onClose={() => setShowDrillSettings(false)} />
-      )}
-      {showAssemblerSettings && (
-        <LogicAssemblerSettings nodeId={id} currentSettings={recipe.assemblerSettings || {}} 
-          onSettingsChange={onLogicAssemblerSettingsChange} onClose={() => setShowAssemblerSettings(false)} />
-      )}
-      {showTemperatureSettings && (
-        <TemperatureSettings nodeId={id} machineId={machine.id} currentSettings={recipe.temperatureSettings || {}} 
-          recipe={recipe} onSettingsChange={onTemperatureSettingsChange} onClose={() => setShowTemperatureSettings(false)} />
-      )}
-      {showBoilerSettings && (
-        <BoilerSettings nodeId={id} currentSettings={recipe.temperatureSettings || {}} 
-          onSettingsChange={onBoilerSettingsChange} onClose={() => setShowBoilerSettings(false)} />
-      )}
-      {showTreeFarmSettings && (
-        <TreeFarmSettings nodeId={id} currentSettings={recipe.treeFarmSettings || {}} 
-          globalPollution={globalPollution || 0} onSettingsChange={onTreeFarmSettingsChange} 
-          onClose={() => setShowTreeFarmSettings(false)} />
-      )}
-      {showFireboxSettings && (
-        <IndustrialFireboxSettings nodeId={id} currentSettings={recipe.fireboxSettings || {}} 
-          recipe={recipe} onSettingsChange={onIndustrialFireboxSettingsChange} 
-          onClose={() => setShowFireboxSettings(false)} />
-      )}
-      {showChemicalPlantSettings && (
-        <ChemicalPlantSettings nodeId={id} currentSettings={recipe.chemicalPlantSettings || {}} 
-          recipe={recipe} onSettingsChange={onChemicalPlantSettingsChange} 
-          onClose={() => setShowChemicalPlantSettings(false)} />
-      )}
-      {showWasteFacilitySettings && (
-        <UndergroundWasteFacilitySettings nodeId={id} currentSettings={recipe.wasteFacilitySettings || {}} 
-          onSettingsChange={data.onWasteFacilitySettingsChange} 
-          onClose={() => setShowWasteFacilitySettings(false)} />
-      )}
-      {showLiquidDumpSettings && (
-        <LiquidDumpSettings nodeId={id} currentSettings={recipe.liquidDumpSettings || {}} recipe={recipe} 
-          onSettingsChange={data.onLiquidDumpSettingsChange}
-          onClose={() => setShowLiquidDumpSettings(false)} />
-      )}
-      {showLiquidBurnerSettings && (
-        <LiquidBurnerSettings nodeId={id} currentSettings={recipe.liquidBurnerSettings || {}} recipe={recipe} 
-          onSettingsChange={data.onLiquidBurnerSettingsChange}
-          onClose={() => setShowLiquidBurnerSettings(false)} />
+      {settingsModal && (
+        <UnifiedSettings
+          recipeType={settingsModal}
+          nodeId={id}
+          currentSettings={
+            settingsModal === 'drill' ? recipe.drillSettings :
+            settingsModal === 'assembler' ? recipe.assemblerSettings :
+            settingsModal === 'treeFarm' ? recipe.treeFarmSettings :
+            settingsModal === 'firebox' ? recipe.fireboxSettings :
+            settingsModal === 'temperature' ? recipe.temperatureSettings :
+            settingsModal === 'boiler' ? recipe.temperatureSettings :
+            settingsModal === 'chemicalPlant' ? recipe.chemicalPlantSettings :
+            settingsModal === 'wasteFacility' ? recipe.wasteFacilitySettings :
+            settingsModal === 'liquidDump' ? recipe.liquidDumpSettings :
+            settingsModal === 'liquidBurner' ? recipe.liquidBurnerSettings :
+            {}
+          }
+          recipe={recipe}
+          globalPollution={globalPollution || 0}
+          onSettingsChange={
+            settingsModal === 'drill' ? onDrillSettingsChange :
+            settingsModal === 'assembler' ? onLogicAssemblerSettingsChange :
+            settingsModal === 'treeFarm' ? onTreeFarmSettingsChange :
+            settingsModal === 'firebox' ? onIndustrialFireboxSettingsChange :
+            settingsModal === 'temperature' ? onTemperatureSettingsChange :
+            settingsModal === 'boiler' ? onBoilerSettingsChange :
+            settingsModal === 'chemicalPlant' ? onChemicalPlantSettingsChange :
+            settingsModal === 'wasteFacility' ? data.onWasteFacilitySettingsChange :
+            settingsModal === 'liquidDump' ? data.onLiquidDumpSettingsChange :
+            settingsModal === 'liquidBurner' ? data.onLiquidBurnerSettingsChange :
+            () => {}
+          }
+          onClose={() => setSettingsModal(null)}
+        />
       )}
     </>
   );
