@@ -7,12 +7,16 @@ import {
   updateProduct,
   updateMachine,
   updateRecipe,
+  saveCustomProducts,
+  saveCustomMachines,
+  saveCustomRecipes,
   exportData,
   importData,
   restoreDefaultProducts,
   restoreDefaultMachines,
   restoreDefaultRecipes
 } from '../utils/dataUtilities';
+import { metricFormat } from '../utils/appUtilities';
 
 const DataManager = ({ onClose, defaultProducts, defaultMachines, defaultRecipes, onDataChange }) => {
   const [activeTab, setActiveTab] = useState('products');
@@ -184,6 +188,13 @@ const ProductsTab = ({ searchTerm, defaultProducts, onDataChange }) => {
   const [products, setProducts] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editValues, setEditValues] = useState({});
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    type: 'item',
+    price: 0,
+    rp_multiplier: 1
+  });
 
   useEffect(() => {
     loadProducts();
@@ -231,45 +242,156 @@ const ProductsTab = ({ searchTerm, defaultProducts, onDataChange }) => {
   };
 
   const resetToDefault = (productId) => {
-    console.log('Reset clicked for product:', productId);
     const defaultProduct = defaultProducts.find(p => p.id === productId);
-    console.log('Default product found:', defaultProduct);
     
     if (!defaultProduct) {
       alert('Default product not found');
       return;
     }
     
-    // Get current product to compare
-    const currentProduct = products.find(p => p.id === productId);
-    console.log('Current product:', currentProduct);
-    
-    // Reset all editable fields to default values
     const updates = {
       price: defaultProduct.price,
       rp_multiplier: defaultProduct.rp_multiplier,
       type: defaultProduct.type
     };
     
-    console.log('Updates to apply:', updates);
-    
-    const success = updateProduct(productId, updates);
-    console.log('Update result:', success);
-    
-    if (success) {
+    if (updateProduct(productId, updates)) {
       loadProducts();
       onDataChange();
-      console.log('Reset complete, reloaded products');
     } else {
       alert('Failed to reset product to default');
     }
   };
 
+  const generateProductId = (name) => {
+    return 'p_' + name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+  };
+
+  const handleAddProduct = () => {
+    if (!newProduct.name.trim()) {
+      alert('Product name is required');
+      return;
+    }
+
+    const productId = generateProductId(newProduct.name);
+    
+    if (products.find(p => p.id === productId)) {
+      alert(`Product ID "${productId}" already exists. Please use a different name.`);
+      return;
+    }
+
+    const productToAdd = {
+      id: productId,
+      name: newProduct.name.trim(),
+      type: newProduct.type,
+      price: parseFloat(newProduct.price) || 0,
+      rp_multiplier: parseFloat(newProduct.rp_multiplier) || 1
+    };
+
+    const updatedProducts = [...products, productToAdd];
+    if (saveCustomProducts(updatedProducts)) {
+      loadProducts();
+      onDataChange();
+      setShowAddForm(false);
+      setNewProduct({ name: '', type: 'item', price: 0, rp_multiplier: 1 });
+    } else {
+      alert('Failed to add product');
+    }
+  };
+
+  const handleDeleteProduct = (productId) => {
+    if (!window.confirm(`Delete product "${products.find(p => p.id === productId)?.name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    const updatedProducts = products.filter(p => p.id !== productId);
+    if (saveCustomProducts(updatedProducts)) {
+      loadProducts();
+      onDataChange();
+    } else {
+      alert('Failed to delete product');
+    }
+  };
+
   return (
     <div>
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: '1fr 80px 100px 100px 90px',
+      <div style={{ marginBottom: '15px' }}>
+        <button 
+          onClick={() => setShowAddForm(!showAddForm)} 
+          className="btn btn-primary"
+          style={{ width: '100%' }}
+        >
+          {showAddForm ? 'Cancel' : '+ Add New Product'}
+        </button>
+      </div>
+
+      {showAddForm && (
+        <div style={{
+          padding: '15px',
+          background: 'var(--bg-secondary)',
+          borderRadius: 'var(--radius-md)',
+          marginBottom: '15px',
+          border: '2px solid var(--border-primary)'
+        }}>
+          <h4 style={{ color: 'var(--text-primary)', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>
+            New Product
+          </h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Name</label>
+              <input
+                type="text"
+                value={newProduct.name}
+                onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                className="input"
+                placeholder="Product name"
+              />
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                ID: {newProduct.name ? generateProductId(newProduct.name) : 'p_...'}
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Type</label>
+              <select
+                value={newProduct.type}
+                onChange={(e) => setNewProduct({ ...newProduct, type: e.target.value })}
+                className="select"
+              >
+                <option value="item">Item</option>
+                <option value="fluid">Fluid</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Price</label>
+              <input
+                type="number"
+                value={newProduct.price}
+                onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                className="input"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>RP Multiplier</label>
+              <input
+                type="number"
+                step="0.1"
+                value={newProduct.rp_multiplier}
+                onChange={(e) => setNewProduct({ ...newProduct, rp_multiplier: e.target.value })}
+                className="input"
+                placeholder="1"
+              />
+            </div>
+          </div>
+          <button onClick={handleAddProduct} className="btn btn-primary" style={{ width: '100%' }}>
+            Create Product
+          </button>
+        </div>
+      )}
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 80px 100px 100px 130px',
         gap: '8px',
         padding: '10px',
         background: 'var(--bg-secondary)',
@@ -289,7 +411,7 @@ const ProductsTab = ({ searchTerm, defaultProducts, onDataChange }) => {
       {filteredProducts.map(product => (
         <div key={product.id} style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 80px 100px 100px 90px',
+          gridTemplateColumns: '1fr 80px 100px 100px 130px',
           gap: '8px',
           padding: '10px',
           background: 'var(--bg-main)',
@@ -344,10 +466,10 @@ const ProductsTab = ({ searchTerm, defaultProducts, onDataChange }) => {
             <>
               <div style={{ color: 'var(--text-secondary)' }}>{product.type}</div>
               <div style={{ color: 'var(--text-secondary)' }}>
-                {product.price === 'Variable' ? 'Variable' : `$${product.price}`}
+                {product.price === 'Variable' ? 'Variable' : `$${metricFormat(product.price)}`}
               </div>
               <div style={{ color: 'var(--text-secondary)' }}>
-                {product.rp_multiplier === 'Variable' ? 'Variable' : `${product.rp_multiplier}x`}
+                {product.rp_multiplier === 'Variable' ? 'Variable' : `${product.rp_multiplier >= 1000 ? metricFormat(product.rp_multiplier) : product.rp_multiplier}x`}
               </div>
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button onClick={() => startEdit(product)} className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Edit">
@@ -355,6 +477,9 @@ const ProductsTab = ({ searchTerm, defaultProducts, onDataChange }) => {
                 </button>
                 <button onClick={() => resetToDefault(product.id)} className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Reset">
                   ↻
+                </button>
+                <button onClick={() => handleDeleteProduct(product.id)} className="btn btn-delete" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Delete">
+                  ✕
                 </button>
               </div>
             </>
@@ -370,6 +495,12 @@ const MachinesTab = ({ searchTerm, defaultMachines, onDataChange }) => {
   const [machines, setMachines] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editValues, setEditValues] = useState({});
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newMachine, setNewMachine] = useState({
+    name: '',
+    cost: 0,
+    tier: 1
+  });
 
   useEffect(() => {
     loadMachines();
@@ -421,7 +552,6 @@ const MachinesTab = ({ searchTerm, defaultMachines, onDataChange }) => {
       return;
     }
     
-    // Reset all editable fields to default values
     const updates = {
       cost: defaultMachine.cost,
       tier: defaultMachine.tier
@@ -435,11 +565,126 @@ const MachinesTab = ({ searchTerm, defaultMachines, onDataChange }) => {
     }
   };
 
+  const generateMachineId = (name) => {
+    return 'm_' + name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+  };
+
+  const handleAddMachine = () => {
+    if (!newMachine.name.trim()) {
+      alert('Machine name is required');
+      return;
+    }
+
+    const machineId = generateMachineId(newMachine.name);
+    
+    if (machines.find(m => m.id === machineId)) {
+      alert(`Machine ID "${machineId}" already exists. Please use a different name.`);
+      return;
+    }
+
+    const machineToAdd = {
+      id: machineId,
+      name: newMachine.name.trim(),
+      cost: parseFloat(newMachine.cost) || 0,
+      tier: parseInt(newMachine.tier) || 1
+    };
+
+    const updatedMachines = [...machines, machineToAdd];
+    if (saveCustomMachines(updatedMachines)) {
+      loadMachines();
+      onDataChange();
+      setShowAddForm(false);
+      setNewMachine({ name: '', cost: 0, tier: 1 });
+    } else {
+      alert('Failed to add machine');
+    }
+  };
+
+  const handleDeleteMachine = (machineId) => {
+    if (!window.confirm(`Delete machine "${machines.find(m => m.id === machineId)?.name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    const updatedMachines = machines.filter(m => m.id !== machineId);
+    if (saveCustomMachines(updatedMachines)) {
+      loadMachines();
+      onDataChange();
+    } else {
+      alert('Failed to delete machine');
+    }
+  };
+
   return (
     <div>
+      <div style={{ marginBottom: '15px' }}>
+        <button 
+          onClick={() => setShowAddForm(!showAddForm)} 
+          className="btn btn-primary"
+          style={{ width: '100%' }}
+        >
+          {showAddForm ? 'Cancel' : '+ Add New Machine'}
+        </button>
+      </div>
+
+      {showAddForm && (
+        <div style={{
+          padding: '15px',
+          background: 'var(--bg-secondary)',
+          borderRadius: 'var(--radius-md)',
+          marginBottom: '15px',
+          border: '2px solid var(--border-primary)'
+        }}>
+          <h4 style={{ color: 'var(--text-primary)', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>
+            New Machine
+          </h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Name</label>
+              <input
+                type="text"
+                value={newMachine.name}
+                onChange={(e) => setNewMachine({ ...newMachine, name: e.target.value })}
+                className="input"
+                placeholder="Machine name"
+              />
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                ID: {newMachine.name ? generateMachineId(newMachine.name) : 'm_...'}
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Cost</label>
+              <input
+                type="number"
+                value={newMachine.cost}
+                onChange={(e) => setNewMachine({ ...newMachine, cost: e.target.value })}
+                className="input"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Tier</label>
+              <select
+                value={newMachine.tier}
+                onChange={(e) => setNewMachine({ ...newMachine, tier: e.target.value })}
+                className="select"
+              >
+                <option value="1">Tier 1</option>
+                <option value="2">Tier 2</option>
+                <option value="3">Tier 3</option>
+                <option value="4">Tier 4</option>
+                <option value="5">Tier 5</option>
+              </select>
+            </div>
+          </div>
+          <button onClick={handleAddMachine} className="btn btn-primary" style={{ width: '100%' }}>
+            Create Machine
+          </button>
+        </div>
+      )}
+
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 120px 80px 90px',
+        gridTemplateColumns: '1fr 120px 80px 130px',
         gap: '8px',
         padding: '10px',
         background: 'var(--bg-secondary)',
@@ -458,7 +703,7 @@ const MachinesTab = ({ searchTerm, defaultMachines, onDataChange }) => {
       {filteredMachines.map(machine => (
         <div key={machine.id} style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 120px 80px 90px',
+          gridTemplateColumns: '1fr 120px 80px 130px',
           gap: '8px',
           padding: '10px',
           background: 'var(--bg-main)',
@@ -498,7 +743,7 @@ const MachinesTab = ({ searchTerm, defaultMachines, onDataChange }) => {
             </>
           ) : (
             <>
-              <div style={{ color: 'var(--text-secondary)' }}>${machine.cost}</div>
+              <div style={{ color: 'var(--text-secondary)' }}>${metricFormat(machine.cost)}</div>
               <div style={{ color: 'var(--text-secondary)' }}>Tier {machine.tier || 1}</div>
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button onClick={() => startEdit(machine)} className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Edit">
@@ -506,6 +751,9 @@ const MachinesTab = ({ searchTerm, defaultMachines, onDataChange }) => {
                 </button>
                 <button onClick={() => resetToDefault(machine.id)} className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Reset">
                   ↻
+                </button>
+                <button onClick={() => handleDeleteMachine(machine.id)} className="btn btn-delete" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Delete">
+                  ✕
                 </button>
               </div>
             </>
@@ -519,23 +767,81 @@ const MachinesTab = ({ searchTerm, defaultMachines, onDataChange }) => {
 // Recipes Tab Component (Simplified for now - can be expanded)
 const RecipesTab = ({ searchTerm, defaultRecipes, defaultMachines, defaultProducts, onDataChange }) => {
   const [recipes, setRecipes] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [machines, setMachines] = useState([]);
   const [editingRecipe, setEditingRecipe] = useState(null);
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
 
   useEffect(() => {
     loadRecipes();
+    loadProducts();
+    loadMachines();
   }, []);
 
   const loadRecipes = () => {
     setRecipes(getCustomRecipes());
   };
 
-  const handleSaveRecipe = (updatedRecipe) => {
-    if (updateRecipe(updatedRecipe.id, updatedRecipe)) {
+  const loadProducts = () => {
+    setProducts(getCustomProducts());
+  };
+
+  const loadMachines = () => {
+    setMachines(getCustomMachines());
+  };
+
+  const handleSaveRecipe = (updatedRecipe, isNew = false) => {
+    if (isNew) {
+      const updatedRecipes = [...recipes, updatedRecipe];
+      if (saveCustomRecipes(updatedRecipes)) {
+        loadRecipes();
+        loadProducts();
+        loadMachines();
+        onDataChange();
+      } else {
+        alert('Failed to create recipe');
+      }
+    } else {
+      if (updateRecipe(updatedRecipe.id, updatedRecipe)) {
+        loadRecipes();
+        loadProducts();
+        loadMachines();
+        onDataChange();
+      } else {
+        alert('Failed to save recipe');
+      }
+    }
+  };
+
+  const handleDeleteRecipe = (recipeId) => {
+    if (!window.confirm(`Delete recipe "${recipes.find(r => r.id === recipeId)?.name || recipeId}"? This cannot be undone.`)) {
+      return;
+    }
+
+    const updatedRecipes = recipes.filter(r => r.id !== recipeId);
+    if (saveCustomRecipes(updatedRecipes)) {
       loadRecipes();
+      loadProducts();
+      loadMachines();
       onDataChange();
     } else {
-      alert('Failed to save recipe');
+      alert('Failed to delete recipe');
     }
+  };
+
+  const handleCreateNew = () => {
+    setEditingRecipe({
+      id: '',
+      name: '',
+      machine_id: '',
+      cycle_time: 1,
+      power_consumption: 0,
+      power_type: 'MV',
+      pollution: 0,
+      inputs: [],
+      outputs: []
+    });
+    setIsCreatingNew(true);
   };
 
   const filteredRecipes = recipes
@@ -551,9 +857,19 @@ const RecipesTab = ({ searchTerm, defaultRecipes, defaultMachines, defaultProduc
 
   return (
     <div>
+      <div style={{ marginBottom: '15px' }}>
+        <button 
+          onClick={handleCreateNew} 
+          className="btn btn-primary"
+          style={{ width: '100%' }}
+        >
+          + Add New Recipe
+        </button>
+      </div>
+
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr 110px 110px 70px',
+        gridTemplateColumns: '1fr 1fr 110px 110px 110px',
         gap: '8px',
         padding: '10px',
         background: 'var(--bg-secondary)',
@@ -573,7 +889,7 @@ const RecipesTab = ({ searchTerm, defaultRecipes, defaultMachines, defaultProduc
       {filteredRecipes.map(recipe => (
         <div key={recipe.id} style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 110px 110px 70px',
+          gridTemplateColumns: '1fr 1fr 110px 110px 110px',
           gap: '8px',
           padding: '10px',
           background: 'var(--bg-main)',
@@ -585,7 +901,7 @@ const RecipesTab = ({ searchTerm, defaultRecipes, defaultMachines, defaultProduc
           <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{recipe.name || recipe.id}</div>
           <div style={{ 
             color: (() => {
-              const machine = defaultMachines.find(m => m.id === recipe.machine_id);
+              const machine = machines.find(m => m.id === recipe.machine_id);
               if (!machine) return 'var(--text-secondary)';
               switch(machine.tier) {
                 case 1: return 'var(--tier-1-color)';
@@ -599,34 +915,50 @@ const RecipesTab = ({ searchTerm, defaultRecipes, defaultMachines, defaultProduc
             fontWeight: 500
           }}>
             {(() => {
-              const machine = defaultMachines.find(m => m.id === recipe.machine_id);
+              const machine = machines.find(m => m.id === recipe.machine_id);
               return machine ? machine.name : recipe.machine_id;
             })()}
           </div>
-          <div style={{ color: 'var(--text-secondary)' }}>{recipe.cycle_time}s</div>
+          <div style={{ color: 'var(--text-secondary)' }}>
+            {typeof recipe.cycle_time === 'number' ? `${recipe.cycle_time}s` : String(recipe.cycle_time)}
+          </div>
           <div style={{ color: 'var(--text-secondary)' }}>
             {typeof recipe.power_consumption === 'number' 
-              ? `${recipe.power_consumption}W` 
+              ? `${metricFormat(recipe.power_consumption)}W` 
+              : typeof recipe.power_consumption === 'object' && recipe.power_consumption !== null
+              ? `${metricFormat(recipe.power_consumption.max || recipe.power_consumption.average || 0)}W`
               : String(recipe.power_consumption)}
           </div>
-          <button 
-            onClick={() => setEditingRecipe(recipe)} 
-            className="btn btn-secondary" 
-            style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }}
-            title="Edit"
-          >
-            ✎
-          </button>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            <button 
+              onClick={() => { setEditingRecipe(recipe); setIsCreatingNew(false); }} 
+              className="btn btn-secondary" 
+              style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }}
+              title="Edit"
+            >
+              ✎
+            </button>
+            <button 
+              onClick={() => handleDeleteRecipe(recipe.id)} 
+              className="btn btn-delete" 
+              style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }}
+              title="Delete"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       ))}
 
       {editingRecipe && (
         <RecipeEditor
           recipe={editingRecipe}
-          onClose={() => setEditingRecipe(null)}
-          onSave={handleSaveRecipe}
-          availableProducts={defaultProducts}
-          defaultMachines={defaultMachines}
+          onClose={() => { setEditingRecipe(null); setIsCreatingNew(false); }}
+          onSave={(recipe) => handleSaveRecipe(recipe, isCreatingNew)}
+          availableProducts={products}
+          defaultMachines={machines}
+          allRecipes={recipes}
+          isCreatingNew={isCreatingNew}
         />
       )}
     </div>

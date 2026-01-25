@@ -1116,3 +1116,361 @@ input[type="number"] {
   cursor: pointer;
   border: 2px solid var(--color-primary-dark);
 }
+
+/* ============================================================
+   MOBILE RESPONSIVE STYLES
+   ============================================================ */
+
+@media (max-width: 768px) {
+  /* Base adjustments */
+  body {
+    font-size: 14px;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 10px 16px;
+    font-size: var(--font-size-sm);
+  }
+
+  .btn-secondary {
+    min-width: 120px;
+  }
+
+  .btn-menu-toggle {
+    padding: 10px 12px;
+    font-size: var(--font-size-xl);
+  }
+
+  .menu-buttons .btn-secondary {
+    padding: 12px 12px;
+    min-width: 100px;
+    font-size: var(--font-size-xs);
+  }
+
+  /* Modals */
+  .modal {
+    width: 95vw;
+    max-height: 85vh;
+    padding: var(--spacing-lg);
+  }
+
+  .modal-title {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-md);
+  }
+
+  /* Stats Panel */
+  .stats-panel {
+    min-width: auto;
+    width: 100%;
+    max-width: calc(100vw - 20px);
+    padding: 8px 12px;
+  }
+
+  .stats-title {
+    font-size: var(--font-size-sm);
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+  }
+
+  .stats-grid {
+    gap: 6px;
+  }
+
+  .stat-item {
+    padding: 4px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+  }
+
+  .stat-value {
+    font-size: var(--font-size-xs);
+  }
+
+  /* Action Buttons */
+  .action-buttons-container {
+    width: 100%;
+  }
+
+  .action-buttons-container .btn {
+    padding: 8px 12px;
+    font-size: var(--font-size-xs);
+    min-width: auto;
+  }
+
+  .btn-square {
+    width: auto !important;
+    height: auto !important;
+    padding: 6px 10px !important;
+    font-size: var(--font-size-lg) !important;
+  }
+
+  /* Extended Panel */
+  .extended-panel {
+    width: calc(100vw - 20px);
+    max-width: 100%;
+    height: auto;
+    max-height: calc(100vh - 280px);
+    margin-top: 10px;
+  }
+
+  .extended-panel-content {
+    padding: 10px;
+  }
+
+  /* Menu Container */
+  .menu-container {
+    max-width: calc(100vw - 20px);
+  }
+
+  .menu-container.closed {
+    transform: translateX(calc(100% - 46px));
+  }
+
+  .menu-buttons {
+    gap: 6px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding: 5px;
+  }
+
+  /* Left Panel Container */
+  .left-panel-container {
+    flex-direction: column;
+    gap: 10px;
+    max-width: calc(100vw - 20px);
+  }
+
+  .left-panel-container.collapsed {
+    transform: translateX(calc(-100% + 70px));
+  }
+
+  .left-panel-container.collapsed .action-buttons-container {
+    transform: translateX(70px);
+  }
+
+  .action-buttons-container > div:last-child {
+    transform: translateX(0);
+  }
+
+  .left-panel-container:not(.collapsed) .action-buttons-container > div:last-child {
+    transform: translateX(0);
+  }
+
+  /* Nodes */
+  .custom-node {
+    padding: 12px 15px;
+    max-width: 280px;
+  }
+
+  .node-recipe-name {
+    font-size: var(--font-size-base);
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .node-stats-row {
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: var(--spacing-sm);
+    padding-bottom: var(--spacing-sm);
+  }
+
+  .node-machine-info {
+    align-items: flex-start;
+  }
+
+  .node-machine-name {
+    font-size: var(--font-size-xs);
+    text-align: left;
+  }
+
+  .node-machine-count {
+    font-size: var(--font-size-lg);
+  }
+
+  .node-stat-row {
+    font-size: 10px;
+  }
+
+  .node-rect {
+    padding: 8px 6px;
+    font-size: 10px;
+  }
+
+  /* Recipe Cards */
+  .recipe-card {
+    padding: var(--spacing-md);
+  }
+
+  .recipe-machine {
+    font-size: var(--font-size-sm);
+    margin-bottom: 6px;
+  }
+
+  .recipe-details {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  /* Product Rows */
+  .product-row {
+    padding: var(--spacing-sm);
+  }
+
+  .product-name {
+    font-size: var(--font-size-sm);
+  }
+
+  .product-type {
+    font-size: 10px;
+  }
+
+  /* Form Elements */
+  .input,
+  .select {
+    padding: 8px;
+    font-size: var(--font-size-sm);
+  }
+
+  /* Settings Modals */
+  .drill-settings-bubble {
+    width: 95vw;
+    max-width: 100%;
+    padding: var(--spacing-lg);
+    max-height: 85vh;
+  }
+
+  .drill-settings-title {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .drill-settings-content {
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+  }
+
+  .drill-setting-label {
+    font-size: var(--font-size-sm);
+  }
+
+  /* Theme Editor */
+  .theme-color-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ReactFlow Controls - keep at default top-left but adjust for mobile panels */
+  .react-flow__controls {
+    top: auto !important;
+    bottom: 100px !important;
+    left: 10px !important;
+  }
+
+  .react-flow__controls.controls-shifted {
+    left: 10px !important;
+    bottom: 100px !important;
+  }
+
+  .react-flow__controls button {
+    width: 30px;
+    height: 30px;
+  }
+
+  /* ReactFlow MiniMap */
+  .react-flow__minimap {
+    width: 100px !important;
+    height: 80px !important;
+    bottom: 10px !important;
+    right: 10px !important;
+  }
+
+  /* Pending Node Preview */
+  .pending-node-preview {
+    min-width: 250px;
+    padding: 12px 15px;
+  }
+
+  .pending-node-recipe-name {
+    font-size: var(--font-size-base);
+  }
+
+  .pending-node-machine-name {
+    font-size: var(--font-size-xs);
+  }
+
+  /* Target Cards */
+  .target-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+  }
+
+  .target-product-name {
+    font-size: var(--font-size-sm);
+  }
+
+  /* Utility adjustments */
+  .flex-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .flex-col {
+    gap: 8px;
+  }
+
+  /* Prevent horizontal overflow */
+  .modal-content {
+    overflow-x: hidden;
+  }
+
+  /* Make tables scrollable on mobile */
+  .product-table-header,
+  .product-row {
+    min-width: 100%;
+  }
+
+  /* Adjust panel positions to avoid overlap */
+  .react-flow__panel.top-left,
+  .react-flow__panel.top-right {
+    max-width: calc(100vw - 20px);
+  }
+}
+
+/* Extra small devices (phones in portrait, less than 576px) */
+@media (max-width: 576px) {
+  .stats-panel {
+    padding: 6px 10px;
+  }
+
+  .stat-label,
+  .stat-value {
+    font-size: 10px;
+  }
+
+  .btn {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .modal {
+    padding: var(--spacing-md);
+  }
+
+  .custom-node {
+    max-width: 240px;
+    padding: 10px 12px;
+  }
+
+  .extended-panel {
+    max-height: calc(100vh - 320px);
+  }
+
+  .action-buttons-container .btn {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+}

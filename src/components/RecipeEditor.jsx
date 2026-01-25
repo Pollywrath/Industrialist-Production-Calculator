@@ -9,12 +9,12 @@ const SPECIAL_RECIPE_IDS = [
   'r_liquid_burner'
 ];
 
-const RecipeEditor = ({ recipe, onClose, onSave, availableProducts, defaultMachines }) => {
-  const isSpecial = SPECIAL_RECIPE_IDS.includes(recipe.id);
+const RecipeEditor = ({ recipe, onClose, onSave, availableProducts, defaultMachines, allRecipes = [], isCreatingNew = false }) => {
+  const isSpecial = !isCreatingNew && SPECIAL_RECIPE_IDS.includes(recipe.id);
   
   // Check if recipe has variable products
-  const hasVariableProducts = recipe.inputs?.some(i => i.product_id === 'p_variableproduct') || 
-                               recipe.outputs?.some(o => o.product_id === 'p_variableproduct');
+  const hasVariableProducts = !isCreatingNew && (recipe.inputs?.some(i => i.product_id === 'p_variableproduct') || 
+                               recipe.outputs?.some(o => o.product_id === 'p_variableproduct'));
   
   const [editedRecipe, setEditedRecipe] = useState({
     ...recipe,
@@ -58,7 +58,47 @@ const RecipeEditor = ({ recipe, onClose, onSave, availableProducts, defaultMachi
     setEditedRecipe(prev => ({ ...prev, outputs: newOutputs }));
   };
 
+  const generateRecipeId = (machineName) => {
+    const baseName = machineName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+    const prefix = `r_${baseName}_`;
+    
+    // Find existing recipes with this prefix
+    const existingNumbers = allRecipes
+      .filter(r => r.id.startsWith(prefix))
+      .map(r => {
+        const match = r.id.match(/_(\d+)$/);
+        return match ? parseInt(match[1]) : 0;
+      });
+    
+    // Find next available number
+    let nextNum = 1;
+    while (existingNumbers.includes(nextNum)) {
+      nextNum++;
+    }
+    
+    return `${prefix}${String(nextNum).padStart(2, '0')}`;
+  };
+
   const validateRecipe = () => {
+    // Validate name and machine for new recipes
+    if (isCreatingNew) {
+      if (!editedRecipe.name || !editedRecipe.name.trim()) {
+        alert('Recipe name is required');
+        return false;
+      }
+      
+      if (!editedRecipe.machine_id) {
+        alert('Machine is required');
+        return false;
+      }
+      
+      const machine = defaultMachines.find(m => m.id === editedRecipe.machine_id);
+      if (!machine) {
+        alert('Selected machine does not exist');
+        return false;
+      }
+    }
+
     // Check all product IDs exist (skip p_variableproduct, p_any_fluid, p_any_item)
     const allProductIds = [
       ...editedRecipe.inputs.map(i => i.product_id),
@@ -107,7 +147,16 @@ const RecipeEditor = ({ recipe, onClose, onSave, availableProducts, defaultMachi
 
   const handleSave = () => {
     if (!validateRecipe()) return;
-    onSave(editedRecipe);
+    
+    let recipeToSave = { ...editedRecipe };
+    
+    // Generate ID for new recipes
+    if (isCreatingNew) {
+      const machine = defaultMachines.find(m => m.id === editedRecipe.machine_id);
+      recipeToSave.id = generateRecipeId(machine.name);
+    }
+    
+    onSave(recipeToSave);
     onClose();
   };
 
@@ -163,20 +212,65 @@ const RecipeEditor = ({ recipe, onClose, onSave, availableProducts, defaultMachi
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '700px', maxHeight: '90vh', overflowY: 'auto' }}>
-        <h2 className="modal-title">Edit Recipe: {recipe.name || recipe.id}</h2>
+        <h2 className="modal-title">{isCreatingNew ? 'Create New Recipe' : `Edit Recipe: ${recipe.name || recipe.id}`}</h2>
 
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ 
-            color: machine?.tier === 1 ? 'var(--tier-1-color)' :
-                   machine?.tier === 2 ? 'var(--tier-2-color)' :
-                   machine?.tier === 3 ? 'var(--tier-3-color)' :
-                   machine?.tier === 4 ? 'var(--tier-4-color)' :
-                   machine?.tier === 5 ? 'var(--tier-5-color)' : 'var(--text-secondary)',
-            fontWeight: 600,
-            fontSize: '14px'
-          }}>
-            Machine: {machine?.name || recipe.machine_id}
+        {/* Recipe Name (editable for new recipes) */}
+        {isCreatingNew && (
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+              Recipe Name *
+            </label>
+            <input
+              type="text"
+              value={editedRecipe.name}
+              onChange={(e) => handleFieldChange('name', e.target.value)}
+              placeholder="Enter recipe name"
+              className="input"
+            />
           </div>
+        )}
+
+        {/* Machine Selection */}
+        <div style={{ marginBottom: '20px' }}>
+          <label style={{ display: 'block', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+            Machine {isCreatingNew ? '*' : ''}
+          </label>
+          {isCreatingNew ? (
+            <select
+              value={editedRecipe.machine_id}
+              onChange={(e) => handleFieldChange('machine_id', e.target.value)}
+              className="select"
+            >
+              <option value="">Select a machine</option>
+              {defaultMachines
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} (Tier {m.tier || 1})
+                  </option>
+                ))}
+            </select>
+          ) : (
+            <div style={{ 
+              color: machine?.tier === 1 ? 'var(--tier-1-color)' :
+                     machine?.tier === 2 ? 'var(--tier-2-color)' :
+                     machine?.tier === 3 ? 'var(--tier-3-color)' :
+                     machine?.tier === 4 ? 'var(--tier-4-color)' :
+                     machine?.tier === 5 ? 'var(--tier-5-color)' : 'var(--text-secondary)',
+              fontWeight: 600,
+              fontSize: '14px',
+              padding: '10px',
+              background: 'var(--bg-main)',
+              borderRadius: 'var(--radius-sm)'
+            }}>
+              {machine?.name || recipe.machine_id}
+            </div>
+          )}
+          {isCreatingNew && editedRecipe.machine_id && (
+            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              Recipe ID will be: {generateRecipeId(defaultMachines.find(m => m.id === editedRecipe.machine_id)?.name || '')}
+            </div>
+          )}
         </div>
 
         {/* Basic Fields */}

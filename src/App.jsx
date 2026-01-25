@@ -130,6 +130,8 @@ function App() {
   });
   const [extendedPanelClosing, setExtendedPanelClosing] = useState(false);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileActionMode, setMobileActionMode] = useState('pan'); // 'pan', 'target', 'delete', 'disconnect'
   const [globalPollution, setGlobalPollution] = useState(0);
   const [pollutionInputFocused, setPollutionInputFocused] = useState(false);
   const [isPollutionPaused, setIsPollutionPaused] = useState(true);
@@ -183,12 +185,24 @@ function App() {
     
     // Initialize custom data from defaults if not present
     initializeCustomData(products, machines, recipes);
+
+    // Mobile detection
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   // Helper: Create node callbacks object
   const createNodeCallbacks = useCallback(() => ({
     onInputClick: openRecipeSelectorForInput,
     onOutputClick: openRecipeSelectorForOutput,
+    isMobile,
+    mobileActionMode,
     onDrillSettingsChange: handleDrillSettingsChange,
     onLogicAssemblerSettingsChange: handleLogicAssemblerSettingsChange,
     onTreeFarmSettingsChange: handleTreeFarmSettingsChange,
@@ -733,6 +747,14 @@ function App() {
   }, []);
 
   const openRecipeSelectorForInput = useCallback((productId, nodeId, inputIndex, event) => {
+    // Mobile disconnect mode
+    if (isMobile && mobileActionMode === 'disconnect') {
+      setEdges(eds => eds.filter(edge => !(edge.target === nodeId && edge.targetHandle === `left-${inputIndex}`)));
+      clearFlowCache();
+      triggerRecalculation('connection');
+      return;
+    }
+    
     if (event?.ctrlKey) {
       setEdges(eds => eds.filter(edge => !(edge.target === nodeId && edge.targetHandle === `left-${inputIndex}`)));
       clearFlowCache();
@@ -750,6 +772,14 @@ function App() {
   }, [setEdges]);
 
   const openRecipeSelectorForOutput = useCallback((productId, nodeId, outputIndex, event) => {
+    // Mobile disconnect mode
+    if (isMobile && mobileActionMode === 'disconnect') {
+      setEdges(eds => eds.filter(edge => !(edge.source === nodeId && edge.sourceHandle === `right-${outputIndex}`)));
+      clearFlowCache();
+      triggerRecalculation('connection');
+      return;
+    }
+    
     if (event?.ctrlKey) {
       setEdges(eds => eds.filter(edge => !(edge.source === nodeId && edge.sourceHandle === `right-${outputIndex}`)));
       clearFlowCache();
@@ -1295,9 +1325,21 @@ function App() {
   }, [targetProducts]);
 
   const onNodeClick = useCallback((event, node) => {
+    // Mobile action mode handling
+    if (isMobile) {
+      if (mobileActionMode === 'target') {
+        toggleTargetStatus(node);
+        return;
+      } else if (mobileActionMode === 'delete') {
+        deleteRecipeBoxAndTarget(node.id);
+        return;
+      }
+    }
+    
+    // Desktop keyboard shortcuts
     if (event.shiftKey && !event.ctrlKey && !event.altKey) toggleTargetStatus(node);
     else if (event.ctrlKey && event.altKey) deleteRecipeBoxAndTarget(node.id);
-  }, [toggleTargetStatus, deleteRecipeBoxAndTarget]);
+  }, [isMobile, mobileActionMode, toggleTargetStatus, deleteRecipeBoxAndTarget]);
 
   const onNodeDoubleClick = useCallback((event, node) => {
     event.stopPropagation();
@@ -1826,13 +1868,25 @@ function App() {
         }}
         defaultEdgeOptions={{ type: 'custom' }}>
         <Background color="#333" gap={16} size={1} />
-        <Controls className={(extendedPanelOpen || extendedPanelClosing) && !leftPanelCollapsed ? 'controls-shifted' : ''} />
+        <Controls 
+          className={(extendedPanelOpen || extendedPanelClosing) && !leftPanelCollapsed ? 'controls-shifted' : ''} 
+          position={isMobile ? 'bottom-left' : 'top-left'}
+          style={isMobile ? { left: '10px', bottom: '10px' } : {}}
+        />
         <MiniMap
           nodeColor={() => getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim()}
-          maskColor={getComputedStyle(document.documentElement).getPropertyValue('--bg-overlay').trim()} />
+          maskColor={getComputedStyle(document.documentElement).getPropertyValue('--bg-overlay').trim()}
+          position={isMobile ? 'bottom-right' : 'bottom-right'}
+          style={isMobile ? { 
+            width: '100px', 
+            height: '80px',
+            bottom: '10px',
+            right: '10px'
+          } : {}}
+        />
 
-        <Panel position="top-left" style={{ margin: '10px' }}>
-          <div className={`left-panel-container ${leftPanelCollapsed ? 'collapsed' : ''}`}>
+        <Panel position="top-left" style={{ margin: isMobile ? '5px' : '10px', maxWidth: isMobile ? 'calc(100vw - 10px)' : 'none' }}>
+          <div className={`left-panel-container ${leftPanelCollapsed ? 'collapsed' : ''}`} style={isMobile ? { maxWidth: '100%' } : {}}>
             <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start', flexDirection: 'column' }}>
               <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-start' }}>
                 <div className="stats-panel">
@@ -1859,22 +1913,22 @@ function App() {
               </div>
 
               {(extendedPanelOpen || extendedPanelClosing) && (
-                <div className={`extended-panel ${extendedPanelClosing ? 'closing' : ''}`}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px', borderBottom: '2px solid var(--border-divider)',
-                    position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 1 }}>
-                    <h3 style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-md)', fontWeight: 700, margin: 0 }}>More Statistics</h3>
-                    <div style={{ display: 'flex', gap: '10px' }}>
+                <div className={`extended-panel ${extendedPanelClosing ? 'closing' : ''}`} style={isMobile ? { maxHeight: 'calc(100vh - 300px)' } : {}}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '10px' : '15px', borderBottom: '2px solid var(--border-divider)',
+                    position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 1, flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? '10px' : '0' }}>
+                    <h3 style={{ color: 'var(--color-primary)', fontSize: isMobile ? 'var(--font-size-base)' : 'var(--font-size-md)', fontWeight: 700, margin: 0 }}>More Statistics</h3>
+                    <div style={{ display: 'flex', gap: isMobile ? '5px' : '10px', flexWrap: 'wrap' }}>
                       <button onClick={() => setDisplayMode(prev => prev === 'perSecond' ? 'perCycle' : 'perSecond')} className="btn btn-secondary"
-                        style={{ padding: '8px 16px', fontSize: 'var(--font-size-base)', minWidth: 'auto' }}
+                        style={{ padding: isMobile ? '6px 10px' : '8px 16px', fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)', minWidth: 'auto' }}
                         title={displayMode === 'perSecond' ? 'Switch to per-cycle display' : 'Switch to per-second display'}>
                         {displayMode === 'perSecond' ? 'Per Second' : 'Per Cycle'}</button>
                       <button onClick={() => setMachineDisplayMode(prev => prev === 'perMachine' ? 'total' : 'perMachine')} className="btn btn-secondary"
-                        style={{ padding: '8px 16px', fontSize: 'var(--font-size-base)', minWidth: 'auto' }}
+                        style={{ padding: isMobile ? '6px 10px' : '8px 16px', fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)', minWidth: 'auto' }}
                         title={machineDisplayMode === 'perMachine' ? 'Switch to total display' : 'Switch to per-machine display'}>
                         {machineDisplayMode === 'perMachine' ? 'Per Machine' : 'Total'}</button>
                     </div>
                   </div>
-                  <div className="extended-panel-content" style={{ maxHeight: 'calc(100vh - 200px)', overflowY: 'auto', paddingBottom: '120px' }}>
+                  <div className="extended-panel-content" style={{ maxHeight: isMobile ? 'calc(100vh - 350px)' : 'calc(100vh - 200px)', overflowY: 'auto', paddingBottom: isMobile ? '20px' : '120px' }}>
                     <div style={{ marginBottom: '20px' }}>
                       <label htmlFor="global-pollution" style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-base)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
                         Global Pollution (%):</label>
@@ -2005,10 +2059,59 @@ function App() {
           </div>
         </Panel>
 
-        <Panel position="top-right" style={{ margin: '10px' }}>
-          <div className={`menu-container ${menuOpen ? '' : 'closed'}`}>
-            <button onClick={() => setMenuOpen(!menuOpen)} className="btn btn-secondary btn-menu-toggle">{menuOpen ? '>' : '<'}</button>
-            <div className="menu-buttons">
+        <Panel position="top-right" style={{ margin: isMobile ? '5px' : '10px', maxWidth: isMobile ? 'calc(100vw - 10px)' : 'none' }}>
+          {isMobile && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              background: 'var(--bg-secondary)',
+              border: '2px solid var(--border-primary)',
+              borderRadius: 'var(--radius-md)',
+              padding: '8px',
+              marginBottom: '10px'
+            }}>
+              <div style={{ color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600, textAlign: 'center', marginBottom: '4px' }}>
+                Touch Mode
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                <button
+                  onClick={() => setMobileActionMode('pan')}
+                  className={`btn ${mobileActionMode === 'pan' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ padding: '8px 6px', fontSize: '11px', minWidth: 'auto' }}
+                >
+                  🤚 Pan
+                </button>
+                <button
+                  onClick={() => setMobileActionMode('target')}
+                  className={`btn ${mobileActionMode === 'target' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ padding: '8px 6px', fontSize: '11px', minWidth: 'auto' }}
+                  title="Tap nodes to mark as targets"
+                >
+                  🎯 Target
+                </button>
+                <button
+                  onClick={() => setMobileActionMode('disconnect')}
+                  className={`btn ${mobileActionMode === 'disconnect' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ padding: '8px 6px', fontSize: '11px', minWidth: 'auto' }}
+                  title="Tap connections to remove"
+                >
+                  ✂️ Cut
+                </button>
+                <button
+                  onClick={() => setMobileActionMode('delete')}
+                  className={`btn ${mobileActionMode === 'delete' ? 'btn-primary' : 'btn-secondary'}`}
+                  style={{ padding: '8px 6px', fontSize: '11px', minWidth: 'auto' }}
+                  title="Tap nodes to delete"
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          )}
+          <div className={`menu-container ${menuOpen ? '' : 'closed'}`} style={isMobile ? { maxWidth: 'calc(100vw - 10px)' } : {}}>
+            <button onClick={() => setMenuOpen(!menuOpen)} className="btn btn-secondary btn-menu-toggle" style={isMobile ? { fontSize: 'var(--font-size-sm)', padding: '6px 10px' } : {}}>{menuOpen ? '>' : '<'}</button>
+            <div className="menu-buttons" style={isMobile ? { maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' } : {}}>
               <button onClick={() => {
                 setNodes([]);
                 setEdges([]);
@@ -2416,6 +2519,29 @@ function App() {
           defaultRecipes={defaultRecipesJSON}
           onDataChange={handleDataChange}
         />
+      )}
+
+      {isMobile && mobileActionMode !== 'pan' && (
+        <div style={{
+          position: 'fixed',
+          bottom: '120px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: 'var(--bg-secondary)',
+          border: '2px solid var(--border-primary)',
+          borderRadius: 'var(--radius-md)',
+          padding: '8px 16px',
+          color: 'var(--color-primary)',
+          fontSize: '14px',
+          fontWeight: 600,
+          zIndex: 1000,
+          pointerEvents: 'none',
+          boxShadow: 'var(--shadow-lg)'
+        }}>
+          {mobileActionMode === 'target' && '🎯 Target Mode: Tap nodes to mark as targets'}
+          {mobileActionMode === 'disconnect' && '✂️ Disconnect Mode: Tap connections to remove'}
+          {mobileActionMode === 'delete' && '🗑️ Delete Mode: Tap nodes to delete'}
+        </div>
       )}
 
       {pendingNode && (
