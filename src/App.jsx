@@ -4,8 +4,15 @@ import '@xyflow/react/dist/style.css';
 import CustomNode from './components/CustomNode';
 import CustomEdge from './components/CustomEdge';
 import ThemeEditor, { applyTheme, loadTheme } from './components/ThemeEditor';
+import HelpModal from './components/HelpModal';
+import SaveManager from './components/SaveManager';
+import DataManager from './components/DataManager';
+import { initializeCustomData, getCustomProducts, getCustomMachines, getCustomRecipes, restoreDefaultProducts, restoreDefaultMachines, restoreDefaultRecipes } from './utils/dataUtilities';
 import { products, machines, recipes, getMachine, getProduct, updateProducts, updateMachines, 
   updateRecipes, saveCanvasState, loadCanvasState, restoreDefaults } from './data/dataLoader';
+import defaultProductsJSON from './data/products.json';
+import defaultMachinesJSON from './data/machines.json';
+import defaultRecipesJSON from './data/recipes.json';
 import { getProductName, formatIngredient } from './utils/variableHandler';
 import { calculateOutputTemperature, isTemperatureProduct, HEAT_SOURCES, DEFAULT_BOILER_INPUT_TEMPERATURE, 
   DEFAULT_WATER_TEMPERATURE, DEFAULT_STEAM_TEMPERATURE } from './utils/temperatureHandler';
@@ -110,6 +117,9 @@ function App() {
   const [newNodePendingMachineCount, setNewNodePendingMachineCount] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showThemeEditor, setShowThemeEditor] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showSaveManager, setShowSaveManager] = useState(false);
+  const [showDataManager, setShowDataManager] = useState(false);
   const [extendedPanelOpen, setExtendedPanelOpen] = useState(false);
   const [edgeSettings, setEdgeSettings] = useState(() => {
     const theme = loadTheme();
@@ -170,6 +180,9 @@ function App() {
     const theme = loadTheme();
     applyTheme(theme);
     setEdgeSettings({ edgePath: theme.edgePath || 'orthogonal', edgeStyle: theme.edgeStyle || 'animated' });
+    
+    // Initialize custom data from defaults if not present
+    initializeCustomData(products, machines, recipes);
   }, []);
 
   // Helper: Create node callbacks object
@@ -1635,9 +1648,70 @@ function App() {
     URL.revokeObjectURL(url);
   }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig]);
 
+  const handleDataChange = useCallback(() => {
+    // Reload custom data and update app state
+    const customProducts = getCustomProducts();
+    const customMachines = getCustomMachines();
+    const customRecipes = getCustomRecipes();
+    
+    updateProducts(customProducts);
+    updateMachines(customMachines);
+    updateRecipes(customRecipes);
+    
+    // Trigger recalculation to update any nodes with changed data
+    triggerRecalculation('node');
+  }, [triggerRecalculation]);
+
+  const handleLoadSave = useCallback((saveData) => {
+    const callbacks = createNodeCallbacks();
+    const restoredNodes = saveData.nodes.map(node => {
+      const machine = getMachine(node.data?.recipe?.machine_id);
+      let recipe = node.data?.recipe;
+      if (machine && recipe && !recipe.outputs?.some(o => o.temperature !== undefined)) {
+        recipe = initializeRecipeTemperatures(recipe, machine.id);
+      }
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          recipe,
+          machineCount: node.data.machineCount ?? 1,
+          displayMode,
+          machineDisplayMode,
+          ...callbacks,
+          globalPollution,
+          flows: null,
+          suggestions: []
+        }
+      };
+    });
+    
+    setNodes(restoredNodes);
+    setEdges(saveData.edges || []);
+    setTargetProducts(saveData.targetProducts || []);
+    setSoldProducts(saveData.soldProducts || {});
+    setFavoriteRecipes(saveData.favoriteRecipes || []);
+    setLastDrillConfig(saveData.lastDrillConfig || null);
+    setLastAssemblerConfig(saveData.lastAssemblerConfig || null);
+    setLastTreeFarmConfig(saveData.lastTreeFarmConfig || null);
+    setLastFireboxConfig(saveData.lastFireboxConfig || null);
+    setLastWasteFacilityConfig(saveData.lastWasteFacilityConfig || null);
+    setNodeId(saveData.nodeId || 0);
+    setTargetIdCounter(saveData.targetIdCounter || 0);
+    
+    clearFlowCache();
+    triggerRecalculation('node');
+  }, [displayMode, machineDisplayMode, globalPollution, createNodeCallbacks, setNodes, setEdges, setTargetProducts, setSoldProducts, setFavoriteRecipes, setLastDrillConfig, setLastAssemblerConfig, setLastTreeFarmConfig, setLastFireboxConfig, setLastWasteFacilityConfig, setNodeId, setTargetIdCounter, triggerRecalculation]);
+
   const handleRestoreDefaults = useCallback(() => {
     if (window.confirm('Restore all data to defaults? This will clear the canvas and reset all products, machines, and recipes.')) {
       restoreDefaults();
+      
+      // Also restore custom data in localStorage to defaults
+      restoreDefaultProducts(defaultProductsJSON);
+      restoreDefaultMachines(defaultMachinesJSON);
+      restoreDefaultRecipes(defaultRecipesJSON);
+      
       setNodes([]);
       setEdges([]);
       setNodeId(0);
@@ -1652,7 +1726,7 @@ function App() {
       setLastWasteFacilityConfig(null);
       window.location.reload();
     }
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, products, machines, recipes]);
 
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -1952,11 +2026,11 @@ function App() {
                 triggerRecalculation('node');
               }}
                 className="btn btn-secondary">Clear All</button>
-              <button onClick={handleImport} className="btn btn-secondary">Import JSON</button>
-              <button onClick={handleExportData} className="btn btn-secondary">Export Data</button>
-              <button onClick={handleExportCanvas} className="btn btn-secondary">Export Canvas</button>
+              <button onClick={() => setShowSaveManager(true)} className="btn btn-secondary">Saves</button>
+              <button onClick={() => setShowDataManager(true)} className="btn btn-secondary">Data</button>
               <button onClick={handleRestoreDefaults} className="btn btn-secondary">Restore Defaults</button>
               <button onClick={() => setShowThemeEditor(true)} className="btn btn-secondary">Theme Editor</button>
+              <button onClick={() => setShowHelpModal(true)} className="btn btn-secondary">Help</button>
               <button onClick={() => window.open('https://github.com/Pollywrath/Industrialist-Production-Calculator', '_blank')} className="btn btn-secondary">Source Code</button>
             </div>
           </div>
@@ -2310,6 +2384,39 @@ function App() {
       )}
 
       {showThemeEditor && <ThemeEditor onClose={() => setShowThemeEditor(false)} />}
+
+      {showHelpModal && <HelpModal onClose={() => setShowHelpModal(false)} />}
+
+      {showSaveManager && (
+        <SaveManager 
+          onClose={() => setShowSaveManager(false)} 
+          onLoad={handleLoadSave}
+          currentCanvas={{
+            nodes, 
+            edges, 
+            targetProducts, 
+            nodeId, 
+            targetIdCounter, 
+            soldProducts, 
+            favoriteRecipes,
+            lastDrillConfig, 
+            lastAssemblerConfig, 
+            lastTreeFarmConfig, 
+            lastFireboxConfig, 
+            lastWasteFacilityConfig
+          }}
+        />
+      )}
+
+      {showDataManager && (
+        <DataManager
+          onClose={() => setShowDataManager(false)}
+          defaultProducts={defaultProductsJSON}
+          defaultMachines={defaultMachinesJSON}
+          defaultRecipes={defaultRecipesJSON}
+          onDataChange={handleDataChange}
+        />
+      )}
 
       {pendingNode && (
         <div className="pending-node-preview" style={{ left: `${mousePosition.x + 20}px`, top: `${mousePosition.y + 20}px` }}>
