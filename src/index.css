@@ -117,6 +117,10 @@ body {
   overflow: hidden;
   background: var(--bg-main);
   color: var(--text-primary);
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  touch-action: none; /* Prevent pull-to-refresh and other gestures */
 }
 
 #root {
@@ -1073,14 +1077,13 @@ input[type="number"] {
    ============================================================ */
 
 .react-flow__controls {
-  transition: left 0.3s ease-out;
-  /* Default position - don't shift for left panel collapse */
+  transition: left 0.3s ease-out, bottom 0.3s ease-out;
   z-index: 10; /* Above extended panel */
 }
 
 .react-flow__controls.controls-shifted {
-  left: 385px !important; /* Move right, past the extended panel */
-  transition: left 0.3s ease-out;
+  left: 395px !important; /* Move right, past the extended panel (10px margin + 385px panel) */
+  transition: left 0.3s ease-out, bottom 0.3s ease-out;
   z-index: 10; /* Above extended panel */
 }
 
@@ -1213,7 +1216,7 @@ input[type="number"] {
     width: calc(100vw - 20px);
     max-width: 100%;
     height: auto;
-    max-height: calc(100vh - 280px);
+    max-height: calc(100vh - 320px); /* More space for mobile browser chrome */
     margin-top: 10px;
   }
 
@@ -1362,17 +1365,7 @@ input[type="number"] {
     grid-template-columns: 1fr;
   }
 
-  /* ReactFlow Controls - keep at default top-left but adjust for mobile panels */
-  .react-flow__controls {
-    top: auto !important;
-    bottom: 100px !important;
-    left: 10px !important;
-  }
-
-  .react-flow__controls.controls-shifted {
-    left: 10px !important;
-    bottom: 100px !important;
-  }
+  /* ReactFlow Controls - handled via inline styles on mobile */
 
   .react-flow__controls button {
     width: 30px;
@@ -1472,5 +1465,13 @@ input[type="number"] {
   .action-buttons-container .btn {
     font-size: 11px;
     padding: 6px 10px;
+  }
+
+  /* Safe area support for devices with notches */
+  @supports (padding: max(0px)) {
+    .react-flow__minimap {
+      bottom: max(10px, env(safe-area-inset-bottom, 0px) + 10px) !important;
+      right: max(10px, env(safe-area-inset-right, 0px) + 10px) !important;
+    }
   }
 }

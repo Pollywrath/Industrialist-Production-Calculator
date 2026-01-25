@@ -1870,8 +1870,7 @@ function App() {
         <Background color="#333" gap={16} size={1} />
         <Controls 
           className={(extendedPanelOpen || extendedPanelClosing) && !leftPanelCollapsed ? 'controls-shifted' : ''} 
-          position={isMobile ? 'bottom-left' : 'top-left'}
-          style={isMobile ? { left: '10px', bottom: '10px' } : {}}
+          position='bottom-left'
         />
         <MiniMap
           nodeColor={() => getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim()}

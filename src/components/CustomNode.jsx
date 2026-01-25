@@ -347,7 +347,8 @@ const CustomNode = memo(({ data, id }) => {
           return (
             <React.Fragment key={`left-${id}-${i}-${input.product_id}`}>
               <NodeRect side="left" index={i} position={pos} width={leftWidth} isOnly={!hasRight} 
-                input={input} onClick={onInputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
+                input={input} onClick={onInputClick} nodeId={id} formatQuantity={formatDisplayQuantity} 
+                isMobile={data.isMobile} mobileActionMode={data.mobileActionMode} />
               <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} 
                 onClick={onInputClick} nodeId={id} productId={input.product_id} flows={data.flows} 
                 onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={input} />
@@ -361,7 +362,8 @@ const CustomNode = memo(({ data, id }) => {
           return (
             <React.Fragment key={`right-${id}-${i}-${output.product_id}`}>
               <NodeRect side="right" index={i} position={pos} width={rightWidth} isOnly={!hasLeft} 
-                input={output} onClick={onOutputClick} nodeId={id} formatQuantity={formatDisplayQuantity} />
+                input={output} onClick={onOutputClick} nodeId={id} formatQuantity={formatDisplayQuantity} 
+                isMobile={data.isMobile} mobileActionMode={data.mobileActionMode} />
               <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} 
                 onClick={onOutputClick} nodeId={id} productId={output.product_id} flows={data.flows} 
                 onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={output} />
@@ -435,13 +437,21 @@ const CustomNode = memo(({ data, id }) => {
 
 export default CustomNode;
 
-const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId, formatQuantity }) => {
+const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId, formatQuantity, isMobile, mobileActionMode }) => {
   const isLeft = side === 'left';
   const productName = getProductName(input.product_id, getProduct, input.acceptedType);
   const displayQuantity = formatQuantity(input.quantity);
   
+  // On mobile, only allow clicks in pan mode for connection management
+  const shouldAllowClick = !isMobile || mobileActionMode === 'pan' || mobileActionMode === 'disconnect';
+  
   return (
-    <div onClick={(e) => { if (onClick) { e.stopPropagation(); onClick(input.product_id, nodeId, index, e); } }}
+    <div onClick={(e) => { 
+      if (onClick && shouldAllowClick) { 
+        e.stopPropagation(); 
+        onClick(input.product_id, nodeId, index, e); 
+      } 
+    }}
       title={`${displayQuantity}x ${productName}`}
       className={`node-rect ${isLeft ? 'input' : 'output'} ${onClick ? 'clickable' : ''}`}
       style={{
