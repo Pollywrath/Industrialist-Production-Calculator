@@ -587,6 +587,26 @@ input[type="number"] {
   pointer-events: auto !important;
   position: relative;
   z-index: 100;
+  display: flex;
+  gap: 6px;
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  margin-bottom: 10px;
+  width: fit-content; /* Prevent extra gap on right */
+}
+
+.mobile-controls-container .btn {
+  padding: 10px !important;
+  font-size: 20px !important;
+  min-width: auto !important;
+  line-height: 1 !important;
+  width: 50px !important;
+  height: 50px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 /* ============================================================

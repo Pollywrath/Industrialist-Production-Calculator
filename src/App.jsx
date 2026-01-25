@@ -186,12 +186,16 @@ function App() {
     // Initialize custom data from defaults if not present
     initializeCustomData(products, machines, recipes);
 
-    // Mobile detection
+    // Mobile detection - detect actual mobile devices, not just screen width
     const checkMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
+      // Check for touch capability AND mobile user agent
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(hasTouch && isMobileDevice);
     };
     
     checkMobile();
+    // Still listen to resize in case device changes (unlikely but good practice)
     window.addEventListener('resize', checkMobile);
     
     return () => window.removeEventListener('resize', checkMobile);
@@ -2160,43 +2164,24 @@ function App() {
 
         <Panel position="top-right" style={{ margin: isMobile ? '5px' : '10px', maxWidth: isMobile ? 'calc(100vw - 10px)' : 'none' }}>
           {isMobile && (
-            <div className="mobile-controls-container" style={{
-              display: 'flex',
-              gap: '4px',
-              background: 'var(--bg-secondary)',
-              border: '2px solid var(--border-primary)',
-              borderRadius: 'var(--radius-md)',
-              padding: '4px',
-              marginBottom: '10px'
-            }}>
+            <div className="mobile-controls-container">
               <button
-                onClick={() => setMobileActionMode('pan')}
-                className={`btn ${mobileActionMode === 'pan' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '8px', fontSize: '18px', minWidth: 'auto', lineHeight: 1 }}
-                title="Pan mode"
-              >
-                🤚
-              </button>
-              <button
-                onClick={() => setMobileActionMode('target')}
-                className={`btn ${mobileActionMode === 'target' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '8px', fontSize: '18px', minWidth: 'auto', lineHeight: 1 }}
-                title="Target mode - Tap nodes to mark as targets"
-              >
-                🎯
-              </button>
-              <button
-                onClick={() => setMobileActionMode('disconnect')}
+                onClick={() => setMobileActionMode(prev => prev === 'disconnect' ? 'pan' : 'disconnect')}
                 className={`btn ${mobileActionMode === 'disconnect' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '8px', fontSize: '18px', minWidth: 'auto', lineHeight: 1 }}
                 title="Disconnect mode - Tap connections to remove"
               >
                 ✂️
               </button>
               <button
-                onClick={() => setMobileActionMode('delete')}
+                onClick={() => setMobileActionMode(prev => prev === 'target' ? 'pan' : 'target')}
+                className={`btn ${mobileActionMode === 'target' ? 'btn-primary' : 'btn-secondary'}`}
+                title="Target mode - Tap nodes to mark as targets"
+              >
+                🎯
+              </button>
+              <button
+                onClick={() => setMobileActionMode(prev => prev === 'delete' ? 'pan' : 'delete')}
                 className={`btn ${mobileActionMode === 'delete' ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ padding: '8px', fontSize: '18px', minWidth: 'auto', lineHeight: 1 }}
                 title="Delete mode - Tap nodes to delete"
               >
                 🗑️
