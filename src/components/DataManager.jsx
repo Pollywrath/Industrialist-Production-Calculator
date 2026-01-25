@@ -49,6 +49,31 @@ const DataManager = ({ onClose, defaultProducts, defaultMachines, defaultRecipes
     reader.onload = (e) => {
       try {
         const imported = JSON.parse(e.target.result);
+        
+        // Check if this file only contains canvas data
+        const hasData = imported.products || imported.machines || imported.recipes;
+        const hasCanvas = imported.canvas;
+        
+        if (!hasData && hasCanvas) {
+          alert('This file only contains canvas data. Please use Save Manager to import canvas layouts.');
+          event.target.value = '';
+          return;
+        }
+        
+        if (!hasData) {
+          alert('This file does not contain any game data (products, machines, or recipes).');
+          event.target.value = '';
+          return;
+        }
+        
+        // Warn if file contains canvas data that will be ignored
+        if (hasCanvas) {
+          if (!window.confirm('This file contains canvas data which will be IGNORED.\n\nOnly game data (products/machines/recipes) will be imported.\n\nTo import canvas data, use Save Manager > Import Canvas.\n\nContinue with data-only import?')) {
+            event.target.value = '';
+            return;
+          }
+        }
+        
         const results = importData(imported);
         
         let message = 'Import complete:\n';

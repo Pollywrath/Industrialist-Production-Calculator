@@ -96,7 +96,7 @@ export const getCurrentSaveName = () => {
   }
 };
 
-const SaveManager = ({ onClose, onLoad, currentCanvas }) => {
+const SaveManager = ({ onClose, onLoad, currentCanvas, onImport, onExportCanvas }) => {
   const [saves, setSaves] = useState({});
   const [saveName, setSaveName] = useState('');
   const [renamingId, setRenamingId] = useState(null);
@@ -206,7 +206,7 @@ const SaveManager = ({ onClose, onLoad, currentCanvas }) => {
           <div style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '10px' }}>
             Current Canvas: <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{getCurrentSaveName()}</span>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
             <input
               type="text"
               value={saveName}
@@ -219,6 +219,37 @@ const SaveManager = ({ onClose, onLoad, currentCanvas }) => {
             <button onClick={handleSave} className="btn btn-primary" style={{ minWidth: '120px' }}>
               Save Current
             </button>
+          </div>
+          
+          {/* Import/Export Section */}
+          <div style={{ paddingTop: '10px', borderTop: '1px solid var(--border-divider)' }}>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '8px', fontWeight: 600 }}>
+              Import/Export
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                onClick={() => {
+                  if (onImport) {
+                    onImport();
+                  }
+                }} 
+                className="btn btn-secondary" 
+                style={{ flex: 1, padding: '8px 12px', fontSize: '13px' }}
+              >
+                📥 Import Canvas
+              </button>
+              <button 
+                onClick={() => {
+                  if (onExportCanvas) {
+                    onExportCanvas();
+                  }
+                }} 
+                className="btn btn-secondary" 
+                style={{ flex: 1, padding: '8px 12px', fontSize: '13px' }}
+              >
+                📤 Export Canvas
+              </button>
+            </div>
           </div>
         </div>
 

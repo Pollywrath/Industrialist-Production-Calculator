@@ -1536,7 +1536,100 @@ function App() {
     }
   }, [showRecipeSelector, selectorMode, selectedProduct, selectedMachine, autoConnectTarget, nodes, recipeFilter]);
 
-  const handleImport = useCallback(() => fileInputRef.current?.click(), []);
+  const handleCanvasOnlyImport = useCallback(() => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const imported = JSON.parse(e.target.result);
+          
+          // Check if this is a canvas-only file
+          if (!imported.canvas) {
+            alert('This file does not contain canvas data. Please use the Data Manager to import game data (products, machines, recipes).');
+            return;
+          }
+          
+          // Canvas import validation
+          const canvasNodes = imported.canvas.nodes || [];
+          const missingItems = [];
+          
+          canvasNodes.forEach(node => {
+            const machineId = node.data?.recipe?.machine_id;
+            if (machineId && !getMachine(machineId)) missingItems.push(`Machine: ${machineId}`);
+            node.data?.recipe?.inputs?.forEach(input => {
+              if (input.product_id !== 'p_variableproduct' && !getProduct(input.product_id)) {
+                missingItems.push(`Product: ${input.product_id}`);
+              }
+            });
+            node.data?.recipe?.outputs?.forEach(output => {
+              if (output.product_id !== 'p_variableproduct' && !getProduct(output.product_id)) {
+                missingItems.push(`Product: ${output.product_id}`);
+              }
+            });
+          });
+          
+          if (missingItems.length > 0) {
+            const uniqueMissing = [...new Set(missingItems)];
+            alert(`Cannot import canvas - missing items:\n${uniqueMissing.slice(0, 10).join('\n')}${uniqueMissing.length > 10 ? `\n...and ${uniqueMissing.length - 10} more` : ''}`);
+            return;
+          }
+          
+          if (!window.confirm('Import this canvas? Your current canvas will be replaced.')) {
+            return;
+          }
+          
+          const callbacks = createNodeCallbacks();
+          const restoredNodes = canvasNodes.map(node => {
+            const machine = getMachine(node.data?.recipe?.machine_id);
+            let recipe = node.data?.recipe;
+            if (machine && recipe && !recipe.outputs?.some(o => o.temperature !== undefined)) {
+              recipe = initializeRecipeTemperatures(recipe, machine.id);
+            }
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                recipe,
+                machineCount: node.data.machineCount ?? 1,
+                displayMode,
+                machineDisplayMode,
+                ...callbacks,
+                globalPollution,
+                flows: null,
+                suggestions: []
+              }
+            };
+          });
+          
+          setNodes(restoredNodes);
+          setEdges(imported.canvas.edges || []);
+          setTargetProducts(imported.canvas.targetProducts || []);
+          setSoldProducts(imported.canvas.soldProducts || {});
+          setFavoriteRecipes(imported.canvas.favoriteRecipes || []);
+          setLastDrillConfig(imported.canvas.lastDrillConfig || null);
+          setLastAssemblerConfig(imported.canvas.lastAssemblerConfig || null);
+          setLastTreeFarmConfig(imported.canvas.lastTreeFarmConfig || null);
+          setLastFireboxConfig(imported.canvas.lastFireboxConfig || null);
+          setLastWasteFacilityConfig(imported.canvas.lastWasteFacilityConfig || null);
+          setNodeId(imported.canvas.nodeId || 0);
+          setTargetIdCounter(imported.canvas.targetIdCounter || 0);
+          
+          clearFlowCache();
+          triggerRecalculation('node');
+          alert('Canvas imported successfully!');
+        } catch (error) {
+          alert(`Import failed: ${error.message}`);
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }, [displayMode, machineDisplayMode, globalPollution, createNodeCallbacks, setNodes, setEdges, setTargetProducts, setSoldProducts, setFavoriteRecipes, setLastDrillConfig, setLastAssemblerConfig, setLastTreeFarmConfig, setLastFireboxConfig, setLastWasteFacilityConfig, setNodeId, setTargetIdCounter, triggerRecalculation]);
   
   const processImport = useCallback((event) => {
     const file = event.target.files?.[0];
@@ -1868,21 +1961,19 @@ function App() {
         }}
         defaultEdgeOptions={{ type: 'custom' }}>
         <Background color="#333" gap={16} size={1} />
-        <Controls 
-          className={(extendedPanelOpen || extendedPanelClosing) && !leftPanelCollapsed ? 'controls-shifted' : ''} 
-          position='bottom-left'
-        />
-        <MiniMap
-          nodeColor={() => getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim()}
-          maskColor={getComputedStyle(document.documentElement).getPropertyValue('--bg-overlay').trim()}
-          position={isMobile ? 'bottom-right' : 'bottom-right'}
-          style={isMobile ? { 
-            width: '100px', 
-            height: '80px',
-            bottom: '10px',
-            right: '10px'
-          } : {}}
-        />
+        {!isMobile && (
+          <Controls 
+            className={(extendedPanelOpen || extendedPanelClosing) && !leftPanelCollapsed ? 'controls-shifted' : ''} 
+            position='bottom-left'
+          />
+        )}
+        {!isMobile && (
+          <MiniMap
+            nodeColor={() => getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim()}
+            maskColor={getComputedStyle(document.documentElement).getPropertyValue('--bg-overlay').trim()}
+            position='bottom-right'
+          />
+        )}
 
         <Panel position="top-left" style={{ margin: isMobile ? '5px' : '10px', maxWidth: isMobile ? 'calc(100vw - 10px)' : 'none' }}>
           <div className={`left-panel-container ${leftPanelCollapsed ? 'collapsed' : ''}`} style={isMobile ? { maxWidth: '100%' } : {}}>
@@ -1912,10 +2003,19 @@ function App() {
               </div>
 
               {(extendedPanelOpen || extendedPanelClosing) && (
-                <div className={`extended-panel ${extendedPanelClosing ? 'closing' : ''}`} style={isMobile ? { maxHeight: 'calc(100vh - 300px)' } : {}}>
+                <div className={`extended-panel ${extendedPanelClosing ? 'closing' : ''}`}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '10px' : '15px', borderBottom: '2px solid var(--border-divider)',
                     position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 1, flexWrap: isMobile ? 'wrap' : 'nowrap', gap: isMobile ? '10px' : '0' }}>
                     <h3 style={{ color: 'var(--color-primary)', fontSize: isMobile ? 'var(--font-size-base)' : 'var(--font-size-md)', fontWeight: 700, margin: 0 }}>More Statistics</h3>
+                    {isMobile && (
+                      <button 
+                        onClick={() => setExtendedPanelOpen(false)} 
+                        className="btn btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: 'var(--font-size-sm)', minWidth: 'auto' }}
+                      >
+                        Close
+                      </button>
+                    )}
                     <div style={{ display: 'flex', gap: isMobile ? '5px' : '10px', flexWrap: 'wrap' }}>
                       <button onClick={() => setDisplayMode(prev => prev === 'perSecond' ? 'perCycle' : 'perSecond')} className="btn btn-secondary"
                         style={{ padding: isMobile ? '6px 10px' : '8px 16px', fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)', minWidth: 'auto' }}
@@ -1927,7 +2027,7 @@ function App() {
                         {machineDisplayMode === 'perMachine' ? 'Per Machine' : 'Total'}</button>
                     </div>
                   </div>
-                  <div className="extended-panel-content" style={{ maxHeight: isMobile ? 'calc(100vh - 350px)' : 'calc(100vh - 200px)', overflowY: 'auto', paddingBottom: isMobile ? '20px' : '120px' }}>
+                  <div className="extended-panel-content">
                     <div style={{ marginBottom: '20px' }}>
                       <label htmlFor="global-pollution" style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-base)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
                         Global Pollution (%):</label>
@@ -2060,52 +2160,47 @@ function App() {
 
         <Panel position="top-right" style={{ margin: isMobile ? '5px' : '10px', maxWidth: isMobile ? 'calc(100vw - 10px)' : 'none' }}>
           {isMobile && (
-            <div style={{
+            <div className="mobile-controls-container" style={{
               display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
+              gap: '4px',
               background: 'var(--bg-secondary)',
               border: '2px solid var(--border-primary)',
               borderRadius: 'var(--radius-md)',
-              padding: '8px',
+              padding: '4px',
               marginBottom: '10px'
             }}>
-              <div style={{ color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600, textAlign: 'center', marginBottom: '4px' }}>
-                Touch Mode
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                <button
-                  onClick={() => setMobileActionMode('pan')}
-                  className={`btn ${mobileActionMode === 'pan' ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ padding: '8px 6px', fontSize: '11px', minWidth: 'auto' }}
-                >
-                  🤚 Pan
-                </button>
-                <button
-                  onClick={() => setMobileActionMode('target')}
-                  className={`btn ${mobileActionMode === 'target' ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ padding: '8px 6px', fontSize: '11px', minWidth: 'auto' }}
-                  title="Tap nodes to mark as targets"
-                >
-                  🎯 Target
-                </button>
-                <button
-                  onClick={() => setMobileActionMode('disconnect')}
-                  className={`btn ${mobileActionMode === 'disconnect' ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ padding: '8px 6px', fontSize: '11px', minWidth: 'auto' }}
-                  title="Tap connections to remove"
-                >
-                  ✂️ Cut
-                </button>
-                <button
-                  onClick={() => setMobileActionMode('delete')}
-                  className={`btn ${mobileActionMode === 'delete' ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ padding: '8px 6px', fontSize: '11px', minWidth: 'auto' }}
-                  title="Tap nodes to delete"
-                >
-                  🗑️ Delete
-                </button>
-              </div>
+              <button
+                onClick={() => setMobileActionMode('pan')}
+                className={`btn ${mobileActionMode === 'pan' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ padding: '8px', fontSize: '18px', minWidth: 'auto', lineHeight: 1 }}
+                title="Pan mode"
+              >
+                🤚
+              </button>
+              <button
+                onClick={() => setMobileActionMode('target')}
+                className={`btn ${mobileActionMode === 'target' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ padding: '8px', fontSize: '18px', minWidth: 'auto', lineHeight: 1 }}
+                title="Target mode - Tap nodes to mark as targets"
+              >
+                🎯
+              </button>
+              <button
+                onClick={() => setMobileActionMode('disconnect')}
+                className={`btn ${mobileActionMode === 'disconnect' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ padding: '8px', fontSize: '18px', minWidth: 'auto', lineHeight: 1 }}
+                title="Disconnect mode - Tap connections to remove"
+              >
+                ✂️
+              </button>
+              <button
+                onClick={() => setMobileActionMode('delete')}
+                className={`btn ${mobileActionMode === 'delete' ? 'btn-primary' : 'btn-secondary'}`}
+                style={{ padding: '8px', fontSize: '18px', minWidth: 'auto', lineHeight: 1 }}
+                title="Delete mode - Tap nodes to delete"
+              >
+                🗑️
+              </button>
             </div>
           )}
           <div className={`menu-container ${menuOpen ? '' : 'closed'}`} style={isMobile ? { maxWidth: 'calc(100vw - 10px)' } : {}}>
@@ -2507,6 +2602,8 @@ function App() {
             lastFireboxConfig, 
             lastWasteFacilityConfig
           }}
+          onImport={handleCanvasOnlyImport}
+          onExportCanvas={handleExportCanvas}
         />
       )}
 
