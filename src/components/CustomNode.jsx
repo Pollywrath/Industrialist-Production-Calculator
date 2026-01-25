@@ -22,7 +22,7 @@ const calculateTextLines = (text, availableWidth, fontSize = 16) => {
 const CustomNode = memo(({ data, id }) => {
   const { recipe, machine, machineCount, displayMode, machineDisplayMode, onInputClick, onOutputClick, isTarget,
     onDrillSettingsChange, onLogicAssemblerSettingsChange, onTreeFarmSettingsChange, onIndustrialFireboxSettingsChange, 
-    onTemperatureSettingsChange, onBoilerSettingsChange, onChemicalPlantSettingsChange, globalPollution, flows } = data;
+    onTemperatureSettingsChange, onBoilerSettingsChange, onChemicalPlantSettingsChange, globalPollution, flows, isMobile, mobileActionMode } = data;
   
   const [settingsModal, setSettingsModal] = useState(null);
   
@@ -351,7 +351,7 @@ const CustomNode = memo(({ data, id }) => {
                 isMobile={data.isMobile} mobileActionMode={data.mobileActionMode} />
               <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} 
                 onClick={onInputClick} nodeId={id} productId={input.product_id} flows={data.flows} 
-                onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={input} />
+                onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={input} data={data} />
             </React.Fragment>
           );
         })}
@@ -366,7 +366,7 @@ const CustomNode = memo(({ data, id }) => {
                 isMobile={data.isMobile} mobileActionMode={data.mobileActionMode} />
               <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} 
                 onClick={onOutputClick} nodeId={id} productId={output.product_id} flows={data.flows} 
-                onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={output} />
+                onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={output} data={data} />
             </React.Fragment>
           );
         })}
@@ -443,7 +443,7 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
   const displayQuantity = formatQuantity(input.quantity);
   
   // On mobile, only allow clicks in pan mode for connection management
-  const shouldAllowClick = !isMobile || mobileActionMode === 'pan' || mobileActionMode === 'disconnect';
+  const shouldAllowClick = !isMobile || mobileActionMode === 'pan';
   
   return (
     <div onClick={(e) => { 
@@ -466,7 +466,7 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
   );
 };
 
-const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, onHandleDoubleClick, suggestions, input }) => {
+const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, onHandleDoubleClick, suggestions, input, data }) => {
   // Use relaxed epsilon to handle floating-point precision from LP solver
   const EPSILON = 1e-6;
   
@@ -504,6 +504,9 @@ const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, 
   const isFluid = product?.type === 'fluid' || productId === 'p_any_fluid';
   const borderRadius = isFluid ? '50%' : '2px'; // Circle for fluids, square for items
   
+  // Mobile disconnect mode
+  const isMobile = data?.isMobile;
+  
   return (
     <Handle
       type={side === 'left' ? 'target' : 'source'}
@@ -515,7 +518,8 @@ const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, 
         height: '12px', 
         border: '2px solid #1a1a1a', 
         top: `${position}%`,
-        borderRadius
+        borderRadius,
+        cursor: 'pointer' // Handles are always interactive (Ctrl+Click on desktop, tap in disconnect mode on mobile)
       }}
       onClick={(e) => {
         if (onClick && e.ctrlKey) {

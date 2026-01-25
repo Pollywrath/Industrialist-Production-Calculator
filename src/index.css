@@ -588,25 +588,40 @@ input[type="number"] {
   position: relative;
   z-index: 100;
   display: flex;
-  gap: 6px;
+  gap: 4px;
   background: var(--bg-secondary);
   border: 2px solid var(--border-primary);
   border-radius: var(--radius-md);
-  padding: 6px;
+  padding: 4px;
   margin-bottom: 10px;
-  width: fit-content; /* Prevent extra gap on right */
+  margin-left: auto; /* Push to the right */
+  margin-right: 2px; /* Tiny gap from edge */
+  width: fit-content;
 }
 
 .mobile-controls-container .btn {
-  padding: 10px !important;
-  font-size: 20px !important;
+  padding: 8px !important;
+  font-size: 18px !important;
   min-width: auto !important;
   line-height: 1 !important;
-  width: 50px !important;
-  height: 50px !important;
+  width: 42px !important;
+  height: 42px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
+}
+
+/* Disable hover effects on mobile controls */
+.mobile-controls-container .btn:hover {
+  background: var(--bg-secondary) !important;
+  color: var(--color-primary) !important;
+  transform: none !important;
+}
+
+.mobile-controls-container .btn-primary:hover {
+  background: var(--color-primary) !important;
+  color: var(--color-primary-dark) !important;
+  transform: none !important;
 }
 
 /* ============================================================
@@ -1152,32 +1167,33 @@ input[type="number"] {
    MOBILE RESPONSIVE STYLES
    ============================================================ */
 
-@media (max-width: 768px) {
+/* Use touch detection instead of width for mobile styles */
+@media (hover: none) and (pointer: coarse) {
   /* Hide ReactFlow controls and minimap on mobile */
   .react-flow__controls,
   .react-flow__minimap {
     display: none !important;
   }
 
-  /* Extended Panel - Mobile Modal */
+  /* Extended Panel - Mobile Modal (works in both portrait and landscape) */
   .extended-panel {
-    position: fixed;
-    left: 50%;
-    top: auto;
-    bottom: 0;
-    transform: translateX(-50%);
-    width: calc(100vw - 20px);
-    max-width: 500px;
-    height: auto;
-    max-height: calc(100vh - 200px); /* Leave space for top buttons and controls */
-    margin-top: 0;
-    z-index: 2000;
-    overflow: hidden; /* Prevent outer scroll */
+    position: fixed !important;
+    left: 50% !important;
+    top: auto !important;
+    bottom: 0 !important;
+    transform: translateX(-50%) !important;
+    width: calc(100vw - 20px) !important;
+    max-width: 500px !important;
+    height: auto !important;
+    max-height: calc(100vh - 200px) !important; /* Leave space for top buttons and controls */
+    margin-top: 0 !important;
+    z-index: 2000 !important;
+    overflow: hidden !important; /* Prevent outer scroll */
   }
 
   .extended-panel-content {
-    max-height: calc(100vh - 300px); /* Account for header inside panel */
-    overflow-y: auto;
+    max-height: calc(100vh - 300px) !important; /* Account for header inside panel */
+    overflow-y: auto !important;
   }
   
   /* Modal overlay for extended panel on mobile */
@@ -1190,10 +1206,57 @@ input[type="number"] {
   }
 }
 
+/* Fallback for devices that don't support hover detection */
+@media (max-width: 768px) {
+  .react-flow__controls,
+  .react-flow__minimap {
+    display: none !important;
+  }
+}
+
 /* Extra small devices (phones in portrait, less than 576px) */
 @media (max-width: 576px) {
   /* Extended panel takes more width on very small screens */
   .extended-panel {
     width: calc(100vw - 20px);
+  }
+}
+
+/* ============================================================
+   DISABLE HOVER EFFECTS ON TOUCH DEVICES
+   ============================================================ */
+@media (hover: none) and (pointer: coarse) {
+  /* Disable all hover effects on touch devices */
+  .btn:hover:not(:disabled),
+  .btn-primary:hover:not(:disabled),
+  .btn-secondary:hover:not(:disabled),
+  .btn-delete:hover,
+  .drill-settings-button:hover,
+  .product-row:hover,
+  .recipe-card:hover,
+  .node-rect.clickable:hover {
+    background: inherit !important;
+    color: inherit !important;
+    transform: none !important;
+    border-color: inherit !important;
+  }
+  
+  /* Keep primary button colors */
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-primary) !important;
+    color: var(--color-primary-dark) !important;
+  }
+  
+  /* Keep secondary button colors */
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--bg-secondary) !important;
+    color: var(--color-primary) !important;
+    border: 2px solid var(--border-primary) !important;
+  }
+  
+  /* Keep delete button colors */
+  .btn-delete:hover {
+    background: var(--delete-bg) !important;
+    color: var(--delete-color) !important;
   }
 }

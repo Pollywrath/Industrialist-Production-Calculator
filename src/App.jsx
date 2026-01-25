@@ -131,7 +131,7 @@ function App() {
   const [extendedPanelClosing, setExtendedPanelClosing] = useState(false);
   const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [mobileActionMode, setMobileActionMode] = useState('pan'); // 'pan', 'target', 'delete', 'disconnect'
+  const [mobileActionMode, setMobileActionMode] = useState('pan'); // 'pan', 'target', 'delete'
   const [globalPollution, setGlobalPollution] = useState(0);
   const [pollutionInputFocused, setPollutionInputFocused] = useState(false);
   const [isPollutionPaused, setIsPollutionPaused] = useState(true);
@@ -219,7 +219,7 @@ function App() {
     onLiquidBurnerSettingsChange: handleLiquidBurnerSettingsChange,
     onMiddleClick: onNodeMiddleClick,
     onHandleDoubleClick: handleHandleDoubleClick
-  }), []);
+  }), [isMobile, mobileActionMode]);
 
   useEffect(() => {
     const savedState = loadCanvasState();
@@ -751,14 +751,6 @@ function App() {
   }, []);
 
   const openRecipeSelectorForInput = useCallback((productId, nodeId, inputIndex, event) => {
-    // Mobile disconnect mode
-    if (isMobile && mobileActionMode === 'disconnect') {
-      setEdges(eds => eds.filter(edge => !(edge.target === nodeId && edge.targetHandle === `left-${inputIndex}`)));
-      clearFlowCache();
-      triggerRecalculation('connection');
-      return;
-    }
-    
     if (event?.ctrlKey) {
       setEdges(eds => eds.filter(edge => !(edge.target === nodeId && edge.targetHandle === `left-${inputIndex}`)));
       clearFlowCache();
@@ -773,17 +765,9 @@ function App() {
       setSelectorOpenedFrom('rectangle');
       setRecipeFilter('producers');
     }
-  }, [setEdges]);
+  }, [setEdges, isMobile, mobileActionMode, triggerRecalculation]);
 
   const openRecipeSelectorForOutput = useCallback((productId, nodeId, outputIndex, event) => {
-    // Mobile disconnect mode
-    if (isMobile && mobileActionMode === 'disconnect') {
-      setEdges(eds => eds.filter(edge => !(edge.source === nodeId && edge.sourceHandle === `right-${outputIndex}`)));
-      clearFlowCache();
-      triggerRecalculation('connection');
-      return;
-    }
-    
     if (event?.ctrlKey) {
       setEdges(eds => eds.filter(edge => !(edge.source === nodeId && edge.sourceHandle === `right-${outputIndex}`)));
       clearFlowCache();
@@ -803,7 +787,7 @@ function App() {
       setSelectorOpenedFrom('rectangle');
       setRecipeFilter('consumers');
     }
-  }, [setEdges]);
+  }, [setEdges, isMobile, mobileActionMode, triggerRecalculation]);
 
   const cleanupInvalidConnections = useCallback((nodeId, inputs, outputs) => {
     setEdges((eds) => {
@@ -2166,13 +2150,6 @@ function App() {
           {isMobile && (
             <div className="mobile-controls-container">
               <button
-                onClick={() => setMobileActionMode(prev => prev === 'disconnect' ? 'pan' : 'disconnect')}
-                className={`btn ${mobileActionMode === 'disconnect' ? 'btn-primary' : 'btn-secondary'}`}
-                title="Disconnect mode - Tap connections to remove"
-              >
-                ✂️
-              </button>
-              <button
                 onClick={() => setMobileActionMode(prev => prev === 'target' ? 'pan' : 'target')}
                 className={`btn ${mobileActionMode === 'target' ? 'btn-primary' : 'btn-secondary'}`}
                 title="Target mode - Tap nodes to mark as targets"
@@ -2603,27 +2580,26 @@ function App() {
       )}
 
       {isMobile && mobileActionMode !== 'pan' && (
-        <div style={{
-          position: 'fixed',
-          bottom: '120px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'var(--bg-secondary)',
-          border: '2px solid var(--border-primary)',
-          borderRadius: 'var(--radius-md)',
-          padding: '8px 16px',
-          color: 'var(--color-primary)',
-          fontSize: '14px',
-          fontWeight: 600,
-          zIndex: 1000,
-          pointerEvents: 'none',
-          boxShadow: 'var(--shadow-lg)'
-        }}>
-          {mobileActionMode === 'target' && '🎯 Target Mode: Tap nodes to mark as targets'}
-          {mobileActionMode === 'disconnect' && '✂️ Disconnect Mode: Tap connections to remove'}
-          {mobileActionMode === 'delete' && '🗑️ Delete Mode: Tap nodes to delete'}
-        </div>
-      )}
+            <div style={{
+              position: 'fixed',
+              bottom: '120px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'var(--bg-secondary)',
+              border: '2px solid var(--border-primary)',
+              borderRadius: 'var(--radius-md)',
+              padding: '8px 16px',
+              color: 'var(--color-primary)',
+              fontSize: '14px',
+              fontWeight: 600,
+              zIndex: 1000,
+              pointerEvents: 'none',
+              boxShadow: 'var(--shadow-lg)'
+            }}>
+              {mobileActionMode === 'target' && '🎯 Target Mode: Tap nodes to mark as targets'}
+              {mobileActionMode === 'delete' && '🗑️ Delete Mode: Tap nodes to delete'}
+            </div>
+          )}
 
       {pendingNode && (
         <div className="pending-node-preview" style={{ left: `${mousePosition.x + 20}px`, top: `${mousePosition.y + 20}px` }}>
