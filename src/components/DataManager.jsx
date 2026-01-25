@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import RecipeEditor from './RecipeEditor';
 import { 
   getCustomProducts, 
   getCustomMachines, 
@@ -164,6 +165,7 @@ const DataManager = ({ onClose, defaultProducts, defaultMachines, defaultRecipes
               searchTerm={searchTerm} 
               defaultRecipes={defaultRecipes}
               defaultMachines={defaultMachines}
+              defaultProducts={defaultProducts}
               onDataChange={onDataChange}
             />
           )}
@@ -191,10 +193,12 @@ const ProductsTab = ({ searchTerm, defaultProducts, onDataChange }) => {
     setProducts(getCustomProducts());
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = products
+    .filter(p => 
+      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.id.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const startEdit = (product) => {
     setEditingId(product.id);
@@ -314,6 +318,8 @@ const ProductsTab = ({ searchTerm, defaultProducts, onDataChange }) => {
                 placeholder="Variable"
                 className="input"
                 style={{ padding: '6px', fontSize: '12px' }}
+                disabled={product.price === 'Variable'}
+                title={product.price === 'Variable' ? 'Cannot edit Variable values' : ''}
               />
               <input
                 type="number"
@@ -322,6 +328,8 @@ const ProductsTab = ({ searchTerm, defaultProducts, onDataChange }) => {
                 placeholder="Variable"
                 className="input"
                 style={{ padding: '6px', fontSize: '12px' }}
+                disabled={product.rp_multiplier === 'Variable'}
+                title={product.rp_multiplier === 'Variable' ? 'Cannot edit Variable values' : ''}
               />
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button onClick={() => saveEdit(product.id)} className="btn btn-primary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Save">
@@ -371,10 +379,12 @@ const MachinesTab = ({ searchTerm, defaultMachines, onDataChange }) => {
     setMachines(getCustomMachines());
   };
 
-  const filteredMachines = machines.filter(m =>
-    m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    m.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredMachines = machines
+    .filter(m =>
+      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      m.id.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const startEdit = (machine) => {
     setEditingId(machine.id);
@@ -507,8 +517,9 @@ const MachinesTab = ({ searchTerm, defaultMachines, onDataChange }) => {
 };
 
 // Recipes Tab Component (Simplified for now - can be expanded)
-const RecipesTab = ({ searchTerm, defaultRecipes, defaultMachines, onDataChange }) => {
+const RecipesTab = ({ searchTerm, defaultRecipes, defaultMachines, defaultProducts, onDataChange }) => {
   const [recipes, setRecipes] = useState([]);
+  const [editingRecipe, setEditingRecipe] = useState(null);
 
   useEffect(() => {
     loadRecipes();
@@ -518,32 +529,31 @@ const RecipesTab = ({ searchTerm, defaultRecipes, defaultMachines, onDataChange 
     setRecipes(getCustomRecipes());
   };
 
-  const filteredRecipes = recipes.filter(r =>
-    r.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    r.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleSaveRecipe = (updatedRecipe) => {
+    if (updateRecipe(updatedRecipe.id, updatedRecipe)) {
+      loadRecipes();
+      onDataChange();
+    } else {
+      alert('Failed to save recipe');
+    }
+  };
+
+  const filteredRecipes = recipes
+    .filter(r =>
+      r.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.id.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      const nameA = a.name || a.id;
+      const nameB = b.name || b.id;
+      return nameA.localeCompare(nameB);
+    });
 
   return (
     <div>
       <div style={{
-        padding: '15px',
-        background: 'rgba(212, 166, 55, 0.1)',
-        border: '1px solid var(--border-divider)',
-        borderRadius: 'var(--radius-sm)',
-        marginBottom: '15px'
-      }}>
-        <div style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: '8px' }}>
-          Recipe Editing Coming Soon
-        </div>
-        <div style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
-          Recipe editing is complex and will be added in a future update. For now, you can view all recipes below.
-          Use Import/Export to modify recipe data externally.
-        </div>
-      </div>
-
-      <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr 110px 110px',
+        gridTemplateColumns: '1fr 1fr 110px 110px 70px',
         gap: '8px',
         padding: '10px',
         background: 'var(--bg-secondary)',
@@ -557,12 +567,13 @@ const RecipesTab = ({ searchTerm, defaultRecipes, defaultMachines, onDataChange 
         <div>Machine</div>
         <div>Cycle Time</div>
         <div>Power</div>
+        <div>Actions</div>
       </div>
 
       {filteredRecipes.map(recipe => (
         <div key={recipe.id} style={{
           display: 'grid',
-          gridTemplateColumns: '1fr 1fr 110px 110px',
+          gridTemplateColumns: '1fr 1fr 110px 110px 70px',
           gap: '8px',
           padding: '10px',
           background: 'var(--bg-main)',
@@ -598,8 +609,26 @@ const RecipesTab = ({ searchTerm, defaultRecipes, defaultMachines, onDataChange 
               ? `${recipe.power_consumption}W` 
               : String(recipe.power_consumption)}
           </div>
+          <button 
+            onClick={() => setEditingRecipe(recipe)} 
+            className="btn btn-secondary" 
+            style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }}
+            title="Edit"
+          >
+            ✎
+          </button>
         </div>
       ))}
+
+      {editingRecipe && (
+        <RecipeEditor
+          recipe={editingRecipe}
+          onClose={() => setEditingRecipe(null)}
+          onSave={handleSaveRecipe}
+          availableProducts={defaultProducts}
+          defaultMachines={defaultMachines}
+        />
+      )}
     </div>
   );
 };
