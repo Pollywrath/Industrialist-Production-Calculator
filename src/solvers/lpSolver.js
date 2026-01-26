@@ -617,25 +617,6 @@ const detectUnsustainableLoops = (graph) => {
  * Solve the full graph LP model
  */
 export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
-  // Detect unsustainable loops before solving
-  const unsustainableLoops = detectUnsustainableLoops(graph);
-  
-  if (unsustainableLoops.length > 0) {
-    if (DEBUG_LP) {
-      console.log('%c[LP Solver] Unsustainable Loops Detected', 'color: #e74c3c; font-weight: bold');
-      unsustainableLoops.forEach((loop, idx) => {
-        console.log(`  Loop ${idx + 1}: ${loop.nodeNames.join(' → ')}`);
-        console.log(`    These nodes form a cycle with no external input source`);
-      });
-    }
-    
-    return {
-      feasible: false,
-      unsustainableLoops,
-      message: 'Unsustainable loops detected - these machines depend on each other with no external input source'
-    };
-  }
-  
   const model = buildFullGraphModel(graph, targetNodeIds);
   
   if (DEBUG_LP) {
@@ -643,6 +624,27 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
   }
   
   const result = solver.Solve(model);
+  
+  // Only check for unsustainable loops if solver failed
+  if (!result.feasible) {
+    const unsustainableLoops = detectUnsustainableLoops(graph);
+    
+    if (unsustainableLoops.length > 0) {
+      if (DEBUG_LP) {
+        console.log('%c[LP Solver] Unsustainable Loops Detected', 'color: #e74c3c; font-weight: bold');
+        unsustainableLoops.forEach((loop, idx) => {
+          console.log(`  Loop ${idx + 1}: ${loop.nodeNames.join(' → ')}`);
+          console.log(`    These nodes form a cycle with no external input source`);
+        });
+      }
+      
+      return {
+        feasible: false,
+        unsustainableLoops,
+        message: 'Unsustainable loops detected - these machines depend on each other with no external input source'
+      };
+    }
+  }
   
   if (DEBUG_LP) {
     if (result.feasible) {

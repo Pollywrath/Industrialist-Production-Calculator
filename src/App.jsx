@@ -157,8 +157,11 @@ function App() {
   const pendingChangesRef = useRef([]);
 
   const onNodesChange = useCallback((changes) => {
-    const positionChanges = changes.filter(c => c.type === 'position' && c.dragging);
-    const otherChanges = changes.filter(c => !(c.type === 'position' && c.dragging));
+    // Filter out 'remove' type changes to disable backspace/delete key functionality
+    const filteredChanges = changes.filter(c => c.type !== 'remove');
+    
+    const positionChanges = filteredChanges.filter(c => c.type === 'position' && c.dragging);
+    const otherChanges = filteredChanges.filter(c => !(c.type === 'position' && c.dragging));
     
     if (positionChanges.length > 0) onNodesChangeBase(positionChanges);
     
