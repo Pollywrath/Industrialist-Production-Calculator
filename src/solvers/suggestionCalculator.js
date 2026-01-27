@@ -1,5 +1,3 @@
-import { HEAT_SOURCES } from '../utils/temperatureHandler';
-
 const EPSILON = 1e-10;
 
 /**

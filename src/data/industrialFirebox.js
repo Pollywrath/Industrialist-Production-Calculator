@@ -63,6 +63,11 @@ export const calculateFireboxMetrics = (recipeId, fuelId) => {
 };
 
 export const buildFireboxInputs = (originalInputs, fuelId, recipeId) => {
+  // Recipe 07 (Sodium Carbonate) has no variable product - return original inputs unchanged
+  if (recipeId === 'r_industrial_firebox_07') {
+    return originalInputs;
+  }
+  
   const metrics = calculateFireboxMetrics(recipeId, fuelId);
   if (!metrics) return originalInputs;
   

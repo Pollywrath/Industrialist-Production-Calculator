@@ -27,7 +27,7 @@ import {
 import { 
   HEAT_SOURCES, calculateOutputTemperature, getPowerConsumptionForTemperature, 
   formatTemperature 
-} from '../utils/temperatureHandler';
+} from '../utils/temperatureUtils';
 import { getProductName } from '../utils/variableHandler';
 import { getProduct, products } from '../data/dataLoader';
 

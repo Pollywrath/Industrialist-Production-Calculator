@@ -1,5 +1,5 @@
-import { hasTempDependentCycle, getTempDependentCycleTime, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getSteamInputIndex } from '../utils/temperatureDependentCycles';
-import { DEFAULT_STEAM_TEMPERATURE } from '../utils/temperatureHandler';
+import { hasTempDependentCycle, getTempDependentCycleTime, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, 
+  getSteamInputIndex, DEFAULT_STEAM_TEMPERATURE } from '../utils/temperatureUtils';
 
 export const buildProductionGraph = (nodes, edges) => {
   // Early return for empty graphs

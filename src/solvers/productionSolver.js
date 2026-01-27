@@ -1,9 +1,7 @@
 import { buildProductionGraph } from './graphBuilder';
 import { calculateProductFlows } from './flowCalculator';
 import { determineExcessAndDeficiency } from './excessCalculator';
-import { propagateTemperatures, applyTemperaturesToNodes } from '../utils/temperaturePropagation';
-import { HEAT_SOURCES } from '../utils/temperatureHandler';
-import { hasTempDependentCycle } from '../utils/temperatureDependentCycles';
+import { propagateTemperatures, applyTemperaturesToNodes, HEAT_SOURCES, hasTempDependentCycle } from '../utils/temperatureUtils';
 
 export const solveProductionNetwork = (nodes, edges, options = {}) => {
   const { skipTemperature = false, previousTemperatureData = null } = options;

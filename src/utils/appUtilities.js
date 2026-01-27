@@ -2,8 +2,8 @@ import { recipes, getProduct } from '../data/dataLoader';
 import { DEPTH_OUTPUTS } from '../data/mineshaftDrill';
 import { MICROCHIP_STAGES } from '../data/logicAssembler';
 import { HEAT_SOURCES, calculateOutputTemperature, DEFAULT_BOILER_INPUT_TEMPERATURE, 
-  DEFAULT_WATER_TEMPERATURE, DEFAULT_STEAM_TEMPERATURE, getDefaultTemperatureSettings, isTemperatureProduct } from '../utils/temperatureHandler';
-import { hasTempDependentCycle, TEMP_DEPENDENT_MACHINES } from '../utils/temperatureDependentCycles';
+  DEFAULT_WATER_TEMPERATURE, DEFAULT_STEAM_TEMPERATURE, getDefaultTemperatureSettings, isTemperatureProduct,
+  hasTempDependentCycle, TEMP_DEPENDENT_MACHINES } from './temperatureUtils';
 import { DEFAULT_WASTE_FACILITY_RECIPE } from '../data/undergroundWasteFacility';
 import { DEFAULT_LIQUID_DUMP_RECIPE } from '../data/liquidDump';
 import { DEFAULT_LIQUID_BURNER_RECIPE } from '../data/liquidBurner';

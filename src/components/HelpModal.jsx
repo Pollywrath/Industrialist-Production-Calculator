@@ -319,7 +319,7 @@ const HelpModal = ({ onClose }) => {
                       <span style={{ color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600 }}>Temperature Indicator</span>
                     </div>
                     <div style={{ color: 'var(--text-secondary)', fontSize: '12px', paddingLeft: '15px' }}>
-                      Appears on nodes with heat sources (boilers, heaters) or temperature-dependent recipes. Shows output temperature for heat sources (red border) or input temperature for temperature-dependent machines (green border).
+                      Appears on nodes with heat sources (boilers, heaters) or temperature-dependent recipes. Shows output temperature for heat sources (red border) or input temperature for temperature-dependent machines (green border). Connect heat sources to boilers and boilers to temperature-dependent recipes to change their values.
                     </div>
                   </div>
 
@@ -477,6 +477,77 @@ const HelpModal = ({ onClose }) => {
               <div style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                 <span style={{ color: 'var(--color-primary)', fontSize: '16px', lineHeight: '20px' }}>💡</span>
                 <span>Favorite recipes (⭐) appear at the top of the recipe selector for quick access</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact & Links Section */}
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{ color: 'var(--color-primary)', fontSize: '18px', fontWeight: 700, marginBottom: '15px', borderBottom: '2px solid var(--border-divider)', paddingBottom: '8px' }}>
+              Contact & Links
+            </h3>
+            
+            <div style={{ paddingLeft: '15px' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '15px' }}>
+                Found a bug? Have suggestions? Want to contribute?
+              </p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px 20px', fontSize: '14px' }}>
+                <div>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Discord: </span>
+                  <a 
+                    href="https://discord.com/users/pollywrath4961" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--color-primary)', textDecoration: 'none', transition: 'all 0.2s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+                  >
+                    pollywrath4961
+                  </a>
+                </div>
+
+                <div>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Reddit: </span>
+                  <a 
+                    href="https://www.reddit.com/user/Pollywrath5" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--color-primary)', textDecoration: 'none', transition: 'all 0.2s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+                  >
+                    u/Pollywrath5
+                  </a>
+                </div>
+
+                <div>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Roblox: </span>
+                  <a 
+                    href="https://www.roblox.com/users/profile?username=Pollywrath5" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--color-primary)', textDecoration: 'none', transition: 'all 0.2s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+                  >
+                    Pollywrath5
+                  </a>
+                </div>
+
+                <div>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>GitHub: </span>
+                  <a 
+                    href="https://github.com/Pollywrath/Industrialist-Production-Calculator" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--color-primary)', textDecoration: 'none', transition: 'all 0.2s' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.textDecoration = 'underline'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.textDecoration = 'none'; }}
+                  >
+                    Source Code
+                  </a>
+                </div>
               </div>
             </div>
           </div>

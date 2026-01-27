@@ -15,9 +15,8 @@ import defaultMachinesJSON from './data/machines.json';
 import defaultRecipesJSON from './data/recipes.json';
 import { getProductName, formatIngredient } from './utils/variableHandler';
 import { calculateOutputTemperature, isTemperatureProduct, HEAT_SOURCES, DEFAULT_BOILER_INPUT_TEMPERATURE, 
-  DEFAULT_WATER_TEMPERATURE, DEFAULT_STEAM_TEMPERATURE } from './utils/temperatureHandler';
-import { hasTempDependentCycle, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getSteamInputIndex, getTempDependentCycleTime } from './utils/temperatureDependentCycles';
-import { applyTemperaturesToNodes } from './utils/temperaturePropagation';
+  DEFAULT_WATER_TEMPERATURE, DEFAULT_STEAM_TEMPERATURE, hasTempDependentCycle, TEMP_DEPENDENT_MACHINES, 
+  recipeUsesSteam, getSteamInputIndex, getTempDependentCycleTime, applyTemperaturesToNodes } from './utils/temperatureUtils';
 import { DEFAULT_DRILL_RECIPE, DEPTH_OUTPUTS, calculateDrillMetrics, buildDrillInputs, buildDrillOutputs } from './data/mineshaftDrill';
 import { DEFAULT_LOGIC_ASSEMBLER_RECIPE, MICROCHIP_STAGES, calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from './data/logicAssembler';
 import { DEFAULT_TREE_FARM_RECIPE, calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs } from './data/treeFarm';
@@ -2193,7 +2192,6 @@ function App() {
               <button onClick={handleRestoreDefaults} className="btn btn-secondary">Restore Defaults</button>
               <button onClick={() => setShowThemeEditor(true)} className="btn btn-secondary">Theme Editor</button>
               <button onClick={() => setShowHelpModal(true)} className="btn btn-secondary">Help</button>
-              <button onClick={() => window.open('https://github.com/Pollywrath/Industrialist-Production-Calculator', '_blank')} className="btn btn-secondary">Source Code</button>
             </div>
           </div>
         </Panel>

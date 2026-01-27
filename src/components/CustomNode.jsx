@@ -2,8 +2,9 @@ import React, { useState, memo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { getProduct } from '../data/dataLoader';
 import { getProductName, formatPowerConsumption, formatPollution } from '../utils/variableHandler';
-import { isTemperatureProduct, formatTemperature, needsTemperatureConfig, needsBoilerConfig, HEAT_SOURCES, DEFAULT_STEAM_TEMPERATURE } from '../utils/temperatureHandler';
-import { hasTempDependentCycle, getTempDependentCycleTime, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getSteamInputIndex } from '../utils/temperatureDependentCycles';
+import { isTemperatureProduct, formatTemperature, needsTemperatureConfig, needsBoilerConfig, HEAT_SOURCES, 
+  DEFAULT_STEAM_TEMPERATURE, hasTempDependentCycle, getTempDependentCycleTime, TEMP_DEPENDENT_MACHINES, 
+  recipeUsesSteam, getSteamInputIndex } from '../utils/temperatureUtils';
 import UnifiedSettings from './UnifiedSettings';
 
 const RECT_HEIGHT = 44, RECT_GAP = 8, BOTTOM_PADDING = 20, SIDE_PADDING = 10, COLUMN_GAP = 20, MIN_WIDTH = 320;

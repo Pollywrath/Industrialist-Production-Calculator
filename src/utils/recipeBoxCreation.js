@@ -1,6 +1,6 @@
 import { getMachine, getProduct } from '../data/dataLoader';
-import { calculateOutputTemperature, DEFAULT_BOILER_INPUT_TEMPERATURE, DEFAULT_WATER_TEMPERATURE, HEAT_SOURCES } from './temperatureHandler';
-import { hasTempDependentCycle, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getTempDependentCycleTime } from './temperatureDependentCycles';
+import { calculateOutputTemperature, DEFAULT_BOILER_INPUT_TEMPERATURE, DEFAULT_WATER_TEMPERATURE, HEAT_SOURCES,
+  hasTempDependentCycle, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getTempDependentCycleTime, DEFAULT_STEAM_TEMPERATURE } from './temperatureUtils';
 import { DEPTH_OUTPUTS, calculateDrillMetrics, buildDrillInputs, buildDrillOutputs } from '../data/mineshaftDrill';
 import { MICROCHIP_STAGES, calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from '../data/logicAssembler';
 import { calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs } from '../data/treeFarm';
@@ -9,7 +9,6 @@ import { calculateWasteFacilityMetrics, buildWasteFacilityInputs } from '../data
 import { calculateLiquidDumpPollution, buildLiquidDumpInputs } from '../data/liquidDump';
 import { calculateLiquidBurnerPollution, buildLiquidBurnerInputs } from '../data/liquidBurner';
 import { applyTemperatureToOutputs, initializeRecipeTemperatures } from './appUtilities';
-import { DEFAULT_STEAM_TEMPERATURE } from './temperatureHandler';
 
 /**
  * Calculate machine count needed to fully supply or consume a connected recipe
