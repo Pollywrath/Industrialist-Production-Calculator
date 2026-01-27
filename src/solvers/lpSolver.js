@@ -477,35 +477,69 @@ const detectUnsustainableLoops = (graph) => {
   
   sccs.forEach(scc => {
     const sccSet = new Set(scc);
-    let hasExternalInput = false;
     
-    // Check if any node in the SCC has an input from outside the SCC
-    for (const nodeId of scc) {
+    // Find products that are BOTH produced AND consumed within the loop (loop-dependent products)
+    const loopProducts = new Map(); // productId -> { production, consumption }
+    
+    scc.forEach(nodeId => {
       const node = graph.nodes[nodeId];
       
-      for (const input of node.inputs) {
-        const productData = graph.products[input.productId];
-        if (!productData) continue;
-        
-        // Check if any producer of this product is outside the SCC
-        const hasExternalProducer = productData.producers.some(
-          producer => !sccSet.has(producer.nodeId)
-        );
-        
-        if (hasExternalProducer) {
-          hasExternalInput = true;
-          break;
+      // Track production within loop
+      node.outputs.forEach(output => {
+        if (!loopProducts.has(output.productId)) {
+          loopProducts.set(output.productId, { production: 0, consumption: 0 });
         }
+        loopProducts.get(output.productId).production += output.rate;
+      });
+      
+      // Track consumption within loop
+      node.inputs.forEach(input => {
+        if (!loopProducts.has(input.productId)) {
+          loopProducts.set(input.productId, { production: 0, consumption: 0 });
+        }
+        loopProducts.get(input.productId).consumption += input.rate;
+      });
+    });
+    
+    // Check each loop-dependent product (both produced AND consumed in loop)
+    let isUnsustainable = false;
+    const problematicProducts = [];
+    
+    for (const [productId, rates] of loopProducts) {
+      const EPSILON = 1e-10;
+      
+      // Only check products that are BOTH produced and consumed within the loop
+      if (rates.production < EPSILON || rates.consumption < EPSILON) {
+        continue; // Not loop-dependent, skip
       }
       
-      if (hasExternalInput) break;
+      const netProduction = rates.production - rates.consumption;
+      
+      // If net production is positive or zero, this product is fine
+      if (netProduction > -EPSILON) {
+        continue;
+      }
+      
+      // Net consumption (deficit) - check if there are external producers
+      const productData = graph.products[productId];
+      if (!productData) continue;
+      
+      const hasExternalProducer = productData.producers.some(
+        producer => !sccSet.has(producer.nodeId)
+      );
+      
+      if (!hasExternalProducer) {
+        // No external source for a net-consuming loop-dependent product
+        isUnsustainable = true;
+        problematicProducts.push(productId);
+      }
     }
     
-    // If no external input, this is an unsustainable loop
-    if (!hasExternalInput) {
+    if (isUnsustainable) {
       unsustainableLoops.push({
         nodes: scc,
-        nodeNames: scc.map(id => graph.nodes[id]?.recipe?.name || id)
+        nodeNames: scc.map(id => graph.nodes[id]?.recipe?.name || id),
+        problematicProducts
       });
     }
   });
@@ -617,6 +651,25 @@ const detectUnsustainableLoops = (graph) => {
  * Solve the full graph LP model
  */
 export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
+  // Check for unsustainable loops BEFORE solving
+  const unsustainableLoops = detectUnsustainableLoops(graph);
+  
+  if (unsustainableLoops.length > 0) {
+    if (DEBUG_LP) {
+      console.log('%c[LP Solver] Unsustainable Loops Detected (Pre-Solve)', 'color: #e74c3c; font-weight: bold');
+      unsustainableLoops.forEach((loop, idx) => {
+        console.log(`  Loop ${idx + 1}: ${loop.nodeNames.join(' → ')}`);
+        console.log(`    These nodes form a cycle with no external input source`);
+      });
+    }
+    
+    return {
+      feasible: false,
+      unsustainableLoops,
+      message: 'Unsustainable loops detected - these machines depend on each other with no external input source'
+    };
+  }
+  
   const model = buildFullGraphModel(graph, targetNodeIds);
   
   if (DEBUG_LP) {
@@ -624,27 +677,6 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
   }
   
   const result = solver.Solve(model);
-  
-  // Only check for unsustainable loops if solver failed
-  if (!result.feasible) {
-    const unsustainableLoops = detectUnsustainableLoops(graph);
-    
-    if (unsustainableLoops.length > 0) {
-      if (DEBUG_LP) {
-        console.log('%c[LP Solver] Unsustainable Loops Detected', 'color: #e74c3c; font-weight: bold');
-        unsustainableLoops.forEach((loop, idx) => {
-          console.log(`  Loop ${idx + 1}: ${loop.nodeNames.join(' → ')}`);
-          console.log(`    These nodes form a cycle with no external input source`);
-        });
-      }
-      
-      return {
-        feasible: false,
-        unsustainableLoops,
-        message: 'Unsustainable loops detected - these machines depend on each other with no external input source'
-      };
-    }
-  }
   
   if (DEBUG_LP) {
     if (result.feasible) {
