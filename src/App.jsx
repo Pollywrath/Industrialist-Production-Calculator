@@ -1843,7 +1843,6 @@ function App() {
       setTargetProducts([]);
       setTargetIdCounter(0);
       setSoldProducts({});
-      setFavoriteRecipes([]);
       setLastDrillConfig(null);
       setLastAssemblerConfig(null);
       setLastTreeFarmConfig(null);
@@ -2177,7 +2176,6 @@ function App() {
                 setTargetProducts([]);
                 setTargetIdCounter(0);
                 setSoldProducts({});
-                setFavoriteRecipes([]);
                 setLastDrillConfig(null);
                 setLastAssemblerConfig(null);
                 setLastTreeFarmConfig(null);

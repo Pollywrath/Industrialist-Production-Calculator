@@ -236,6 +236,11 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       total_cost: 0
     };
     
+    // Add explicit non-negativity constraint for flow
+    const flowNonNegConstraintName = `flow_nonneg_${conn.id}`;
+    model.constraints[flowNonNegConstraintName] = { min: 0 };
+    model.variables[flowVar][flowNonNegConstraintName] = 1;
+    
     // Flow must be non-negative (but not necessarily integer)
     // Don't add to ints{} - flows can be fractional
   });
