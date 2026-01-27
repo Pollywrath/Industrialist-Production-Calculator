@@ -13,7 +13,8 @@ const DEBUG_LP = true; // Enable debug logging for LP solver
 // Each priority level must dominate all lower priorities combined
 const DEFICIENCY_WEIGHT = 1000000000;  // 1 billion - absolutely must eliminate deficiencies
 const EXCESS_COUNT_WEIGHT = 1000000;   // 1 million - minimize number of excess outputs
-const EXCESS_AMOUNT_WEIGHT = 10000;    // 10k - minimize amount of each excess
+const CONNECTED_EXCESS_WEIGHT = 50000;  // 50k - minimize connected excess (has connections but overproducing)
+const UNCONNECTED_EXCESS_WEIGHT = 10000; // 10k - minimize unconnected excess (no connections, less problematic)
 const MODEL_COUNT_WEIGHT = 100;        // 100 - minimize model count (values are small: 1-20 per machine)
 const POLLUTION_WEIGHT = 1;            // 1 - minimize pollution (values: 0.2-10 per machine)
 const POWER_WEIGHT = 0.00001;          // 0.00001 - minimize power (values: 1k-1M per machine)
@@ -269,9 +270,18 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       const slackVar = `excess_${nodeId}_${outputIndex}`;
       const excessIndicatorVar = `excess_indicator_${nodeId}_${outputIndex}`;
       
-      // Create excess slack variable (penalized by amount)
+      // Find all connections from this output
+      const outgoingConnections = graph.connections.filter(
+        c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
+      );
+      
+      // Determine if this is connected or unconnected excess
+      const hasConnections = outgoingConnections.length > 0;
+      const excessWeight = hasConnections ? CONNECTED_EXCESS_WEIGHT : UNCONNECTED_EXCESS_WEIGHT;
+      
+      // Create excess slack variable (penalized by amount based on connection status)
       model.variables[slackVar] = {
-        total_cost: EXCESS_AMOUNT_WEIGHT,  // Cost per unit of excess
+        total_cost: excessWeight,  // Higher cost for connected excess
         [constraintName]: -1  // Subtracts from constraint to absorb excess production
       };
       
@@ -300,9 +310,9 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       model.variables[slackVar][linkConstraintName] = 1;
       model.variables[excessIndicatorVar][linkConstraintName] = -M;
       
-      // Constraint: production_capacity >= outgoing_flows + excess_slack
-      // production_capacity - outgoing_flows - excess_slack >= 0
-      model.constraints[constraintName] = { min: 0 };
+      // Constraint: production_capacity = outgoing_flows + excess_slack
+      // Use equality constraint to force proper accounting of excess
+      model.constraints[constraintName] = { equal: 0 };
       
       // Add production capacity term (positive)
       if (!model.variables[machineVar][constraintName]) {
@@ -310,12 +320,7 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       }
       model.variables[machineVar][constraintName] += ratePerMachine;
       
-      // Find all connections from this output
-      const outgoingConnections = graph.connections.filter(
-        c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
-      );
-      
-      // Add outgoing flow terms (negative)
+      // Add outgoing flow terms (negative) - already found above
       outgoingConnections.forEach(conn => {
         const flowVar = `f_${conn.id}`;
         if (!model.variables[flowVar][constraintName]) {
@@ -386,13 +391,13 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     const machineVars = Object.keys(model.variables).filter(v => v.startsWith('m_')).length;
     const flowVars = Object.keys(model.variables).filter(v => v.startsWith('f_')).length;
     const deficitVars = Object.keys(model.variables).filter(v => v.startsWith('deficit_')).length;
-    const excessVars = Object.keys(model.variables).filter(v => v.startsWith('excess_') && !v.includes('indicator')).length;
-    const excessIndicatorVars = Object.keys(model.variables).filter(v => v.startsWith('excess_indicator_')).length;
-    console.log(`  Created ${machineVars} machine variables`);
-    console.log(`  Created ${flowVars} flow variables`);
-    console.log(`  Created ${deficitVars} deficiency slack variables (weight: ${DEFICIENCY_WEIGHT})`);
-    console.log(`  Created ${excessVars} excess amount variables (weight: ${EXCESS_AMOUNT_WEIGHT})`);
-    console.log(`  Created ${excessIndicatorVars} excess count indicators (weight: ${EXCESS_COUNT_WEIGHT})`);
+      const excessVars = Object.keys(model.variables).filter(v => v.startsWith('excess_') && !v.includes('indicator')).length;
+      const excessIndicatorVars = Object.keys(model.variables).filter(v => v.startsWith('excess_indicator_')).length;
+      console.log(`  Created ${machineVars} machine variables`);
+      console.log(`  Created ${flowVars} flow variables`);
+      console.log(`  Created ${deficitVars} deficiency slack variables (weight: ${DEFICIENCY_WEIGHT})`);
+      console.log(`  Created ${excessVars} excess amount variables (weight: ${CONNECTED_EXCESS_WEIGHT} for connected, ${UNCONNECTED_EXCESS_WEIGHT} for unconnected)`);
+      console.log(`  Created ${excessIndicatorVars} excess count indicators (weight: ${EXCESS_COUNT_WEIGHT})`);
     console.log(`  Created ${Object.keys(model.constraints).length} constraints`);
     
     // Sample one deficit variable to verify structure
@@ -478,64 +483,108 @@ const detectUnsustainableLoops = (graph) => {
   sccs.forEach(scc => {
     const sccSet = new Set(scc);
     
-    // Find products that are BOTH produced AND consumed within the loop (loop-dependent products)
-    const loopProducts = new Map(); // productId -> { production, consumption }
+    // Find products that are BOTH produced AND consumed within the loop AND have actual connections
+    const loopDependentProducts = new Set();
     
-    scc.forEach(nodeId => {
-      const node = graph.nodes[nodeId];
+    // Check all connections within the loop
+    graph.connections.forEach(conn => {
+      const sourceInLoop = sccSet.has(conn.sourceNodeId);
+      const targetInLoop = sccSet.has(conn.targetNodeId);
       
-      // Track production within loop
-      node.outputs.forEach(output => {
-        if (!loopProducts.has(output.productId)) {
-          loopProducts.set(output.productId, { production: 0, consumption: 0 });
-        }
-        loopProducts.get(output.productId).production += output.rate;
-      });
-      
-      // Track consumption within loop
-      node.inputs.forEach(input => {
-        if (!loopProducts.has(input.productId)) {
-          loopProducts.set(input.productId, { production: 0, consumption: 0 });
-        }
-        loopProducts.get(input.productId).consumption += input.rate;
-      });
+      // Only consider connections that are entirely within the loop
+      if (sourceInLoop && targetInLoop) {
+        const productId = conn.productId;
+        
+        // This product has an actual connection flowing within the loop
+        loopDependentProducts.add(productId);
+      }
     });
     
-    // Check each loop-dependent product (both produced AND consumed in loop)
-    let isUnsustainable = false;
-    const problematicProducts = [];
+    // If no loop-dependent products, this cycle is fine (just happens to be connected, not dependent)
+    if (loopDependentProducts.size === 0) {
+      return;
+    }
     
-    for (const [productId, rates] of loopProducts) {
-      const EPSILON = 1e-10;
-      
-      // Only check products that are BOTH produced and consumed within the loop
-      if (rates.production < EPSILON || rates.consumption < EPSILON) {
-        continue; // Not loop-dependent, skip
-      }
-      
-      const netProduction = rates.production - rates.consumption;
-      
-      // If net production is positive or zero, this product is fine
-      if (netProduction > -EPSILON) {
-        continue;
-      }
-      
-      // Net consumption (deficit) - check if there are external producers
+    // Check if loop has external input sources for ANY loop-dependent product
+    let hasExternalSource = false;
+    
+    for (const productId of loopDependentProducts) {
       const productData = graph.products[productId];
       if (!productData) continue;
       
+      // Check if there are producers outside the loop
       const hasExternalProducer = productData.producers.some(
         producer => !sccSet.has(producer.nodeId)
       );
       
-      if (!hasExternalProducer) {
-        // No external source for a net-consuming loop-dependent product
-        isUnsustainable = true;
+      if (hasExternalProducer) {
+        hasExternalSource = true;
+        break;
+      }
+    }
+    
+    // If the loop has an external source for at least one loop-dependent product, it's sustainable
+    // (The LP solver can balance it by adjusting machine counts and using the external input)
+    if (hasExternalSource) {
+      return;
+    }
+    
+    // No external sources - check if loop can be self-sustaining
+    // A loop is self-sustaining if for every loop-dependent product, there exists at least one
+    // recipe in the loop that can net-produce it (produces more than it consumes per machine)
+    let canSelfSustain = true;
+    const problematicProducts = [];
+    
+    for (const productId of loopDependentProducts) {
+      // Check if any node in the loop can net-produce this product
+      let hasNetProducer = false;
+      
+      for (const nodeId of scc) {
+        const node = graph.nodes[nodeId];
+        
+        // Calculate per-machine rates
+        let cycleTime = node.cycleTime;
+        if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
+        
+        const isMineshaftDrill = node.isMineshaftDrill || node.recipe?.isMineshaftDrill;
+        
+        // Production rate per machine
+        let productionPerMachine = 0;
+        node.outputs.forEach(output => {
+          if (output.productId === productId) {
+            const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
+            if (typeof quantity === 'number') {
+              productionPerMachine += isMineshaftDrill ? quantity : quantity / cycleTime;
+            }
+          }
+        });
+        
+        // Consumption rate per machine
+        let consumptionPerMachine = 0;
+        node.inputs.forEach(input => {
+          if (input.productId === productId) {
+            if (typeof input.quantity === 'number') {
+              consumptionPerMachine += isMineshaftDrill ? input.quantity : input.quantity / cycleTime;
+            }
+          }
+        });
+        
+        // If this node net-produces (or is neutral), the product can be sustained
+        if (productionPerMachine >= consumptionPerMachine - 1e-10) {
+          hasNetProducer = true;
+          break;
+        }
+      }
+      
+      if (!hasNetProducer) {
+        // ALL recipes in the loop consume more of this product than they produce
+        // This is structurally impossible to balance
+        canSelfSustain = false;
         problematicProducts.push(productId);
       }
     }
     
-    if (isUnsustainable) {
+    if (!canSelfSustain) {
       unsustainableLoops.push({
         nodes: scc,
         nodeNames: scc.map(id => graph.nodes[id]?.recipe?.name || id),
@@ -696,7 +745,8 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
       // Show slack variable values
       let totalDeficit = 0;
       let totalExcessCount = 0;
-      let totalExcessAmount = 0;
+      let totalConnectedExcess = 0;
+      let totalUnconnectedExcess = 0;
       let totalModelCount = 0;
       let totalPower = 0;
       let totalPollution = 0;
@@ -721,9 +771,27 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
         if (key.startsWith('excess_') && !key.includes('indicator')) {
           const value = result[key] || 0;
           if (value > EPSILON) {
-            totalExcessAmount += value;
-            excessAmountCost += value * EXCESS_AMOUNT_WEIGHT;
-            console.log(`    EXCESS AMOUNT ${key}: ${value} (cost: ${value * EXCESS_AMOUNT_WEIGHT})`);
+            // Parse nodeId and outputIndex from key format: excess_nodeId_outputIndex
+            const parts = key.split('_');
+            const nodeId = parts.slice(1, -1).join('_'); // Handle node IDs with underscores
+            const outputIndex = parseInt(parts[parts.length - 1]);
+            
+            // Check if this output has connections
+            const hasConnections = graph.connections.some(
+              c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
+            );
+            
+            const weight = hasConnections ? CONNECTED_EXCESS_WEIGHT : UNCONNECTED_EXCESS_WEIGHT;
+            const excessType = hasConnections ? 'CONNECTED' : 'UNCONNECTED';
+            
+            if (hasConnections) {
+              totalConnectedExcess += value;
+            } else {
+              totalUnconnectedExcess += value;
+            }
+            
+            excessAmountCost += value * weight;
+            console.log(`    ${excessType} EXCESS ${key}: ${value} (cost: ${value * weight})`);
           }
         }
         if (key.startsWith('m_')) {
@@ -781,7 +849,8 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
       
       console.log(`    Total deficiency: ${totalDeficit} (cost: ${deficiencyCost})`);
       console.log(`    Total excess count: ${totalExcessCount} outputs (cost: ${excessCountCost})`);
-      console.log(`    Total excess amount: ${totalExcessAmount} (cost: ${excessAmountCost})`);
+      console.log(`    Total connected excess: ${totalConnectedExcess} (cost: ${totalConnectedExcess * CONNECTED_EXCESS_WEIGHT})`);
+      console.log(`    Total unconnected excess: ${totalUnconnectedExcess} (cost: ${totalUnconnectedExcess * UNCONNECTED_EXCESS_WEIGHT})`);
       console.log(`    Total model count: ${totalModelCount.toFixed(2)} (cost: ${modelCountCost.toFixed(2)})`);
       console.log(`    Total power: ${totalPower.toFixed(2)} W (cost: ${powerCost.toFixed(2)})`);
       console.log(`    Total pollution: ${totalPollution.toFixed(2)} %/hr (cost: ${pollutionCost.toFixed(2)})`);
