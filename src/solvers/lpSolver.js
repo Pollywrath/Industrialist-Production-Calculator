@@ -604,23 +604,23 @@ const detectUnsustainableLoops = (graph) => {
     const node = graph.nodes[nodeId];
     if (!node) return;
     
-    // Check if this node feeds itself
+    // Check if this node feeds itself via actual connections
     const selfFedProducts = new Map(); // productId -> { inputRate, outputRate }
     
-    node.inputs.forEach(input => {
-      const productData = graph.products[input.productId];
-      if (!productData) return;
-      
-      // Check if this node produces this product
-      const selfProducer = productData.producers.find(
-        producer => producer.nodeId === nodeId
-      );
-      
-      if (selfProducer) {
-        selfFedProducts.set(input.productId, {
-          inputRate: input.rate,
-          outputRate: selfProducer.rate
-        });
+    // Find all self-feeding connections (output to input on same node)
+    graph.connections.forEach(conn => {
+      if (conn.sourceNodeId === nodeId && conn.targetNodeId === nodeId) {
+        // This is a self-feeding connection
+        const productId = conn.productId;
+        const sourceOutput = node.outputs[conn.sourceOutputIndex];
+        const targetInput = node.inputs[conn.targetInputIndex];
+        
+        if (sourceOutput && targetInput && sourceOutput.productId === productId && targetInput.productId === productId) {
+          selfFedProducts.set(productId, {
+            inputRate: targetInput.rate,
+            outputRate: sourceOutput.rate
+          });
+        }
       }
     });
     
