@@ -81,19 +81,7 @@ The following game data and constants are derived from the Industrialist game an
   - `WATER_VARIANTS` array
   - Pollution calculation formula (`calculateLiquidBurnerPollution`)
 
-- `src/utils/temperatureHandler.js`:
-  - `TEMPERATURE_PRODUCTS` array
-  - `HEAT_SOURCES` object (all heat source definitions and temperature values)
-  - Temperature default constants (DEFAULT_WATER_TEMPERATURE, DEFAULT_BOILER_INPUT_TEMPERATURE, etc.)
-
-- `src/utils/temperatureDependentCycles.js`:
-  - `TEMP_DEPENDENT_MACHINES` object
-  - All temperature-dependent cycle time formulas:
-    - `industrialDrillSeconds`
-    - `alloyerSeconds`
-    - `coalLiquefactionSeconds`
-    - `steamCrackingSeconds`
-    - `waterCycleTimePerUnit`
+- `src/utils/temperatureUtils.js` (heat source definitions, temperature calculations, temperature-dependent cycle formulas)
 
 ### Attribution:
 All game data is sourced from the [Industrialist Wiki](https://industrialist.miraheze.org/).

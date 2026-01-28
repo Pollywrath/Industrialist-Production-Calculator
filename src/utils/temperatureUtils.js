@@ -178,8 +178,7 @@ export const propagateTemperatures = (graph, flows) => {
   const outputTemperatures = new Map();
   const inputTemperatures = new Map();
   
-  const { sorted, cycleNodes } = topologicalSortWithCycles(graph);
-  
+  // Initialize all temperatures to default (18°C)
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     if (!node) return;
@@ -193,6 +192,8 @@ export const propagateTemperatures = (graph, flows) => {
     });
   });
   
+  const { sorted, cycleNodes } = topologicalSortWithCycles(graph);
+  
   const calculateNodeTemperatures = (nodeId, inCycle = false) => {
     const node = graph.nodes[nodeId];
     if (!node) return false;
@@ -201,6 +202,7 @@ export const propagateTemperatures = (graph, flows) => {
     const heatSource = HEAT_SOURCES[machine.id];
     let hasChanges = false;
     
+    // Step 1: Calculate all input temperatures (flow-weighted averaging)
     node.inputs.forEach((input, inputIndex) => {
       const newTemp = calculateInputTemperature(graph, flows, nodeId, inputIndex, outputTemperatures, !inCycle);
       const oldTemp = inputTemperatures.get(`${nodeId}:${inputIndex}`);
@@ -212,67 +214,70 @@ export const propagateTemperatures = (graph, flows) => {
       }
     });
     
+    // Step 2: Calculate output temperatures based on heat source type
     node.outputs.forEach((output, outputIndex) => {
       let temperature = DEFAULT_WATER_TEMPERATURE;
       
       if (heatSource) {
         if (heatSource.type === 'fixed') {
+          // Fixed temperature output
           temperature = heatSource.outputTemp;
+          
         } else if (heatSource.type === 'additive') {
-          const waterInputIndex = node.inputs.findIndex(inp => 
-            ['p_water', 'p_filtered_water', 'p_distilled_water'].includes(inp.productId)
-          );
-          
-          if (waterInputIndex >= 0) {
-            const inputTemp = inputTemperatures.get(`${nodeId}:${waterInputIndex}`);
-            const finalInputTemp = inputTemp !== undefined && inputTemp !== null ? inputTemp : DEFAULT_WATER_TEMPERATURE;
-            // Always add temperature increase, capped at max
-            temperature = Math.min(finalInputTemp + heatSource.tempIncrease, heatSource.maxTemp);
-          }
-        } else if (heatSource.type === 'configurable') {
-          temperature = node.recipe.temperatureSettings?.temperature || heatSource.tempOptions[0].temp;
-        } else if (heatSource.type === 'product_dependent') {
-          const waterInputIndex = node.inputs.findIndex(inp => 
-            ['p_water', 'p_filtered_water', 'p_distilled_water'].includes(inp.productId)
-          );
-          
-          if (waterInputIndex >= 0) {
-            const inputProductId = node.inputs[waterInputIndex].productId;
-            temperature = heatSource.temps[inputProductId] || heatSource.temps.p_water || 400;
-          }
-        } else if (heatSource.type === 'boiler') {
-          if (node.inputs.length >= 2) {
-            const coolantTemp = inputTemperatures.get(`${nodeId}:1`) || DEFAULT_BOILER_INPUT_TEMPERATURE;
-            const heatLoss = node.recipe.temperatureSettings?.heatLoss || heatSource.defaultHeatLoss;
-            temperature = coolantTemp - heatLoss;
+          // Geothermal: input + 80°C up to 220°C max, or passthrough if > 220°C
+          if (node.inputs.length > 0) {
+            const firstInputTemp = inputTemperatures.get(`${nodeId}:0`) || DEFAULT_WATER_TEMPERATURE;
             
-            if (temperature < heatSource.minSteamTemp) {
-              temperature = Math.max(temperature, DEFAULT_WATER_TEMPERATURE);
+            if (firstInputTemp > heatSource.maxTemp) {
+              // Passthrough if input exceeds max
+              temperature = firstInputTemp;
+            } else {
+              // Add temperature increase, capped at max
+              temperature = Math.min(firstInputTemp + heatSource.tempIncrease, heatSource.maxTemp);
             }
           }
+          
+        } else if (heatSource.type === 'configurable') {
+          // Electric water heater: user-configured temperature
+          temperature = node.recipe.temperatureSettings?.temperature || heatSource.tempOptions[0].temp;
+          
+        } else if (heatSource.type === 'product_dependent') {
+          // Gas burner: different temps for different water types
+          if (node.inputs.length > 0) {
+            const firstInputProductId = node.inputs[0].productId;
+            temperature = heatSource.temps[firstInputProductId] || heatSource.temps.p_water || 400;
+          }
+          
+        } else if (heatSource.type === 'boiler') {
+          // Boiler: dual outputs with different temperatures
+          // Uses second input (hot water/coolant from heat source) as boiler temperature
+          if (node.inputs.length >= 2) {
+            const boilerTemp = inputTemperatures.get(`${nodeId}:1`) || DEFAULT_WATER_TEMPERATURE;
+            const heatLoss = node.recipe.temperatureSettings?.heatLoss || heatSource.defaultHeatLoss;
+            const steamTemp = boilerTemp - heatLoss;
+            
+            // Coolant output (index 0): (boilerTemp - heatLoss) * 0.85
+            if (outputIndex === 0) {
+              temperature = steamTemp * 0.85;
+            } 
+            // Steam output (index 1): boilerTemp - heatLoss
+            else if (outputIndex === 1) {
+              if (steamTemp < heatSource.minSteamTemp) {
+                temperature = Math.max(steamTemp, DEFAULT_WATER_TEMPERATURE);
+              } else {
+                temperature = steamTemp;
+              }
+            }
+          }
+          
         } else if (heatSource.type === 'passthrough') {
+          // Modular turbine: pass through input temperature
           const steamInputIndex = node.inputs.findIndex(inp => 
             inp.productId === heatSource.inputProduct
           );
           
           if (steamInputIndex >= 0) {
             temperature = inputTemperatures.get(`${nodeId}:${steamInputIndex}`) || DEFAULT_WATER_TEMPERATURE;
-          }
-        }
-        
-        // Check if machine has a max output temperature
-        // Do NOT apply passthrough logic to additive heat sources (geothermal wells)
-        if (heatSource.maxTemp && temperature > heatSource.maxTemp && heatSource.type !== 'additive') {
-          // If input temp exceeds max, just pass through input temp
-          const waterInputIndex = node.inputs.findIndex(inp => 
-            ['p_water', 'p_filtered_water', 'p_distilled_water', 'p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam'].includes(inp.productId)
-          );
-          
-          if (waterInputIndex >= 0) {
-            const inputTemp = inputTemperatures.get(`${nodeId}:${waterInputIndex}`);
-            if (inputTemp !== undefined && inputTemp !== null) {
-              temperature = inputTemp;
-            }
           }
         }
       }
@@ -283,20 +288,26 @@ export const propagateTemperatures = (graph, flows) => {
     return hasChanges;
   };
   
+  // Process nodes in topological order
   sorted.forEach(nodeId => {
     if (!cycleNodes.has(nodeId)) {
       calculateNodeTemperatures(nodeId);
     }
   });
   
+  // Handle cycles with iteration
   if (cycleNodes.size > 0) {
-    const MAX_ITERATIONS = 50;
+    const MAX_ITERATIONS = 100;
     let iteration = 0;
     let hasChanges = true;
     
+    // Get cycle nodes in a consistent order (from sorted list)
+    const cycleNodesOrdered = sorted.filter(nodeId => cycleNodes.has(nodeId));
+    
     while (hasChanges && iteration < MAX_ITERATIONS) {
       hasChanges = false;
-      cycleNodes.forEach(nodeId => {
+      // Process cycle nodes in topological order for better convergence
+      cycleNodesOrdered.forEach(nodeId => {
         if (calculateNodeTemperatures(nodeId, true)) {
           hasChanges = true;
         }
@@ -304,6 +315,7 @@ export const propagateTemperatures = (graph, flows) => {
       iteration++;
     }
     
+    // Recalculate downstream nodes affected by cycles
     const nodesToRecalculate = new Set();
     
     sorted.forEach(nodeId => {

@@ -71,23 +71,18 @@ App runs at `http://localhost:5173`
 Resets all data to original game values. **Warning**: Clears canvas and custom data except for themes.
 
 ## Project Structure
-
 ```
 src/
 ├── components/          # React components
 │   ├── CustomNode.jsx
 │   ├── CustomEdge.jsx
-│   ├── DrillSettings.jsx
-│   ├── LogicAssemblerSettings.jsx
-│   ├── TreeFarmSettings.jsx
-│   ├── IndustrialFireboxSettings.jsx
-│   ├── ChemicalPlantSettings.jsx
-│   ├── TemperatureSettings.jsx
-│   ├── BoilerSettings.jsx
-│   ├── UndergroundWasteFacilitySettings.jsx
-│   ├── LiquidDumpSettings.jsx
-│   ├── LiquidBurnerSettings.jsx
-│   └── ThemeEditor.jsx
+│   ├── UnifiedSettings.jsx
+│   ├── settingsConfig.jsx
+│   ├── ThemeEditor.jsx
+│   ├── HelpModal.jsx
+│   ├── SaveManager.jsx
+│   ├── DataManager.jsx
+│   └── RecipeEditor.jsx
 ├── data/                # Game data (CC BY-NC-SA 4.0)
 │   ├── products.json
 │   ├── machines.json
@@ -103,12 +98,11 @@ src/
 │   └── liquidBurner.js
 ├── utils/               # Utilities (MIT)
 │   ├── variableHandler.js
-│   ├── temperatureHandler.js
-│   ├── temperatureDependentCycles.js
-│   ├── temperaturePropagation.js
+│   ├── temperatureUtils.js
 │   ├── appUtilities.js
 │   ├── recipeBoxCreation.js
-│   └── machineCountPropagator.js
+│   ├── machineCountPropagator.js
+│   └── dataUtilities.js
 ├── solvers/             # Production analysis (MIT)
 │   ├── productionSolver.js
 │   ├── graphBuilder.js
