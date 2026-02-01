@@ -33,7 +33,7 @@ import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, 
 import { configureSpecialRecipe, calculateMachineCountForAutoConnect, getSpecialRecipeInputs, getSpecialRecipeOutputs, isSpecialRecipe } from './utils/recipeBoxCreation';
 import { propagateMachineCount, propagateFromHandle, calculateMachineCountForNewConnection } from './utils/machineCountPropagator';
 import { buildProductionGraph } from './solvers/graphBuilder';
-import { computeMachines } from './solvers/computeMachinesSolver';
+import { computeMachines } from './solvers/lpSolver';
   
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
