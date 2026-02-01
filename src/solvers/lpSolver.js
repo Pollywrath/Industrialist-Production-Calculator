@@ -7,136 +7,35 @@ import solver from 'javascript-lp-solver';
 import { getMachine } from '../data/dataLoader';
 
 const EPSILON = 1e-8;
-const DEBUG_LP = true; // Enable debug logging for LP solver
+const DEBUG_LP = false; // Minimal logging - only show cost breakdown and changes
 
 // Objective weights (in strict priority order)
-// Each priority level must dominate all lower priorities combined
-const DEFICIENCY_WEIGHT = 1000000000;  // 1 billion - absolutely must eliminate deficiencies
-const EXCESS_COUNT_WEIGHT = 1000000;   // 1 million - minimize number of excess outputs
-const CONNECTED_EXCESS_WEIGHT = 50000;  // 50k - minimize connected excess (has connections but overproducing)
-const UNCONNECTED_EXCESS_WEIGHT = 10000; // 10k - minimize unconnected excess (no connections, less problematic)
-const MODEL_COUNT_WEIGHT = 100;        // 100 - minimize model count (values are small: 1-20 per machine)
-const POLLUTION_WEIGHT = 1;            // 1 - minimize pollution (values: 0.2-10 per machine)
-const POWER_WEIGHT = 0.00001;          // 0.00001 - minimize power (values: 1k-1M per machine)
-const COST_WEIGHT = 0.000001;          // 0.000001 - minimize cost (values: 250-200M per machine)
+// Priority tiers (each tier dominates all lower tiers):
+// Tier 1 (Critical): Deficiency count and amounts - MUST be zero
+// Tier 2 (Important): Model count, excess counts and amounts - should be minimized
+// Tier 3 (Optional): Pollution, power, cost - nice to minimize but low priority
 
-/**
- * Simple example: Balance a single product between producer and consumer
- * This demonstrates the basic translation from graph to LP model
- */
-export const solveSingleProductBalance = (graph) => {
-  if (DEBUG_LP) {
-    console.log('%c[LP Solver] Single Product Balance', 'color: #2ecc71; font-weight: bold');
-  }
-  
-  // Find a simple case: one product with one producer and one consumer
-  const productId = Object.keys(graph.products)[0];
-  if (!productId) {
-    if (DEBUG_LP) console.log('  No products found');
-    return null;
-  }
-  
-  const productData = graph.products[productId];
-  if (!productData || productData.producers.length === 0 || productData.consumers.length === 0) {
-    if (DEBUG_LP) console.log(`  Product ${productId} has no producers or consumers`);
-    return null;
-  }
-  
-  const producer = productData.producers[0];
-  const consumer = productData.consumers[0];
-  
-  const producerNode = graph.nodes[producer.nodeId];
-  const consumerNode = graph.nodes[consumer.nodeId];
-  
-  if (!producerNode || !consumerNode) {
-    if (DEBUG_LP) console.log('  Producer or consumer node not found');
-    return null;
-  }
-  
-  if (DEBUG_LP) {
-    console.log(`  Product: ${productId}`);
-    console.log(`  Producer: ${producerNode.recipe?.name || producer.nodeId} (rate: ${producer.rate}/machine)`);
-    console.log(`  Consumer: ${consumerNode.recipe?.name || consumer.nodeId} (rate: ${consumer.rate}/machine)`);
-  }
-  
-  // Build LP model
-  // Variables: machine_count_producer, machine_count_consumer
-  // Constraints: 
-  //   producer_rate * machine_count_producer >= consumer_rate * machine_count_consumer
-  // Objective: Minimize total machines
-  
-  const model = {
-    optimize: 'total_machines',
-    opType: 'min',
-    constraints: {},
-    variables: {},
-    ints: {} // Integer constraints for machine counts
-  };
-  
-  // Variable for producer machine count
-  const producerVar = `m_${producer.nodeId}`;
-  model.variables[producerVar] = {
-    total_machines: 1,
-    production: producer.rate
-  };
-  model.ints[producerVar] = 1; // Must be integer
-  
-  // Variable for consumer machine count
-  const consumerVar = `m_${consumer.nodeId}`;
-  model.variables[consumerVar] = {
-    total_machines: 1,
-    consumption: consumer.rate
-  };
-  model.ints[consumerVar] = 1; // Must be integer
-  
-  // Constraint: production >= consumption
-  model.constraints.balance = { min: 0 };
-  model.variables[producerVar].balance = producer.rate;
-  model.variables[consumerVar].balance = -consumer.rate;
-  
-  if (DEBUG_LP) {
-    console.log('  LP Model:', JSON.stringify(model, null, 2));
-  }
-  
-  // Solve
-  const result = solver.Solve(model);
-  
-  if (DEBUG_LP) {
-    console.log('  Solution:', result);
-    if (result.feasible) {
-      console.log(`  ✓ Feasible solution found`);
-      console.log(`    Producer machines: ${result[producerVar] || 0}`);
-      console.log(`    Consumer machines: ${result[consumerVar] || 0}`);
-      console.log(`    Total machines: ${result.total_machines || 0}`);
-    } else {
-      console.log('  ✗ No feasible solution');
-    }
-  }
-  
-  return result;
-};
+// Tier 1: Deficiency (must dominate everything)
+const DEFICIENCY_COUNT_WEIGHT = 1e15;      // 1 quadrillion - count of deficient inputs (range: 1-3)
+const DEFICIENCY_AMOUNT_WEIGHT = 1e12;     // 1 trillion - amount of each deficiency (range: varies widely)
+
+// Tier 2: Model count and excess (should dominate tier 3)
+const MODEL_COUNT_WEIGHT = 1e9;            // 1 billion - model count per machine (range: 3-20, uses ceiling)
+const CONNECTED_EXCESS_COUNT_WEIGHT = 1e6; // 1 million - count of connected excess outputs (range: 1-3)
+const CONNECTED_EXCESS_AMOUNT_WEIGHT = 1e3;// 1 thousand - amount of connected excess (range: varies)
+const UNCONNECTED_EXCESS_COUNT_WEIGHT = 1e5;// 100 thousand - count of unconnected excess (range: 1-3)
+const UNCONNECTED_EXCESS_AMOUNT_WEIGHT = 1e2;// 100 - amount of unconnected excess (range: varies)
+
+// Tier 3: Resource optimization (lowest priority)
+const POLLUTION_WEIGHT = 10;               // 10 - pollution per machine (range: 0.01-0.4, scales with machine count)
+const POWER_WEIGHT = 0.00001;              // 0.00001 - power per machine (range: 150-20M, scales with machine count)
+const COST_WEIGHT = 0.000001;              // 0.000001 - cost per machine (range: 80-200M, but mostly 1k-250k)
 
 /**
  * Build LP model for entire production graph
  * This is a more complete translation but still simplified
  */
 export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
-  if (DEBUG_LP) {
-    console.log('%c[LP Solver] Building Full Graph Model (Flow-Based)', 'color: #2ecc71; font-weight: bold');
-    console.log(`  Nodes: ${Object.keys(graph.nodes).length}`);
-    console.log(`  Products: ${Object.keys(graph.products).length}`);
-    console.log(`  Connections: ${graph.connections.length}`);
-    console.log(`  Targets: ${targetNodeIds.size}`);
-    if (targetNodeIds.size > 0) {
-      console.log(`  Target node IDs:`, Array.from(targetNodeIds));
-      targetNodeIds.forEach(nodeId => {
-        const node = graph.nodes[nodeId];
-        if (node) {
-          console.log(`    - ${nodeId}: ${node.recipe?.name || 'Unknown'} (${node.machineCount} machines)`);
-        }
-      });
-    }
-  }
   
   const model = {
     optimize: 'total_cost',
@@ -187,23 +86,6 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
                   (COST_WEIGHT * machineCost)
     };
     
-    if (DEBUG_LP) {
-      const costBreakdown = {
-        modelCount: MODEL_COUNT_WEIGHT * modelCountPerMachine,
-        power: POWER_WEIGHT * powerValue,
-        pollution: POLLUTION_WEIGHT * pollutionValue,
-        machineCost: COST_WEIGHT * machineCost
-      };
-      if (nodeId === Object.keys(graph.nodes)[0]) {
-        console.log(`  Sample cost breakdown for ${node.recipe?.name || nodeId}:`);
-        console.log(`    Model count: ${modelCountPerMachine} × ${MODEL_COUNT_WEIGHT} = ${costBreakdown.modelCount}`);
-        console.log(`    Power: ${powerValue} × ${POWER_WEIGHT} = ${costBreakdown.power}`);
-        console.log(`    Pollution: ${pollutionValue} × ${POLLUTION_WEIGHT} = ${costBreakdown.pollution}`);
-        console.log(`    Machine cost: ${machineCost} × ${COST_WEIGHT} = ${costBreakdown.machineCost}`);
-        console.log(`    Total per machine: ${costBreakdown.modelCount + costBreakdown.power + costBreakdown.pollution + costBreakdown.machineCost}`);
-      }
-    }
-    
     // Machine counts can be fractional (don't add to ints)
     // Will round to 10dp or 20dp for repeating decimals in post-processing
     
@@ -220,10 +102,6 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
         max: currentCount 
       };
       model.variables[varName][targetConstraintName] = 1;
-      
-      if (DEBUG_LP) {
-        console.log(`  Target node ${nodeId} (${node.recipe?.name}): fixed at ${currentCount} machines`);
-      }
     }
   });
   
@@ -252,9 +130,16 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     node.outputs.forEach((output, outputIndex) => {
       const excessIndicatorVar = `excess_indicator_${nodeId}_${outputIndex}`;
       
+      // Determine if this is connected or unconnected to set appropriate count weight
+      const outgoingConnections = graph.connections.filter(
+        c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
+      );
+      const hasConnections = outgoingConnections.length > 0;
+      const excessCountWeight = hasConnections ? CONNECTED_EXCESS_COUNT_WEIGHT : UNCONNECTED_EXCESS_COUNT_WEIGHT;
+      
       // This is a binary variable (0 or 1) that indicates if this output has excess
       model.variables[excessIndicatorVar] = {
-        total_cost: EXCESS_COUNT_WEIGHT  // High cost for having excess
+        total_cost: excessCountWeight
       };
       model.ints[excessIndicatorVar] = 1;  // Must be integer
       
@@ -282,11 +167,11 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       
       // Determine if this is connected or unconnected excess
       const hasConnections = outgoingConnections.length > 0;
-      const excessWeight = hasConnections ? CONNECTED_EXCESS_WEIGHT : UNCONNECTED_EXCESS_WEIGHT;
+      const excessAmountWeight = hasConnections ? CONNECTED_EXCESS_AMOUNT_WEIGHT : UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
       
-      // Create excess slack variable (penalized by amount based on connection status)
+      // Create excess amount slack variable (penalized by amount based on connection status)
       model.variables[slackVar] = {
-        total_cost: excessWeight,  // Higher cost for connected excess
+        total_cost: excessAmountWeight,
         [constraintName]: -1  // Subtracts from constraint to absorb excess production
       };
       
@@ -344,20 +229,11 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       
       // Skip unconnected inputs - they don't need to be satisfied
       if (incomingConnections.length === 0) {
-        if (DEBUG_LP) {
-          console.log(`  Skipping unconnected input: ${nodeId} input ${inputIndex} (${input.productId})`);
-        }
         return;
       }
       
       const constraintName = `flow_in_${nodeId}_${inputIndex}`;
       const slackVar = `deficit_${nodeId}_${inputIndex}`;
-      
-      // Create deficiency slack variable (heavily penalized)
-      model.variables[slackVar] = {
-        total_cost: DEFICIENCY_WEIGHT,
-        [constraintName]: 1  // Adds to LHS to allow deficit
-      };
       
       // Get machine count variable
       const machineVar = `m_${nodeId}`;
@@ -370,6 +246,35 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       if (typeof quantity !== 'number') return;
       
       const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
+      
+      // Create deficiency amount slack variable (heavily penalized by amount)
+      model.variables[slackVar] = {
+        total_cost: DEFICIENCY_AMOUNT_WEIGHT,
+        [constraintName]: 1  // Adds to LHS to allow deficit
+      };
+      
+      // Create deficiency count indicator (binary variable, even more heavily penalized)
+      const deficitIndicatorVar = `deficit_indicator_${nodeId}_${inputIndex}`;
+      model.variables[deficitIndicatorVar] = {
+        total_cost: DEFICIENCY_COUNT_WEIGHT
+      };
+      model.ints[deficitIndicatorVar] = 1;  // Must be integer (0 or 1)
+      
+      // Binary constraint: 0 <= indicator <= 1
+      const deficitBinaryConstraintName = `deficit_binary_${nodeId}_${inputIndex}`;
+      model.constraints[deficitBinaryConstraintName] = { min: 0, max: 1 };
+      model.variables[deficitIndicatorVar][deficitBinaryConstraintName] = 1;
+      
+      // Link deficit to indicator: if deficit > 0, indicator must be 1
+      const deficitLinkConstraintName = `deficit_link_${nodeId}_${inputIndex}`;
+      model.constraints[deficitLinkConstraintName] = { max: 0 };
+      
+      // Calculate M = maximum possible deficit
+      const M_deficit = ratePerMachine * 10000;  // Assume max 10000 machines
+      
+      // Constraint: deficit - M * indicator <= 0
+      model.variables[slackVar][deficitLinkConstraintName] = 1;
+      model.variables[deficitIndicatorVar][deficitLinkConstraintName] = -M_deficit;
       
       // Constraint: incoming_flows + deficiency_slack >= consumption_demand
       // incoming_flows + deficit_slack - consumption_demand >= 0
@@ -389,28 +294,26 @@ export const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
         model.variables[machineVar][constraintName] = 0;
       }
       model.variables[machineVar][constraintName] -= ratePerMachine;
+
+      // Add MAXIMUM flow constraint: flow cannot exceed consumption capacity
+      // This prevents flow from going into nodes with 0 or low machine counts
+      const maxFlowConstraintName = `max_flow_in_${nodeId}_${inputIndex}`;
+      model.constraints[maxFlowConstraintName] = { max: 0 };
+      
+      // flow - consumption_capacity <= 0
+      // OR: flow <= consumption_capacity
+      incomingConnections.forEach(conn => {
+        const flowVar = `f_${conn.id}`;
+        if (!model.variables[flowVar][maxFlowConstraintName]) {
+          model.variables[flowVar][maxFlowConstraintName] = 0;
+        }
+        model.variables[flowVar][maxFlowConstraintName] += 1;  // Add flow
+      });
+      
+      // Add consumption capacity (negative, so flow can't exceed it)
+      model.variables[machineVar][maxFlowConstraintName] = -ratePerMachine;
     });
   });
-  
-  if (DEBUG_LP) {
-    const machineVars = Object.keys(model.variables).filter(v => v.startsWith('m_')).length;
-    const flowVars = Object.keys(model.variables).filter(v => v.startsWith('f_')).length;
-    const deficitVars = Object.keys(model.variables).filter(v => v.startsWith('deficit_')).length;
-      const excessVars = Object.keys(model.variables).filter(v => v.startsWith('excess_') && !v.includes('indicator')).length;
-      const excessIndicatorVars = Object.keys(model.variables).filter(v => v.startsWith('excess_indicator_')).length;
-      console.log(`  Created ${machineVars} machine variables`);
-      console.log(`  Created ${flowVars} flow variables`);
-      console.log(`  Created ${deficitVars} deficiency slack variables (weight: ${DEFICIENCY_WEIGHT})`);
-      console.log(`  Created ${excessVars} excess amount variables (weight: ${CONNECTED_EXCESS_WEIGHT} for connected, ${UNCONNECTED_EXCESS_WEIGHT} for unconnected)`);
-      console.log(`  Created ${excessIndicatorVars} excess count indicators (weight: ${EXCESS_COUNT_WEIGHT})`);
-    console.log(`  Created ${Object.keys(model.constraints).length} constraints`);
-    
-    // Sample one deficit variable to verify structure
-    const sampleDeficit = Object.keys(model.variables).find(v => v.startsWith('deficit_'));
-    if (sampleDeficit) {
-      console.log(`  Sample deficit variable structure:`, model.variables[sampleDeficit]);
-    }
-  }
   
   return model;
 };
@@ -709,14 +612,6 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
   const unsustainableLoops = detectUnsustainableLoops(graph);
   
   if (unsustainableLoops.length > 0) {
-    if (DEBUG_LP) {
-      console.log('%c[LP Solver] Unsustainable Loops Detected (Pre-Solve)', 'color: #e74c3c; font-weight: bold');
-      unsustainableLoops.forEach((loop, idx) => {
-        console.log(`  Loop ${idx + 1}: ${loop.nodeNames.join(' → ')}`);
-        console.log(`    These nodes form a cycle with no external input source`);
-      });
-    }
-    
     return {
       feasible: false,
       unsustainableLoops,
@@ -725,21 +620,16 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
   }
   
   const model = buildFullGraphModel(graph, targetNodeIds);
-  
-  if (DEBUG_LP) {
-    console.log('%c[LP Solver] Solving Full Graph', 'color: #2ecc71; font-weight: bold');
-  }
-  
   const result = solver.Solve(model);
   
-  if (DEBUG_LP) {
-    if (result.feasible) {
+  if (result.feasible) {
       console.log('  ✓ Feasible solution found');
       console.log(`    Reported cost: ${result.total_cost || 0}`);
       
       // Calculate actual objective value manually
       let actualCost = 0;
-      let deficiencyCost = 0;
+      let deficiencyCountCost = 0;
+      let deficiencyAmountCost = 0;
       let excessCountCost = 0;
       let excessAmountCost = 0;
       let modelCountCost = 0;
@@ -748,7 +638,8 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
       let machineCost = 0;
       
       // Show slack variable values
-      let totalDeficit = 0;
+      let totalDeficitCount = 0;
+      let totalDeficitAmount = 0;
       let totalExcessCount = 0;
       let totalConnectedExcess = 0;
       let totalUnconnectedExcess = 0;
@@ -757,24 +648,41 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
       let totalPollution = 0;
       let totalMachineCost = 0;
       Object.keys(result).forEach(key => {
-        if (key.startsWith('deficit_')) {
+        if (key.startsWith('deficit_indicator_')) {
           const value = result[key] || 0;
           if (value > EPSILON) {
-            totalDeficit += value;
-            deficiencyCost += value * DEFICIENCY_WEIGHT;
-            console.log(`    DEFICIENCY ${key}: ${value} (cost: ${value * DEFICIENCY_WEIGHT})`);
+            totalDeficitCount += value;
+            deficiencyCountCost += value * DEFICIENCY_COUNT_WEIGHT;
+          }
+        }
+        if (key.startsWith('deficit_') && !key.includes('indicator')) {
+          const value = result[key] || 0;
+          if (value > EPSILON) {
+            totalDeficitAmount += value;
+            deficiencyAmountCost += value * DEFICIENCY_AMOUNT_WEIGHT;
           }
         }
         if (key.startsWith('excess_indicator_')) {
           const value = result[key] || 0;
           if (value > EPSILON) {
+            // Parse nodeId and outputIndex to check if connected
+            const parts = key.split('_');
+            const nodeId = parts.slice(2, -1).join('_');
+            const outputIndex = parseInt(parts[parts.length - 1]);
+            
+            const hasConnections = graph.connections.some(
+              c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
+            );
+            
+            const countWeight = hasConnections ? CONNECTED_EXCESS_COUNT_WEIGHT : UNCONNECTED_EXCESS_COUNT_WEIGHT;
+            
             totalExcessCount += value;
-            excessCountCost += value * EXCESS_COUNT_WEIGHT;
-            console.log(`    EXCESS COUNT ${key}: ${value} (cost: ${value * EXCESS_COUNT_WEIGHT})`);
+            excessCountCost += value * countWeight;
           }
         }
         if (key.startsWith('excess_') && !key.includes('indicator')) {
           const value = result[key] || 0;
+          
           if (value > EPSILON) {
             // Parse nodeId and outputIndex from key format: excess_nodeId_outputIndex
             const parts = key.split('_');
@@ -786,8 +694,7 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
               c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
             );
             
-            const weight = hasConnections ? CONNECTED_EXCESS_WEIGHT : UNCONNECTED_EXCESS_WEIGHT;
-            const excessType = hasConnections ? 'CONNECTED' : 'UNCONNECTED';
+            const weight = hasConnections ? CONNECTED_EXCESS_AMOUNT_WEIGHT : UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
             
             if (hasConnections) {
               totalConnectedExcess += value;
@@ -796,7 +703,6 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
             }
             
             excessAmountCost += value * weight;
-            console.log(`    ${excessType} EXCESS ${key}: ${value} (cost: ${value * weight})`);
           }
         }
         if (key.startsWith('m_')) {
@@ -850,35 +756,41 @@ export const solveFullGraph = (graph, targetNodeIds = new Set()) => {
         }
       });
       
-      actualCost = deficiencyCost + excessCountCost + excessAmountCost + modelCountCost + powerCost + pollutionCost + machineCost;
+      actualCost = deficiencyCountCost + deficiencyAmountCost + excessCountCost + excessAmountCost + modelCountCost + powerCost + pollutionCost + machineCost;
       
-      console.log(`    Total deficiency: ${totalDeficit} (cost: ${deficiencyCost})`);
-      console.log(`    Total excess count: ${totalExcessCount} outputs (cost: ${excessCountCost})`);
-      console.log(`    Total connected excess: ${totalConnectedExcess} (cost: ${totalConnectedExcess * CONNECTED_EXCESS_WEIGHT})`);
-      console.log(`    Total unconnected excess: ${totalUnconnectedExcess} (cost: ${totalUnconnectedExcess * UNCONNECTED_EXCESS_WEIGHT})`);
-      console.log(`    Total model count: ${totalModelCount.toFixed(2)} (cost: ${modelCountCost.toFixed(2)})`);
-      console.log(`    Total power: ${totalPower.toFixed(2)} W (cost: ${powerCost.toFixed(2)})`);
-      console.log(`    Total pollution: ${totalPollution.toFixed(2)} %/hr (cost: ${pollutionCost.toFixed(2)})`);
-      console.log(`    Total machine cost: $${totalMachineCost.toFixed(2)} (cost: ${machineCost.toFixed(2)})`);
-      console.log(`    ACTUAL TOTAL COST: ${actualCost.toFixed(2)}`);
+      // Cost breakdown
+      console.log('  Cost Breakdown:');
+      console.log(`    Deficiency count: ${totalDeficitCount} inputs (cost: ${deficiencyCountCost.toExponential(2)})`);
+      console.log(`    Deficiency amount: ${totalDeficitAmount.toFixed(4)} (cost: ${deficiencyAmountCost.toExponential(2)})`);
+      console.log(`    Excess count: ${totalExcessCount} outputs (cost: ${excessCountCost.toExponential(2)})`);
+      console.log(`    Connected excess: ${totalConnectedExcess.toFixed(4)} (cost: ${(totalConnectedExcess * CONNECTED_EXCESS_AMOUNT_WEIGHT).toExponential(2)})`);
+      console.log(`    Unconnected excess: ${totalUnconnectedExcess.toFixed(4)} (cost: ${(totalUnconnectedExcess * UNCONNECTED_EXCESS_AMOUNT_WEIGHT).toExponential(2)})`);
+      console.log(`    Model count: ${totalModelCount.toFixed(0)} (cost: ${modelCountCost.toExponential(2)})`);
+      console.log(`    Power: ${totalPower.toFixed(0)} W (cost: ${powerCost.toFixed(2)})`);
+      console.log(`    Pollution: ${totalPollution.toFixed(2)} %/hr (cost: ${pollutionCost.toFixed(2)})`);
+      console.log(`    Machine cost: $${totalMachineCost.toFixed(0)} (cost: ${machineCost.toFixed(2)})`);
+      console.log(`    Total: ${actualCost.toExponential(2)}`);
       
-      // Show machine counts for each node (including 0s and changes)
+      // Show changed machine counts only
+      console.log('  Machine Count Changes:');
+      let changesFound = false;
       Object.keys(graph.nodes).forEach(nodeId => {
         const node = graph.nodes[nodeId];
         const varName = `m_${nodeId}`;
         const newValue = result[varName] || 0;
         const oldValue = node.machineCount || 0;
         const changed = Math.abs(newValue - oldValue) > EPSILON;
-        const changeIndicator = changed ? ' 🔄' : '';
-        console.log(`    ${node?.recipe?.name || nodeId}: ${oldValue} → ${newValue}${changeIndicator}`);
+        if (changed) {
+          changesFound = true;
+          console.log(`    ${node?.recipe?.name || nodeId}: ${oldValue.toFixed(4)} → ${newValue.toFixed(4)}`);
+        }
       });
-    } else {
-      console.log('  ✗ No feasible solution');
-      if (result.bounded === false) {
-        console.log('    Problem is unbounded');
+      if (!changesFound) {
+        console.log('    No changes needed');
       }
+    } else {
+      console.log('%c[LP Solver] No feasible solution', 'color: #e74c3c; font-weight: bold');
     }
-  }
   
   return result;
 };
@@ -905,37 +817,9 @@ export const extractMachineUpdates = (lpResult, graph) => {
       if (Math.abs(finalCount - currentCount) > EPSILON) {
         // Store the value exactly as LP solver computed it
         updates.set(nodeId, finalCount);
-        
-        if (DEBUG_LP) {
-          console.log(`  Update: ${node?.recipe?.name || nodeId}: ${currentCount} → ${finalCount}`);
-        }
       }
     }
   });
   
   return updates;
-};
-
-/**
- * Test function to demonstrate LP solver on a simple graph
- */
-export const testLPSolver = (graph, targetNodeIds = new Set()) => {
-  console.log('\n%c=== LP Solver Test ===', 'color: #2ecc71; font-weight: bold; font-size: 14px');
-  
-  // Test 1: Single product balance
-  console.log('\n1. Testing single product balance...');
-  const singleResult = solveSingleProductBalance(graph);
-  
-  // Test 2: Full graph
-  console.log('\n2. Testing full graph model...');
-  const fullResult = solveFullGraph(graph, targetNodeIds);
-  
-  if (fullResult.feasible) {
-    const updates = extractMachineUpdates(fullResult, graph);
-    console.log(`\n  Suggested updates for ${updates.size} nodes`);
-  }
-  
-  console.log('\n%c===================', 'color: #2ecc71; font-weight: bold; font-size: 14px\n');
-  
-  return { singleResult, fullResult };
 };

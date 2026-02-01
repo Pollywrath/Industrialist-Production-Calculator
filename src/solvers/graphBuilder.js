@@ -68,7 +68,13 @@ export const buildProductionGraph = (nodes, edges) => {
       const rate = isMineshaftDrill ? quantity * machineCount : (quantity / cycleTime) * machineCount;
 
       const actualInputIndex = graphNode.inputs.length;
-      graphNode.inputs.push({ productId, quantity, rate, index: actualInputIndex, connectedRate: 0, temperature: null });
+      graphNode.inputs.push({ 
+        productId, quantity, rate, 
+        index: actualInputIndex, 
+        recipeIndex: index,  // Store original recipe index for handle matching
+        connectedRate: 0, 
+        temperature: null 
+      });
 
       if (!graph.products[productId]) {
         graph.products[productId] = { producers: [], consumers: [], connections: [] };
@@ -91,7 +97,10 @@ export const buildProductionGraph = (nodes, edges) => {
 
     const actualOutputIndex = graphNode.outputs.length;
     graphNode.outputs.push({ 
-      productId, quantity, rate, index: actualOutputIndex, connectedRate: 0, 
+      productId, quantity, rate, 
+      index: actualOutputIndex, 
+      recipeIndex: index,  // Store original recipe index for handle matching
+      connectedRate: 0, 
       temperature: output.temperature || null 
     });
 
@@ -111,11 +120,11 @@ export const buildProductionGraph = (nodes, edges) => {
     const targetNode = graph.nodes[edge.target];
     if (!sourceNode || !targetNode) continue;
 
-    const sourceOutputIndex = parseInt(edge.sourceHandle.split('-')[1]);
-    const targetInputIndex = parseInt(edge.targetHandle.split('-')[1]);
+    const sourceHandleIndex = parseInt(edge.sourceHandle.split('-')[1]);
+    const targetHandleIndex = parseInt(edge.targetHandle.split('-')[1]);
 
-    const sourceOutput = sourceNode.outputs[sourceOutputIndex];
-    const targetInput = targetNode.inputs[targetInputIndex];
+    const sourceOutput = sourceNode.outputs.find(o => o.recipeIndex === sourceHandleIndex);
+    const targetInput = targetNode.inputs.find(i => i.recipeIndex === targetHandleIndex);
 
     if (!sourceOutput || !targetInput || sourceOutput.productId !== targetInput.productId) return;
 
@@ -129,8 +138,8 @@ export const buildProductionGraph = (nodes, edges) => {
       id: edge.id,
       sourceNodeId: edge.source,
       targetNodeId: edge.target,
-      sourceOutputIndex,
-      targetInputIndex,
+      sourceOutputIndex: sourceOutput.index,  // Use graph array index
+      targetInputIndex: targetInput.index,    // Use graph array index
       productId,
       sourceRate: sourceOutput.rate,
       targetRate: targetInput.rate,
