@@ -87,15 +87,8 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     model.constraints[nonNegConstraintName] = { min: 0 };
     model.variables[varName][nonNegConstraintName] = 1;
     
-    // For target nodes, fix them at their current count
-    if (targetNodeIds.has(nodeId)) {
-      const targetConstraintName = `fixed_${nodeId}`;
-      model.constraints[targetConstraintName] = { 
-        min: currentCount, 
-        max: currentCount 
-      };
-      model.variables[varName][targetConstraintName] = 1;
-    }
+    // Target nodes will have their excess amounts constrained, not machine counts
+    // Machine counts can vary to meet downstream demand while maintaining target excess
   });
   
   // Create flow variables for each connection
@@ -141,6 +134,7 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
   // Flow conservation constraints for each node
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
+    const isTargetNode = targetNodeIds.has(nodeId);
     
     // For each output handle, create flow conservation constraint with excess slack
     node.outputs.forEach((output, outputIndex) => {
@@ -158,8 +152,10 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       const excessAmountWeight = hasConnections ? CONNECTED_EXCESS_AMOUNT_WEIGHT : UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
       
       // Create excess amount slack variable (penalized by amount based on connection status)
+      // For target nodes, use a very small weight to allow excess to vary minimally
+      const actualExcessWeight = isTargetNode ? 1 : excessAmountWeight;
       model.variables[slackVar] = {
-        total_cost: excessAmountWeight,
+        total_cost: actualExcessWeight,
         [constraintName]: -1
       };
       
@@ -294,6 +290,62 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       
       // Add consumption capacity (negative, so flow can't exceed it)
       model.variables[machineVar][maxFlowConstraintName] = -ratePerMachine;
+    });
+  });
+  
+  // Add minimum excess constraints for target nodes
+  targetNodeIds.forEach(nodeId => {
+    const node = graph.nodes[nodeId];
+    if (!node) return;
+    
+    // Calculate current excess for each output
+    node.outputs.forEach((output, outputIndex) => {
+      const machineVar = `m_${nodeId}`;
+      const slackVar = `excess_${nodeId}_${outputIndex}`;
+      
+      // Find all connections from this output
+      const outgoingConnections = graph.connections.filter(
+        c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
+      );
+      
+      // Calculate current excess amount
+      let cycleTime = node.cycleTime;
+      if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
+      
+      const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
+      if (typeof quantity !== 'number') return;
+      
+      const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
+      const currentProduction = ratePerMachine * (node.machineCount || 0);
+      
+      // Calculate current connected flow
+      let currentConnectedFlow = 0;
+      outgoingConnections.forEach(conn => {
+        const targetNode = graph.nodes[conn.targetNodeId];
+        if (!targetNode) return;
+        
+        const targetInput = targetNode.inputs[conn.targetInputIndex];
+        if (!targetInput) return;
+        
+        let targetCycleTime = targetNode.cycleTime;
+        if (typeof targetCycleTime !== 'number' || targetCycleTime <= 0) targetCycleTime = 1;
+        
+        const targetQuantity = targetInput.quantity;
+        if (typeof targetQuantity !== 'number') return;
+        
+        const targetRatePerMachine = targetNode.isMineshaftDrill ? targetQuantity : targetQuantity / targetCycleTime;
+        const targetDemand = targetRatePerMachine * (targetNode.machineCount || 0);
+        
+        currentConnectedFlow += Math.min(currentProduction - currentConnectedFlow, targetDemand);
+      });
+      
+      const currentExcess = Math.max(0, currentProduction - currentConnectedFlow);
+      
+      // Add constraint: excess must be >= current excess
+      // This allows the excess to increase but not decrease below target
+      const minExcessConstraintName = `min_excess_${nodeId}_${outputIndex}`;
+      model.constraints[minExcessConstraintName] = { min: currentExcess };
+      model.variables[slackVar][minExcessConstraintName] = 1;
     });
   });
   
