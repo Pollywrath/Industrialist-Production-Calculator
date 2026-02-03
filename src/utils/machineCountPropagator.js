@@ -33,7 +33,7 @@ const calculateMachinesForRate = (node, rate, productId, isOutput) => {
 /**
  * Propagate machine count changes using ratio-based scaling
  */
-export const propagateMachineCount = (sourceNodeId, oldMachineCount, newMachineCount, graph, flows) => {
+export const propagateMachineCount = (sourceNodeId, oldMachineCount, newMachineCount, graph, flows, nodes = null) => {
   if (oldMachineCount < EPSILON) {
     return new Map([[sourceNodeId, newMachineCount]]);
   }
@@ -97,6 +97,11 @@ export const propagateMachineCount = (sourceNodeId, oldMachineCount, newMachineC
       const node = graph.nodes[nodeId];
       if (!node) return;
       
+      // Skip locked nodes
+      const nodeData = nodes?.find(n => n.id === nodeId)?.data;
+      const machineCountMode = nodeData?.machineCountMode || node.machineCountMode || 'free';
+      if (machineCountMode === 'locked') return;
+      
       const oldCount = node.machineCount || 0;
       if (oldCount < EPSILON) return;
       
@@ -152,7 +157,16 @@ export const propagateMachineCount = (sourceNodeId, oldMachineCount, newMachineC
       // Only update if ratio changed significantly
       if (Math.abs(finalRatio - currentRatio) > 0.0001) {
         nodeRatios.set(nodeId, finalRatio);
-        const newCount = oldCount * finalRatio;
+        let newCount = oldCount * finalRatio;
+        
+        // Respect cap
+        if (machineCountMode === 'capped') {
+          const cappedCount = nodeData?.cappedMachineCount || node.cappedMachineCount;
+          if (typeof cappedCount === 'number') {
+            newCount = Math.min(newCount, cappedCount);
+          }
+        }
+        
         newCounts.set(nodeId, newCount);
         hasChanges = true;
       }
@@ -195,7 +209,7 @@ export const propagateFromHandle = (sourceNodeId, handleSide, handleIndex, oldMa
   }
   
   // Run normal propagation
-  const allResults = propagateMachineCount(sourceNodeId, oldMachineCount, newMachineCount, graph, flows);
+  const allResults = propagateMachineCount(sourceNodeId, oldMachineCount, newMachineCount, graph, flows, null);
   
   // Filter out excluded nodes
   const filteredResults = new Map();

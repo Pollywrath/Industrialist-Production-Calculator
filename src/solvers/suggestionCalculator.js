@@ -180,6 +180,10 @@ export const calculateSuggestions = (graph, flows) => {
         const currentMachineCount = outputNode.machineCount || 0;
         if (currentMachineCount <= 0) return;
         
+        // Skip locked nodes
+        const machineCountMode = outputNode.machineCountMode || 'free';
+        if (machineCountMode === 'locked') return;
+        
         let cycleTime = outputNode.cycleTime;
         if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
         
@@ -199,7 +203,14 @@ export const calculateSuggestions = (graph, flows) => {
         
         // Calculate increase needed (direct calculation, no loop adjustment)
         const increase = shortage / ratePerMachine;
-        const newCount = currentMachineCount + increase;
+        let newCount = currentMachineCount + increase;
+        
+        // Respect cap
+        if (machineCountMode === 'capped' && outputNode.cappedMachineCount) {
+          newCount = Math.min(newCount, outputNode.cappedMachineCount);
+          // If capped value doesn't allow enough increase, skip suggestion
+          if (newCount <= currentMachineCount + EPSILON) return;
+        }
         
         // Check if this supplier has other outputs that would be affected
         const hasConstrainedOutputs = outputNode.outputs.length > 1 && outputNode.outputs.some((otherOutput, idx) => {
@@ -248,12 +259,14 @@ export const calculateSuggestions = (graph, flows) => {
       });
       
       // Also suggest decreasing this input's consumer to match available supply
-      const ratePerMachine = node.isMineshaftDrill ? input.quantity : input.quantity / (node.cycleTime || 1);
-      if (typeof ratePerMachine === 'number' && ratePerMachine > EPSILON) {
-        const reduction = shortage / ratePerMachine;
-        const newCount = (node.machineCount || 0) - reduction;
-        
-        if (newCount > EPSILON) {
+      const nodeMachineCountMode = node.machineCountMode || 'free';
+      if (nodeMachineCountMode !== 'locked') {
+        const ratePerMachine = node.isMineshaftDrill ? input.quantity : input.quantity / (node.cycleTime || 1);
+        if (typeof ratePerMachine === 'number' && ratePerMachine > EPSILON) {
+          const reduction = shortage / ratePerMachine;
+          const newCount = (node.machineCount || 0) - reduction;
+          
+          if (newCount > EPSILON) {
           suggestions.push({
             nodeId,
             handleType: 'input',
@@ -269,6 +282,7 @@ export const calculateSuggestions = (graph, flows) => {
             machineDelta: -reduction
           });
         }
+      }
       }
     });
   });
@@ -291,6 +305,10 @@ export const calculateSuggestions = (graph, flows) => {
       
       const excess = outputFlow.produced - outputFlow.connected;
       if (excess <= EPSILON) return;
+      
+      // Skip locked nodes for decrease suggestions
+      const nodeMachineCountMode = node.machineCountMode || 'free';
+      if (nodeMachineCountMode === 'locked') return;
       
       const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
       const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
@@ -331,6 +349,10 @@ export const calculateSuggestions = (graph, flows) => {
         const consumerMachineCount = consumerNode.machineCount || 0;
         if (consumerMachineCount <= 0) return;
         
+        // Skip locked nodes, respect caps for consumers
+        const consumerMachineCountMode = consumerNode.machineCountMode || 'free';
+        if (consumerMachineCountMode === 'locked') return;
+        
         let consumerCycleTime = consumerNode.cycleTime;
         if (typeof consumerCycleTime !== 'number' || consumerCycleTime <= 0) consumerCycleTime = 1;
         
@@ -344,7 +366,14 @@ export const calculateSuggestions = (graph, flows) => {
         if (typeof consumerRatePerMachine !== 'number' || consumerRatePerMachine <= EPSILON) return;
         
         const increase = excess / consumerRatePerMachine;
-        const newConsumerCount = consumerMachineCount + increase;
+        let newConsumerCount = consumerMachineCount + increase;
+        
+        // Respect cap
+        if (consumerMachineCountMode === 'capped' && consumerNode.cappedMachineCount) {
+          newConsumerCount = Math.min(newConsumerCount, consumerNode.cappedMachineCount);
+          // If capped value doesn't allow enough increase, skip suggestion
+          if (newConsumerCount <= consumerMachineCount + EPSILON) return;
+        }
         
         suggestions.push({
           nodeId: conn.targetNodeId,

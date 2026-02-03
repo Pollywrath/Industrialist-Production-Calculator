@@ -6,7 +6,8 @@ https://pollywrath.github.io/Industrialist-Production-Calculator/
 ## Features
 
 - **Visual Planning**: Drag-and-drop recipe nodes with auto-balancing
-- **LP Solver**: Set targets and compute optimal machine counts
+- **LP Solver**: Set targets and compute optimal machine counts with lock/cap constraints
+- **Machine Count Control**: Lock nodes to prevent changes or cap them to limit LP solver/suggestions
 - **Special Recipes**: Mineshaft Drill, Logic Assembler, Tree Farm, Industrial Firebox, Chemical Plant, Underground Waste Facility, Liquid Dump/Burner
 - **Temperature System**: Heat sources, boilers, and temperature-dependent cycles
 - **Analysis**: Real-time excess/deficiency detection, flow visualization, pollution tracking
@@ -39,11 +40,18 @@ App runs at `http://localhost:5173`
 
 ### Node Actions
 - **Edit Count**: Double-click node
-- **Auto-Balance**: Double-click handle
+- **Lock/Cap Count**: Click 🔒/📊 icon on node to cycle modes (Free → Capped → Locked → Free)
+- **Auto-Balance**: Double-click handle (respects locks/caps)
 - **Set Target**: Shift+Click node
 - **Delete**: Ctrl+Alt+Click node
 - **Duplicate**: Middle-click node, left-click to place
 - **Configure**: Click ⚙️ on special recipes
+
+### Machine Count Modes
+- **🔓 Free**: LP solver and suggestions can modify count freely
+- **📊 Capped**: LP solver and suggestions cannot exceed the cap value (cap is set when Apply is pressed)
+- **🔒 Locked**: LP solver and suggestions cannot change count at all
+- **Note**: You can always manually edit counts regardless of mode
 
 ### Connection Actions
 - **Delete**: Ctrl+Click input/output rectangle
@@ -57,7 +65,7 @@ App runs at `http://localhost:5173`
 ### Canvas
 - **Clear All**: Remove all nodes
 - **View Targets**: Manage production targets
-- **Compute Machines**: Calculate optimal counts
+- **Compute Machines**: Calculate optimal counts (respects locks/caps)
 
 ## Data Management
 
@@ -109,8 +117,7 @@ src/
 │   ├── flowCalculator.js
 │   ├── excessCalculator.js
 │   ├── suggestionCalculator.js
-│   ├── lpSolver.js
-│   └── computeMachinesSolver.js
+│   └── lpSolver.js
 ├── App.jsx
 ├── index.css
 └── main.jsx

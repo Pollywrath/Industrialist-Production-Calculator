@@ -41,6 +41,9 @@ const HelpModal = ({ onClose }) => {
                   <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Edit Count:</span> Double-click node
                 </div>
                 <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Lock/Cap Count:</span> Click 🔓/🔒/📊 icon on node
+                </div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
                   <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Auto-Balance:</span> Double-click handle
                 </div>
                 <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
@@ -461,6 +464,10 @@ const HelpModal = ({ onClose }) => {
               <div style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                 <span style={{ color: 'var(--color-primary)', fontSize: '16px', lineHeight: '20px' }}>💡</span>
                 <span>Use <span style={{ fontWeight: 600 }}>Shift+Click</span> to mark nodes as targets, then click <span style={{ fontWeight: 600 }}>Compute Machines</span> to balance your entire production line</span>
+              </div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <span style={{ color: 'var(--color-primary)', fontSize: '16px', lineHeight: '20px' }}>💡</span>
+                <span><span style={{ fontWeight: 600 }}>Machine Count Modes:</span> Free (🔓) allows LP/suggestions to change count, Capped (📊) limits max value, Locked (🔒) prevents all changes</span>
               </div>
               <div style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                 <span style={{ color: 'var(--color-primary)', fontSize: '16px', lineHeight: '20px' }}>💡</span>

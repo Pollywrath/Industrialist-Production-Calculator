@@ -54,6 +54,8 @@ export const buildProductionGraph = (nodes, edges) => {
       isMineshaftDrill,
       isLogicAssembler,
       isTempDependent,
+      machineCountMode: node.data?.machineCountMode || 'free',
+      cappedMachineCount: node.data?.cappedMachineCount,
       inputs: [],
       outputs: []
     };

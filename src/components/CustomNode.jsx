@@ -23,7 +23,7 @@ const calculateTextLines = (text, availableWidth, fontSize = 16) => {
 const CustomNode = memo(({ data, id }) => {
   const { recipe, machine, machineCount, displayMode, machineDisplayMode, onInputClick, onOutputClick, isTarget,
     onDrillSettingsChange, onLogicAssemblerSettingsChange, onTreeFarmSettingsChange, onIndustrialFireboxSettingsChange, 
-    onTemperatureSettingsChange, onBoilerSettingsChange, onChemicalPlantSettingsChange, globalPollution, flows, isMobile, mobileActionMode } = data;
+    onTemperatureSettingsChange, onBoilerSettingsChange, onChemicalPlantSettingsChange, globalPollution, flows, isMobile, mobileActionMode, onMachineCountModeChange } = data;
   
   const [settingsModal, setSettingsModal] = useState(null);
   
@@ -210,6 +210,7 @@ const CustomNode = memo(({ data, id }) => {
   const formattedMachineCount = Number.isInteger(displayMachineCount) 
     ? displayMachineCount.toString() 
     : displayMachineCount.toFixed(2);
+  const machineCountMode = data.machineCountMode || 'free';
   const machineCountStyle = machineDisplayMode === 'total' ? { color: 'var(--text-muted)', opacity: 0.5 } : {};
 
   return (
@@ -335,9 +336,41 @@ const CustomNode = memo(({ data, id }) => {
                      machine.tier === 4 ? 'var(--tier-4-color)' :
                      machine.tier === 5 ? 'var(--tier-5-color)' : 'var(--tier-5-color)'
             }}>{machine.name}</div>
-            <div className="node-machine-count" style={machineCountStyle}
-              title={machineDisplayMode === 'total' ? "Machine count (display mode: Total)" : "Double-click node to edit"}>
-              {formattedMachineCount}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div className="node-machine-count" style={machineCountStyle}
+                title={machineDisplayMode === 'total' ? "Machine count (display mode: Total)" : "Double-click node to edit"}>
+                {formattedMachineCount}
+              </div>
+              {machineCountMode !== 'free' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onMachineCountModeChange) {
+                      onMachineCountModeChange(id, machineCountMode, machineCount);
+                    }
+                  }}
+                  onDoubleClick={(e) => e.stopPropagation()}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    lineHeight: 1,
+                    opacity: 0.8,
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    transition: 'opacity 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+                  title={machineCountMode === 'locked' 
+                    ? `Locked: LP/suggestions cannot change (cap: ${data.cappedMachineCount?.toFixed(2) || machineCount.toFixed(2)})\nClick to unlock` 
+                    : `Capped: LP/suggestions max ${data.cappedMachineCount?.toFixed(2) || machineCount.toFixed(2)}\nClick to lock`}
+                >
+                  {machineCountMode === 'locked' ? '🔒' : '📊'}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -423,7 +456,9 @@ const CustomNode = memo(({ data, id }) => {
     prevData.displayMode !== nextData.displayMode ||
     prevData.machineDisplayMode !== nextData.machineDisplayMode ||
     prevData.isTarget !== nextData.isTarget ||
-    prevData.globalPollution !== nextData.globalPollution
+    prevData.globalPollution !== nextData.globalPollution ||
+    prevData.machineCountMode !== nextData.machineCountMode ||
+    prevData.cappedMachineCount !== nextData.cappedMachineCount
   ) {
     return false;
   }

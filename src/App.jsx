@@ -114,6 +114,7 @@ function App() {
   const [editingNodeId, setEditingNodeId] = useState(null);
   const [editingMachineCount, setEditingMachineCount] = useState('');
   const [newNodePendingMachineCount, setNewNodePendingMachineCount] = useState(null);
+  const [editingMachineCountMode, setEditingMachineCountMode] = useState('free');
   const [menuOpen, setMenuOpen] = useState(false);
   const [showThemeEditor, setShowThemeEditor] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
@@ -220,7 +221,8 @@ function App() {
     onLiquidDumpSettingsChange: handleLiquidDumpSettingsChange,
     onLiquidBurnerSettingsChange: handleLiquidBurnerSettingsChange,
     onMiddleClick: onNodeMiddleClick,
-    onHandleDoubleClick: handleHandleDoubleClick
+    onHandleDoubleClick: handleHandleDoubleClick,
+    onMachineCountModeChange: handleMachineCountModeChange
   }), [isMobile, mobileActionMode]);
 
   useEffect(() => {
@@ -978,7 +980,29 @@ function App() {
     const suggestion = suggestions?.find(s => s.nodeId === nodeId && s.handleType === handleType && s.handleIndex === index);
     if (!suggestion) return;
     
-    setNodes(nds => nds.map(n => n.id === nodeId ? { ...n, data: { ...n.data, machineCount: suggestion.suggestedMachineCount } } : n));
+    setNodes(nds => nds.map(n => {
+      if (n.id !== nodeId) return n;
+      
+      const machineCountMode = n.data?.machineCountMode || 'free';
+      const cappedMachineCount = n.data?.cappedMachineCount;
+      
+      // Locked nodes cannot be changed by suggestions
+      if (machineCountMode === 'locked') {
+        console.log(`Node ${nodeId} is locked - suggestion ignored`);
+        return n;
+      }
+      
+      // Capped nodes cannot exceed their cap
+      let newCount = suggestion.suggestedMachineCount;
+      if (machineCountMode === 'capped' && typeof cappedMachineCount === 'number') {
+        if (newCount > cappedMachineCount) {
+          console.log(`Node ${nodeId} is capped at ${cappedMachineCount} - clamping suggestion from ${newCount} to ${cappedMachineCount}`);
+          newCount = cappedMachineCount;
+        }
+      }
+      
+      return { ...n, data: { ...n.data, machineCount: newCount } };
+    }));
     triggerRecalculation('machineCount');
   }, [setNodes, triggerRecalculation]);
 
@@ -1166,6 +1190,8 @@ function App() {
         recipe: recipeWithTemp,
         machine,
         machineCount: calculatedMachineCount,
+        machineCountMode: 'free',
+        cappedMachineCount: undefined,
         displayMode,
         machineDisplayMode,
         leftHandles: Math.max(recipeWithTemp.inputs.length, 1),
@@ -1335,6 +1361,7 @@ function App() {
     event.stopPropagation();
     setEditingNodeId(node.id);
     setEditingMachineCount(String(node.data?.machineCount ?? 0));
+    setEditingMachineCountMode(node.data?.machineCountMode || 'free');
     setShowMachineCountEditor(true);
   }, []);
 
@@ -1410,23 +1437,54 @@ function App() {
     }
     
     if (editingNodeId && !newNodePendingMachineCount) {
-      const oldMachineCount = nodes.find(n => n.id === editingNodeId)?.data?.machineCount || 0;
+      const currentNode = nodes.find(n => n.id === editingNodeId);
+      const oldMachineCount = currentNode?.data?.machineCount || 0;
+      
+      // Determine the new capped value based on mode
+      // When user sets capped mode, store the current value as the cap
+      let newCappedValue = currentNode?.data?.cappedMachineCount;
+      if (editingMachineCountMode === 'capped') {
+        newCappedValue = value;
+      } else if (editingMachineCountMode === 'free') {
+        newCappedValue = undefined;
+      }
       
       if (propagate && oldMachineCount > 0 && value !== oldMachineCount) {
         const graph = buildProductionGraph(nodes, edges);
         const flows = productionSolution?.flows;
         
         if (flows) {
-          const newMachineCounts = propagateMachineCount(editingNodeId, oldMachineCount, value, graph, flows);
+          const newMachineCounts = propagateMachineCount(editingNodeId, oldMachineCount, value, graph, flows, nodes);
           setNodes(nds => nds.map(n => {
             const propagatedCount = newMachineCounts.get(n.id);
+            if (n.id === editingNodeId) {
+              return {
+                ...n,
+                data: {
+                  ...n.data,
+                  machineCount: value,
+                  machineCountMode: editingMachineCountMode,
+                  cappedMachineCount: newCappedValue
+                }
+              };
+            }
             return propagatedCount !== undefined ? { ...n, data: { ...n.data, machineCount: propagatedCount } } : n;
           }));
         } else {
-          updateNodeData(editingNodeId, data => ({ ...data, machineCount: value }));
+          updateNodeData(editingNodeId, data => ({
+            ...data,
+            machineCount: value,
+            machineCountMode: editingMachineCountMode,
+            cappedMachineCount: newCappedValue
+          }));
         }
       } else {
-        updateNodeData(editingNodeId, data => ({ ...data, machineCount: value }));
+        updateNodeData(editingNodeId, data => ({
+          ...data,
+          machineCount: value,
+          machineCountMode: editingMachineCountMode,
+          cappedMachineCount: newCappedValue
+        }));
       }
     } else if (newNodePendingMachineCount) {
       updateNodeData(newNodePendingMachineCount, data => ({ ...data, machineCount: value }));
@@ -1435,9 +1493,10 @@ function App() {
     setShowMachineCountEditor(false);
     setEditingNodeId(null);
     setEditingMachineCount('');
+    setEditingMachineCountMode('free');
     setNewNodePendingMachineCount(null);
     triggerRecalculation('machineCount');
-  }, [editingNodeId, editingMachineCount, newNodePendingMachineCount, nodes, edges, productionSolution, setNodes, deleteRecipeBoxAndTarget, triggerRecalculation]);
+  }, [editingNodeId, editingMachineCount, editingMachineCountMode, newNodePendingMachineCount, nodes, edges, productionSolution, setNodes, deleteRecipeBoxAndTarget, triggerRecalculation]);
 
   const handleMachineCountCancel = useCallback(() => {
     if (newNodePendingMachineCount) {
@@ -1450,8 +1509,37 @@ function App() {
     setShowMachineCountEditor(false);
     setEditingNodeId(null);
     setEditingMachineCount('');
+    setEditingMachineCountMode('free');
     setNewNodePendingMachineCount(null);
   }, [newNodePendingMachineCount, deleteRecipeBoxAndTarget]);
+
+  const handleMachineCountModeChange = useCallback((nodeId, currentMode, currentCount) => {
+    let newMode, newCappedValue;
+    
+    if (currentMode === 'free') {
+      newMode = 'capped';
+      newCappedValue = currentCount;
+    } else if (currentMode === 'capped') {
+      newMode = 'locked';
+      newCappedValue = currentCount; // Keep the capped value when switching to locked
+    } else {
+      newMode = 'free';
+      newCappedValue = undefined;
+    }
+    
+    setNodes(nds => nds.map(n => {
+      if (n.id !== nodeId) return n;
+      
+      return {
+        ...n,
+        data: {
+          ...n.data,
+          machineCountMode: newMode,
+          cappedMachineCount: newCappedValue
+        }
+      };
+    }));
+  }, [setNodes]);
 
   const handleCompute = useCallback(() => {
     if (targetProducts.length === 0) {
@@ -1459,7 +1547,19 @@ function App() {
       return;
     }
     
-    const result = computeMachines(nodes, edges, targetProducts);
+    let result = computeMachines(nodes, edges, targetProducts, { allowDeficiency: false });
+    
+    if (!result.success && result.hasDeficiency) {
+      const shouldContinue = window.confirm(
+        `${result.message}\n\nDo you want to compute anyway? The solver will do its best to minimize deficiency.`
+      );
+      
+      if (shouldContinue) {
+        result = computeMachines(nodes, edges, targetProducts, { allowDeficiency: true });
+      } else {
+        return;
+      }
+    }
     
     if (result.success) {
       setNodes(nds => nds.map(n => {
@@ -2205,9 +2305,49 @@ function App() {
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', color: 'var(--text-primary)', fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: '10px' }}>
                   Machine Count:</label>
-                <input type="number" min="0" step="0.1" value={editingMachineCount} onChange={(e) => setEditingMachineCount(e.target.value)}
-                  onKeyPress={(e) => { if (e.key === 'Enter') handleMachineCountUpdate(false); }} className="input" placeholder="Enter machine count" autoFocus />
-                <p style={{ marginTop: '8px', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>Must be a non-negative number (can be decimal)</p>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <button
+                    onClick={() => {
+                      const modes = ['free', 'capped', 'locked'];
+                      const currentIndex = modes.indexOf(editingMachineCountMode);
+                      const nextIndex = (currentIndex + 1) % modes.length;
+                      const nextMode = modes[nextIndex];
+                      setEditingMachineCountMode(nextMode);
+                    }}
+                    className="btn btn-secondary"
+                    style={{
+                      minWidth: '80px',
+                      padding: '10px',
+                      fontWeight: 600,
+                      background: editingMachineCountMode === 'locked' ? '#ef4444' :
+                                 editingMachineCountMode === 'capped' ? '#f59e0b' : 'var(--bg-secondary)',
+                      color: editingMachineCountMode === 'free' ? 'var(--text-primary)' : '#fff'
+                    }}
+                    title={`Mode: ${editingMachineCountMode === 'free' ? 'Free (LP/suggestions can change)' : 
+                            editingMachineCountMode === 'capped' ? 'Capped (LP/suggestions cannot exceed cap)' : 
+                            'Locked (LP/suggestions cannot change)'}`}
+                  >
+                    {editingMachineCountMode === 'free' ? '🔓 Free' :
+                     editingMachineCountMode === 'capped' ? '📊 Cap' : '🔒 Lock'}
+                  </button>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={editingMachineCount}
+                    onChange={(e) => setEditingMachineCount(e.target.value)}
+                    onKeyPress={(e) => { if (e.key === 'Enter') handleMachineCountUpdate(false); }}
+                    className="input"
+                    placeholder="Enter machine count"
+                    autoFocus
+                    style={{ flex: 1 }}
+                  />
+                </div>
+                <p style={{ marginTop: '8px', fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)' }}>
+                  {editingMachineCountMode === 'free' && 'Free: LP solver and suggestions can modify this count'}
+                  {editingMachineCountMode === 'capped' && `Capped: LP/suggestions cannot exceed ${parseFloat(editingMachineCount) || 0} (the value when Apply is pressed)`}
+                  {editingMachineCountMode === 'locked' && 'Locked: LP solver and suggestions cannot modify this count'}
+                </p>
               </div>
 
               {editingNodeId && !newNodePendingMachineCount && (
@@ -2220,10 +2360,13 @@ function App() {
                 }}>
                   <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
                     <div style={{ marginBottom: '8px' }}>
-                      <strong style={{ color: 'var(--text-primary)' }}>Apply:</strong> Changes only this box
+                      <strong style={{ color: 'var(--text-primary)' }}>Apply:</strong> Applies machine count and lock/cap mode to this node only
                     </div>
-                    <div>
-                      <strong style={{ color: 'var(--text-primary)' }}>Apply to All:</strong> Changes this box and propagates to connected boxes
+                    <div style={{ marginBottom: '8px' }}>
+                      <strong style={{ color: 'var(--text-primary)' }}>Apply to All:</strong> Applies machine count to this node and propagates count changes to connected nodes. Lock/cap mode only applies to this node.
+                    </div>
+                    <div style={{ fontSize: '11px', fontStyle: 'italic', color: 'var(--text-muted)' }}>
+                      Note: Lock/cap mode is never propagated to other nodes
                     </div>
                   </div>
                 </div>

@@ -48,6 +48,8 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     const node = graph.nodes[nodeId];
     const varName = `m_${nodeId}`;
     const currentCount = node.machineCount || 0;
+    const machineCountMode = node.machineCountMode || 'free';
+    const cappedCount = node.cappedMachineCount;
     
     // Calculate machine contribution to objective
     let cycleTime = node.cycleTime;
@@ -86,6 +88,19 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     const nonNegConstraintName = `nonneg_${nodeId}`;
     model.constraints[nonNegConstraintName] = { min: 0 };
     model.variables[varName][nonNegConstraintName] = 1;
+    
+    // Handle locked and capped nodes
+    if (machineCountMode === 'locked') {
+      // Locked: fix to current value
+      const lockConstraintName = `lock_${nodeId}`;
+      model.constraints[lockConstraintName] = { equal: currentCount };
+      model.variables[varName][lockConstraintName] = 1;
+    } else if (machineCountMode === 'capped' && typeof cappedCount === 'number') {
+      // Capped: cannot exceed cap value
+      const capConstraintName = `cap_${nodeId}`;
+      model.constraints[capConstraintName] = { max: cappedCount };
+      model.variables[varName][capConstraintName] = 1;
+    }
     
     // Target nodes will have their excess amounts constrained, not machine counts
     // Machine counts can vary to meet downstream demand while maintaining target excess
@@ -841,7 +856,8 @@ const extractMachineUpdates = (lpResult, graph) => {
 /**
  * Main compute function - adjusts machine counts to balance production
  */
-export const computeMachines = (nodes, edges, targetProducts) => {
+export const computeMachines = (nodes, edges, targetProducts, options = {}) => {
+  const { allowDeficiency = false } = options;
   if (targetProducts.length === 0) {
     return {
       success: false,
@@ -910,7 +926,7 @@ export const computeMachines = (nodes, edges, targetProducts) => {
     }
   });
   
-  if (hasDeficiency) {
+  if (hasDeficiency && !allowDeficiency) {
     const deficiencyDetails = deficientNodes.map(d => 
       `  ${d.nodeName}: needs ${d.deficitAmount.toFixed(4)}/s more of product ${d.productId}`
     ).join('\n');
@@ -920,7 +936,9 @@ export const computeMachines = (nodes, edges, targetProducts) => {
       updates: new Map(),
       converged: false,
       iterations: 1,
-      message: `Cannot balance production - insufficient input supply detected:\n${deficiencyDetails}\n\nThis usually means a loop consumes more than it produces.`
+      message: `Cannot balance production - insufficient input supply detected:\n${deficiencyDetails}\n\nThis usually means a loop consumes more than it produces.`,
+      hasDeficiency: true,
+      deficientNodes
     };
   }
   
