@@ -1090,6 +1090,8 @@ input[type="number"] {
 
 .extended-panel-content {
   padding: 15px;
+  max-height: calc(100vh - 350px); /* Account for stats panel, buttons, and sticky header */
+  overflow-y: auto;
 }
 
 /* ============================================================
