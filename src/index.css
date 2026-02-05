@@ -430,7 +430,6 @@ input[type="number"] {
    NODE STYLES
    ============================================================ */
 .custom-node {
-  padding: 15px 20px;
   border-radius: var(--radius-lg);
   background: var(--node-bg);
   border: 2px solid var(--node-border);
@@ -438,6 +437,8 @@ input[type="number"] {
   font-weight: 500;
   box-shadow: var(--shadow-md);
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 .custom-node.target {
@@ -446,29 +447,35 @@ input[type="number"] {
   box-shadow: var(--shadow-target);
 }
 
+.node-info-area {
+  padding: 15px 20px 0 20px;
+  display: flex;
+  flex-direction: column;
+}
+
 .node-recipe-name {
   font-size: var(--font-size-lg);
   font-weight: 700;
   color: var(--text-primary);
   text-align: center;
   margin-bottom: var(--spacing-md);
-  word-wrap: break-word;
-  overflow-wrap: break-word;
+  padding: 0 30px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   max-width: 100%;
 }
 
 .node-stats-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: var(--spacing-md);
-  padding-bottom: var(--spacing-md);
   border-bottom: 1px solid var(--border-divider);
 }
 
 .node-stats {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  justify-content: space-evenly;
   font-size: var(--font-size-xs);
   flex: 1;
   min-width: 0;
@@ -515,17 +522,100 @@ input[type="number"] {
 }
 
 /* ============================================================
+   NODE INPUT/OUTPUT AREA
+   ============================================================ */
+.node-io-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.node-handles-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.node-handles-container .react-flow__handle {
+  pointer-events: auto;
+}
+
+.node-io-columns {
+  display: grid;
+  height: 100%;
+  align-items: center;
+  width: 100%;
+}
+
+.node-io-column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  position: relative;
+}
+
+.node-io-column.node-io-right {
+  justify-self: end;
+}
+
+.node-rect-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.node-io-left {
+  align-items: flex-start;
+}
+
+.node-io-left .node-rect {
+  align-self: flex-start;
+}
+
+.node-io-right {
+  align-items: flex-end;
+}
+
+.node-io-right .node-rect-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.node-io-right .node-rect {
+  align-self: flex-end;
+}
+
+/* ============================================================
    NODE RECTANGLES (INPUT/OUTPUT)
    ============================================================ */
 .node-rect {
-  position: absolute;
+  position: relative;
   border: 2px solid;
   border-radius: var(--radius-sm);
-  padding: 10px 8px;
+  padding: 4px 8px;
   font-size: var(--font-size-sm);
   text-align: center;
   font-weight: 600;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.node-rect-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  word-break: break-word;
 }
 
 .node-rect.input {
@@ -542,18 +632,6 @@ input[type="number"] {
 
 .node-rect.clickable {
   cursor: pointer;
-}
-
-/* ============================================================
-   RECTANGLE CONTAINER
-   ============================================================ */
-.node-rectangles-container {
-  border: 2px dashed rgba(212, 166, 55, 0.5);
-  background: rgba(212, 166, 55, 0.05);
-  margin-top: 10px;
-  margin-left: 10px;
-  margin-right: 10px;
-  margin-bottom: 10px;
 }
 
 /* ============================================================

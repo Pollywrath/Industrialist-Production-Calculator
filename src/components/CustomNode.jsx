@@ -7,18 +7,9 @@ import { isTemperatureProduct, formatTemperature, needsTemperatureConfig, needsB
   recipeUsesSteam, getSteamInputIndex } from '../utils/temperatureUtils';
 import UnifiedSettings from './UnifiedSettings';
 
-const RECT_HEIGHT = 44, RECT_GAP = 8, BOTTOM_PADDING = 20, SIDE_PADDING = 10, COLUMN_GAP = 20, MIN_WIDTH = 320;
+const RECT_HEIGHT = 44, RECT_GAP = 8, SIDE_PADDING = 10, COLUMN_GAP = 20, NODE_WIDTH = 380, BASE_INFO_HEIGHT = 120;
 
 const smartFormat = (num) => typeof num === 'number' ? Math.round(num * 10000) / 10000 : num;
-
-// Function to estimate text width and calculate lines needed
-const calculateTextLines = (text, availableWidth, fontSize = 16) => {
-  // Character width multiplier for accurate estimation
-  const avgCharWidth = fontSize * 0.61;
-  const estimatedTextWidth = text.length * avgCharWidth;
-  const lines = Math.ceil(estimatedTextWidth / availableWidth);
-  return lines;
-};
 
 const CustomNode = memo(({ data, id }) => {
   const { recipe, machine, machineCount, displayMode, machineDisplayMode, onInputClick, onOutputClick, isTarget,
@@ -165,46 +156,24 @@ const CustomNode = memo(({ data, id }) => {
   const maxCount = Math.max(leftCount, rightCount, 1);
   const multiplier = maxCount >= 5 ? 8 : 24;
   
-  const getMaxWidth = (items) => !items?.length ? 80 : Math.max(80, ...items.map(item => {
-    const name = getProductName(item.product_id, getProduct);
-    const qty = formatDisplayQuantity(item.quantity);
-    // Increased multiplier from 8 to 10 for better width, and added base padding
-    return qty.length * 10 + name.length * 10 + 20;
-  }));
-
-  const leftWidth = leftCount > 0 ? getMaxWidth(recipe.inputs) : 0;
-  const rightWidth = rightCount > 0 ? getMaxWidth(recipe.outputs) : 0;
   const hasLeft = leftCount > 0, hasRight = rightCount > 0;
   
-  const contentWidth = hasLeft && hasRight ? leftWidth + rightWidth + COLUMN_GAP + SIDE_PADDING * 2 : (hasLeft ? leftWidth : rightWidth) + SIDE_PADDING * 2;
-  const width = Math.max(contentWidth, MIN_WIDTH);
+  // Fixed rectangle widths based on available space
+  const availableWidth = NODE_WIDTH - (SIDE_PADDING * 2);
+  const leftWidth = hasLeft && hasRight ? Math.floor((availableWidth - COLUMN_GAP) / 2) : (hasLeft ? availableWidth : 0);
+  const rightWidth = hasLeft && hasRight ? Math.floor((availableWidth - COLUMN_GAP) / 2) : (hasRight ? availableWidth : 0);
   
-  // Calculate recipe name lines for dynamic padding
-  const recipeNamePaddingLeft = 30;
-  const recipeNamePaddingRight = 30;
-  const availableWidthForName = width - recipeNamePaddingLeft - recipeNamePaddingRight;
-  const recipeNameFontSize = 14; // This should match the CSS font-size for .node-recipe-name
-  const recipeNameLines = calculateTextLines(recipe.name, availableWidthForName, recipeNameFontSize);
+  const width = NODE_WIDTH;
   
-  // Add extra padding for wrapped lines (each additional line needs ~22px)
-  const extraPaddingForName = recipeNameLines > 1 ? (recipeNameLines - 1) * 22 : 0;
+  // Calculate height based on number of rectangles
+  // The io-area has 12px padding on top and bottom for the columns
+  const ioColumnPadding = 24; // 12px top + 12px bottom
+  const ioAreaHeight = (maxCount * RECT_HEIGHT) + ((maxCount - 1) * RECT_GAP) + ioColumnPadding;
   
-  const TOP_PADDING_RECTANGLES = 109 + multiplier * Math.ceil(maxCount / 2) + extraPaddingForName;
+  // Add bottom padding to balance the top io-column padding (12px)
+  const bottomPadding = 12;
   
-  const height = TOP_PADDING_RECTANGLES + (maxCount * RECT_HEIGHT) + ((maxCount - 1) * RECT_GAP) + BOTTOM_PADDING;
-
-  const getRectPositions = (count) => {
-    if (count === 0) return [];
-    const totalHeight = count * RECT_HEIGHT + (count - 1) * RECT_GAP;
-    const availableHeight = height - TOP_PADDING_RECTANGLES - BOTTOM_PADDING;
-    const offset = Math.max((availableHeight - totalHeight) / 2, 0);
-    return Array.from({ length: count }, (_, i) => TOP_PADDING_RECTANGLES + offset + i * (RECT_HEIGHT + RECT_GAP));
-  };
-
-  const leftPositions = getRectPositions(leftCount);
-  const rightPositions = getRectPositions(rightCount);
-  const getHandlePositions = (positions) => positions.map(p => ((p + RECT_HEIGHT / 2) / height) * 100);
-
+  const height = BASE_INFO_HEIGHT + ioAreaHeight + bottomPadding;
   const displayMachineCount = machineCount ?? 0;
   // Display up to 2 decimal places, but compute with full precision internally
   const formattedMachineCount = Number.isInteger(displayMachineCount) 
@@ -228,6 +197,8 @@ const CustomNode = memo(({ data, id }) => {
           }
         }}
       >
+        {/* Info Area */}
+        <div className="node-info-area">
         {temperatureData.outputs.length > 0 && (
           <div onDoubleClick={(e) => e.stopPropagation()} style={{
             position: 'absolute', top: '10px', left: '10px', background: 'var(--bg-secondary)',
@@ -302,13 +273,10 @@ const CustomNode = memo(({ data, id }) => {
             className="drill-settings-button" title="Configure Boiler" style={{ right: '10px' }}>⚙️</button>
         )}
 
-        <div className="node-recipe-name" title={recipe.name} style={{ 
-          paddingLeft: '30px',
-          paddingRight: '30px'
-        }}>{recipe.name}</div>
+        <div className="node-recipe-name" title={recipe.name}>{recipe.name}</div>
 
-        <div className="node-stats-row">
-          <div className="node-stats">
+          <div className="node-stats-row">
+          <div className="node-stats" style={{ gap: hasDualPower ? '1px' : '3px', minHeight: '65px' }}>
             <div className="node-stat-row"><span className="node-stat-label">Cycle:</span> {displayCycleTime}</div>
             {hasDualPower ? (
               ('drilling' in powerConsumption) ? (
@@ -374,37 +342,62 @@ const CustomNode = memo(({ data, id }) => {
             </div>
           </div>
         </div>
+        </div>
 
-        {leftPositions.map((pos, i) => {
-          const input = recipe.inputs[i];
-          if (!input) return null;
-          return (
-            <React.Fragment key={`left-${id}-${i}-${input.product_id}`}>
-              <NodeRect side="left" index={i} position={pos} width={leftWidth} isOnly={!hasRight} 
-                input={input} onClick={onInputClick} nodeId={id} formatQuantity={formatDisplayQuantity} 
-                isMobile={data.isMobile} mobileActionMode={data.mobileActionMode} />
-              <NodeHandle side="left" index={i} position={getHandlePositions(leftPositions)[i]} 
+        {/* Input/Output Area */}
+        <div className="node-io-area">
+          <div className="node-io-columns" style={{ 
+            gridTemplateColumns: hasLeft && hasRight ? `${leftWidth}px 1fr ${rightWidth}px` : '1fr',
+            padding: `0 ${SIDE_PADDING}px`
+          }}>
+
+        {/* Left Column - Inputs */}
+            {hasLeft && (
+              <div className="node-io-column node-io-left">
+                {recipe.inputs.map((input, i) => (
+                  <div key={`left-${id}-${i}-${input.product_id}`} className="node-rect-wrapper">
+                    <NodeRect side="left" index={i} width={leftWidth} 
+                      input={input} onClick={onInputClick} nodeId={id} formatQuantity={formatDisplayQuantity} 
+                      isMobile={data.isMobile} mobileActionMode={data.mobileActionMode} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Gap Column */}
+            {hasLeft && hasRight && <div className="node-io-gap"></div>}
+
+            {/* Right Column - Outputs */}
+            {hasRight && (
+              <div className="node-io-column node-io-right">
+                {recipe.outputs.map((output, i) => (
+                  <div key={`right-${id}-${i}-${output.product_id}`} className="node-rect-wrapper">
+                    <NodeRect side="right" index={i} width={rightWidth} 
+                      input={output} onClick={onOutputClick} nodeId={id} formatQuantity={formatDisplayQuantity} 
+                      isMobile={data.isMobile} mobileActionMode={data.mobileActionMode} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {/* Handles positioned absolutely on node edges */}
+          <div className="node-handles-container">
+            {recipe.inputs.map((input, i) => (
+              <NodeHandle key={`handle-left-${id}-${i}`} side="left" index={i}
                 onClick={onInputClick} nodeId={id} productId={input.product_id} flows={data.flows} 
-                onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={input} data={data} />
-            </React.Fragment>
-          );
-        })}
-
-        {rightPositions.map((pos, i) => {
-          const output = recipe.outputs[i];
-          if (!output) return null;
-          return (
-            <React.Fragment key={`right-${id}-${i}-${output.product_id}`}>
-              <NodeRect side="right" index={i} position={pos} width={rightWidth} isOnly={!hasLeft} 
-                input={output} onClick={onOutputClick} nodeId={id} formatQuantity={formatDisplayQuantity} 
-                isMobile={data.isMobile} mobileActionMode={data.mobileActionMode} />
-              <NodeHandle side="right" index={i} position={getHandlePositions(rightPositions)[i]} 
+                onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={input} data={data}
+                leftCount={leftCount} rightCount={rightCount} />
+            ))}
+            {recipe.outputs.map((output, i) => (
+              <NodeHandle key={`handle-right-${id}-${i}`} side="right" index={i}
                 onClick={onOutputClick} nodeId={id} productId={output.product_id} flows={data.flows} 
-                onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={output} data={data} />
-            </React.Fragment>
-          );
-        })}
-      </div>
+                onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={output} data={data}
+                leftCount={leftCount} rightCount={rightCount} />
+            ))}
+          </div>
+          </div>
+        </div>
 
       {settingsModal && (
         <UnifiedSettings
@@ -473,7 +466,7 @@ const CustomNode = memo(({ data, id }) => {
 
 export default CustomNode;
 
-const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId, formatQuantity, isMobile, mobileActionMode }) => {
+const NodeRect = ({ side, index, width, input, onClick, nodeId, formatQuantity, isMobile, mobileActionMode }) => {
   const isLeft = side === 'left';
   const productName = getProductName(input.product_id, getProduct, input.acceptedType);
   const displayQuantity = formatQuantity(input.quantity);
@@ -490,19 +483,13 @@ const NodeRect = ({ side, index, position, width, isOnly, input, onClick, nodeId
     }}
       title={`${displayQuantity}x ${productName}`}
       className={`node-rect ${isLeft ? 'input' : 'output'} ${onClick ? 'clickable' : ''}`}
-      style={{
-        left: isOnly ? '50%' : (isLeft ? `${SIDE_PADDING}px` : undefined),
-        right: !isOnly && !isLeft ? `${SIDE_PADDING}px` : undefined,
-        transform: isOnly ? 'translateX(-50%)' : undefined,
-        top: `${position}px`,
-        width: `${width}px`,
-      }}>
-      {displayQuantity}x {productName}
+      style={{ width: `${width}px`, height: `${RECT_HEIGHT}px`, minWidth: `${width}px` }}>
+      <span className="node-rect-text">{displayQuantity}x {productName}</span>
     </div>
   );
 };
 
-const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, onHandleDoubleClick, suggestions, input, data }) => {
+const NodeHandle = ({ side, index, onClick, nodeId, productId, flows, onHandleDoubleClick, suggestions, input, data, leftCount, rightCount }) => {
   // Use relaxed epsilon to handle floating-point precision from LP solver
   const EPSILON = 1e-6;
   
@@ -540,8 +527,18 @@ const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, 
   const isFluid = product?.type === 'fluid' || productId === 'p_any_fluid';
   const borderRadius = isFluid ? '50%' : '2px'; // Circle for fluids, square for items
   
-  // Mobile disconnect mode
-  const isMobile = data?.isMobile;
+  // Calculate vertical position based on index
+  // The columns use align-items: center in CSS, so we need to account for vertical centering
+  const maxCount = Math.max(leftCount, rightCount);
+  const sideCount = side === 'left' ? leftCount : rightCount;
+  
+  // Calculate offset needed to center the shorter column
+  const verticalOffset = ((maxCount - sideCount) * (RECT_HEIGHT + RECT_GAP)) / 2;
+  
+  // Handles are positioned relative to node-io-area
+  // The node-io-columns has padding, and node-io-column has 12px top padding
+  // Need to account for both when calculating position
+  const topPosition = 12 + verticalOffset + (index * (RECT_HEIGHT + RECT_GAP)) + (RECT_HEIGHT / 2) + 11;
   
   return (
     <Handle
@@ -552,10 +549,13 @@ const NodeHandle = ({ side, index, position, onClick, nodeId, productId, flows, 
         background: handleColor, 
         width: '12px', 
         height: '12px', 
-        border: '2px solid #1a1a1a', 
-        top: `${position}%`,
+        border: '2px solid #1a1a1a',
         borderRadius,
-        cursor: 'pointer' // Handles are always interactive (Ctrl+Click on desktop, tap in disconnect mode on mobile)
+        cursor: 'pointer',
+        position: 'absolute',
+        [side === 'left' ? 'left' : 'right']: '0',
+        top: `${topPosition}px`,
+        transform: side === 'left' ? 'translate(-50%, -50%)' : 'translate(50%, -50%)'
       }}
       onClick={(e) => {
         if (onClick && e.ctrlKey) {
