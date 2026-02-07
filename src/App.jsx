@@ -34,6 +34,7 @@ import { configureSpecialRecipe, calculateMachineCountForAutoConnect, getSpecial
 import { propagateMachineCount, propagateFromHandle, calculateMachineCountForNewConnection } from './utils/machineCountPropagator';
 import { buildProductionGraph } from './solvers/graphBuilder';
 import { computeMachines } from './solvers/lpSolver';
+import { autoLayout } from './utils/autoLayout';
   
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
@@ -160,11 +161,15 @@ function App() {
     // Filter out 'remove' type changes to disable backspace/delete key functionality
     const filteredChanges = changes.filter(c => c.type !== 'remove');
     
-    const positionChanges = filteredChanges.filter(c => c.type === 'position' && c.dragging);
-    const otherChanges = filteredChanges.filter(c => !(c.type === 'position' && c.dragging));
+    const positionChanges = filteredChanges.filter(c => c.type === 'position');
+    const otherChanges = filteredChanges.filter(c => c.type !== 'position');
     
-    if (positionChanges.length > 0) onNodesChangeBase(positionChanges);
+    // Apply position changes immediately for smooth dragging
+    if (positionChanges.length > 0) {
+      onNodesChangeBase(positionChanges);
+    }
     
+    // Batch non-position changes
     if (otherChanges.length > 0) {
       pendingChangesRef.current.push(...otherChanges);
       if (dragTimeoutRef.current) clearTimeout(dragTimeoutRef.current);
@@ -1541,6 +1546,11 @@ function App() {
     }));
   }, [setNodes]);
 
+  const handleAutoLayout = useCallback(() => {
+    const updatedNodes = autoLayout(nodes, edges);
+    setNodes(updatedNodes);
+  }, [nodes, edges, setNodes]);
+
   const handleCompute = useCallback(() => {
     if (targetProducts.length === 0) {
       alert('No target recipes. Please add target recipes (Shift+Click a node) before computing.');
@@ -2082,6 +2092,7 @@ function App() {
                   <button onClick={openRecipeSelector} className="btn btn-primary">+ Select Recipe</button>
                   <button onClick={() => setShowTargetsModal(true)} className="btn btn-secondary">View Targets ({targetProducts.length})</button>
                   <button onClick={handleCompute} className="btn btn-secondary">Compute Machines</button>
+                  <button onClick={handleAutoLayout} className="btn btn-secondary">Auto Layout</button>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button onClick={() => setExtendedPanelOpen(!extendedPanelOpen)} className="btn btn-secondary btn-square"
                       title={extendedPanelOpen ? "Close more statistics" : "Open more statistics"}>{extendedPanelOpen ? '↓' : '↑'}</button>
