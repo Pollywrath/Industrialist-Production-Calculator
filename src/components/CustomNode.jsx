@@ -14,7 +14,10 @@ const smartFormat = (num) => typeof num === 'number' ? Math.round(num * 10000) /
 const CustomNode = memo(({ data, id }) => {
   const { recipe, machine, machineCount, displayMode, machineDisplayMode, onInputClick, onOutputClick, isTarget,
     onDrillSettingsChange, onLogicAssemblerSettingsChange, onTreeFarmSettingsChange, onIndustrialFireboxSettingsChange, 
-    onTemperatureSettingsChange, onBoilerSettingsChange, onChemicalPlantSettingsChange, globalPollution, flows, isMobile, mobileActionMode, onMachineCountModeChange } = data;
+    onTemperatureSettingsChange, onBoilerSettingsChange, onChemicalPlantSettingsChange, globalPollution, flows, isMobile, mobileActionMode, onMachineCountModeChange, zoomLevel } = data;
+  
+  // Determine detail level based on zoom
+  const showDetails = !zoomLevel || zoomLevel >= 0.25;
   
   const [settingsModal, setSettingsModal] = useState(null);
   
@@ -275,8 +278,12 @@ const CustomNode = memo(({ data, id }) => {
 
         <div className="node-recipe-name" title={recipe.name}>{recipe.name}</div>
 
-          <div className="node-stats-row">
-          <div className="node-stats" style={{ gap: hasDualPower ? '1px' : '3px', minHeight: '65px' }}>
+        <div className="node-stats-row">
+          <div className="node-stats" style={{ 
+            gap: hasDualPower ? '1px' : '3px', 
+            minHeight: '65px',
+            visibility: showDetails ? 'visible' : 'hidden'
+          }}>
             <div className="node-stat-row"><span className="node-stat-label">Cycle:</span> {displayCycleTime}</div>
             {hasDualPower ? (
               ('drilling' in powerConsumption) ? (
@@ -296,7 +303,9 @@ const CustomNode = memo(({ data, id }) => {
             <div className="node-stat-row"><span className="node-stat-label">Pollution:</span> {formatPollution(displayPollution)}</div>
           </div>
 
-          <div className="node-machine-info">
+          <div className="node-machine-info" style={{
+            visibility: showDetails ? 'visible' : 'hidden'
+          }}>
             <div className="node-machine-name" title={machine.name} style={{
               color: machine.tier === 1 ? 'var(--tier-1-color)' :
                      machine.tier === 2 ? 'var(--tier-2-color)' :
@@ -437,31 +446,26 @@ const CustomNode = memo(({ data, id }) => {
     </>
   );
 }, (prevProps, nextProps) => {
-  // Fast path - check IDs first
+  // Simple reference equality check - let React Flow handle position changes
   if (prevProps.id !== nextProps.id) return false;
   
   const prevData = prevProps.data;
   const nextData = nextProps.data;
   
-  // Check primitive values
-  if (
-    prevData.machineCount !== nextData.machineCount ||
-    prevData.displayMode !== nextData.displayMode ||
-    prevData.machineDisplayMode !== nextData.machineDisplayMode ||
-    prevData.isTarget !== nextData.isTarget ||
-    prevData.globalPollution !== nextData.globalPollution ||
-    prevData.machineCountMode !== nextData.machineCountMode ||
-    prevData.cappedMachineCount !== nextData.cappedMachineCount
-  ) {
-    return false;
-  }
-  
-  // Check object references
-  if (prevData.recipe !== nextData.recipe) return false;
-  if (prevData.flows !== nextData.flows) return false;
-  if (prevData.suggestions !== nextData.suggestions) return false;
-  
-  return true;
+  // Only check critical rendering props
+  return (
+    prevData === nextData || // Same object reference
+    (
+      prevData.machineCount === nextData.machineCount &&
+      prevData.recipe === nextData.recipe &&
+      prevData.flows === nextData.flows &&
+      prevData.suggestions === nextData.suggestions &&
+      prevData.displayMode === nextData.displayMode &&
+      prevData.machineDisplayMode === nextData.machineDisplayMode &&
+      prevData.isTarget === nextData.isTarget &&
+      prevData.zoomLevel === nextData.zoomLevel
+    )
+  );
 });
 
 export default CustomNode;

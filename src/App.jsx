@@ -136,6 +136,7 @@ function App() {
   const [globalPollution, setGlobalPollution] = useState(0);
   const [pollutionInputFocused, setPollutionInputFocused] = useState(false);
   const [isPollutionPaused, setIsPollutionPaused] = useState(true);
+  const [zoomLevel, setZoomLevel] = useState(1);
   const [soldProducts, setSoldProducts] = useState({});
   const [displayMode, setDisplayMode] = useState('perSecond');
   const [machineDisplayMode, setMachineDisplayMode] = useState('total');
@@ -272,8 +273,16 @@ function App() {
   }, []);
 
   useEffect(() => {
-    setNodes(nds => nds.map(node => ({ ...node, data: { ...node.data, displayMode, machineDisplayMode } })));
-  }, [displayMode, machineDisplayMode, setNodes]);
+    setNodes(nds => nds.map(node => ({ 
+      ...node, 
+      data: { 
+        ...node.data, 
+        displayMode, 
+        machineDisplayMode,
+        zoomLevel 
+      } 
+    })));
+  }, [displayMode, machineDisplayMode, zoomLevel, setNodes]);
 
   useEffect(() => {
     setEdges(eds => eds.map(edge => ({ ...edge, data: edgeSettings })));
@@ -368,6 +377,8 @@ function App() {
     pollutionUpdateTimeoutRef.current = setTimeout(() => {
       setNodes(nds => {
         let hasChanges = false;
+        const changedNodeIds = new Set();
+        
         const newNodes = nds.map(node => {
           const { recipe, machine, globalPollution: nodeGlobalPollution } = node.data || {};
           
@@ -416,9 +427,10 @@ function App() {
           return node;
         });
         
+        // Only return new array if we actually changed something
         return hasChanges ? newNodes : nds;
       });
-    }, 250);
+    }, 250); // Keep at 250ms for responsiveness
     
     return () => clearTimeout(pollutionUpdateTimeoutRef.current);
   }, [globalPollution, setNodes]);
@@ -477,10 +489,24 @@ function App() {
     const recipe = node.data?.recipe;
     const nodeFlows = flows.byNode[node.id];
     
+    // Check if flows/suggestions actually changed (quick reference check first)
+    const flowsChanged = node.data.flows !== nodeFlows;
+    const suggestionsChanged = node.data.suggestions !== suggestions && 
+      (node.data.suggestions?.length !== suggestions?.length || 
+       JSON.stringify(node.data.suggestions) !== JSON.stringify(suggestions || []));
+    
     if (recipe?.isWasteFacility) {
       const itemFlow = Math.min(nodeFlows?.inputFlows[0]?.connected || 0, 240);
       const fluidFlow = Math.min(nodeFlows?.inputFlows[1]?.connected || 0, 240);
       const settings = recipe.wasteFacilitySettings || {};
+      
+      // Only update if flows actually changed
+      if (!flowsChanged && !suggestionsChanged && 
+          settings.itemFlowRate === itemFlow && 
+          settings.fluidFlowRate === fluidFlow) {
+        return node;
+      }
+      
       const metrics = calculateWasteFacilityMetrics(itemFlow, fluidFlow);
       const updatedInputs = buildWasteFacilityInputs(itemFlow, fluidFlow, recipe.inputs[0].product_id, recipe.inputs[1].product_id);
       
@@ -495,7 +521,8 @@ function App() {
             wasteFacilitySettings: { ...settings, itemFlowRate: itemFlow, fluidFlowRate: fluidFlow }
           },
           flows: nodeFlows || null,
-          suggestions: suggestions || []
+          suggestions: suggestions || [],
+          zoomLevel: node.data.zoomLevel
         }
       };
     }
@@ -508,13 +535,19 @@ function App() {
       });
       const pollution = calculateLiquidDumpPollution(recipe.inputs, flowRatesPerMachine);
       
+      // Only update if actually changed
+      if (!flowsChanged && !suggestionsChanged && recipe.pollution === pollution) {
+        return node;
+      }
+      
       return {
         ...node,
         data: {
           ...node.data,
           recipe: { ...recipe, pollution },
           flows: nodeFlows || null,
-          suggestions: suggestions || []
+          suggestions: suggestions || [],
+          zoomLevel: node.data.zoomLevel
         }
       };
     }
@@ -527,15 +560,26 @@ function App() {
       });
       const pollution = calculateLiquidBurnerPollution(recipe.inputs, flowRatesPerMachine);
       
+      // Only update if actually changed
+      if (!flowsChanged && !suggestionsChanged && recipe.pollution === pollution) {
+        return node;
+      }
+      
       return {
         ...node,
         data: {
           ...node.data,
           recipe: { ...recipe, pollution },
           flows: nodeFlows || null,
-          suggestions: suggestions || []
+          suggestions: suggestions || [],
+          zoomLevel: node.data.zoomLevel
         }
       };
+    }
+    
+    // Only update if flows or suggestions changed
+    if (!flowsChanged && !suggestionsChanged) {
+      return node;
     }
     
     return {
@@ -543,10 +587,12 @@ function App() {
       data: {
         ...node.data,
         flows: nodeFlows || null,
-        suggestions: suggestions || []
+        suggestions: suggestions || [],
+        zoomLevel: node.data.zoomLevel // Preserve zoom level
       }
     };
   }, []);
+  
   useEffect(() => {
     if (!productionSolution?.flows?.byNode) return;
     if (lastFlowsRef.current === productionSolution.flows) return;
@@ -556,11 +602,23 @@ function App() {
     
     flowUpdateTimeoutRef.current = setTimeout(() => {
       setNodes(nds => {
-        const baseNodes = productionSolution.temperatureData
-          ? applyTemperaturesToNodes(nds, productionSolution.temperatureData, productionSolution.graph)
-          : nds;
+        let baseNodes = nds;
         
-        return baseNodes.map(node => updateNodeWithFlows(node, productionSolution.flows, productionSolution.suggestions));
+        // Only apply temperature updates if needed
+        if (productionSolution.temperatureData) {
+          baseNodes = applyTemperaturesToNodes(nds, productionSolution.temperatureData, productionSolution.graph);
+        }
+        
+        // Map and check for actual changes
+        let hasChanges = false;
+        const newNodes = baseNodes.map(node => {
+          const updated = updateNodeWithFlows(node, productionSolution.flows, productionSolution.suggestions);
+          if (updated !== node) hasChanges = true;
+          return updated;
+        });
+        
+        // Only update state if something actually changed
+        return hasChanges ? newNodes : nds;
       });
     }, 250);
     
@@ -1205,7 +1263,8 @@ function App() {
         globalPollution,
         isTarget: false,
         flows: null,
-        suggestions: []
+        suggestions: [],
+        zoomLevel
       },
       sourcePosition: 'right',
       targetPosition: 'left'
@@ -1279,13 +1338,23 @@ function App() {
     const existingTarget = targetProducts.find(t => t.recipeBoxId === node.id);
     if (existingTarget) {
       setTargetProducts(prev => prev.filter(t => t.recipeBoxId !== node.id));
-      updateNodeData(node.id, data => ({ ...data, isTarget: false }));
+      // Force immediate update by creating new object
+      setNodes(nds => nds.map(n => 
+        n.id === node.id 
+          ? { ...n, data: { ...n.data, isTarget: false } }
+          : n
+      ));
     } else if (node.data?.recipe) {
       setTargetProducts(prev => [...prev, { id: `target_${targetIdCounter}`, recipeBoxId: node.id }]);
       setTargetIdCounter(prev => prev + 1);
-      updateNodeData(node.id, data => ({ ...data, isTarget: true }));
+      // Force immediate update by creating new object
+      setNodes(nds => nds.map(n => 
+        n.id === node.id 
+          ? { ...n, data: { ...n.data, isTarget: true } }
+          : n
+      ));
     }
-  }, [targetProducts, targetIdCounter]);
+  }, [targetProducts, targetIdCounter, setNodes]);
 
   const handleUpdateTarget = useCallback((targetId, ioType, ioIndex, targetExcess) => {
     const target = targetProducts.find(t => t.id === targetId);
@@ -2039,7 +2108,14 @@ function App() {
         onMouseMove={handleCanvasMouseMove}
         onClick={handleCanvasClick}
         onContextMenu={handleCancelPlacement}
-        onInit={(instance) => { reactFlowInstance.current = instance; }}
+        onInit={(instance) => { 
+          reactFlowInstance.current = instance;
+          setZoomLevel(instance.getZoom());
+        }}
+        onMoveEnd={(event, viewport) => {
+          // Always update zoom level after movement ends
+          setZoomLevel(viewport.zoom);
+        }}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         panOnDrag={[0, 2]}
@@ -2052,6 +2128,12 @@ function App() {
         elementsSelectable={true}
         minZoom={0.1}
         maxZoom={4}
+        autoPanOnNodeDrag={false}
+        zoomOnDoubleClick={false}
+        preventScrolling={true}
+        nodeOrigin={[0, 0]}
+        snapToGrid={false}
+        onlyRenderVisibleElements={true}
         connectionLineType={edgeSettings.edgePath === 'straight' ? 'straight' : edgeSettings.edgePath === 'orthogonal' ? 'step' : 'default'}
         connectionLineStyle={{
           stroke: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim(),
