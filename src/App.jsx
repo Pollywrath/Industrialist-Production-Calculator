@@ -281,19 +281,43 @@ function App() {
   }, []);
 
   useEffect(() => {
-    setNodes(nds => nds.map(node => ({ 
-      ...node, 
-      data: { 
-        ...node.data, 
-        displayMode, 
-        machineDisplayMode,
-        zoomLevel 
-      } 
-    })));
+    setNodes(nds => {
+      let hasChanges = false;
+      const newNodes = nds.map(node => {
+        // Only update if values actually changed
+        if (node.data.displayMode === displayMode && 
+            node.data.machineDisplayMode === machineDisplayMode &&
+            node.data.zoomLevel === zoomLevel) {
+          return node;
+        }
+        hasChanges = true;
+        return { 
+          ...node, 
+          data: { 
+            ...node.data, 
+            displayMode, 
+            machineDisplayMode,
+            zoomLevel 
+          } 
+        };
+      });
+      return hasChanges ? newNodes : nds;
+    });
   }, [displayMode, machineDisplayMode, zoomLevel, setNodes]);
 
   useEffect(() => {
-    setEdges(eds => eds.map(edge => ({ ...edge, data: edgeSettings })));
+    setEdges(eds => {
+      let hasChanges = false;
+      const newEdges = eds.map(edge => {
+        if (edge.data?.edgePath === edgeSettings.edgePath && 
+            edge.data?.edgeStyle === edgeSettings.edgeStyle) {
+          return edge;
+        }
+        hasChanges = true;
+        return { ...edge, data: edgeSettings };
+      });
+      return hasChanges ? newEdges : eds;
+    });
   }, [edgeSettings, setEdges]);
 
   useEffect(() => {
@@ -306,10 +330,12 @@ function App() {
 
   const calculateTotalStats = useCallback(() => {
     let totalPower = 0, totalPollution = 0, totalModelCount = 0;
+    const nodesLength = nodes.length;
     
-    nodes.forEach(node => {
+    for (let i = 0; i < nodesLength; i++) {
+      const node = nodes[i];
       const { recipe, machine, machineCount = 0 } = node.data || {};
-      if (!recipe) return;
+      if (!recipe) continue;
       
       const pollution = typeof recipe.pollution === 'number' ? recipe.pollution : parseFloat(recipe.pollution);
       if (!isNaN(pollution) && isFinite(pollution)) totalPollution += pollution * machineCount;
@@ -319,7 +345,7 @@ function App() {
       
       if (machine?.id === 'm_industrial_firebox') {
         totalModelCount += roundedMachineCount * (1 + inputOutputCount * 2);
-        return;
+        continue;
       }
       
       if (machine?.id === 'm_tree_farm' && recipe.treeFarmSettings) {
@@ -331,7 +357,7 @@ function App() {
         const powerFactor = recipe.power_type === 'HV' ? 2 : Math.ceil(powerValue / 1500000) * 2;
         const treeFarmModelCount = trees + harvesters + sprinklers + (waterTanks * 3) + controller + (outputs * 3) + powerFactor;
         totalModelCount += roundedMachineCount * treeFarmModelCount;
-        return;
+        continue;
       }
       
       const power = recipe.power_consumption;
@@ -346,7 +372,7 @@ function App() {
       
       const powerFactor = recipe.power_type === 'HV' ? 2 : Math.ceil(powerValue / 1500000) * 2;
       totalModelCount += roundedMachineCount * (1 + powerFactor + inputOutputCount * 2);
-    });
+    }
     
     return { totalPower, totalPollution, totalModelCount };
   }, [nodes]);
@@ -497,7 +523,12 @@ function App() {
     const recipe = node.data?.recipe;
     const nodeFlows = flows.byNode[node.id];
     
-    // Check if flows/suggestions actually changed (quick reference check first)
+    // Quick reference check first
+    if (node.data.flows === nodeFlows && node.data.suggestions === suggestions) {
+      return node; // No changes at all
+    }
+    
+    // More detailed comparison for suggestions
     const flowsChanged = node.data.flows !== nodeFlows;
     const suggestionsChanged = node.data.suggestions !== suggestions && 
       (node.data.suggestions?.length !== suggestions?.length || 
@@ -2150,6 +2181,12 @@ function App() {
         nodeOrigin={[0, 0]}
         snapToGrid={false}
         onlyRenderVisibleElements={true}
+        disableKeyboardA11y={true}
+        deleteKeyCode={null}
+        selectionKeyCode={null}
+        multiSelectionKeyCode={null}
+        panActivationKeyCode={null}
+        zoomActivationKeyCode={null}
         connectionLineType={edgeSettings.edgePath === 'straight' ? 'straight' : edgeSettings.edgePath === 'orthogonal' ? 'step' : 'default'}
         connectionLineStyle={{
           stroke: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim(),

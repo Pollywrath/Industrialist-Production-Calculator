@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, memo } from 'react';
 import { getBezierPath, getStraightPath } from '@xyflow/react';
 
 const getOrthogonalPath = (sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition) => {
@@ -58,4 +58,11 @@ const CustomEdge = ({ id, sourceX, sourceY, targetX, targetY, sourcePosition, ta
   return <path id={id} className={className} d={path} fill="none" />;
 };
 
-export default CustomEdge;
+export default memo(CustomEdge, (prev, next) => {
+  return prev.sourceX === next.sourceX &&
+         prev.sourceY === next.sourceY &&
+         prev.targetX === next.targetX &&
+         prev.targetY === next.targetY &&
+         prev.data?.edgePath === next.data?.edgePath &&
+         prev.data?.edgeStyle === next.data?.edgeStyle;
+});

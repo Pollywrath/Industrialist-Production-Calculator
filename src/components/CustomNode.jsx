@@ -1,4 +1,4 @@
-import React, { useState, memo } from 'react';
+import React, { useState, memo, useCallback, useMemo } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { getProduct } from '../data/dataLoader';
 import { getProductName, formatPowerConsumption, formatPollution } from '../utils/variableHandler';
@@ -96,7 +96,8 @@ const CustomNode = memo(({ data, id }) => {
     }
   }
 
-  const formatDisplayQuantity = (quantity) => {
+  // Memoize format functions to avoid recreating them on every render
+  const formatDisplayQuantity = useCallback((quantity) => {
     if (quantity === 'Variable') return 'Variable';
     if (typeof quantity !== 'number') return String(quantity);
     if (cycleTime === 'Variable') return displayMode === 'perSecond' ? 'Variable' : String(smartFormat(quantity));
@@ -104,9 +105,9 @@ const CustomNode = memo(({ data, id }) => {
     let baseQuantity = displayMode === 'perSecond' ? quantity / cycleTime : quantity;
     if (machineDisplayMode === 'total') baseQuantity *= (machineCount || 0);
     return String(smartFormat(baseQuantity));
-  };
+  }, [cycleTime, displayMode, machineDisplayMode, machineCount]);
 
-  const formatDisplayCycleTime = (ct) => {
+  const formatDisplayCycleTime = useCallback((ct) => {
     if (ct === 'Variable' || typeof ct !== 'number') return ct;
     if (displayMode === 'perSecond') return '1s';
     if (ct >= 60) {
@@ -115,9 +116,9 @@ const CustomNode = memo(({ data, id }) => {
       return `${minutes}m ${smartFormat(seconds)}s`;
     }
     return `${smartFormat(ct)}s`;
-  };
-
-  const displayCycleTime = formatDisplayCycleTime(cycleTime);
+  }, [displayMode]);
+  
+  const displayCycleTime = useMemo(() => formatDisplayCycleTime(cycleTime), [cycleTime, formatDisplayCycleTime]);
   
   // Apply machine count to power and pollution if in total mode
   let adjustedPowerConsumption = recipe.power_consumption;
@@ -446,26 +447,27 @@ const CustomNode = memo(({ data, id }) => {
     </>
   );
 }, (prevProps, nextProps) => {
-  // Simple reference equality check - let React Flow handle position changes
+  // Fast path: check if data object reference changed
+  if (prevProps.data === nextProps.data && prevProps.id === nextProps.id) return true;
   if (prevProps.id !== nextProps.id) return false;
   
   const prevData = prevProps.data;
   const nextData = nextProps.data;
   
-  // Only check critical rendering props
-  return (
-    prevData === nextData || // Same object reference
-    (
-      prevData.machineCount === nextData.machineCount &&
-      prevData.recipe === nextData.recipe &&
-      prevData.flows === nextData.flows &&
-      prevData.suggestions === nextData.suggestions &&
-      prevData.displayMode === nextData.displayMode &&
-      prevData.machineDisplayMode === nextData.machineDisplayMode &&
-      prevData.isTarget === nextData.isTarget &&
-      prevData.zoomLevel === nextData.zoomLevel
-    )
-  );
+  // Critical check: if recipe object changed, always re-render
+  if (prevData.recipe !== nextData.recipe) return false;
+  
+  // Check other critical props with early exit
+  if (prevData.machineCount !== nextData.machineCount) return false;
+  if (prevData.flows !== nextData.flows) return false;
+  if (prevData.suggestions !== nextData.suggestions) return false;
+  if (prevData.displayMode !== nextData.displayMode) return false;
+  if (prevData.machineDisplayMode !== nextData.machineDisplayMode) return false;
+  if (prevData.isTarget !== nextData.isTarget) return false;
+  if (prevData.zoomLevel !== nextData.zoomLevel) return false;
+  if (prevData.machineCountMode !== nextData.machineCountMode) return false;
+  
+  return true;
 });
 
 export default CustomNode;
