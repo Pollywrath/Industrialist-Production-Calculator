@@ -110,6 +110,8 @@ function App() {
   const [autoConnectTarget, setAutoConnectTarget] = useState(null);
   const [targetProducts, setTargetProducts] = useState([]);
   const [showTargetsModal, setShowTargetsModal] = useState(false);
+  const [showRecipesModal, setShowRecipesModal] = useState(false);
+  const [recipesModalTab, setRecipesModalTab] = useState('targets'); // 'targets' or 'canvas'
   const [targetIdCounter, setTargetIdCounter] = useState(0);
   const [showMachineCountEditor, setShowMachineCountEditor] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState(null);
@@ -148,6 +150,12 @@ function App() {
   const [lastWasteFacilityConfig, setLastWasteFacilityConfig] = useState(null);
   const [recipeMachineCounts, setRecipeMachineCounts] = useState({});
   const [pendingNode, setPendingNode] = useState(null);
+  const [editingRecipeMachineCounts, setEditingRecipeMachineCounts] = useState({});
+  const [recipeTabFilter, setRecipeTabFilter] = useState('all'); // 'all', 'excess', 'deficiency'
+  const [activeWeights, setActiveWeights] = useState(['Deficiencies', 'Model Count', 'Excesses', 'Pollution', 'Power', 'Cost']);
+  const [unusedWeights, setUnusedWeights] = useState([]);
+  const [draggedWeight, setDraggedWeight] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const reactFlowWrapper = useRef(null);
   const reactFlowInstance = useRef(null);
@@ -625,10 +633,18 @@ function App() {
     return () => clearTimeout(flowUpdateTimeoutRef.current);
   }, [productionSolution, setNodes, updateNodeWithFlows]);
   
-  const excessProducts = useMemo(() => excessProductsRaw.map(item => ({
-    ...item,
-    isSold: soldProducts[item.productId] ?? (typeof item.product.price === 'number' && item.product.price > 0)
-  })), [excessProductsRaw, soldProducts]);
+  const excessProducts = useMemo(() => excessProductsRaw.map(item => {
+    // Check if this product is an output of any target node
+    const isTargetOutput = targetProducts.some(target => {
+      const node = nodes.find(n => n.id === target.recipeBoxId);
+      return node?.data?.recipe?.outputs?.some(output => output.product_id === item.productId);
+    });
+    
+    return {
+      ...item,
+      isSold: soldProducts[item.productId] ?? (isTargetOutput && typeof item.product.price === 'number' && item.product.price > 1)
+    };
+  }), [excessProductsRaw, soldProducts, targetProducts, nodes]);
 
   const totalProfit = useMemo(() => 
     excessProducts.reduce((profit, item) => 
@@ -2168,11 +2184,13 @@ function App() {
                     <div className="stat-item"><div className="stat-label">Total Minimum Model Count:</div><div className="stat-value">{stats.totalModelCount.toFixed(0)}</div></div>
                     <div className="stat-item"><div className="stat-label">Total Profit:</div><div className="stat-value" style={{ color: totalProfit >= 0 ? 'var(--stat-positive)' : 'var(--stat-negative)' }}>
                       ${metricFormat(totalProfit)}/s</div></div>
+                    <div className="stat-item"><div className="stat-label">Total Cost:</div><div className="stat-value">
+                      ${metricFormat(machineStats.totalCost)}</div></div>
                   </div>
                 </div>
                 <div className="flex-col action-buttons-container">
                   <button onClick={openRecipeSelector} className="btn btn-primary">+ Select Recipe</button>
-                  <button onClick={() => setShowTargetsModal(true)} className="btn btn-secondary">View Targets ({targetProducts.length})</button>
+                  <button onClick={() => { setShowRecipesModal(true); setRecipesModalTab('targets'); }} className="btn btn-secondary">View Recipes</button>
                   <button onClick={handleCompute} className="btn btn-secondary">Compute Machines</button>
                   <button onClick={handleAutoLayout} className="btn btn-secondary">Auto Layout</button>
                   <div style={{ display: 'flex', gap: '10px' }}>
@@ -2291,46 +2309,6 @@ function App() {
                             </div>
                           ))}
                         </div>
-                      )}
-                    </div>
-
-                    <div style={{ marginTop: '30px' }}>
-                      <h4 style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-base)', fontWeight: 600, marginBottom: '12px' }}>Machine Costs:</h4>
-                      {machineStats.stats.length === 0 ? (
-                        <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)', padding: '15px', textAlign: 'center',
-                          background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)' }}>No machines on canvas.</div>
-                      ) : (
-                        <>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '15px' }}>
-                            {machineStats.stats.map(stat => (
-                              <div key={stat.machineId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px',
-                                background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '2px solid var(--border-light)' }}>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{
-                                    color: stat.machine.tier === 1 ? 'var(--tier-1-color)' :
-                                           stat.machine.tier === 2 ? 'var(--tier-2-color)' :
-                                           stat.machine.tier === 3 ? 'var(--tier-3-color)' :
-                                           stat.machine.tier === 4 ? 'var(--tier-4-color)' :
-                                           stat.machine.tier === 5 ? 'var(--tier-5-color)' : 'var(--tier-5-color)',
-                                    fontSize: 'var(--font-size-sm)',
-                                    fontWeight: 600
-                                  }}>{stat.machine.name}</div>
-                                  <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-xs)', marginTop: '2px' }}>
-                                    Count: {stat.count} × ${metricFormat(stat.cost)}</div>
-                                </div>
-                                <div style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 600 }}>${metricFormat(stat.totalCost)}</div>
-                              </div>
-                            ))}
-                          </div>
-                          <div style={{ padding: '12px', background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', border: '2px solid var(--color-primary)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                              <div style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-base)', fontWeight: 700 }}>Total Cost:</div>
-                              <div style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-md)', fontWeight: 700 }}>${metricFormat(machineStats.totalCost)}</div>
-                            </div>
-                            <div style={{ color: 'var(--text-muted)', fontSize: 'var(--font-size-xs)', fontStyle: 'italic', textAlign: 'center' }}>
-                              For machines only. Poles and pipes not accounted for.</div>
-                          </div>
-                        </>
                       )}
                     </div>
                   </div>
@@ -2670,9 +2648,9 @@ function App() {
 
       {showTargetsModal && (
         <div className="modal-overlay" onClick={() => setShowTargetsModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '800px', maxHeight: '85vh' }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '800px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
             <h2 className="modal-title">Target Products</h2>
-            <div className="modal-content flex-col" style={{ maxHeight: '70vh', marginBottom: '20px' }}>
+            <div className="modal-content flex-col" style={{ flex: 1, overflowY: 'auto', paddingBottom: '20px', marginBottom: '0' }}>
               {targetProducts.length === 0 ? (
                 <div className="empty-state">No target products yet. Shift+Click a recipe box to mark it as a target.</div>
               ) : (
@@ -2772,7 +2750,693 @@ function App() {
                 })
               )}
             </div>
-            <button onClick={() => setShowTargetsModal(false)} className="btn btn-secondary">Close</button>
+            <button onClick={() => setShowTargetsModal(false)} className="btn btn-secondary" style={{ width: '100%' }}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {showRecipesModal && (
+        <div className="modal-overlay" onClick={() => setShowRecipesModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '1400px', maxWidth: '95vw', maxHeight: '90vh' }}>
+            <h2 className="modal-title">Recipes</h2>
+            
+            {/* Tab Navigation */}
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '2px solid var(--border-divider)' }}>
+              <button 
+                onClick={() => setRecipesModalTab('targets')}
+                className={recipesModalTab === 'targets' ? 'btn btn-primary' : 'btn btn-secondary'}
+                style={{ 
+                  flex: 1, 
+                  borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
+                  borderBottom: recipesModalTab === 'targets' ? '3px solid var(--color-primary)' : 'none',
+                  minWidth: 'auto'
+                }}
+              >
+                Solver & Targets
+              </button>
+              <button 
+                onClick={() => setRecipesModalTab('canvas')}
+                className={recipesModalTab === 'canvas' ? 'btn btn-primary' : 'btn btn-secondary'}
+                style={{ 
+                  flex: 1, 
+                  borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0',
+                  borderBottom: recipesModalTab === 'canvas' ? '3px solid var(--color-primary)' : 'none',
+                  minWidth: 'auto'
+                }}
+              >
+                Canvas Recipes
+              </button>
+            </div>
+
+            {/* Filter for Canvas Recipes Tab */}
+            {recipesModalTab === 'canvas' && (
+              <div style={{ marginBottom: '15px' }}>
+                <select 
+                  value={recipeTabFilter} 
+                  onChange={(e) => setRecipeTabFilter(e.target.value)} 
+                  className="select"
+                  style={{ width: '100%' }}
+                >
+                  <option value="all">All Recipes</option>
+                  <option value="excess">Has Excess</option>
+                  <option value="deficiency">Has Deficiency</option>
+                </select>
+              </div>
+            )}
+
+            {/* Tab Content */}
+            <div style={{ maxHeight: 'calc(90vh - 300px)', marginBottom: '20px' }}>
+              {recipesModalTab === 'targets' ? (
+                <div style={{ display: 'flex', gap: '0', height: 'calc(90vh - 180px)' }}>
+                  {/* Solver Config Section (Left - 25%) */}
+                  <div style={{ flex: '0 0 25%', display: 'flex', flexDirection: 'column', paddingRight: '20px' }}>
+                    <h3 style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-lg)', fontWeight: 700, marginBottom: '15px', textAlign: 'center' }}>
+                      Solver Configuration
+                    </h3>
+                    <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                      {/* Reset Button */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <button
+                          onClick={() => {
+                            setActiveWeights(['Deficiencies', 'Model Count', 'Excesses', 'Pollution', 'Power', 'Cost']);
+                            setUnusedWeights([]);
+                          }}
+                          className="btn btn-secondary"
+                          style={{ padding: '8px 12px', fontSize: 'var(--font-size-sm)' }}
+                        >
+                          Restore to Defaults
+                        </button>
+                      </div>
+                      {/* Active Weights Box */}
+                      <div>
+                        <div style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 600, marginBottom: '8px' }}>
+                          Active Weights (Higher = More Priority)
+                        </div>
+                        <div 
+                          style={{ 
+                            minHeight: '80px',
+                            padding: '10px',
+                            background: 'var(--bg-main)',
+                            border: '2px solid var(--border-primary)',
+                            borderRadius: 'var(--radius-md)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (draggedWeight && draggedWeight !== 'Deficiencies' && unusedWeights.includes(draggedWeight)) {
+                              setUnusedWeights(prev => prev.filter(w => w !== draggedWeight));
+                              setActiveWeights(prev => [...prev, draggedWeight]);
+                            }
+                            setDraggedWeight(null);
+                            setDragOverIndex(null);
+                          }}
+                        >
+                          {activeWeights.length === 0 ? (
+                            <div style={{ 
+                              flex: 1, 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              color: 'var(--text-secondary)',
+                              fontSize: 'var(--font-size-xs)',
+                              fontStyle: 'italic'
+                            }}>
+                              Drag weights here
+                            </div>
+                          ) : (
+                            activeWeights.map((weight, index) => {
+                              // Calculate color based on position (red for high priority, green for low)
+                              const totalWeights = activeWeights.length;
+                              const ratio = totalWeights > 1 ? index / (totalWeights - 1) : 0;
+                              
+                              // Interpolate between red (239, 68, 68) and green (34, 197, 94)
+                              const r = Math.round(239 - (239 - 34) * ratio);
+                              const g = Math.round(68 + (197 - 68) * ratio);
+                              const b = Math.round(68 + (94 - 68) * ratio);
+                              const bgColor = `rgb(${r}, ${g}, ${b})`;
+                              
+                              return (
+                              <div
+                                key={weight}
+                                draggable={weight !== 'Deficiencies'}
+                                onDragStart={() => weight !== 'Deficiencies' && setDraggedWeight(weight)}
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  // Don't allow dropping on Deficiencies (index 0)
+                                  if (draggedWeight && draggedWeight !== weight && weight !== 'Deficiencies') {
+                                    setDragOverIndex(index);
+                                  }
+                                }}
+                                onDragLeave={() => setDragOverIndex(null)}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  // Don't allow dropping on Deficiencies position
+                                  if (draggedWeight && draggedWeight !== weight && weight !== 'Deficiencies') {
+                                    // If dragging from unused to active
+                                    if (unusedWeights.includes(draggedWeight)) {
+                                      setUnusedWeights(prev => prev.filter(w => w !== draggedWeight));
+                                      setActiveWeights(prev => {
+                                        const newWeights = [...prev];
+                                        // Insert at the drop position (which is never 0 because we prevent dropping on Deficiencies)
+                                        newWeights.splice(index, 0, draggedWeight);
+                                        return newWeights;
+                                      });
+                                    }
+                                    // If reordering within active
+                                    else if (activeWeights.includes(draggedWeight)) {
+                                      setActiveWeights(prev => {
+                                        // Keep Deficiencies at index 0
+                                        const withoutDragged = prev.filter(w => w !== draggedWeight);
+                                        // Calculate the correct insertion index
+                                        const targetIndex = withoutDragged.indexOf(weight);
+                                        withoutDragged.splice(targetIndex, 0, draggedWeight);
+                                        return withoutDragged;
+                                      });
+                                    }
+                                  }
+                                  setDragOverIndex(null);
+                                  setDraggedWeight(null);
+                                }}
+                                style={{
+                                  padding: '10px 12px',
+                                  background: 'var(--bg-secondary)',
+                                  color: 'var(--text-primary)',
+                                  border: `3px solid ${bgColor}`,
+                                  borderRadius: 'var(--radius-sm)',
+                                  cursor: weight === 'Deficiencies' ? 'not-allowed' : 'grab',
+                                  fontWeight: 600,
+                                  fontSize: 'var(--font-size-sm)',
+                                  textAlign: 'center',
+                                  userSelect: 'none',
+                                  transition: 'all 0.2s',
+                                  opacity: weight === 'Deficiencies' ? 0.7 : (draggedWeight === weight ? 0.5 : 1),
+                                  // Don't show drop indicator on Deficiencies
+                                  boxShadow: (dragOverIndex === index && weight !== 'Deficiencies') ? '0 -3px 0 0 var(--color-primary-hover)' : 'none',
+                                  marginTop: (dragOverIndex === index && weight !== 'Deficiencies') ? '3px' : '0'
+                                }}
+                                onDragEnd={() => {
+                                  setDraggedWeight(null);
+                                  setDragOverIndex(null);
+                                }}
+                                title={weight === 'Deficiencies' ? 'Deficiencies must always be active' : ''}
+                              >
+                                {weight}
+                              </div>
+                            );
+                            })
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Unused Weights Box */}
+                      <div>
+                        <div style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 600, marginBottom: '8px' }}>
+                          Unused Weights
+                        </div>
+                        <div 
+                          style={{ 
+                            minHeight: '80px',
+                            padding: '10px',
+                            background: 'var(--bg-main)',
+                            border: '2px solid var(--border-light)',
+                            borderRadius: 'var(--radius-md)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px'
+                          }}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (draggedWeight && draggedWeight !== 'Deficiencies' && activeWeights.includes(draggedWeight)) {
+                              setActiveWeights(prev => prev.filter(w => w !== draggedWeight));
+                              setUnusedWeights(prev => [...prev, draggedWeight]);
+                            }
+                            setDraggedWeight(null);
+                          }}
+                        >
+                          {unusedWeights.length === 0 ? (
+                            <div style={{ 
+                              flex: 1, 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              color: 'var(--text-secondary)',
+                              fontSize: 'var(--font-size-xs)',
+                              fontStyle: 'italic'
+                            }}>
+                              All weights active
+                            </div>
+                          ) : (
+                            unusedWeights.map(weight => (
+                              <div
+                                key={weight}
+                                draggable
+                                onDragStart={() => setDraggedWeight(weight)}
+                                style={{
+                                  padding: '10px 12px',
+                                  background: 'var(--bg-secondary)',
+                                  color: 'var(--text-secondary)',
+                                  border: '2px solid var(--border-light)',
+                                  borderRadius: 'var(--radius-sm)',
+                                  cursor: 'grab',
+                                  fontWeight: 600,
+                                  fontSize: 'var(--font-size-sm)',
+                                  textAlign: 'center',
+                                  userSelect: 'none',
+                                  transition: 'opacity 0.2s'
+                                }}
+                                onDragEnd={() => setDraggedWeight(null)}
+                              >
+                                {weight}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Vertical Divider */}
+                  <div style={{ width: '2px', background: 'var(--border-divider)', margin: '0 20px' }}></div>
+
+                  {/* Targets Section (Right - 75%) */}
+                  <div style={{ flex: '0 0 calc(75% - 42px)', display: 'flex', flexDirection: 'column' }}>
+                    <h3 style={{ color: 'var(--color-primary)', fontSize: 'var(--font-size-lg)', fontWeight: 700, marginBottom: '15px', textAlign: 'center' }}>
+                      Target Products
+                    </h3>
+                    <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', maxHeight: 'calc(90vh - 350px)' }}>
+                      {targetProducts.length === 0 ? (
+                        <div className="empty-state">No target products yet. Shift+Click a recipe box to mark it as a target.</div>
+                      ) : (
+                        targetProducts.map(target => {
+                          const node = nodes.find(n => n.id === target.recipeBoxId);
+                          if (!node) return null;
+
+                          const { recipe, machine, machineCount = 0 } = node.data || {};
+                          if (!recipe) return null;
+
+                          let cycleTime = recipe.cycle_time;
+                          if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
+                          
+                          const isTempDependent = hasTempDependentCycle(machine?.id);
+                          if (isTempDependent) {
+                            const tempInfo = TEMP_DEPENDENT_MACHINES[machine.id];
+                            if (tempInfo?.type === 'steam_input' && recipeUsesSteam(recipe)) {
+                              const inputTemp = recipe.tempDependentInputTemp ?? DEFAULT_STEAM_TEMPERATURE;
+                              cycleTime = getTempDependentCycleTime(machine.id, inputTemp, cycleTime);
+                            }
+                          }
+                          if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
+
+                          const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
+                          const flows = productionSolution?.flows?.byNode[target.recipeBoxId];
+                          const flowData = { inputs: {}, outputs: {} };
+
+                          recipe.inputs.forEach((input, idx) => {
+                            if (typeof input.quantity === 'number') {
+                              const ratePerMachine = isMineshaftDrill ? input.quantity : input.quantity / cycleTime;
+                              const totalRate = ratePerMachine * machineCount;
+                              const connectedFlow = flows?.inputFlows[idx]?.connected || 0;
+                              flowData.inputs[idx] = { totalRate, connectedFlow, deficiency: Math.max(0, totalRate - connectedFlow) };
+                            }
+                          });
+
+                          recipe.outputs.forEach((output, idx) => {
+                            const quantity = output.quantity;
+                            if (typeof quantity === 'number') {
+                              const ratePerMachine = isMineshaftDrill ? quantity : quantity / cycleTime;
+                              const totalRate = ratePerMachine * machineCount;
+                              const connectedFlow = flows?.outputFlows[idx]?.connected || 0;
+                              flowData.outputs[idx] = { totalRate, connectedFlow, excess: Math.max(0, totalRate - connectedFlow) };
+                            }
+                          });
+
+                          return (
+                            <div key={target.id} style={{
+                              padding: '20px', background: 'var(--bg-main)', border: '2px solid var(--border-primary)',
+                              borderRadius: 'var(--radius-md)', marginBottom: '15px'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                                <div>
+                                  <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 600 }}>{recipe.name}</div>
+                                  <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px' }}>Machine Count: {machineCount.toFixed(4)}</div>
+                                </div>
+                                <button onClick={() => handleRemoveTarget(target.id)} className="btn btn-delete" style={{ padding: '6px 12px' }}>Remove</button>
+                              </div>
+
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', borderTop: '1px solid var(--border-divider)', paddingTop: '15px' }}>
+                                <div>
+                                  <div style={{ color: 'var(--input-text)', fontSize: '14px', fontWeight: 600, marginBottom: '12px', textAlign: 'center' }}>Inputs</div>
+                                  {recipe.inputs.map((input, idx) => {
+                                    const data = flowData.inputs[idx];
+                                    return data ? (
+                                      <TargetExcessInput
+                                        key={idx}
+                                        productName={getProductName(input.product_id, getProduct)}
+                                        connectedFlow={data.connectedFlow}
+                                        currentExcess={data.deficiency}
+                                        onTargetExcessCommit={(val) => handleUpdateTarget(target.id, 'input', idx, val)}
+                                        styleType="input"
+                                      />
+                                    ) : null;
+                                  })}
+                                </div>
+
+                                <div>
+                                  <div style={{ color: 'var(--output-text)', fontSize: '14px', fontWeight: 600, marginBottom: '12px', textAlign: 'center' }}>Outputs</div>
+                                  {recipe.outputs.map((output, idx) => {
+                                    const data = flowData.outputs[idx];
+                                    return data ? (
+                                      <TargetExcessInput
+                                        key={idx}
+                                        productName={getProductName(output.product_id, getProduct)}
+                                        connectedFlow={data.connectedFlow}
+                                        currentExcess={data.excess}
+                                        onTargetExcessCommit={(val) => handleUpdateTarget(target.id, 'output', idx, val)}
+                                        styleType="output"
+                                      />
+                                    ) : null;
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ height: 'calc(90vh - 300px)', overflowY: 'auto', overflowX: 'hidden', paddingBottom: '20px' }}>
+                  {nodes.length === 0 ? (
+                    <div className="empty-state">No recipes on canvas</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '20px' }}>
+                      {nodes.filter(node => {
+                        if (recipeTabFilter === 'all') return true;
+                        
+                        const { recipe, machineCount = 0 } = node.data || {};
+                        if (!recipe) return false;
+                        
+                        let cycleTime = recipe.cycle_time;
+                        if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
+                        
+                        const flows = productionSolution?.flows?.byNode[node.id];
+                        if (!flows) return false;
+                        
+                        const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
+                        
+                        let hasExcess = false;
+                        let hasDeficiency = false;
+                        
+                        // Check inputs for deficiency
+                        recipe.inputs.forEach((input, idx) => {
+                          if (typeof input.quantity === 'number') {
+                            const ratePerMachine = isMineshaftDrill ? input.quantity : input.quantity / cycleTime;
+                            const totalRate = ratePerMachine * machineCount;
+                            const connectedFlow = flows.inputFlows[idx]?.connected || 0;
+                            const deficiency = Math.max(0, totalRate - connectedFlow);
+                            if (deficiency > 0.001) hasDeficiency = true;
+                          }
+                        });
+                        
+                        // Check outputs for excess
+                        recipe.outputs.forEach((output, idx) => {
+                          const outputQuantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
+                          if (typeof outputQuantity === 'number') {
+                            const ratePerMachine = isMineshaftDrill ? outputQuantity : outputQuantity / cycleTime;
+                            const totalRate = ratePerMachine * machineCount;
+                            const connectedFlow = flows.outputFlows[idx]?.connected || 0;
+                            const excess = Math.max(0, totalRate - connectedFlow);
+                            if (excess > 0.001) hasExcess = true;
+                          }
+                        });
+                        
+                        if (recipeTabFilter === 'excess') return hasExcess;
+                        if (recipeTabFilter === 'deficiency') return hasDeficiency;
+                        return true;
+                      }).map(node => {
+                        const { recipe, machine, machineCount = 0, machineCountMode = 'free', cappedMachineCount } = node.data || {};
+                        if (!recipe || !machine) return null;
+
+                        let cycleTime = recipe.cycle_time;
+                        if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
+                        
+                        const isTempDependent = hasTempDependentCycle(machine?.id);
+                        if (isTempDependent) {
+                          const tempInfo = TEMP_DEPENDENT_MACHINES[machine.id];
+                          if (tempInfo?.type === 'steam_input' && recipeUsesSteam(recipe)) {
+                            const inputTemp = recipe.tempDependentInputTemp ?? DEFAULT_STEAM_TEMPERATURE;
+                            cycleTime = getTempDependentCycleTime(machine.id, inputTemp, cycleTime);
+                          }
+                        }
+
+                        const power = recipe.power_consumption;
+                        let powerDisplay = 'Variable';
+                        if (typeof power === 'number') {
+                          powerDisplay = formatPowerDisplay(power * machineCount);
+                        } else if (typeof power === 'object' && power !== null && 'max' in power) {
+                          powerDisplay = `${formatPowerDisplay(power.max * machineCount)} (max)`;
+                        }
+
+                        const pollution = typeof recipe.pollution === 'number' ? recipe.pollution * machineCount : 0;
+
+                        return (
+                          <div key={node.id} style={{
+                            padding: '15px 20px', background: 'var(--bg-main)', border: '2px solid var(--border-primary)',
+                            borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '15px'
+                          }}>
+                            {/* Recipe Info */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600, marginBottom: '4px' }}>
+                                {recipe.name}
+                              </div>
+                              <div style={{ marginBottom: '8px' }}>
+                                <div style={{
+                                  color: machine.tier === 1 ? 'var(--tier-1-color)' :
+                                         machine.tier === 2 ? 'var(--tier-2-color)' :
+                                         machine.tier === 3 ? 'var(--tier-3-color)' :
+                                         machine.tier === 4 ? 'var(--tier-4-color)' :
+                                         machine.tier === 5 ? 'var(--tier-5-color)' : 'var(--tier-5-color)',
+                                  fontSize: '13px', fontWeight: 500
+                                }}>
+                                  {machine.name}
+                                </div>
+                                <div style={{ color: 'var(--text-secondary)', fontSize: '11px', marginTop: '2px' }}>
+                                  Cost: ${metricFormat(Math.ceil(machineCount) * (typeof machine.cost === 'number' ? machine.cost : 0))}
+                                </div>
+                              </div>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                <div><span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Cycle:</span> {typeof cycleTime === 'number' ? `${cycleTime.toFixed(2)}s` : 'Variable'}</div>
+                                <div><span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Power:</span> {powerDisplay}</div>
+                                <div><span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>Pollution:</span> {pollution.toFixed(2)}%/hr</div>
+                              </div>
+                              
+                              {/* Products Section */}
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-divider)' }}>
+                                {/* Inputs */}
+                                <div>
+                                  <div style={{ color: 'var(--input-text)', fontSize: '11px', fontWeight: 600, marginBottom: '6px' }}>Inputs</div>
+                                  {recipe.inputs.map((input, idx) => {
+                                    const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
+                                    const inputQuantity = input.quantity;
+                                    const ratePerMachine = typeof inputQuantity === 'number' 
+                                      ? (isMineshaftDrill ? inputQuantity : inputQuantity / cycleTime)
+                                      : 0;
+                                    const totalRate = ratePerMachine * machineCount;
+                                    
+                                    const flows = productionSolution?.flows?.byNode[node.id];
+                                    const connectedFlow = flows?.inputFlows[idx]?.connected || 0;
+                                    const deficiency = Math.max(0, totalRate - connectedFlow);
+                                    const isDeficient = deficiency > 0.001;
+                                    
+                                    return (
+                                      <div key={idx} style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '6px', 
+                                        fontSize: '11px',
+                                        padding: '4px 6px',
+                                        background: 'var(--bg-secondary)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        marginBottom: '4px',
+                                        border: isDeficient ? '1px solid var(--delete-color)' : '1px solid var(--border-light)'
+                                      }}>
+                                        <div style={{ 
+                                          width: '8px', 
+                                          height: '8px', 
+                                          borderRadius: '50%', 
+                                          background: isDeficient ? 'var(--delete-color)' : 'var(--handle-input-supplied)',
+                                          flexShrink: 0
+                                        }} />
+                                        <div style={{ flex: 1, color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {getProductName(input.product_id, getProduct)}
+                                        </div>
+                                        <div style={{ color: 'var(--text-secondary)', fontSize: '10px', whiteSpace: 'nowrap' }}>
+                                          {typeof inputQuantity === 'number' ? metricFormat(totalRate) : 'Var'}/s
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                
+                                {/* Outputs */}
+                                <div>
+                                  <div style={{ color: 'var(--output-text)', fontSize: '11px', fontWeight: 600, marginBottom: '6px' }}>Outputs</div>
+                                  {recipe.outputs.map((output, idx) => {
+                                    const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
+                                    const outputQuantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
+                                    const ratePerMachine = typeof outputQuantity === 'number'
+                                      ? (isMineshaftDrill ? outputQuantity : outputQuantity / cycleTime)
+                                      : 0;
+                                    const totalRate = ratePerMachine * machineCount;
+                                    
+                                    const flows = productionSolution?.flows?.byNode[node.id];
+                                    const connectedFlow = flows?.outputFlows[idx]?.connected || 0;
+                                    const excess = Math.max(0, totalRate - connectedFlow);
+                                    const hasExcess = excess > 0.001;
+                                    
+                                    return (
+                                      <div key={idx} style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        gap: '6px', 
+                                        fontSize: '11px',
+                                        padding: '4px 6px',
+                                        background: 'var(--bg-secondary)',
+                                        borderRadius: 'var(--radius-sm)',
+                                        marginBottom: '4px',
+                                        border: hasExcess ? '1px solid var(--handle-output-excess)' : '1px solid var(--border-light)'
+                                      }}>
+                                        <div style={{ 
+                                          width: '8px', 
+                                          height: '8px', 
+                                          borderRadius: '50%', 
+                                          background: hasExcess ? 'var(--handle-output-excess)' : 'var(--handle-output-connected)',
+                                          flexShrink: 0
+                                        }} />
+                                        <div style={{ flex: 1, color: 'var(--text-primary)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                          {getProductName(output.product_id, getProduct)}
+                                        </div>
+                                        <div style={{ color: 'var(--text-secondary)', fontSize: '10px', whiteSpace: 'nowrap' }}>
+                                          {typeof outputQuantity === 'number' ? metricFormat(totalRate) : 'Var'}/s
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Machine Count Editor */}
+                              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600 }}>Machine Count</div>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="0.1"
+                                    value={editingRecipeMachineCounts[node.id] !== undefined ? editingRecipeMachineCounts[node.id] : machineCount.toFixed(2)}
+                                    onFocus={() => {
+                                      setEditingRecipeMachineCounts(prev => ({ ...prev, [node.id]: machineCount.toFixed(2) }));
+                                    }}
+                                    onChange={(e) => {
+                                      setEditingRecipeMachineCounts(prev => ({ ...prev, [node.id]: e.target.value }));
+                                    }}
+                                    onBlur={() => {
+                                      const val = parseFloat(editingRecipeMachineCounts[node.id]);
+                                      if (!isNaN(val) && val >= 0) {
+                                        updateNodeData(node.id, data => ({ ...data, machineCount: val }));
+                                        triggerRecalculation('machineCount');
+                                      }
+                                      setEditingRecipeMachineCounts(prev => {
+                                        const newState = { ...prev };
+                                        delete newState[node.id];
+                                        return newState;
+                                      });
+                                    }}
+                                    onKeyPress={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.target.blur();
+                                      }
+                                    }}
+                                    className="input"
+                                    style={{ width: '100px', padding: '8px', fontSize: '13px', textAlign: 'center' }}
+                                  />
+                                </div>
+
+                              {/* Lock/Cap/Free Button */}
+                              <button
+                                onClick={() => {
+                                  const modes = ['free', 'capped', 'locked'];
+                                  const currentIndex = modes.indexOf(machineCountMode);
+                                  const nextIndex = (currentIndex + 1) % modes.length;
+                                  const nextMode = modes[nextIndex];
+                                  
+                                  setNodes(nds => nds.map(n => {
+                                    if (n.id !== node.id) return n;
+                                    return {
+                                      ...n,
+                                      data: {
+                                        ...n.data,
+                                        machineCountMode: nextMode,
+                                        cappedMachineCount: nextMode === 'free' ? undefined : machineCount
+                                      }
+                                    };
+                                  }));
+                                }}
+                                className="btn btn-secondary"
+                                style={{
+                                  minWidth: '70px',
+                                  padding: '8px',
+                                  fontWeight: 600,
+                                  fontSize: '12px',
+                                  background: machineCountMode === 'locked' ? '#ef4444' :
+                                             machineCountMode === 'capped' ? '#f59e0b' : 'var(--bg-secondary)',
+                                  color: machineCountMode === 'free' ? 'var(--text-primary)' : '#fff',
+                                  border: machineCountMode === 'free' ? '2px solid var(--border-primary)' : 'none'
+                                }}
+                                title={machineCountMode === 'free' ? 'Free: LP/suggestions can change' :
+                                       machineCountMode === 'capped' ? `Capped: Max ${cappedMachineCount?.toFixed(2) || machineCount.toFixed(2)}` :
+                                       'Locked: Cannot be changed'}
+                              >
+                                {machineCountMode === 'free' ? '🔓 Free' :
+                                 machineCountMode === 'capped' ? '📊 Cap' : '🔒 Lock'}
+                              </button>
+
+                              {/* Locate Button */}
+                              <button
+                                onClick={() => {
+                                  if (reactFlowInstance.current) {
+                                    reactFlowInstance.current.fitView({
+                                      nodes: [{ id: node.id }],
+                                      padding: 0.5,
+                                      duration: 500
+                                    });
+                                    setShowRecipesModal(false);
+                                  }
+                                }}
+                                className="btn btn-primary"
+                                style={{ minWidth: '80px', padding: '8px 12px', fontSize: '12px' }}
+                                title="Locate this recipe on canvas"
+                              >
+                                📍 Locate
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <button onClick={() => setShowRecipesModal(false)} className="btn btn-secondary">Close</button>
           </div>
         </div>
       )}

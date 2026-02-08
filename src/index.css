@@ -1099,7 +1099,7 @@ input[type="number"] {
 .stats-grid {
   display: flex;
   flex-direction: column;
-  gap: 8px; /* Reduced from 12px */
+  gap: 12px;
 }
 
 .stat-item {
