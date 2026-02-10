@@ -2187,7 +2187,7 @@ function App() {
         multiSelectionKeyCode={null}
         panActivationKeyCode={null}
         zoomActivationKeyCode={null}
-        connectionLineType={edgeSettings.edgePath === 'straight' ? 'straight' : edgeSettings.edgePath === 'orthogonal' ? 'step' : 'default'}
+        connectionLineType={edgeSettings.edgePath === 'straight' ? 'straight' : edgeSettings.edgePath === 'orthogonal' ? 'smoothstep' : 'default'}
         connectionLineStyle={{
           stroke: getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim(),
           strokeWidth: 2,

@@ -43,10 +43,11 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     ints: {}
   };
   
-  // Create variables for each node's machine count
+ // Create variables for each node's machine count
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     const varName = `m_${nodeId}`;
+    const ceilingVarName = `mc_${nodeId}`; // ceiling of machine count for model count penalty
     const currentCount = node.machineCount || 0;
     const machineCountMode = node.machineCountMode || 'free';
     const cappedCount = node.cappedMachineCount;
@@ -76,13 +77,24 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     const inputOutputFactor = inputOutputCount * 2;
     const modelCountPerMachine = 1 + powerFactor + inputOutputFactor;
     
-    // Weighted contribution to objective
+    // Create continuous machine count variable (power, pollution, cost use actual fractional count)
     model.variables[varName] = {
-      total_cost: (MODEL_COUNT_WEIGHT * modelCountPerMachine) + 
-                  (POWER_WEIGHT * powerValue) + 
+      total_cost: (POWER_WEIGHT * powerValue) + 
                   (POLLUTION_WEIGHT * pollutionValue) + 
                   (COST_WEIGHT * machineCost)
     };
+    
+    // Create integer ceiling variable for model count (minimization naturally gives ceiling)
+    model.variables[ceilingVarName] = {
+      total_cost: MODEL_COUNT_WEIGHT * modelCountPerMachine
+    };
+    model.ints[ceilingVarName] = 1;
+    
+    // Constraint: ceiling >= machine count (mc_nodeId >= m_nodeId)
+    const ceilingConstraintName = `ceiling_${nodeId}`;
+    model.constraints[ceilingConstraintName] = { min: 0 };
+    model.variables[ceilingVarName][ceilingConstraintName] = 1;
+    model.variables[varName][ceilingConstraintName] = -1;
     
     // Add non-negativity constraint (allow 0, but not negative)
     const nonNegConstraintName = `nonneg_${nodeId}`;
@@ -660,9 +672,57 @@ const solveFullGraph = (graph, targetNodeIds = new Set()) => {
   }
   
   const model = buildFullGraphModel(graph, targetNodeIds);
+  
+  // Log model statistics before solving
+  const numVariables = Object.keys(model.variables).length;
+  const numConstraints = Object.keys(model.constraints).length;
+  const numIntegerVars = Object.keys(model.ints).length;
+  const numContinuousVars = numVariables - numIntegerVars;
+  const numNodes = Object.keys(graph.nodes).length;
+  const numConnections = graph.connections.length;
+  
+  console.log('%c[LP Solver] Model Statistics:', 'color: #3498db; font-weight: bold');
+  console.log(`  Graph: ${numNodes} nodes, ${numConnections} connections`);
+  console.log(`  Variables: ${numVariables} total (${numContinuousVars} continuous, ${numIntegerVars} integer)`);
+  console.log(`  Constraints: ${numConstraints}`);
+  
+  // Breakdown of variable types
+  let machineVars = 0;
+  let ceilingVars = 0;
+  let flowVars = 0;
+  let excessVars = 0;
+  let excessIndicatorVars = 0;
+  let deficitVars = 0;
+  let deficitIndicatorVars = 0;
+  
+  Object.keys(model.variables).forEach(varName => {
+    if (varName.startsWith('m_') && !varName.startsWith('mc_')) machineVars++;
+    else if (varName.startsWith('mc_')) ceilingVars++;
+    else if (varName.startsWith('f_')) flowVars++;
+    else if (varName.startsWith('excess_') && !varName.includes('indicator')) excessVars++;
+    else if (varName.startsWith('excess_indicator_')) excessIndicatorVars++;
+    else if (varName.startsWith('deficit_') && !varName.includes('indicator')) deficitVars++;
+    else if (varName.startsWith('deficit_indicator_')) deficitIndicatorVars++;
+  });
+  
+  console.log('  Variable breakdown:');
+  console.log(`    Machine counts: ${machineVars}`);
+  console.log(`    Ceiling vars (model count): ${ceilingVars}`);
+  console.log(`    Flow vars: ${flowVars}`);
+  console.log(`    Excess vars: ${excessVars}`);
+  console.log(`    Excess indicators: ${excessIndicatorVars}`);
+  console.log(`    Deficit vars: ${deficitVars}`);
+  console.log(`    Deficit indicators: ${deficitIndicatorVars}`);
+  
+  // Solve the model
+  console.log('%c[LP Solver] Solving...', 'color: #f39c12; font-weight: bold');
+  const solveStartTime = performance.now();
   const result = solver.Solve(model);
+  const solveEndTime = performance.now();
+  const solveTime = solveEndTime - solveStartTime;
   
   if (result.feasible) {
+    console.log(`%c[LP Solver] Solution found in ${solveTime.toFixed(2)}ms`, 'color: #2ecc71; font-weight: bold');
     console.log('%c[LP Solver] Solution Found', 'color: #2ecc71; font-weight: bold');
     
     // Calculate actual objective value manually
