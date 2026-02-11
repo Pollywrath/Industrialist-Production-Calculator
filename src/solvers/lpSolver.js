@@ -21,9 +21,7 @@ const DEFICIENCY_AMOUNT_WEIGHT = 1e12;     // 1 trillion - amount of each defici
 
 // Tier 2: Model count and excess (should dominate tier 3)
 const MODEL_COUNT_WEIGHT = 1e9;            // 1 billion - model count per machine (range: 3-20, uses ceiling)
-const CONNECTED_EXCESS_COUNT_WEIGHT = 1e6; // 1 million - count of connected excess outputs (range: 1-3)
 const CONNECTED_EXCESS_AMOUNT_WEIGHT = 1e3;// 1 thousand - amount of connected excess (range: varies)
-const UNCONNECTED_EXCESS_COUNT_WEIGHT = 1e5;// 100 thousand - count of unconnected excess (range: 1-3)
 const UNCONNECTED_EXCESS_AMOUNT_WEIGHT = 1e2;// 100 - amount of unconnected excess (range: varies)
 
 // Tier 3: Resource optimization (lowest priority)
@@ -132,31 +130,8 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     model.variables[flowVar][flowNonNegConstraintName] = 1;
   });
   
-  // Create excess indicator variables (binary) to count number of outputs with excess
-  Object.keys(graph.nodes).forEach(nodeId => {
-    const node = graph.nodes[nodeId];
-    
-    node.outputs.forEach((output, outputIndex) => {
-      const excessIndicatorVar = `excess_indicator_${nodeId}_${outputIndex}`;
-      
-      // Determine if this is connected or unconnected to set appropriate count weight
-      const outgoingConnections = graph.connections.filter(
-        c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
-      );
-      const hasConnections = outgoingConnections.length > 0;
-      const excessCountWeight = hasConnections ? CONNECTED_EXCESS_COUNT_WEIGHT : UNCONNECTED_EXCESS_COUNT_WEIGHT;
-      
-      model.variables[excessIndicatorVar] = {
-        total_cost: excessCountWeight
-      };
-      model.ints[excessIndicatorVar] = 1;
-      
-      // Add constraint to make indicator binary (0 <= indicator <= 1)
-      const binaryConstraintName = `binary_${nodeId}_${outputIndex}`;
-      model.constraints[binaryConstraintName] = { min: 0, max: 1 };
-      model.variables[excessIndicatorVar][binaryConstraintName] = 1;
-    });
-  });
+  // Excess is now tracked only by amount (continuous), not by count (binary indicators)
+  // This reduces the number of integer variables and speeds up the solver
   
   // Flow conservation constraints for each node
   Object.keys(graph.nodes).forEach(nodeId => {
@@ -167,7 +142,6 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     node.outputs.forEach((output, outputIndex) => {
       const constraintName = `flow_out_${nodeId}_${outputIndex}`;
       const slackVar = `excess_${nodeId}_${outputIndex}`;
-      const excessIndicatorVar = `excess_indicator_${nodeId}_${outputIndex}`;
       
       // Find all connections from this output
       const outgoingConnections = graph.connections.filter(
@@ -186,10 +160,6 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
         [constraintName]: -1
       };
       
-      // Link slack to indicator
-      const linkConstraintName = `link_excess_${nodeId}_${outputIndex}`;
-      model.constraints[linkConstraintName] = { max: 0 };
-      
       // Get machine count variable
       const machineVar = `m_${nodeId}`;
       
@@ -201,13 +171,6 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       if (typeof quantity !== 'number') return;
       
       const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
-      
-      // M = maximum possible production
-      const M = ratePerMachine * 10000;
-      
-      // Constraint: excess - M * indicator <= 0
-      model.variables[slackVar][linkConstraintName] = 1;
-      model.variables[excessIndicatorVar][linkConstraintName] = -M;
       
       // Constraint: production_capacity = outgoing_flows + excess_slack
       model.constraints[constraintName] = { equal: 0 };
@@ -691,7 +654,6 @@ const solveFullGraph = (graph, targetNodeIds = new Set()) => {
   let ceilingVars = 0;
   let flowVars = 0;
   let excessVars = 0;
-  let excessIndicatorVars = 0;
   let deficitVars = 0;
   let deficitIndicatorVars = 0;
   
@@ -699,8 +661,7 @@ const solveFullGraph = (graph, targetNodeIds = new Set()) => {
     if (varName.startsWith('m_') && !varName.startsWith('mc_')) machineVars++;
     else if (varName.startsWith('mc_')) ceilingVars++;
     else if (varName.startsWith('f_')) flowVars++;
-    else if (varName.startsWith('excess_') && !varName.includes('indicator')) excessVars++;
-    else if (varName.startsWith('excess_indicator_')) excessIndicatorVars++;
+    else if (varName.startsWith('excess_')) excessVars++;
     else if (varName.startsWith('deficit_') && !varName.includes('indicator')) deficitVars++;
     else if (varName.startsWith('deficit_indicator_')) deficitIndicatorVars++;
   });
@@ -709,8 +670,7 @@ const solveFullGraph = (graph, targetNodeIds = new Set()) => {
   console.log(`    Machine counts: ${machineVars}`);
   console.log(`    Ceiling vars (model count): ${ceilingVars}`);
   console.log(`    Flow vars: ${flowVars}`);
-  console.log(`    Excess vars: ${excessVars}`);
-  console.log(`    Excess indicators: ${excessIndicatorVars}`);
+  console.log(`    Excess vars (amount only): ${excessVars}`);
   console.log(`    Deficit vars: ${deficitVars}`);
   console.log(`    Deficit indicators: ${deficitIndicatorVars}`);
   
@@ -738,7 +698,6 @@ const solveFullGraph = (graph, targetNodeIds = new Set()) => {
     
     let totalDeficitCount = 0;
     let totalDeficitAmount = 0;
-    let totalExcessCount = 0;
     let totalConnectedExcess = 0;
     let totalUnconnectedExcess = 0;
     let totalModelCount = 0;
@@ -761,24 +720,7 @@ const solveFullGraph = (graph, targetNodeIds = new Set()) => {
           deficiencyAmountCost += value * DEFICIENCY_AMOUNT_WEIGHT;
         }
       }
-      if (key.startsWith('excess_indicator_')) {
-        const value = result[key] || 0;
-        if (value > EPSILON) {
-          const parts = key.split('_');
-          const nodeId = parts.slice(2, -1).join('_');
-          const outputIndex = parseInt(parts[parts.length - 1]);
-          
-          const hasConnections = graph.connections.some(
-            c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
-          );
-          
-          const countWeight = hasConnections ? CONNECTED_EXCESS_COUNT_WEIGHT : UNCONNECTED_EXCESS_COUNT_WEIGHT;
-          
-          totalExcessCount += value;
-          excessCountCost += value * countWeight;
-        }
-      }
-      if (key.startsWith('excess_') && !key.includes('indicator')) {
+      if (key.startsWith('excess_')) {
         const value = result[key] || 0;
         
         if (value > EPSILON) {
@@ -852,9 +794,8 @@ const solveFullGraph = (graph, targetNodeIds = new Set()) => {
     console.log('  Cost Breakdown:');
     console.log(`    Deficiency count: ${totalDeficitCount} inputs (cost: ${deficiencyCountCost.toExponential(2)})`);
     console.log(`    Deficiency amount: ${totalDeficitAmount.toFixed(4)} (cost: ${deficiencyAmountCost.toExponential(2)})`);
-    console.log(`    Excess count: ${totalExcessCount} outputs (cost: ${excessCountCost.toExponential(2)})`);
-    console.log(`    Connected excess: ${totalConnectedExcess.toFixed(4)} (cost: ${(totalConnectedExcess * CONNECTED_EXCESS_AMOUNT_WEIGHT).toExponential(2)})`);
-    console.log(`    Unconnected excess: ${totalUnconnectedExcess.toFixed(4)} (cost: ${(totalUnconnectedExcess * UNCONNECTED_EXCESS_AMOUNT_WEIGHT).toExponential(2)})`);
+    console.log(`    Connected excess amount: ${totalConnectedExcess.toFixed(4)} (cost: ${(totalConnectedExcess * CONNECTED_EXCESS_AMOUNT_WEIGHT).toExponential(2)})`);
+    console.log(`    Unconnected excess amount: ${totalUnconnectedExcess.toFixed(4)} (cost: ${(totalUnconnectedExcess * UNCONNECTED_EXCESS_AMOUNT_WEIGHT).toExponential(2)})`);
     console.log(`    Model count: ${totalModelCount.toFixed(0)} (cost: ${modelCountCost.toExponential(2)})`);
     console.log(`    Power: ${totalPower.toFixed(0)} W (cost: ${powerCost.toFixed(2)})`);
     console.log(`    Pollution: ${totalPollution.toFixed(2)} %/hr (cost: ${pollutionCost.toFixed(2)})`);

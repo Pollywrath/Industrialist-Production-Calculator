@@ -1673,7 +1673,11 @@ function App() {
       return;
     }
     
-    let result = computeMachines(nodes, edges, targetProducts, { allowDeficiency: false });
+    let result = computeMachines(nodes, edges, targetProducts, { 
+      allowDeficiency: false,
+      activeWeights,
+      unusedWeights
+    });
     
     if (!result.success && result.hasDeficiency) {
       const shouldContinue = window.confirm(
@@ -1681,7 +1685,11 @@ function App() {
       );
       
       if (shouldContinue) {
-        result = computeMachines(nodes, edges, targetProducts, { allowDeficiency: true });
+        result = computeMachines(nodes, edges, targetProducts, { 
+          allowDeficiency: true,
+          activeWeights,
+          unusedWeights
+        });
       } else {
         return;
       }
