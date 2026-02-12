@@ -1,100 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { getSaves, saveCurrent, loadSave, deleteSave, renameSave, getCurrentSaveName } from '../utils/saveDB';
 
-const SAVES_KEY = 'industrialist_saves';
-const CURRENT_SAVE_KEY = 'industrialist_current_save_id';
-
-// Utility functions for save management
-export const getSaves = () => {
-  try {
-    const saves = localStorage.getItem(SAVES_KEY);
-    return saves ? JSON.parse(saves) : {};
-  } catch (error) {
-    console.error('Error loading saves:', error);
-    return {};
-  }
-};
-
-export const saveCurrent = (name, canvasData) => {
-  try {
-    const saves = getSaves();
-    const id = `save_${Date.now()}`;
-    const save = {
-      id,
-      name: name || 'Untitled Save',
-      timestamp: Date.now(),
-      nodeCount: canvasData.nodes?.length || 0,
-      data: canvasData
-    };
-    saves[id] = save;
-    localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
-    localStorage.setItem(CURRENT_SAVE_KEY, id);
-    return save;
-  } catch (error) {
-    console.error('Error saving canvas:', error);
-    return null;
-  }
-};
-
-export const loadSave = (saveId) => {
-  try {
-    const saves = getSaves();
-    const save = saves[saveId];
-    if (save) {
-      localStorage.setItem(CURRENT_SAVE_KEY, saveId);
-      return save.data;
-    }
-    return null;
-  } catch (error) {
-    console.error('Error loading save:', error);
-    return null;
-  }
-};
-
-export const deleteSave = (saveId) => {
-  try {
-    const saves = getSaves();
-    delete saves[saveId];
-    localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
-    
-    // Clear current save if it was deleted
-    const currentSaveId = localStorage.getItem(CURRENT_SAVE_KEY);
-    if (currentSaveId === saveId) {
-      localStorage.removeItem(CURRENT_SAVE_KEY);
-    }
-    return true;
-  } catch (error) {
-    console.error('Error deleting save:', error);
-    return false;
-  }
-};
-
-export const renameSave = (saveId, newName) => {
-  try {
-    const saves = getSaves();
-    if (saves[saveId]) {
-      saves[saveId].name = newName;
-      localStorage.setItem(SAVES_KEY, JSON.stringify(saves));
-      return true;
-    }
-    return false;
-  } catch (error) {
-    console.error('Error renaming save:', error);
-    return false;
-  }
-};
-
-export const getCurrentSaveName = () => {
-  try {
-    const currentSaveId = localStorage.getItem(CURRENT_SAVE_KEY);
-    if (currentSaveId) {
-      const saves = getSaves();
-      return saves[currentSaveId]?.name || 'Untitled';
-    }
-    return 'Untitled';
-  } catch (error) {
-    return 'Untitled';
-  }
-};
+// Re-export for backwards compatibility (now async)
+export { getSaves, saveCurrent, loadSave, deleteSave, renameSave, getCurrentSaveName };
 
 const SaveManager = ({ onClose, onLoad, currentCanvas, onImport, onExportCanvas }) => {
   const [saves, setSaves] = useState({});
@@ -102,58 +10,92 @@ const SaveManager = ({ onClose, onLoad, currentCanvas, onImport, onExportCanvas 
   const [renamingId, setRenamingId] = useState(null);
   const [renameValue, setRenameValue] = useState('');
   const [currentSaveId, setCurrentSaveId] = useState(null);
+  const [currentSaveNameDisplay, setCurrentSaveNameDisplay] = useState('Untitled');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadSaves();
   }, []);
 
-  const loadSaves = () => {
-    const loadedSaves = getSaves();
-    setSaves(loadedSaves);
-    const currentId = localStorage.getItem(CURRENT_SAVE_KEY);
-    setCurrentSaveId(currentId);
+  const loadSaves = async () => {
+    setIsLoading(true);
+    try {
+      const loadedSaves = await getSaves();
+      setSaves(loadedSaves);
+      const currentId = localStorage.getItem('industrialist_current_save_id');
+      setCurrentSaveId(currentId);
+      const currentName = await getCurrentSaveName();
+      setCurrentSaveNameDisplay(currentName);
+    } catch (error) {
+      console.error('Error loading saves:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!saveName.trim()) {
       alert('Please enter a name for your save');
       return;
     }
 
-    const save = saveCurrent(saveName.trim(), currentCanvas);
-    if (save) {
-      setSaveName('');
-      loadSaves();
-      alert(`Canvas saved as "${save.name}"`);
-    } else {
+    setIsSaving(true);
+    try {
+      const save = await saveCurrent(saveName.trim(), currentCanvas);
+      if (save) {
+        setSaveName('');
+        await loadSaves();
+        alert(`Canvas saved as "${save.name}"`);
+      } else {
+        alert('Failed to save canvas');
+      }
+    } catch (error) {
+      console.error('Error saving:', error);
       alert('Failed to save canvas');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleLoad = (saveId) => {
+  const handleLoad = async (saveId) => {
     if (!window.confirm('Load this save? Your current canvas will be replaced.')) {
       return;
     }
 
-    const saveData = loadSave(saveId);
-    if (saveData) {
-      setCurrentSaveId(saveId);
-      onLoad(saveData);
-      onClose();
-    } else {
+    setIsLoading(true);
+    try {
+      const saveData = await loadSave(saveId);
+      if (saveData) {
+        setCurrentSaveId(saveId);
+        onLoad(saveData);
+        onClose();
+      } else {
+        alert('Failed to load save');
+      }
+    } catch (error) {
+      console.error('Error loading:', error);
       alert('Failed to load save');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleDelete = (saveId) => {
+  const handleDelete = async (saveId) => {
     const save = saves[saveId];
     if (!window.confirm(`Delete save "${save.name}"? This cannot be undone.`)) {
       return;
     }
 
-    if (deleteSave(saveId)) {
-      loadSaves();
-    } else {
+    try {
+      const success = await deleteSave(saveId);
+      if (success) {
+        await loadSaves();
+      } else {
+        alert('Failed to delete save');
+      }
+    } catch (error) {
+      console.error('Error deleting:', error);
       alert('Failed to delete save');
     }
   };
@@ -163,17 +105,23 @@ const SaveManager = ({ onClose, onLoad, currentCanvas, onImport, onExportCanvas 
     setRenameValue(saves[saveId].name);
   };
 
-  const handleRenameSubmit = (saveId) => {
+  const handleRenameSubmit = async (saveId) => {
     if (!renameValue.trim()) {
       alert('Name cannot be empty');
       return;
     }
 
-    if (renameSave(saveId, renameValue.trim())) {
-      loadSaves();
-      setRenamingId(null);
-      setRenameValue('');
-    } else {
+    try {
+      const success = await renameSave(saveId, renameValue.trim());
+      if (success) {
+        await loadSaves();
+        setRenamingId(null);
+        setRenameValue('');
+      } else {
+        alert('Failed to rename save');
+      }
+    } catch (error) {
+      console.error('Error renaming:', error);
       alert('Failed to rename save');
     }
   };
@@ -204,7 +152,7 @@ const SaveManager = ({ onClose, onLoad, currentCanvas, onImport, onExportCanvas 
 
         <div style={{ marginBottom: '20px', padding: '15px', background: 'var(--bg-main)', borderRadius: 'var(--radius-md)', border: '2px solid var(--border-divider)' }}>
           <div style={{ color: 'var(--text-secondary)', fontSize: '13px', marginBottom: '10px' }}>
-            Current Canvas: <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{getCurrentSaveName()}</span>
+            Current Canvas: <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>{currentSaveNameDisplay}</span>
           </div>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
             <input
@@ -216,8 +164,8 @@ const SaveManager = ({ onClose, onLoad, currentCanvas, onImport, onExportCanvas 
               className="input"
               style={{ flex: 1 }}
             />
-            <button onClick={handleSave} className="btn btn-primary" style={{ minWidth: '120px' }}>
-              Save Current
+            <button onClick={handleSave} className="btn btn-primary" style={{ minWidth: '120px' }} disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save Current'}
             </button>
           </div>
           
@@ -258,7 +206,9 @@ const SaveManager = ({ onClose, onLoad, currentCanvas, onImport, onExportCanvas 
             Saved Canvases ({savesList.length})
           </h3>
 
-          {savesList.length === 0 ? (
+          {isLoading ? (
+            <div className="empty-state">Loading saves...</div>
+          ) : savesList.length === 0 ? (
             <div className="empty-state">No saves yet. Save your current canvas to get started.</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

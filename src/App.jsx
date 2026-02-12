@@ -6,6 +6,7 @@ import CustomEdge from './components/CustomEdge';
 import ThemeEditor, { applyTheme, loadTheme } from './components/ThemeEditor';
 import HelpModal from './components/HelpModal';
 import SaveManager from './components/SaveManager';
+import { initializeSaveSystem } from './utils/saveDB';
 import DataManager from './components/DataManager';
 import { initializeCustomData, getCustomProducts, getCustomMachines, getCustomRecipes, restoreDefaultProducts, restoreDefaultMachines, restoreDefaultRecipes } from './utils/dataUtilities';
 import { products, machines, recipes, getMachine, getProduct, updateProducts, updateMachines, 
@@ -240,6 +241,11 @@ function App() {
   }), [isMobile, mobileActionMode]);
 
   useEffect(() => {
+    // Initialize IndexedDB and migrate legacy saves
+    initializeSaveSystem().catch(error => {
+      console.error('Failed to initialize save system:', error);
+    });
+    
     const savedState = loadCanvasState();
     if (!savedState?.nodes) return;
     
@@ -255,6 +261,7 @@ function App() {
         data: {
           ...node.data,
           recipe,
+          machine,
           machineCount: node.data.machineCount ?? 1,
           displayMode,
           machineDisplayMode,
@@ -320,13 +327,30 @@ function App() {
     });
   }, [edgeSettings, setEdges]);
 
+  const cleanNodeForSave = useCallback((node) => ({
+    id: node.id,
+    type: node.type,
+    position: node.position,
+    sourcePosition: node.sourcePosition,
+    targetPosition: node.targetPosition,
+    data: {
+      recipe: node.data.recipe,
+      machineCount: node.data.machineCount,
+      machineCountMode: node.data.machineCountMode,
+      cappedMachineCount: node.data.cappedMachineCount,
+      isTarget: node.data.isTarget,
+      leftHandles: node.data.leftHandles,
+      rightHandles: node.data.rightHandles,
+    }
+  }), []);
+
   useEffect(() => {
     const stateToSave = {
-      nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes,
+      nodes: nodes.map(cleanNodeForSave), edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes,
       lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig
     };
     localStorage.setItem('industrialist_canvas_state', JSON.stringify(stateToSave));
-  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig]);
+  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig, cleanNodeForSave]);
 
   const calculateTotalStats = useCallback(() => {
     let totalPower = 0, totalPollution = 0, totalModelCount = 0;
@@ -1760,6 +1784,23 @@ function App() {
     }
   }, [showRecipeSelector, selectorMode, selectedProduct, selectedMachine, autoConnectTarget, nodes, recipeFilter]);
 
+  const clearAll = useCallback(() => {
+    setNodes([]);
+    setEdges([]);
+    setNodeId(0);
+    setTargetProducts([]);
+    setTargetIdCounter(0);
+    setSoldProducts({});
+    setLastDrillConfig(null);
+    setLastAssemblerConfig(null);
+    setLastTreeFarmConfig(null);
+    setLastFireboxConfig(null);
+    setLastWasteFacilityConfig(null);
+    clearFlowCache();
+  }, [setNodes, setEdges, setNodeId, setTargetProducts, setTargetIdCounter, setSoldProducts,
+      setLastDrillConfig, setLastAssemblerConfig, setLastTreeFarmConfig, setLastFireboxConfig,
+      setLastWasteFacilityConfig]);
+
   const handleCanvasOnlyImport = useCallback(() => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -1819,6 +1860,7 @@ function App() {
               data: {
                 ...node.data,
                 recipe,
+                machine,
                 machineCount: node.data.machineCount ?? 1,
                 displayMode,
                 machineDisplayMode,
@@ -1830,21 +1872,23 @@ function App() {
             };
           });
           
-          setNodes(restoredNodes);
-          setEdges(imported.canvas.edges || []);
-          setTargetProducts(imported.canvas.targetProducts || []);
-          setSoldProducts(imported.canvas.soldProducts || {});
-          setFavoriteRecipes(imported.canvas.favoriteRecipes || []);
-          setLastDrillConfig(imported.canvas.lastDrillConfig || null);
-          setLastAssemblerConfig(imported.canvas.lastAssemblerConfig || null);
-          setLastTreeFarmConfig(imported.canvas.lastTreeFarmConfig || null);
-          setLastFireboxConfig(imported.canvas.lastFireboxConfig || null);
-          setLastWasteFacilityConfig(imported.canvas.lastWasteFacilityConfig || null);
-          setNodeId(imported.canvas.nodeId || 0);
-          setTargetIdCounter(imported.canvas.targetIdCounter || 0);
-          
-          clearFlowCache();
-          triggerRecalculation('node');
+          clearAll();
+          setTimeout(() => {
+            setNodes(restoredNodes);
+            setEdges(imported.canvas.edges || []);
+            setTargetProducts(imported.canvas.targetProducts || []);
+            setSoldProducts(imported.canvas.soldProducts || {});
+            setFavoriteRecipes(imported.canvas.favoriteRecipes || []);
+            setLastDrillConfig(imported.canvas.lastDrillConfig || null);
+            setLastAssemblerConfig(imported.canvas.lastAssemblerConfig || null);
+            setLastTreeFarmConfig(imported.canvas.lastTreeFarmConfig || null);
+            setLastFireboxConfig(imported.canvas.lastFireboxConfig || null);
+            setLastWasteFacilityConfig(imported.canvas.lastWasteFacilityConfig || null);
+            setNodeId(imported.canvas.nodeId || 0);
+            setTargetIdCounter(imported.canvas.targetIdCounter || 0);
+            clearFlowCache();
+            triggerRecalculation('node');
+          }, 50);
           alert('Canvas imported successfully!');
         } catch (error) {
           alert(`Import failed: ${error.message}`);
@@ -1853,7 +1897,7 @@ function App() {
       reader.readAsText(file);
     };
     input.click();
-  }, [displayMode, machineDisplayMode, globalPollution, createNodeCallbacks, setNodes, setEdges, setTargetProducts, setSoldProducts, setFavoriteRecipes, setLastDrillConfig, setLastAssemblerConfig, setLastTreeFarmConfig, setLastFireboxConfig, setLastWasteFacilityConfig, setNodeId, setTargetIdCounter, triggerRecalculation]);
+  }, [displayMode, machineDisplayMode, globalPollution, createNodeCallbacks, clearAll, setNodes, setEdges, setTargetProducts, setSoldProducts, setFavoriteRecipes, setLastDrillConfig, setLastAssemblerConfig, setLastTreeFarmConfig, setLastFireboxConfig, setLastWasteFacilityConfig, setNodeId, setTargetIdCounter, triggerRecalculation]);
   
   const processImport = useCallback((event) => {
     const file = event.target.files?.[0];
@@ -1938,6 +1982,7 @@ function App() {
               data: {
                 ...node.data,
                 recipe,
+                machine,
                 machineCount: node.data.machineCount ?? 1,
                 displayMode,
                 machineDisplayMode,
@@ -1949,21 +1994,23 @@ function App() {
             };
           });
           
-          setNodes(restoredNodes);
-          setEdges(imported.canvas.edges || []);
-          setTargetProducts(imported.canvas.targetProducts || []);
-          setSoldProducts(imported.canvas.soldProducts || {});
-          setFavoriteRecipes(imported.canvas.favoriteRecipes || []);
-          setLastDrillConfig(imported.canvas.lastDrillConfig || null);
-          setLastAssemblerConfig(imported.canvas.lastAssemblerConfig || null);
-          setLastTreeFarmConfig(imported.canvas.lastTreeFarmConfig || null);
-          setLastFireboxConfig(imported.canvas.lastFireboxConfig || null);
-          setLastWasteFacilityConfig(imported.canvas.lastWasteFacilityConfig || null);
-          setNodeId(imported.canvas.nodeId || 0);
-          setTargetIdCounter(imported.canvas.targetIdCounter || 0);
-          
-          clearFlowCache();
-          triggerRecalculation('node');
+          clearAll();
+          setTimeout(() => {
+            setNodes(restoredNodes);
+            setEdges(imported.canvas.edges || []);
+            setTargetProducts(imported.canvas.targetProducts || []);
+            setSoldProducts(imported.canvas.soldProducts || {});
+            setFavoriteRecipes(imported.canvas.favoriteRecipes || []);
+            setLastDrillConfig(imported.canvas.lastDrillConfig || null);
+            setLastAssemblerConfig(imported.canvas.lastAssemblerConfig || null);
+            setLastTreeFarmConfig(imported.canvas.lastTreeFarmConfig || null);
+            setLastFireboxConfig(imported.canvas.lastFireboxConfig || null);
+            setLastWasteFacilityConfig(imported.canvas.lastWasteFacilityConfig || null);
+            setNodeId(imported.canvas.nodeId || 0);
+            setTargetIdCounter(imported.canvas.targetIdCounter || 0);
+            clearFlowCache();
+            triggerRecalculation('node');
+          }, 50);
           alert('Canvas import successful!');
         }
       } catch (error) {
@@ -1972,7 +2019,7 @@ function App() {
     };
     reader.readAsText(file);
     event.target.value = '';
-  }, [displayMode, machineDisplayMode, globalPollution, createNodeCallbacks, setNodes, setEdges, setTargetProducts, setSoldProducts, setFavoriteRecipes, setLastDrillConfig, setLastAssemblerConfig, setLastTreeFarmConfig, setLastFireboxConfig, setNodeId, setTargetIdCounter]);
+  }, [displayMode, machineDisplayMode, globalPollution, createNodeCallbacks, clearAll, setNodes, setEdges, setTargetProducts, setSoldProducts, setFavoriteRecipes, setLastDrillConfig, setLastAssemblerConfig, setLastTreeFarmConfig, setNodeId, setTargetIdCounter]);
 
   const handleExportData = useCallback(() => {
     const blob = new Blob([JSON.stringify({ products, machines, recipes }, null, 2)], { type: 'application/json' });
@@ -1985,8 +2032,7 @@ function App() {
   }, [products, machines, recipes]);
 
   const handleExportCanvas = useCallback(() => {
-    const cleanedNodes = nodes.map(node => ({ ...node, data: { ...node.data, flows: undefined, suggestions: undefined } }));
-    const canvas = { nodes: cleanedNodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig };
+    const canvas = { nodes: nodes.map(cleanNodeForSave), edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig };
     const blob = new Blob([JSON.stringify({ canvas }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1994,18 +2040,17 @@ function App() {
     a.download = `industrialist-canvas-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig]);
+ }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig, cleanNodeForSave]);
 
   const handleExport = useCallback(() => {
-    const cleanedNodes = nodes.map(node => ({ ...node, data: { ...node.data, flows: undefined, suggestions: undefined } }));
-    const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes: cleanedNodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig } }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes: nodes.map(cleanNodeForSave), edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig } }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `industrialist-export-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig]);
+  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, cleanNodeForSave]);
 
   const handleDataChange = useCallback(() => {
     // Reload custom data and update app state
@@ -2034,6 +2079,7 @@ function App() {
         data: {
           ...node.data,
           recipe,
+          machine,
           machineCount: node.data.machineCount ?? 1,
           displayMode,
           machineDisplayMode,
@@ -2045,22 +2091,24 @@ function App() {
       };
     });
     
-    setNodes(restoredNodes);
-    setEdges(saveData.edges || []);
-    setTargetProducts(saveData.targetProducts || []);
-    setSoldProducts(saveData.soldProducts || {});
-    setFavoriteRecipes(saveData.favoriteRecipes || []);
-    setLastDrillConfig(saveData.lastDrillConfig || null);
-    setLastAssemblerConfig(saveData.lastAssemblerConfig || null);
-    setLastTreeFarmConfig(saveData.lastTreeFarmConfig || null);
-    setLastFireboxConfig(saveData.lastFireboxConfig || null);
-    setLastWasteFacilityConfig(saveData.lastWasteFacilityConfig || null);
-    setNodeId(saveData.nodeId || 0);
-    setTargetIdCounter(saveData.targetIdCounter || 0);
-    
-    clearFlowCache();
-    triggerRecalculation('node');
-  }, [displayMode, machineDisplayMode, globalPollution, createNodeCallbacks, setNodes, setEdges, setTargetProducts, setSoldProducts, setFavoriteRecipes, setLastDrillConfig, setLastAssemblerConfig, setLastTreeFarmConfig, setLastFireboxConfig, setLastWasteFacilityConfig, setNodeId, setTargetIdCounter, triggerRecalculation]);
+    clearAll();
+    setTimeout(() => {
+      setNodes(restoredNodes);
+      setEdges(saveData.edges || []);
+      setTargetProducts(saveData.targetProducts || []);
+      setSoldProducts(saveData.soldProducts || {});
+      setFavoriteRecipes(saveData.favoriteRecipes || []);
+      setLastDrillConfig(saveData.lastDrillConfig || null);
+      setLastAssemblerConfig(saveData.lastAssemblerConfig || null);
+      setLastTreeFarmConfig(saveData.lastTreeFarmConfig || null);
+      setLastFireboxConfig(saveData.lastFireboxConfig || null);
+      setLastWasteFacilityConfig(saveData.lastWasteFacilityConfig || null);
+      setNodeId(saveData.nodeId || 0);
+      setTargetIdCounter(saveData.targetIdCounter || 0);
+      clearFlowCache();
+      triggerRecalculation('node');
+    }, 50);
+  }, [displayMode, machineDisplayMode, globalPollution, createNodeCallbacks, clearAll, setNodes, setEdges, setTargetProducts, setSoldProducts, setFavoriteRecipes, setLastDrillConfig, setLastAssemblerConfig, setLastTreeFarmConfig, setLastFireboxConfig, setLastWasteFacilityConfig, setNodeId, setTargetIdCounter, triggerRecalculation]);
 
   const handleRestoreDefaults = useCallback(() => {
     if (window.confirm('Restore all data to defaults? This will clear the canvas and reset all products, machines, and recipes.')) {
@@ -2385,21 +2433,7 @@ function App() {
           <div className={`menu-container ${menuOpen ? '' : 'closed'}`} style={isMobile ? { maxWidth: 'calc(100vw - 10px)' } : {}}>
             <button onClick={() => setMenuOpen(!menuOpen)} className="btn btn-secondary btn-menu-toggle" style={isMobile ? { fontSize: 'var(--font-size-sm)', padding: '6px 10px' } : {}}>{menuOpen ? '>' : '<'}</button>
             <div className="menu-buttons" style={isMobile ? { maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' } : {}}>
-              <button onClick={() => {
-                setNodes([]);
-                setEdges([]);
-                setNodeId(0);
-                setTargetProducts([]);
-                setTargetIdCounter(0);
-                setSoldProducts({});
-                setLastDrillConfig(null);
-                setLastAssemblerConfig(null);
-                setLastTreeFarmConfig(null);
-                setLastFireboxConfig(null);
-                setLastWasteFacilityConfig(null);
-                clearFlowCache();
-                triggerRecalculation('node');
-              }}
+              <button onClick={() => { clearAll(); triggerRecalculation('node'); }}
                 className="btn btn-secondary">Clear All</button>
               <button onClick={() => setShowSaveManager(true)} className="btn btn-secondary">Saves</button>
               <button onClick={() => setShowDataManager(true)} className="btn btn-secondary">Data</button>
@@ -3495,7 +3529,7 @@ function App() {
           onClose={() => setShowSaveManager(false)} 
           onLoad={handleLoadSave}
           currentCanvas={{
-            nodes, 
+            nodes: nodes.map(cleanNodeForSave), 
             edges, 
             targetProducts, 
             nodeId, 
