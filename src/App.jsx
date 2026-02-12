@@ -138,6 +138,13 @@ function App() {
   const [mobileActionMode, setMobileActionMode] = useState('pan'); // 'pan', 'target', 'delete'
   const [globalPollution, setGlobalPollution] = useState(0);
   const [pollutionInputFocused, setPollutionInputFocused] = useState(false);
+
+  // Close extended panel on mobile when stats panel is collapsed
+  useEffect(() => {
+    if (isMobile && leftPanelCollapsed && extendedPanelOpen) {
+      setExtendedPanelOpen(false);
+    }
+  }, [isMobile, leftPanelCollapsed, extendedPanelOpen]);
   const [isPollutionPaused, setIsPollutionPaused] = useState(true);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [soldProducts, setSoldProducts] = useState({});
@@ -204,19 +211,34 @@ function App() {
     // Initialize custom data from defaults if not present
     initializeCustomData(products, machines, recipes);
 
-    // Mobile detection - detect actual mobile devices, not just screen width
+    // Mobile detection - detect actual mobile devices with improved pointer detection
     const checkMobile = () => {
-      // Check for touch capability AND mobile user agent
+      // Check for touch capability
       const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      // Check for coarse pointer (touch screens)
+      const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
+      // Check if hover is not supported (most mobile devices)
+      const noHover = window.matchMedia('(hover: none)').matches;
+      // Check user agent as fallback
       const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      setIsMobile(hasTouch && isMobileDevice);
+      
+      // Device is mobile if: (has touch AND coarse pointer) OR (has touch AND no hover) OR mobile user agent
+      setIsMobile((hasTouch && hasCoarsePointer) || (hasTouch && noHover) || isMobileDevice);
     };
     
     checkMobile();
-    // Still listen to resize in case device changes (unlikely but good practice)
+    // Listen to resize and media query changes
     window.addEventListener('resize', checkMobile);
+    const coarsePointerQuery = window.matchMedia('(pointer: coarse)');
+    const noHoverQuery = window.matchMedia('(hover: none)');
+    coarsePointerQuery.addEventListener('change', checkMobile);
+    noHoverQuery.addEventListener('change', checkMobile);
     
-    return () => window.removeEventListener('resize', checkMobile);
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      coarsePointerQuery.removeEventListener('change', checkMobile);
+      noHoverQuery.removeEventListener('change', checkMobile);
+    };
   }, []);
 
   // Helper: Create node callbacks object
@@ -2274,7 +2296,7 @@ function App() {
                   <div className="stats-grid">
                     <div className="stat-item"><div className="stat-label">Total Power:</div><div className="stat-value">{formatPowerDisplay(stats.totalPower)}</div></div>
                     <div className="stat-item"><div className="stat-label">Total Pollution:</div><div className="stat-value" style={{ color: stats.totalPollution >= 0 ? 'var(--stat-negative)' : 'var(--stat-positive)' }}>{stats.totalPollution.toFixed(2)}%/hr</div></div>
-                    <div className="stat-item"><div className="stat-label">Total Minimum Model Count:</div><div className="stat-value">{stats.totalModelCount.toFixed(0)}</div></div>
+                    <div className="stat-item"><div className="stat-label">Total Min Models:</div><div className="stat-value">{stats.totalModelCount.toFixed(0)}</div></div>
                     <div className="stat-item"><div className="stat-label">Total Profit:</div><div className="stat-value" style={{ color: totalProfit >= 0 ? 'var(--stat-positive)' : 'var(--stat-negative)' }}>
                       ${metricFormat(totalProfit)}/s</div></div>
                     <div className="stat-item"><div className="stat-label">Total Cost:</div><div className="stat-value">

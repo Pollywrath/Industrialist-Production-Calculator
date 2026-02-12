@@ -687,7 +687,6 @@ input[type="number"] {
   padding: 4px;
   margin-bottom: 10px;
   margin-left: auto; /* Push to the right */
-  margin-right: 2px; /* Tiny gap from edge */
   width: fit-content;
 }
 
@@ -827,7 +826,14 @@ input[type="number"] {
 }
 
 .menu-container.closed {
-  transform: translateX(calc(100% - 56px)); /* Show 30px bump of buttons */
+  transform: translateX(calc(100% - 48px)); /* Show toggle button only */
+}
+
+/* Adjust for mobile to prevent buttons from going off-screen */
+@media (max-width: 768px) {
+  .menu-container.closed {
+    transform: translateX(calc(100% - 44px));
+  }
 }
 
 .menu-container.closed .menu-buttons {
@@ -867,6 +873,13 @@ input[type="number"] {
   transform: translateX(calc(-100% + 90px));
 }
 
+/* On narrow screens, use fixed positioning to keep buttons at consistent distance from edge */
+@media (max-width: 484px) {
+  .left-panel-container.collapsed {
+    transform: translateX(-345px); /* 240px panel + 105px gap - 90px visible = 345px */
+  }
+}
+
 .left-panel-container.collapsed > div > div:first-child {
   pointer-events: none;
 }
@@ -875,7 +888,7 @@ input[type="number"] {
   pointer-events: auto;
 }
 
-/* Action buttons stay at screen edge when panel collapses */
+/* Action buttons move with the panel */
 .action-buttons-container {
   transition: transform 0.3s ease-in-out;
 }
@@ -885,15 +898,15 @@ input[type="number"] {
   transform: translateX(90px);
 }
 
-/* Arrow buttons container - positioned further left by default */
+/* Arrow buttons container - offset more to the left when collapsed */
 .action-buttons-container > div:last-child {
-  transform: translateX(-95px);
+  transform: translateX(0);
   transition: transform 0.3s ease-in-out;
 }
 
-/* When panel is open (not collapsed), align arrow buttons with other buttons */
-.left-panel-container:not(.collapsed) .action-buttons-container > div:last-child {
-  transform: translateX(0);
+/* When panel is collapsed, move arrow buttons further left */
+.left-panel-container.collapsed .action-buttons-container > div:last-child {
+  transform: translateX(-95px);
 }
 
 .left-panel-container.collapsed .action-buttons-container > button:not(.btn-panel-toggle) {
@@ -1081,9 +1094,10 @@ input[type="number"] {
   background: var(--bg-secondary);
   border: 2px solid var(--border-primary);
   border-radius: var(--radius-lg);
-  padding: 10px 15px; /* Reduced from 15px */
+  padding: 10px 12px;
   box-shadow: var(--shadow-md);
-  min-width: 280px;
+  min-width: 240px;
+  max-width: 240px;
 }
 
 .stats-title {
@@ -1106,9 +1120,10 @@ input[type="number"] {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px; /* Reduced from 8px */
+  padding: 6px;
   background: var(--bg-main);
   border-radius: var(--radius-sm);
+  gap: 8px; /* Add gap to control spacing */
 }
 
 .stat-label {
@@ -1133,12 +1148,18 @@ input[type="number"] {
   border: 2px solid var(--border-primary);
   border-radius: var(--radius-lg);
   margin-top: 0px;
-  width: 380px; /* Match stats panel width */
+  width: 380px; /* Keep original width */
   height: calc(100vh); /* Extend to bottom of screen */
   overflow-y: auto;
   box-shadow: var(--shadow-md);
   animation: slideUp 0.3s ease-out;
   z-index: 1; /* Below controls */
+  transition: transform 0.3s ease-in-out;
+}
+
+/* Move extended panel further left when stats panel is collapsed */
+.left-panel-container.collapsed .extended-panel {
+  transform: translateX(-140px); /* Extra 140px left to hide completely */
 }
 
 .extended-panel.closing {
@@ -1261,9 +1282,11 @@ input[type="number"] {
    MOBILE RESPONSIVE STYLES
    ============================================================ */
 
-/* Use touch detection instead of width for mobile styles */
-@media (hover: none) and (pointer: coarse) {
-  /* Hide ReactFlow controls and minimap on mobile */
+/* Use multiple detection methods for better mobile/tablet support */
+@media (hover: none) and (pointer: coarse), 
+       (pointer: coarse), 
+       (max-width: 768px) and (hover: none) {
+  /* Hide ReactFlow controls and minimap on mobile/tablets */
   .react-flow__controls,
   .react-flow__minimap {
     display: none !important;
