@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
 
 const loadFromStorage = (key, defaultData) => {
   try {
+    if (typeof localStorage === 'undefined') return defaultData;
     const stored = localStorage.getItem(key);
     return stored ? JSON.parse(stored) : defaultData;
   } catch (e) {
@@ -21,6 +22,7 @@ const loadFromStorage = (key, defaultData) => {
 
 const saveToStorage = (key, data) => {
   try {
+    if (typeof localStorage === 'undefined') return;
     localStorage.setItem(key, JSON.stringify(data));
   } catch (e) {
     console.error(`Error saving ${key}:`, e);
@@ -59,7 +61,9 @@ export const saveCanvasState = (nodes, edges, targetProducts, nodeId, targetIdCo
 };
 
 export const loadCanvasState = () => loadFromStorage(STORAGE_KEYS.CANVAS_STATE, null);
-export const clearCanvasState = () => localStorage.removeItem(STORAGE_KEYS.CANVAS_STATE);
+export const clearCanvasState = () => {
+  if (typeof localStorage !== 'undefined') localStorage.removeItem(STORAGE_KEYS.CANVAS_STATE);
+};
 
 export const restoreDefaults = () => {
   updateProducts(defaultProductsData);

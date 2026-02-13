@@ -34,8 +34,8 @@ import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, 
 import { configureSpecialRecipe, calculateMachineCountForAutoConnect, getSpecialRecipeInputs, getSpecialRecipeOutputs, isSpecialRecipe } from './utils/recipeBoxCreation';
 import { propagateMachineCount, propagateFromHandle, calculateMachineCountForNewConnection } from './utils/machineCountPropagator';
 import { buildProductionGraph } from './solvers/graphBuilder';
-import { computeMachines } from './solvers/lpSolver';
 import { autoLayout } from './utils/autoLayout';
+import ComputeModal from './components/ComputeModal';
   
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
@@ -165,9 +165,11 @@ function App() {
   const [draggedWeight, setDraggedWeight] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [computeModal, setComputeModal] = useState(null);
   const reactFlowWrapper = useRef(null);
   const reactFlowInstance = useRef(null);
   const fileInputRef = useRef(null);
+  const workerRef = useRef(null);
 
   const isForestTheme = () => getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim().toLowerCase() === '#5fb573';
   const statisticsTitle = isForestTheme() ? "Plant Statistics" : "Plan Statistics";
@@ -1718,41 +1720,89 @@ function App() {
       alert('No target recipes. Please add target recipes (Shift+Click a node) before computing.');
       return;
     }
-    
-    let result = computeMachines(nodes, edges, targetProducts, { 
-      allowDeficiency: false,
-      activeWeights,
-      unusedWeights
-    });
-    
-    if (!result.success && result.hasDeficiency) {
-      const shouldContinue = window.confirm(
-        `${result.message}\n\nDo you want to compute anyway? The solver will do its best to minimize deficiency.`
-      );
-      
-      if (shouldContinue) {
-        result = computeMachines(nodes, edges, targetProducts, { 
-          allowDeficiency: true,
-          activeWeights,
-          unusedWeights
-        });
-      } else {
+
+    const nodeSnapshot = nodes.map(n => ({
+      id: n.id,
+      data: { recipe: n.data.recipe, machineCount: n.data.machineCount, machineName: n.data.machine?.name || '' }
+    }));
+
+    const solveStartTime = Date.now();
+    setComputeModal({ phase: 'loading', nodeSnapshot });
+
+    const serializableNodes = nodes.map(n => ({
+      id: n.id,
+      data: {
+        recipe: n.data.recipe,
+        machine: n.data.machine,
+        machineCount: n.data.machineCount,
+        machineCountMode: n.data.machineCountMode,
+        cappedMachineCount: n.data.cappedMachineCount
+      }
+    }));
+
+    const serializableEdges = edges.map(e => ({
+      id: e.id,
+      source: e.source,
+      target: e.target,
+      sourceHandle: e.sourceHandle,
+      targetHandle: e.targetHandle
+    }));
+
+    const worker = new Worker(new URL('./solvers/lpWorker.js', import.meta.url), { type: 'module' });
+    workerRef.current = worker;
+
+    worker.onmessage = (e) => {
+      workerRef.current = null;
+      worker.terminate();
+      const elapsedMs = Date.now() - solveStartTime;
+      const { result, deficiencyResult } = e.data;
+      const resultWithTime = { ...result, elapsedMs };
+      const deficiencyResultWithTime = deficiencyResult ? { ...deficiencyResult, elapsedMs } : null;
+
+      if (!result.success && result.hasDeficiency) {
+        setComputeModal(prev => ({ ...prev, phase: 'deficiency_confirm', result: resultWithTime, deficiencyResult: deficiencyResultWithTime }));
         return;
       }
+
+      setComputeModal(prev => ({ ...prev, phase: 'results', result: resultWithTime }));
+    };
+
+    worker.onerror = (err) => {
+      workerRef.current = null;
+      worker.terminate();
+      setComputeModal(null);
+      console.error('[LP Worker] Error:', err);
+      alert('An error occurred while computing. Check the console for details.');
+    };
+
+    worker.postMessage({ nodes: serializableNodes, edges: serializableEdges, targetProducts, activeWeights, unusedWeights, machines });
+  }, [targetProducts, nodes, edges, activeWeights, unusedWeights, setNodes, triggerRecalculation]);
+
+  const handleComputeCancel = useCallback(() => {
+    if (workerRef.current) {
+      workerRef.current.terminate();
+      workerRef.current = null;
     }
-    
-    if (result.success) {
+    setComputeModal(null);
+  }, []);
+
+  const handleComputeConfirmDeficiency = useCallback(() => {
+    setComputeModal(prev => prev
+      ? { ...prev, phase: 'results', result: prev.deficiencyResult }
+      : null
+    );
+  }, []);
+
+  const handleComputeApply = useCallback((result) => {
+    if (result?.success) {
       setNodes(nds => nds.map(n => {
         const newCount = result.updates.get(n.id);
         return newCount !== undefined ? { ...n, data: { ...n.data, machineCount: newCount } } : n;
       }));
-      
       triggerRecalculation('machineCount');
-      alert(`Success! Updated ${result.updates.size} nodes to balance production.\n\nCheck console for detailed LP solver output.`);
-    } else {
-      alert(result.message || 'No changes needed - production line is already balanced.');
     }
-  }, [targetProducts, nodes, edges, setNodes, triggerRecalculation]);
+    setComputeModal(null);
+  }, [setNodes, triggerRecalculation]);
 
   const getAvailableRecipes = () => {
     if (!selectedProduct) return [];
@@ -2306,7 +2356,9 @@ function App() {
                 <div className="flex-col action-buttons-container">
                   <button onClick={openRecipeSelector} className="btn btn-primary">+ Select Recipe</button>
                   <button onClick={() => { setShowRecipesModal(true); setRecipesModalTab('targets'); }} className="btn btn-secondary">View Recipes</button>
-                  <button onClick={handleCompute} className="btn btn-secondary">Compute Machines</button>
+                  <button onClick={handleCompute} className="btn btn-secondary" disabled={computeModal !== null}>
+                    {computeModal !== null ? 'Computing...' : 'Compute Machines'}
+                  </button>
                   <button onClick={handleAutoLayout} className="btn btn-secondary">Auto Layout</button>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button onClick={() => setExtendedPanelOpen(!extendedPanelOpen)} className="btn btn-secondary btn-square"
@@ -3540,6 +3592,18 @@ function App() {
             <button onClick={() => setShowRecipesModal(false)} className="btn btn-secondary">Close</button>
           </div>
         </div>
+      )}
+
+      {computeModal && (
+        <ComputeModal
+          phase={computeModal.phase}
+          nodeSnapshot={computeModal.nodeSnapshot}
+          result={computeModal.result}
+          deficiencyResult={computeModal.deficiencyResult}
+          onCancel={handleComputeCancel}
+          onConfirmDeficiency={handleComputeConfirmDeficiency}
+          onApply={handleComputeApply}
+        />
       )}
 
       {showThemeEditor && <ThemeEditor onClose={() => setShowThemeEditor(false)} />}
