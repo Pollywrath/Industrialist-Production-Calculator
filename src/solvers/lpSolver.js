@@ -21,7 +21,9 @@ const DEFICIENCY_AMOUNT_WEIGHT = 1e12;     // 1 trillion - amount of each defici
 
 // Tier 2: Model count and excess (should dominate tier 3)
 const MODEL_COUNT_WEIGHT = 1e9;            // 1 billion - model count per machine (range: 3-20, uses ceiling)
+const CONNECTED_EXCESS_COUNT_WEIGHT = 1e6; // 1 million - count of connected excess outputs (range: 1-3)
 const CONNECTED_EXCESS_AMOUNT_WEIGHT = 1e3;// 1 thousand - amount of connected excess (range: varies)
+const UNCONNECTED_EXCESS_COUNT_WEIGHT = 1e5;// 100 thousand - count of unconnected excess (range: 1-3)
 const UNCONNECTED_EXCESS_AMOUNT_WEIGHT = 1e2;// 100 - amount of unconnected excess (range: varies)
 
 // Tier 3: Resource optimization (lowest priority)
@@ -130,13 +132,21 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     model.variables[flowVar][flowNonNegConstraintName] = 1;
   });
   
-  // Excess is now tracked only by amount (continuous), not by count (binary indicators)
-  // This reduces the number of integer variables and speeds up the solver
+  // Create single global deficiency indicator
+  const globalDeficitIndicator = 'global_deficit_indicator';
+  model.variables[globalDeficitIndicator] = {
+    total_cost: DEFICIENCY_COUNT_WEIGHT
+  };
+  model.ints[globalDeficitIndicator] = 1;
+  
+  // Binary constraint: 0 <= indicator <= 1
+  const globalDeficitBinaryConstraint = 'global_deficit_binary';
+  model.constraints[globalDeficitBinaryConstraint] = { min: 0, max: 1 };
+  model.variables[globalDeficitIndicator][globalDeficitBinaryConstraint] = 1;
   
   // Flow conservation constraints for each node
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
-    const isTargetNode = targetNodeIds.has(nodeId);
     
     // For each output handle, create flow conservation constraint with excess slack
     node.outputs.forEach((output, outputIndex) => {
@@ -148,15 +158,9 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
         c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
       );
       
-      // Determine if this is connected or unconnected excess
-      const hasConnections = outgoingConnections.length > 0;
-      const excessAmountWeight = hasConnections ? CONNECTED_EXCESS_AMOUNT_WEIGHT : UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
-      
-      // Create excess amount slack variable (penalized by amount based on connection status)
-      // For target nodes, use a very small weight to allow excess to vary minimally
-      const actualExcessWeight = isTargetNode ? 1 : excessAmountWeight;
+      // Create excess slack variable with 0 cost (just for feasibility, no penalty)
       model.variables[slackVar] = {
-        total_cost: actualExcessWeight,
+        total_cost: 0,
         [constraintName]: -1
       };
       
@@ -205,6 +209,7 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       
       const constraintName = `flow_in_${nodeId}_${inputIndex}`;
       const slackVar = `deficit_${nodeId}_${inputIndex}`;
+      const deficitIndicatorVar = `deficit_indicator_${nodeId}_${inputIndex}`;
       
       // Get machine count variable
       const machineVar = `m_${nodeId}`;
@@ -218,34 +223,23 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       
       const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
       
-      // Create deficiency amount slack variable (heavily penalized by amount)
+      // Create deficiency slack variable with 0 cost (just for feasibility)
       model.variables[slackVar] = {
-        total_cost: DEFICIENCY_AMOUNT_WEIGHT,
+        total_cost: 0,
         [constraintName]: 1
       };
       
-      // Create deficiency count indicator (binary variable, even more heavily penalized)
-      const deficitIndicatorVar = `deficit_indicator_${nodeId}_${inputIndex}`;
-      model.variables[deficitIndicatorVar] = {
-        total_cost: DEFICIENCY_COUNT_WEIGHT
-      };
-      model.ints[deficitIndicatorVar] = 1;
-      
-      // Binary constraint: 0 <= indicator <= 1
-      const deficitBinaryConstraintName = `deficit_binary_${nodeId}_${inputIndex}`;
-      model.constraints[deficitBinaryConstraintName] = { min: 0, max: 1 };
-      model.variables[deficitIndicatorVar][deficitBinaryConstraintName] = 1;
-      
-      // Link deficit to indicator
+      // Link this deficit to global indicator: if ANY slack > 0, global indicator must be 1
       const deficitLinkConstraintName = `deficit_link_${nodeId}_${inputIndex}`;
       model.constraints[deficitLinkConstraintName] = { max: 0 };
       
       // Calculate M = maximum possible deficit
       const M_deficit = ratePerMachine * 10000;
       
-      // Constraint: deficit - M * indicator <= 0
+      // Constraint: deficit_slack - M * global_indicator <= 0
+      // If slack > 0, then global indicator must be 1
       model.variables[slackVar][deficitLinkConstraintName] = 1;
-      model.variables[deficitIndicatorVar][deficitLinkConstraintName] = -M_deficit;
+      model.variables['global_deficit_indicator'][deficitLinkConstraintName] = -M_deficit;
       
       // Constraint: incoming_flows + deficiency_slack >= consumption_demand
       model.constraints[constraintName] = { min: 0 };
@@ -655,24 +649,22 @@ const solveFullGraph = (graph, targetNodeIds = new Set()) => {
   let flowVars = 0;
   let excessVars = 0;
   let deficitVars = 0;
-  let deficitIndicatorVars = 0;
   
   Object.keys(model.variables).forEach(varName => {
     if (varName.startsWith('m_') && !varName.startsWith('mc_')) machineVars++;
     else if (varName.startsWith('mc_')) ceilingVars++;
     else if (varName.startsWith('f_')) flowVars++;
     else if (varName.startsWith('excess_')) excessVars++;
-    else if (varName.startsWith('deficit_') && !varName.includes('indicator')) deficitVars++;
-    else if (varName.startsWith('deficit_indicator_')) deficitIndicatorVars++;
+    else if (varName.startsWith('deficit_')) deficitVars++;
   });
   
   console.log('  Variable breakdown:');
   console.log(`    Machine counts: ${machineVars}`);
   console.log(`    Ceiling vars (model count): ${ceilingVars}`);
   console.log(`    Flow vars: ${flowVars}`);
-  console.log(`    Excess vars (amount only): ${excessVars}`);
-  console.log(`    Deficit vars: ${deficitVars}`);
-  console.log(`    Deficit indicators: ${deficitIndicatorVars}`);
+  console.log(`    Excess slack vars: ${excessVars}`);
+  console.log(`    Deficit slack vars: ${deficitVars}`);
+  console.log(`    Global deficiency indicator: 1`);
   
   // Solve the model
   console.log('%c[LP Solver] Solving...', 'color: #f39c12; font-weight: bold');
@@ -687,62 +679,26 @@ const solveFullGraph = (graph, targetNodeIds = new Set()) => {
     
     // Calculate actual objective value manually
     let actualCost = 0;
-    let deficiencyCountCost = 0;
-    let deficiencyAmountCost = 0;
-    let excessCountCost = 0;
-    let excessAmountCost = 0;
+    let deficiencyCost = 0;
     let modelCountCost = 0;
     let powerCost = 0;
     let pollutionCost = 0;
     let machineCost = 0;
     
-    let totalDeficitCount = 0;
-    let totalDeficitAmount = 0;
-    let totalConnectedExcess = 0;
-    let totalUnconnectedExcess = 0;
+    let hasDeficiency = false;
     let totalModelCount = 0;
     let totalPower = 0;
     let totalPollution = 0;
     let totalMachineCost = 0;
     
+    // Check global deficiency indicator
+    const globalDeficitValue = result['global_deficit_indicator'] || 0;
+    if (globalDeficitValue > EPSILON) {
+      hasDeficiency = true;
+      deficiencyCost = DEFICIENCY_COUNT_WEIGHT;
+    }
+    
     Object.keys(result).forEach(key => {
-      if (key.startsWith('deficit_indicator_')) {
-        const value = result[key] || 0;
-        if (value > EPSILON) {
-          totalDeficitCount += value;
-          deficiencyCountCost += value * DEFICIENCY_COUNT_WEIGHT;
-        }
-      }
-      if (key.startsWith('deficit_') && !key.includes('indicator')) {
-        const value = result[key] || 0;
-        if (value > EPSILON) {
-          totalDeficitAmount += value;
-          deficiencyAmountCost += value * DEFICIENCY_AMOUNT_WEIGHT;
-        }
-      }
-      if (key.startsWith('excess_')) {
-        const value = result[key] || 0;
-        
-        if (value > EPSILON) {
-          const parts = key.split('_');
-          const nodeId = parts.slice(1, -1).join('_');
-          const outputIndex = parseInt(parts[parts.length - 1]);
-          
-          const hasConnections = graph.connections.some(
-            c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
-          );
-          
-          const weight = hasConnections ? CONNECTED_EXCESS_AMOUNT_WEIGHT : UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
-          
-          if (hasConnections) {
-            totalConnectedExcess += value;
-          } else {
-            totalUnconnectedExcess += value;
-          }
-          
-          excessAmountCost += value * weight;
-        }
-      }
       if (key.startsWith('m_')) {
         const nodeId = key.substring(2);
         const node = graph.nodes[nodeId];
@@ -788,14 +744,11 @@ const solveFullGraph = (graph, targetNodeIds = new Set()) => {
       }
     });
     
-    actualCost = deficiencyCountCost + deficiencyAmountCost + excessCountCost + excessAmountCost + modelCountCost + powerCost + pollutionCost + machineCost;
+    actualCost = deficiencyCost + modelCountCost + powerCost + pollutionCost + machineCost;
     
     // Cost breakdown
     console.log('  Cost Breakdown:');
-    console.log(`    Deficiency count: ${totalDeficitCount} inputs (cost: ${deficiencyCountCost.toExponential(2)})`);
-    console.log(`    Deficiency amount: ${totalDeficitAmount.toFixed(4)} (cost: ${deficiencyAmountCost.toExponential(2)})`);
-    console.log(`    Connected excess amount: ${totalConnectedExcess.toFixed(4)} (cost: ${(totalConnectedExcess * CONNECTED_EXCESS_AMOUNT_WEIGHT).toExponential(2)})`);
-    console.log(`    Unconnected excess amount: ${totalUnconnectedExcess.toFixed(4)} (cost: ${(totalUnconnectedExcess * UNCONNECTED_EXCESS_AMOUNT_WEIGHT).toExponential(2)})`);
+    console.log(`    Deficiency: ${hasDeficiency ? 'YES' : 'NO'} (cost: ${deficiencyCost.toExponential(2)})`);
     console.log(`    Model count: ${totalModelCount.toFixed(0)} (cost: ${modelCountCost.toExponential(2)})`);
     console.log(`    Power: ${totalPower.toFixed(0)} W (cost: ${powerCost.toFixed(2)})`);
     console.log(`    Pollution: ${totalPollution.toFixed(2)} %/hr (cost: ${pollutionCost.toFixed(2)})`);
@@ -858,7 +811,6 @@ const extractMachineUpdates = (lpResult, graph) => {
  * Main compute function - adjusts machine counts to balance production
  */
 export const computeMachines = (nodes, edges, targetProducts, options = {}) => {
-  const { allowDeficiency = false } = options;
   if (targetProducts.length === 0) {
     return {
       success: false,
@@ -900,44 +852,40 @@ export const computeMachines = (nodes, edges, targetProducts, options = {}) => {
     };
   }
   
-  // Check for deficiency in solution
-  let hasDeficiency = false;
+  // Check for deficiency in solution and collect deficient nodes
+  const hasDeficiency = (lpResult['global_deficit_indicator'] || 0) > EPSILON;
   const deficientNodes = [];
   
-  Object.keys(lpResult).forEach(key => {
-    if (key.startsWith('deficit_') && !key.includes('indicator')) {
-      const deficitAmount = lpResult[key] || 0;
-      if (deficitAmount > EPSILON) {
-        hasDeficiency = true;
-        const parts = key.split('_');
-        const inputIndex = parseInt(parts[parts.length - 1]);
-        const nodeId = parts.slice(1, -1).join('_');
-        const node = graph.nodes[nodeId];
-        if (node) {
-          const input = node.inputs[inputIndex];
-          deficientNodes.push({
-            nodeId,
-            nodeName: node.recipe?.name || nodeId,
-            inputIndex,
-            productId: input?.productId,
-            deficitAmount
-          });
+  if (hasDeficiency) {
+    // Find all inputs with deficiency
+    Object.keys(lpResult).forEach(key => {
+      if (key.startsWith('deficit_')) {
+        const deficitAmount = lpResult[key] || 0;
+        if (deficitAmount > EPSILON) {
+          const parts = key.split('_');
+          const inputIndex = parseInt(parts[parts.length - 1]);
+          const nodeId = parts.slice(1, -1).join('_');
+          const node = graph.nodes[nodeId];
+          if (node) {
+            const input = node.inputs[inputIndex];
+            deficientNodes.push({
+              nodeId,
+              nodeName: node.recipe?.name || nodeId,
+              inputIndex,
+              productId: input?.productId,
+              deficitAmount
+            });
+          }
         }
       }
-    }
-  });
-  
-  if (hasDeficiency && !allowDeficiency) {
-    const deficiencyDetails = deficientNodes.map(d => 
-      `  ${d.nodeName}: needs ${d.deficitAmount.toFixed(4)}/s more of product ${d.productId}`
-    ).join('\n');
+    });
     
     return {
       success: false,
       updates: new Map(),
       converged: false,
       iterations: 1,
-      message: `Cannot balance production - insufficient input supply detected:\n${deficiencyDetails}\n\nThis usually means a loop consumes more than it produces.`,
+      message: 'Cannot balance production - insufficient input supply detected',
       hasDeficiency: true,
       deficientNodes
     };

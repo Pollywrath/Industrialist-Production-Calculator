@@ -1804,6 +1804,16 @@ function App() {
     setComputeModal(null);
   }, [setNodes, triggerRecalculation]);
 
+  const handleLocateNode = useCallback((nodeId) => {
+    if (!reactFlowInstance.current) return;
+    reactFlowInstance.current.fitView({
+      nodes: [{ id: nodeId }],
+      padding: 0.6,
+      duration: 600,
+      maxZoom: 1.5,
+    });
+  }, []);
+
   const getAvailableRecipes = () => {
     if (!selectedProduct) return [];
     
@@ -3603,6 +3613,7 @@ function App() {
           onCancel={handleComputeCancel}
           onConfirmDeficiency={handleComputeConfirmDeficiency}
           onApply={handleComputeApply}
+          onLocateNode={handleLocateNode}
         />
       )}
 

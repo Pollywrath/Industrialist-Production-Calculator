@@ -31,7 +31,7 @@ const Spinner = () => {
   );
 };
 
-const ComputeModal = ({ phase, nodeSnapshot, result, onCancel, onConfirmDeficiency, onApply }) => {
+const ComputeModal = ({ phase, nodeSnapshot, result, onCancel, onApply, onLocateNode }) => {
   const [elapsedMs, setElapsedMs] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
   const startRef = useRef(Date.now());
@@ -49,7 +49,12 @@ const ComputeModal = ({ phase, nodeSnapshot, result, onCancel, onConfirmDeficien
     const node = nodeSnapshot?.find(n => n.id === nodeId);
     const machineName = node?.data?.machineName || '';
     const recipeName = node?.data?.recipe?.name || nodeId;
-    return machineName ? `${machineName} — ${recipeName}` : recipeName;
+    return machineName ? `${machineName} – ${recipeName}` : recipeName;
+  };
+
+  const getMachineLabel = (nodeId) => {
+    const node = nodeSnapshot?.find(n => n.id === nodeId);
+    return node?.data?.machineName || node?.data?.recipe?.name || nodeId;
   };
   const getOldCount = (nodeId) =>
     nodeSnapshot?.find(n => n.id === nodeId)?.data?.machineCount || 0;
@@ -107,24 +112,33 @@ const ComputeModal = ({ phase, nodeSnapshot, result, onCancel, onConfirmDeficien
           <span style={{ fontSize: '28px' }}>⚠️</span>
           <div>
             <div style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 700 }}>
-              Deficiency Detected
+              Insufficient Input Supply
             </div>
             <div style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '2px' }}>
-              The network cannot be fully balanced with the current connections.
+              These recipes need more input than is currently being produced.
             </div>
           </div>
         </div>
         {deficientNodes.length > 0 && (
-          <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
             {deficientNodes.map((d, i) => (
               <div key={i} style={{
                 background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.35)',
-                borderRadius: 'var(--radius-sm)', padding: '8px 12px', fontSize: '12px'
+                borderRadius: 'var(--radius-sm)', padding: '10px 12px',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px'
               }}>
-                <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{d.nodeName}</span>
-                <span style={{ color: '#fca5a5', marginLeft: '8px' }}>
-                  needs {d.deficitAmount.toFixed(4)}/s more of {d.productId}
-                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ color: 'var(--text-primary)', fontWeight: 600, fontSize: '13px' }}>
+                    {getMachineLabel(d.nodeId)}
+                  </div>
+                </div>
+                <button
+                  onClick={() => { onCancel(); onLocateNode(d.nodeId); }}
+                  className="btn btn-secondary"
+                  style={{ padding: '6px 12px', fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}
+                >
+                  Locate
+                </button>
               </div>
             ))}
           </div>
@@ -133,11 +147,10 @@ const ComputeModal = ({ phase, nodeSnapshot, result, onCancel, onConfirmDeficien
           color: 'var(--text-secondary)', fontSize: '13px',
           background: 'var(--bg-main)', padding: '10px 12px', borderRadius: 'var(--radius-sm)'
         }}>
-          Do you want to compute anyway? The solver will minimise deficiency as much as possible.
+          Add more production for the needed products or connect existing producers to resolve these deficiencies.
         </div>
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} className="btn btn-secondary">Cancel</button>
-          <button onClick={onConfirmDeficiency} className="btn btn-primary">Compute Anyway</button>
+          <button onClick={onCancel} className="btn btn-primary">Close</button>
         </div>
       </div>
     );
@@ -236,7 +249,7 @@ const ComputeModal = ({ phase, nodeSnapshot, result, onCancel, onConfirmDeficien
         }}>
           <h2 className="modal-title" style={{ margin: 0 }}>
             {phase === 'loading' && '⚙️ LP Solver'}
-            {phase === 'deficiency_confirm' && '⚠️ Deficiency Warning'}
+            {phase === 'deficiency_confirm' && '⚠️ Insufficient Input Supply'}
             {phase === 'results' && '📊 Results'}
           </h2>
         </div>
