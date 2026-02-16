@@ -8,8 +8,6 @@ import { buildProductionGraph } from './graphBuilder';
 
 const EPSILON = 1e-8;
 
-const RATE_SCALE_FACTOR = 1e5;
-
 const sanitizeVarName = (name) => {
   return name.replace(/-/g, '_');
 };
@@ -245,7 +243,7 @@ const buildLPString = (graph, targetNodeIds = new Set()) => {
       const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
       if (typeof quantity !== 'number') return;
       
-      const ratePerMachine = (node.isMineshaftDrill ? quantity : quantity / cycleTime) * RATE_SCALE_FACTOR;
+      const ratePerMachine = (node.isMineshaftDrill ? quantity : quantity / cycleTime);
       
       const M = ratePerMachine * 10000;
       
@@ -290,7 +288,7 @@ const buildLPString = (graph, targetNodeIds = new Set()) => {
       const quantity = input.quantity;
       if (typeof quantity !== 'number') return;
       
-      const ratePerMachine = (node.isMineshaftDrill ? quantity : quantity / cycleTime) * RATE_SCALE_FACTOR;
+      const ratePerMachine = (node.isMineshaftDrill ? quantity : quantity / cycleTime);
       const M_deficit = ratePerMachine * 10000;
       
       // Link deficit to indicator: deficit - M * indicator <= 0
@@ -336,7 +334,7 @@ const buildLPString = (graph, targetNodeIds = new Set()) => {
       const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
       if (typeof quantity !== 'number') return;
       
-      const ratePerMachine = (node.isMineshaftDrill ? quantity : quantity / cycleTime) * RATE_SCALE_FACTOR;
+      const ratePerMachine = (node.isMineshaftDrill ? quantity : quantity / cycleTime);
       const currentProduction = ratePerMachine * (node.machineCount || 0);
       
       let currentConnectedFlow = 0;
@@ -353,7 +351,7 @@ const buildLPString = (graph, targetNodeIds = new Set()) => {
         const targetQuantity = targetInput.quantity;
         if (typeof targetQuantity !== 'number') return;
         
-        const targetRatePerMachine = (targetNode.isMineshaftDrill ? targetQuantity : targetQuantity / targetCycleTime) * RATE_SCALE_FACTOR;
+        const targetRatePerMachine = (targetNode.isMineshaftDrill ? targetQuantity : targetQuantity / targetCycleTime);
         const targetDemand = targetRatePerMachine * (targetNode.machineCount || 0);
         
         currentConnectedFlow += Math.min(currentProduction - currentConnectedFlow, targetDemand);
@@ -413,15 +411,6 @@ const parseLPSolution = (solutionObj, varNameMap) => {
     
     // Extract the Primal value from the column object
     let value = columns[sanitizedVarName].Primal;
-    
-    // Scale back rate-related variables
-    if (originalVarName.startsWith('f_') || 
-        originalVarName.startsWith('excess_') || 
-        originalVarName.startsWith('deficit_')) {
-      if (!originalVarName.includes('indicator')) {
-        value = value / RATE_SCALE_FACTOR;
-      }
-    }
     
     solution[originalVarName] = value;
   });
