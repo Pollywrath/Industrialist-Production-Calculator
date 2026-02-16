@@ -3,11 +3,16 @@
  * Automatically adjusts machine counts to balance production for target recipes
  */
 
-import solver from 'javascript-lp-solver';
 import { getMachine } from '../data/dataLoader';
 import { buildProductionGraph } from './graphBuilder';
 
 const EPSILON = 1e-8;
+
+const RATE_SCALE_FACTOR = 1e5;
+
+const sanitizeVarName = (name) => {
+  return name.replace(/-/g, '_');
+};
 
 // Objective weights (in strict priority order)
 // Priority tiers (each tier dominates all lower tiers):
@@ -31,26 +36,107 @@ const POLLUTION_WEIGHT = 10;               // 10 - pollution per machine (range:
 const POWER_WEIGHT = 0.00001;              // 0.00001 - power per machine (range: 150-20M, scales with machine count)
 const COST_WEIGHT = 0.000001;              // 0.000001 - cost per machine (range: 80-200M, but mostly 1k-250k)
 
+
+
 /**
- * Build LP model for entire production graph
+ * Convert the declarative model to HiGHS format and solve
  */
-const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
-  const model = {
-    optimize: 'total_cost',
-    opType: 'min',
-    constraints: {},
-    variables: {},
-    ints: {}
+const solveWithHiGHS = async (graph, targetNodeIds) => {
+  try {
+    console.log('[LP Solver] Initializing HiGHS...');
+    console.log('[LP Solver] WASM path:', import.meta.env.BASE_URL + 'highs.wasm');
+    
+    // Dynamically import highs to avoid blocking worker initialization
+    console.log('[LP Solver] Dynamically importing highs...');
+    const highsModule = await import('highs');
+    
+    // Get the highs function
+    const highs = highsModule.default;
+    
+    // Initialize HiGHS - WASM file is served from public folder
+    const h = await highs({
+      locateFile: (file) => {
+        if (file.endsWith('.wasm')) {
+          const wasmPath = import.meta.env.BASE_URL + 'highs.wasm';
+          console.log('[LP Solver] Loading WASM from:', wasmPath);
+          return wasmPath;
+        }
+        return file;
+      }
+    });
+    
+    console.log('[LP Solver] HiGHS initialized successfully');
+    
+    // Build LP format string directly
+    const { lpString, varNameMap } = buildLPString(graph, targetNodeIds);
+    console.log('[LP Solver] Built LP format string, length:', lpString.length);
+    
+    // Solve using HiGHS
+    const solution = h.solve(lpString);
+    console.log('[LP Solver] Raw solution:', solution);
+    
+    // Parse solution using the variable name map
+    const parsedSolution = parseLPSolution(solution, varNameMap);
+    
+    return parsedSolution;
+    
+  } catch (error) {
+    console.error('[LP Solver] HiGHS error:', error);
+    console.error('[LP Solver] Error type:', error.constructor.name);
+    console.error('[LP Solver] Error message:', error.message);
+    console.error('[LP Solver] Error stack:', error.stack);
+    return { feasible: false, error: error.message, stack: error.stack };
+  }
+};
+
+/**
+ * Build LP format string directly from graph
+ */
+const buildLPString = (graph, targetNodeIds = new Set()) => {
+  let lp = '';
+  const variables = new Set();
+  const integerVars = new Set();
+  const constraints = [];
+  const objectiveTerms = [];
+  const varNameMap = new Map(); // sanitized -> original mapping
+  
+  // Helper to register variable and track original name
+  const registerVar = (originalName, isInteger = false) => {
+    const sanitized = sanitizeVarName(originalName);
+    variables.add(sanitized);
+    varNameMap.set(sanitized, originalName);
+    if (isInteger) {
+      integerVars.add(sanitized);
+    }
+    return sanitized;
   };
   
- // Create variables for each node's machine count
+  // Helper to add constraint
+  const addConstraint = (name, lhs, rhs, type) => {
+    const sanitizedName = sanitizeVarName(name);
+    if (type === 'equal') {
+      constraints.push(`${sanitizedName}: ${lhs} = ${rhs}`);
+    } else if (type === 'min') {
+      constraints.push(`${sanitizedName}: ${lhs} >= ${rhs}`);
+    } else if (type === 'max') {
+      constraints.push(`${sanitizedName}: ${lhs} <= ${rhs}`);
+    }
+  };
+  
+  // Helper to format coefficient
+  const formatCoeff = (coeff) => coeff >= 0 ? `+${coeff}` : `${coeff}`;
+  
+  // Create variables for each node's machine count
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     const varName = `m_${nodeId}`;
-    const ceilingVarName = `mc_${nodeId}`; // ceiling of machine count for model count penalty
+    const ceilingVarName = `mc_${nodeId}`;
     const currentCount = node.machineCount || 0;
     const machineCountMode = node.machineCountMode || 'free';
     const cappedCount = node.cappedMachineCount;
+    
+    registerVar(varName);
+    registerVar(ceilingVarName, true);
     
     // Calculate machine contribution to objective
     let cycleTime = node.cycleTime;
@@ -67,94 +153,67 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     const pollution = node.recipe.pollution;
     const pollutionValue = typeof pollution === 'number' ? pollution : 0;
     
-    // Get machine cost
     const machine = getMachine(node.recipe.machine_id);
     const machineCost = machine && typeof machine.cost === 'number' ? machine.cost : 0;
     
-    // Calculate input/output count for model count
     const inputOutputCount = (node.recipe.inputs?.length || 0) + (node.recipe.outputs?.length || 0);
     const powerFactor = Math.ceil(powerValue / 1500000) * 2;
     const inputOutputFactor = inputOutputCount * 2;
     const modelCountPerMachine = 1 + powerFactor + inputOutputFactor;
     
-    // Create continuous machine count variable (power, pollution, cost use actual fractional count)
-    model.variables[varName] = {
-      total_cost: (POWER_WEIGHT * powerValue) + 
-                  (POLLUTION_WEIGHT * pollutionValue) + 
-                  (COST_WEIGHT * machineCost)
-    };
+    // Add to objective function
+    const machineObjCoeff = (POWER_WEIGHT * powerValue) + (POLLUTION_WEIGHT * pollutionValue) + (COST_WEIGHT * machineCost);
+    if (machineObjCoeff !== 0) {
+      objectiveTerms.push(`${formatCoeff(machineObjCoeff)} ${sanitizeVarName(varName)}`);
+    }
     
-    // Create integer ceiling variable for model count (minimization naturally gives ceiling)
-    model.variables[ceilingVarName] = {
-      total_cost: MODEL_COUNT_WEIGHT * modelCountPerMachine
-    };
-    model.ints[ceilingVarName] = 1;
+    const ceilingObjCoeff = MODEL_COUNT_WEIGHT * modelCountPerMachine;
+    objectiveTerms.push(`${formatCoeff(ceilingObjCoeff)} ${sanitizeVarName(ceilingVarName)}`);
     
-    // Constraint: ceiling >= machine count (mc_nodeId >= m_nodeId)
-    const ceilingConstraintName = `ceiling_${nodeId}`;
-    model.constraints[ceilingConstraintName] = { min: 0 };
-    model.variables[ceilingVarName][ceilingConstraintName] = 1;
-    model.variables[varName][ceilingConstraintName] = -1;
+    // Ceiling constraint: mc_nodeId >= m_nodeId
+    addConstraint(`ceiling_${nodeId}`, 
+      `${sanitizeVarName(ceilingVarName)} -1 ${sanitizeVarName(varName)}`, 
+      0, 'min');
     
-    // Add non-negativity constraint (allow 0, but not negative)
-    const nonNegConstraintName = `nonneg_${nodeId}`;
-    model.constraints[nonNegConstraintName] = { min: 0 };
-    model.variables[varName][nonNegConstraintName] = 1;
+    // Non-negativity: m_nodeId >= 0
+    addConstraint(`nonneg_${nodeId}`, sanitizeVarName(varName), 0, 'min');
     
     // Handle locked and capped nodes
     if (machineCountMode === 'locked') {
-      // Locked: fix to current value
-      const lockConstraintName = `lock_${nodeId}`;
-      model.constraints[lockConstraintName] = { equal: currentCount };
-      model.variables[varName][lockConstraintName] = 1;
+      addConstraint(`lock_${nodeId}`, sanitizeVarName(varName), currentCount, 'equal');
     } else if (machineCountMode === 'capped' && typeof cappedCount === 'number') {
-      // Capped: cannot exceed cap value
-      const capConstraintName = `cap_${nodeId}`;
-      model.constraints[capConstraintName] = { max: cappedCount };
-      model.variables[varName][capConstraintName] = 1;
+      addConstraint(`cap_${nodeId}`, sanitizeVarName(varName), cappedCount, 'max');
     }
-    
-    // Target nodes will have their excess amounts constrained, not machine counts
-    // Machine counts can vary to meet downstream demand while maintaining target excess
   });
   
   // Create flow variables for each connection
   graph.connections.forEach(conn => {
     const flowVar = `f_${conn.id}`;
+    registerVar(flowVar);
     
-    model.variables[flowVar] = {
-      total_cost: 0
-    };
-    
-    // Add explicit non-negativity constraint for flow
-    const flowNonNegConstraintName = `flow_nonneg_${conn.id}`;
-    model.constraints[flowNonNegConstraintName] = { min: 0 };
-    model.variables[flowVar][flowNonNegConstraintName] = 1;
+    // Flow non-negativity
+    addConstraint(`flow_nonneg_${conn.id}`, sanitizeVarName(flowVar), 0, 'min');
   });
   
-  // Create excess indicator variables (binary) to count number of outputs with excess
+  // Create excess indicator variables
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     
     node.outputs.forEach((output, outputIndex) => {
       const excessIndicatorVar = `excess_indicator_${nodeId}_${outputIndex}`;
+      registerVar(excessIndicatorVar, true);
       
-      // Determine if this is connected or unconnected to set appropriate count weight
       const outgoingConnections = graph.connections.filter(
         c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
       );
       const hasConnections = outgoingConnections.length > 0;
       const excessCountWeight = hasConnections ? CONNECTED_EXCESS_COUNT_WEIGHT : UNCONNECTED_EXCESS_COUNT_WEIGHT;
       
-      model.variables[excessIndicatorVar] = {
-        total_cost: excessCountWeight
-      };
-      model.ints[excessIndicatorVar] = 1;
+      objectiveTerms.push(`${formatCoeff(excessCountWeight)} ${sanitizeVarName(excessIndicatorVar)}`);
       
-      // Add constraint to make indicator binary (0 <= indicator <= 1)
-      const binaryConstraintName = `binary_${nodeId}_${outputIndex}`;
-      model.constraints[binaryConstraintName] = { min: 0, max: 1 };
-      model.variables[excessIndicatorVar][binaryConstraintName] = 1;
+      // Binary constraint: 0 <= indicator <= 1
+      addConstraint(`binary_${nodeId}_${outputIndex}_min`, sanitizeVarName(excessIndicatorVar), 0, 'min');
+      addConstraint(`binary_${nodeId}_${outputIndex}_max`, sanitizeVarName(excessIndicatorVar), 1, 'max');
     });
   });
   
@@ -163,160 +222,99 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     const node = graph.nodes[nodeId];
     const isTargetNode = targetNodeIds.has(nodeId);
     
-    // For each output handle, create flow conservation constraint with excess slack
+    // Output flow conservation
     node.outputs.forEach((output, outputIndex) => {
-      const constraintName = `flow_out_${nodeId}_${outputIndex}`;
       const slackVar = `excess_${nodeId}_${outputIndex}`;
       const excessIndicatorVar = `excess_indicator_${nodeId}_${outputIndex}`;
+      registerVar(slackVar);
       
-      // Find all connections from this output
       const outgoingConnections = graph.connections.filter(
         c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
       );
       
-      // Determine if this is connected or unconnected excess
       const hasConnections = outgoingConnections.length > 0;
       const excessAmountWeight = hasConnections ? CONNECTED_EXCESS_AMOUNT_WEIGHT : UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
-      
-      // Create excess amount slack variable (penalized by amount based on connection status)
-      // For target nodes, use a very small weight to allow excess to vary minimally
       const actualExcessWeight = isTargetNode ? 1 : excessAmountWeight;
-      model.variables[slackVar] = {
-        total_cost: actualExcessWeight,
-        [constraintName]: -1
-      };
       
-      // Link slack to indicator
-      const linkConstraintName = `link_excess_${nodeId}_${outputIndex}`;
-      model.constraints[linkConstraintName] = { max: 0 };
+      objectiveTerms.push(`${formatCoeff(actualExcessWeight)} ${sanitizeVarName(slackVar)}`);
       
-      // Get machine count variable
-      const machineVar = `m_${nodeId}`;
-      
-      // Calculate production rate per machine
+      // Build constraint: production = flows + excess
       let cycleTime = node.cycleTime;
       if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
       
       const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
       if (typeof quantity !== 'number') return;
       
-      const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
+      const ratePerMachine = (node.isMineshaftDrill ? quantity : quantity / cycleTime) * RATE_SCALE_FACTOR;
       
-      // M = maximum possible production
       const M = ratePerMachine * 10000;
       
-      // Constraint: excess - M * indicator <= 0
-      model.variables[slackVar][linkConstraintName] = 1;
-      model.variables[excessIndicatorVar][linkConstraintName] = -M;
+      // Link constraint: excess - M * indicator <= 0
+      addConstraint(`link_excess_${nodeId}_${outputIndex}`,
+        `${sanitizeVarName(slackVar)} ${formatCoeff(-M)} ${sanitizeVarName(excessIndicatorVar)}`,
+        0, 'max');
       
-      // Constraint: production_capacity = outgoing_flows + excess_slack
-      model.constraints[constraintName] = { equal: 0 };
-      
-      // Add production capacity term (positive)
-      if (!model.variables[machineVar][constraintName]) {
-        model.variables[machineVar][constraintName] = 0;
-      }
-      model.variables[machineVar][constraintName] += ratePerMachine;
-      
-      // Add outgoing flow terms (negative)
+      // Flow conservation: machineCount * rate - flows - excess = 0
+      let lhs = `${formatCoeff(ratePerMachine)} ${sanitizeVarName(`m_${nodeId}`)}`;
       outgoingConnections.forEach(conn => {
-        const flowVar = `f_${conn.id}`;
-        if (!model.variables[flowVar][constraintName]) {
-          model.variables[flowVar][constraintName] = 0;
-        }
-        model.variables[flowVar][constraintName] -= 1;
+        lhs += ` -1 ${sanitizeVarName(`f_${conn.id}`)}`;
       });
+      lhs += ` -1 ${sanitizeVarName(slackVar)}`;
+      
+      addConstraint(`flow_out_${nodeId}_${outputIndex}`, lhs, 0, 'equal');
     });
     
-    // For each input handle, create flow conservation constraint with deficiency slack
+    // Input flow conservation
     node.inputs.forEach((input, inputIndex) => {
-      // Find all connections to this input
       const incomingConnections = graph.connections.filter(
         c => c.targetNodeId === nodeId && c.targetInputIndex === inputIndex
       );
       
-      // Skip unconnected inputs - they don't need to be satisfied
-      if (incomingConnections.length === 0) {
-        return;
-      }
+      if (incomingConnections.length === 0) return;
       
-      const constraintName = `flow_in_${nodeId}_${inputIndex}`;
       const slackVar = `deficit_${nodeId}_${inputIndex}`;
+      const deficitIndicatorVar = `deficit_indicator_${nodeId}_${inputIndex}`;
+      registerVar(slackVar);
+      registerVar(deficitIndicatorVar, true);
       
-      // Get machine count variable
-      const machineVar = `m_${nodeId}`;
+      objectiveTerms.push(`${formatCoeff(DEFICIENCY_AMOUNT_WEIGHT)} ${sanitizeVarName(slackVar)}`);
+      objectiveTerms.push(`${formatCoeff(DEFICIENCY_COUNT_WEIGHT)} ${sanitizeVarName(deficitIndicatorVar)}`);
       
-      // Calculate consumption rate per machine
+      // Binary constraint for deficit indicator
+      addConstraint(`deficit_binary_${nodeId}_${inputIndex}_min`, sanitizeVarName(deficitIndicatorVar), 0, 'min');
+      addConstraint(`deficit_binary_${nodeId}_${inputIndex}_max`, sanitizeVarName(deficitIndicatorVar), 1, 'max');
+      
       let cycleTime = node.cycleTime;
       if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
       
       const quantity = input.quantity;
       if (typeof quantity !== 'number') return;
       
-      const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
-      
-      // Create deficiency amount slack variable (heavily penalized by amount)
-      model.variables[slackVar] = {
-        total_cost: DEFICIENCY_AMOUNT_WEIGHT,
-        [constraintName]: 1
-      };
-      
-      // Create deficiency count indicator (binary variable, even more heavily penalized)
-      const deficitIndicatorVar = `deficit_indicator_${nodeId}_${inputIndex}`;
-      model.variables[deficitIndicatorVar] = {
-        total_cost: DEFICIENCY_COUNT_WEIGHT
-      };
-      model.ints[deficitIndicatorVar] = 1;
-      
-      // Binary constraint: 0 <= indicator <= 1
-      const deficitBinaryConstraintName = `deficit_binary_${nodeId}_${inputIndex}`;
-      model.constraints[deficitBinaryConstraintName] = { min: 0, max: 1 };
-      model.variables[deficitIndicatorVar][deficitBinaryConstraintName] = 1;
-      
-      // Link deficit to indicator
-      const deficitLinkConstraintName = `deficit_link_${nodeId}_${inputIndex}`;
-      model.constraints[deficitLinkConstraintName] = { max: 0 };
-      
-      // Calculate M = maximum possible deficit
+      const ratePerMachine = (node.isMineshaftDrill ? quantity : quantity / cycleTime) * RATE_SCALE_FACTOR;
       const M_deficit = ratePerMachine * 10000;
       
-      // Constraint: deficit - M * indicator <= 0
-      model.variables[slackVar][deficitLinkConstraintName] = 1;
-      model.variables[deficitIndicatorVar][deficitLinkConstraintName] = -M_deficit;
+      // Link deficit to indicator: deficit - M * indicator <= 0
+      addConstraint(`deficit_link_${nodeId}_${inputIndex}`,
+        `${sanitizeVarName(slackVar)} ${formatCoeff(-M_deficit)} ${sanitizeVarName(deficitIndicatorVar)}`,
+        0, 'max');
       
-      // Constraint: incoming_flows + deficiency_slack >= consumption_demand
-      model.constraints[constraintName] = { min: 0 };
-      
-      // Add incoming flow terms (positive)
-      incomingConnections.forEach(conn => {
-        const flowVar = `f_${conn.id}`;
-        if (!model.variables[flowVar][constraintName]) {
-          model.variables[flowVar][constraintName] = 0;
-        }
-        model.variables[flowVar][constraintName] += 1;
+      // Flow conservation: flows + deficit >= consumption
+      let lhs = '';
+      incomingConnections.forEach((conn, idx) => {
+        lhs += `${idx > 0 ? ' +' : ''}1 ${sanitizeVarName(`f_${conn.id}`)}`;
       });
+      lhs += ` +1 ${sanitizeVarName(slackVar)} ${formatCoeff(-ratePerMachine)} ${sanitizeVarName(`m_${nodeId}`)}`;
       
-      // Add consumption demand term (negative)
-      if (!model.variables[machineVar][constraintName]) {
-        model.variables[machineVar][constraintName] = 0;
-      }
-      model.variables[machineVar][constraintName] -= ratePerMachine;
-
-      // Add MAXIMUM flow constraint: flow cannot exceed consumption capacity
-      const maxFlowConstraintName = `max_flow_in_${nodeId}_${inputIndex}`;
-      model.constraints[maxFlowConstraintName] = { max: 0 };
+      addConstraint(`flow_in_${nodeId}_${inputIndex}`, lhs, 0, 'min');
       
-      // flow - consumption_capacity <= 0
-      incomingConnections.forEach(conn => {
-        const flowVar = `f_${conn.id}`;
-        if (!model.variables[flowVar][maxFlowConstraintName]) {
-          model.variables[flowVar][maxFlowConstraintName] = 0;
-        }
-        model.variables[flowVar][maxFlowConstraintName] += 1;
+      // Max flow constraint: flow <= consumption capacity
+      let maxFlowLhs = '';
+      incomingConnections.forEach((conn, idx) => {
+        maxFlowLhs += `${idx > 0 ? ' +' : ''}1 ${sanitizeVarName(`f_${conn.id}`)}`;
       });
+      maxFlowLhs += ` ${formatCoeff(-ratePerMachine)} ${sanitizeVarName(`m_${nodeId}`)}`;
       
-      // Add consumption capacity (negative, so flow can't exceed it)
-      model.variables[machineVar][maxFlowConstraintName] = -ratePerMachine;
+      addConstraint(`max_flow_in_${nodeId}_${inputIndex}`, maxFlowLhs, 0, 'max');
     });
   });
   
@@ -325,27 +323,22 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
     const node = graph.nodes[nodeId];
     if (!node) return;
     
-    // Calculate current excess for each output
     node.outputs.forEach((output, outputIndex) => {
-      const machineVar = `m_${nodeId}`;
       const slackVar = `excess_${nodeId}_${outputIndex}`;
       
-      // Find all connections from this output
       const outgoingConnections = graph.connections.filter(
         c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
       );
       
-      // Calculate current excess amount
       let cycleTime = node.cycleTime;
       if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
       
       const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
       if (typeof quantity !== 'number') return;
       
-      const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
+      const ratePerMachine = (node.isMineshaftDrill ? quantity : quantity / cycleTime) * RATE_SCALE_FACTOR;
       const currentProduction = ratePerMachine * (node.machineCount || 0);
       
-      // Calculate current connected flow
       let currentConnectedFlow = 0;
       outgoingConnections.forEach(conn => {
         const targetNode = graph.nodes[conn.targetNodeId];
@@ -360,7 +353,7 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
         const targetQuantity = targetInput.quantity;
         if (typeof targetQuantity !== 'number') return;
         
-        const targetRatePerMachine = targetNode.isMineshaftDrill ? targetQuantity : targetQuantity / targetCycleTime;
+        const targetRatePerMachine = (targetNode.isMineshaftDrill ? targetQuantity : targetQuantity / targetCycleTime) * RATE_SCALE_FACTOR;
         const targetDemand = targetRatePerMachine * (targetNode.machineCount || 0);
         
         currentConnectedFlow += Math.min(currentProduction - currentConnectedFlow, targetDemand);
@@ -368,356 +361,93 @@ const buildFullGraphModel = (graph, targetNodeIds = new Set()) => {
       
       const currentExcess = Math.max(0, currentProduction - currentConnectedFlow);
       
-      // Add constraint: excess must be >= current excess
-      // This allows the excess to increase but not decrease below target
-      const minExcessConstraintName = `min_excess_${nodeId}_${outputIndex}`;
-      model.constraints[minExcessConstraintName] = { min: currentExcess };
-      model.variables[slackVar][minExcessConstraintName] = 1;
+      addConstraint(`min_excess_${nodeId}_${outputIndex}`, sanitizeVarName(slackVar), currentExcess, 'min');
     });
   });
   
-  return model;
+  // Build final LP string
+  lp += 'Minimize\n';
+  lp += 'obj: ' + objectiveTerms.join(' ') + '\n';
+  lp += 'Subject To\n';
+  lp += constraints.join('\n') + '\n';
+  lp += 'Bounds\n';
+  variables.forEach(varName => {
+    lp += `${varName} >= 0\n`;
+  });
+  if (integerVars.size > 0) {
+    lp += 'General\n';
+    integerVars.forEach(varName => {
+      lp += `${varName}\n`;
+    });
+  }
+  lp += 'End\n';
+  
+  return { lpString: lp, varNameMap };
 };
 
 /**
- * Detect unsustainable loops using Tarjan's algorithm for strongly connected components
+ * Parse HiGHS solution output (already structured as object)
  */
-const detectUnsustainableLoops = (graph) => {
-  const nodeIds = Object.keys(graph.nodes);
-  const nodeIndex = new Map();
-  nodeIds.forEach((id, idx) => nodeIndex.set(id, idx));
+const parseLPSolution = (solutionObj, varNameMap) => {
+  console.log('[LP Solver] Parsing solution...');
   
-  const n = nodeIds.length;
-  const index = new Int32Array(n).fill(-1);
-  const lowlink = new Int32Array(n);
-  const onStack = new Uint8Array(n);
-  const stack = [];
-  let indexCounter = 0;
-  const sccs = [];
-  
-  const strongConnect = (v) => {
-    index[v] = indexCounter;
-    lowlink[v] = indexCounter;
-    indexCounter++;
-    stack.push(v);
-    onStack[v] = 1;
-    
-    const nodeId = nodeIds[v];
-    const node = graph.nodes[nodeId];
-    
-    // Check all outputs and their consumers
-    node.outputs.forEach(output => {
-      const productData = graph.products[output.productId];
-      if (!productData) return;
-      
-      productData.connections.forEach(conn => {
-        if (conn.sourceNodeId !== nodeId) return;
-        
-        const wIndex = nodeIndex.get(conn.targetNodeId);
-        if (wIndex === undefined) return;
-        
-        if (index[wIndex] === -1) {
-          strongConnect(wIndex);
-          lowlink[v] = Math.min(lowlink[v], lowlink[wIndex]);
-        } else if (onStack[wIndex]) {
-          lowlink[v] = Math.min(lowlink[v], index[wIndex]);
-        }
-      });
-    });
-    
-    if (lowlink[v] === index[v]) {
-      const scc = [];
-      let w;
-      do {
-        w = stack.pop();
-        onStack[w] = 0;
-        scc.push(nodeIds[w]);
-      } while (w !== v);
-      
-      if (scc.length > 1) {
-        sccs.push(scc);
-      }
-    }
-  };
-  
-  for (let v = 0; v < n; v++) {
-    if (index[v] === -1) {
-      strongConnect(v);
-    }
+  // Check if optimal
+  if (solutionObj.Status !== 'Optimal') {
+    console.log('[LP Solver] Solution not optimal, status:', solutionObj.Status);
+    return { feasible: false };
   }
   
-  // Check if any SCC is unsustainable
-  const unsustainableLoops = [];
+  const solution = { feasible: true };
   
-  sccs.forEach(scc => {
-    const sccSet = new Set(scc);
+  // Extract column values (variables)
+  const columns = solutionObj.Columns;
+  
+  // Map sanitized variable names back to original using the map
+  Object.keys(columns).forEach(sanitizedVarName => {
+    const originalVarName = varNameMap.get(sanitizedVarName);
     
-    // Find products that are BOTH produced AND consumed within the loop AND have actual connections
-    const loopDependentProducts = new Set();
-    
-    // Check all connections within the loop
-    graph.connections.forEach(conn => {
-      const sourceInLoop = sccSet.has(conn.sourceNodeId);
-      const targetInLoop = sccSet.has(conn.targetNodeId);
-      
-      // Only consider connections that are entirely within the loop
-      if (sourceInLoop && targetInLoop) {
-        const productId = conn.productId;
-        loopDependentProducts.add(productId);
-      }
-    });
-    
-    // If no loop-dependent products, this cycle is fine
-    if (loopDependentProducts.size === 0) {
+    if (!originalVarName) {
+      console.warn('[LP Solver] Unknown variable:', sanitizedVarName);
       return;
     }
     
-    // Check if loop has external input sources for ANY loop-dependent product
-    // An external source means there's an actual CONNECTION from outside the loop into the loop
-    let hasExternalSource = false;
+    // Extract the Primal value from the column object
+    let value = columns[sanitizedVarName].Primal;
     
-    for (const productId of loopDependentProducts) {
-      // Check if there are connections bringing this product from outside into the loop
-      const hasExternalConnection = graph.connections.some(conn => {
-        // Must be the right product
-        if (conn.productId !== productId) return false;
-        
-        // Source must be outside loop, target must be inside loop
-        const sourceOutside = !sccSet.has(conn.sourceNodeId);
-        const targetInside = sccSet.has(conn.targetNodeId);
-        
-        return sourceOutside && targetInside;
-      });
-      
-      if (hasExternalConnection) {
-        hasExternalSource = true;
-        break;
+    // Scale back rate-related variables
+    if (originalVarName.startsWith('f_') || 
+        originalVarName.startsWith('excess_') || 
+        originalVarName.startsWith('deficit_')) {
+      if (!originalVarName.includes('indicator')) {
+        value = value / RATE_SCALE_FACTOR;
       }
     }
     
-    // If the loop has an external source for at least one loop-dependent product, it's sustainable
-    if (hasExternalSource) {
-      return;
-    }
-    
-    // No external sources - check if loop can be self-sustaining
-    let canSelfSustain = true;
-    const problematicProducts = [];
-    
-    for (const productId of loopDependentProducts) {
-      // Check if any node in the loop can net-produce this product
-      let hasNetProducer = false;
-      
-      for (const nodeId of scc) {
-        const node = graph.nodes[nodeId];
-        
-        // Calculate per-machine rates
-        let cycleTime = node.cycleTime;
-        if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
-        
-        const isMineshaftDrill = node.isMineshaftDrill || node.recipe?.isMineshaftDrill;
-        
-        // Production rate per machine
-        let productionPerMachine = 0;
-        node.outputs.forEach(output => {
-          if (output.productId === productId) {
-            const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
-            if (typeof quantity === 'number') {
-              productionPerMachine += isMineshaftDrill ? quantity : quantity / cycleTime;
-            }
-          }
-        });
-        
-        // Consumption rate per machine
-        let consumptionPerMachine = 0;
-        node.inputs.forEach(input => {
-          if (input.productId === productId) {
-            if (typeof input.quantity === 'number') {
-              consumptionPerMachine += isMineshaftDrill ? input.quantity : input.quantity / cycleTime;
-            }
-          }
-        });
-        
-        // If this node net-produces (or is neutral), the product can be sustained
-        if (productionPerMachine >= consumptionPerMachine - 1e-10) {
-          hasNetProducer = true;
-          break;
-        }
-      }
-      
-      if (!hasNetProducer) {
-        canSelfSustain = false;
-        problematicProducts.push(productId);
-      }
-    }
-    
-    if (!canSelfSustain) {
-      unsustainableLoops.push({
-        nodes: scc,
-        nodeNames: scc.map(id => graph.nodes[id]?.recipe?.name || id),
-        problematicProducts
-      });
-    }
+    solution[originalVarName] = value;
   });
   
-  // Check for self-feeding nodes (not already in multi-node SCCs)
-  const nodesInSCCs = new Set();
-  sccs.forEach(scc => scc.forEach(nodeId => nodesInSCCs.add(nodeId)));
+  console.log('[LP Solver] Parsed variables:', Object.keys(solution).length - 1);
   
-  nodeIds.forEach(nodeId => {
-    // Skip if already part of a multi-node cycle
-    if (nodesInSCCs.has(nodeId)) return;
-    
-    const node = graph.nodes[nodeId];
-    if (!node) return;
-    
-    // Check if this node feeds itself via actual connections
-    const selfFedProducts = new Map();
-    
-    // Find all self-feeding connections
-    graph.connections.forEach(conn => {
-      if (conn.sourceNodeId === nodeId && conn.targetNodeId === nodeId) {
-        const productId = conn.productId;
-        const sourceOutput = node.outputs[conn.sourceOutputIndex];
-        const targetInput = node.inputs[conn.targetInputIndex];
-        
-        if (sourceOutput && targetInput && sourceOutput.productId === productId && targetInput.productId === productId) {
-          selfFedProducts.set(productId, {
-            inputRate: targetInput.rate,
-            outputRate: sourceOutput.rate
-          });
-        }
-      }
-    });
-    
-    if (selfFedProducts.size > 0) {
-      let isUnsustainable = false;
-      
-      for (const [productId, rates] of selfFedProducts) {
-        const productData = graph.products[productId];
-        const EPSILON = 1e-10;
-        
-        // If output > input: Always sustainable
-        if (rates.outputRate > rates.inputRate + EPSILON) {
-          continue;
-        }
-        
-        // If output < input: Need external sources
-        if (rates.outputRate < rates.inputRate - EPSILON) {
-          const hasExternalProducer = productData.producers.some(
-            producer => producer.nodeId !== nodeId
-          );
-          
-          if (!hasExternalProducer) {
-            isUnsustainable = true;
-            break;
-          }
-          continue;
-        }
-        
-        // If output == input (net neutral)
-        if (Math.abs(rates.outputRate - rates.inputRate) < EPSILON) {
-          const hasOtherConsumers = productData.consumers.some(
-            consumer => consumer.nodeId !== nodeId
-          );
-          
-          const hasOtherProducers = productData.producers.some(
-            producer => producer.nodeId !== nodeId
-          );
-          
-          // No other demand or suppliers: Sustainable
-          if (!hasOtherConsumers && !hasOtherProducers) {
-            continue;
-          }
-          
-          // There are demands but no additional suppliers: Unsustainable
-          if (hasOtherConsumers && !hasOtherProducers) {
-            isUnsustainable = true;
-            break;
-          }
-          
-          // There's an extra supplier: Sustainable
-          if (hasOtherProducers) {
-            continue;
-          }
-        }
-      }
-      
-      if (isUnsustainable) {
-        unsustainableLoops.push({
-          nodes: [nodeId],
-          nodeNames: [node.recipe?.name || nodeId],
-          isSelfFeeding: true
-        });
-      }
-    }
-  });
-  
-  return unsustainableLoops;
+  return solution;
 };
 
 /**
  * Solve the full graph LP model
  */
-const solveFullGraph = (graph, targetNodeIds = new Set()) => {
-  // Check for unsustainable loops BEFORE solving
-  const unsustainableLoops = detectUnsustainableLoops(graph);
-  
-  if (unsustainableLoops.length > 0) {
-    return {
-      feasible: false,
-      unsustainableLoops,
-      message: 'Unsustainable loops detected - these machines depend on each other with no external input source'
-    };
-  }
-  
-  const model = buildFullGraphModel(graph, targetNodeIds);
-  
-  // Log model statistics before solving
-  const numVariables = Object.keys(model.variables).length;
-  const numConstraints = Object.keys(model.constraints).length;
-  const numIntegerVars = Object.keys(model.ints).length;
-  const numContinuousVars = numVariables - numIntegerVars;
+const solveFullGraph = async (graph, targetNodeIds = new Set()) => {
   const numNodes = Object.keys(graph.nodes).length;
   const numConnections = graph.connections.length;
   
   console.log('%c[LP Solver] Model Statistics:', 'color: #3498db; font-weight: bold');
   console.log(`  Graph: ${numNodes} nodes, ${numConnections} connections`);
-  console.log(`  Variables: ${numVariables} total (${numContinuousVars} continuous, ${numIntegerVars} integer)`);
-  console.log(`  Constraints: ${numConstraints}`);
-  
-  // Breakdown of variable types
-  let machineVars = 0;
-  let ceilingVars = 0;
-  let flowVars = 0;
-  let excessVars = 0;
-  let excessIndicatorVars = 0;
-  let deficitVars = 0;
-  let deficitIndicatorVars = 0;
-  
-  Object.keys(model.variables).forEach(varName => {
-    if (varName.startsWith('m_') && !varName.startsWith('mc_')) machineVars++;
-    else if (varName.startsWith('mc_')) ceilingVars++;
-    else if (varName.startsWith('f_')) flowVars++;
-    else if (varName.startsWith('excess_') && !varName.includes('indicator')) excessVars++;
-    else if (varName.startsWith('excess_indicator_')) excessIndicatorVars++;
-    else if (varName.startsWith('deficit_') && !varName.includes('indicator')) deficitVars++;
-    else if (varName.startsWith('deficit_indicator_')) deficitIndicatorVars++;
-  });
-  
-  console.log('  Variable breakdown:');
-  console.log(`    Machine counts: ${machineVars}`);
-  console.log(`    Ceiling vars (model count): ${ceilingVars}`);
-  console.log(`    Flow vars: ${flowVars}`);
-  console.log(`    Excess vars: ${excessVars}`);
-  console.log(`    Excess indicators: ${excessIndicatorVars}`);
-  console.log(`    Deficit vars: ${deficitVars}`);
-  console.log(`    Deficit indicators: ${deficitIndicatorVars}`);
   
   // Solve the model
   console.log('%c[LP Solver] Solving...', 'color: #f39c12; font-weight: bold');
   const solveStartTime = performance.now();
-  const result = solver.Solve(model);
+  
+  // Build LP string and solve with HiGHS
+  const result = await solveWithHiGHS(graph, targetNodeIds);
+  
   const solveEndTime = performance.now();
   const solveTime = solveEndTime - solveStartTime;
   
@@ -916,7 +646,7 @@ const extractMachineUpdates = (lpResult, graph) => {
 /**
  * Main compute function - adjusts machine counts to balance production
  */
-export const computeMachines = (nodes, edges, targetProducts, options = {}) => {
+export const computeMachines = async (nodes, edges, targetProducts, options = {}) => {
   const { allowDeficiency = false } = options;
   if (targetProducts.length === 0) {
     return {
@@ -933,23 +663,9 @@ export const computeMachines = (nodes, edges, targetProducts, options = {}) => {
   const targetNodeIds = new Set(targetProducts.map(t => t.recipeBoxId));
   
   // Solve with LP
-  const lpResult = solveFullGraph(graph, targetNodeIds);
+  const lpResult = await solveFullGraph(graph, targetNodeIds);
   
   if (!lpResult.feasible) {
-    if (lpResult.unsustainableLoops) {
-      const loopDescriptions = lpResult.unsustainableLoops.map(loop => 
-        loop.nodeNames.join(' → ')
-      ).join('\n  ');
-      
-      return {
-        success: false,
-        updates: new Map(),
-        converged: false,
-        iterations: 0,
-        message: `Unsustainable loops detected:\n  ${loopDescriptions}\n\nThese machines form cycles with no external input source.`
-      };
-    }
-    
     return {
       success: false,
       updates: new Map(),

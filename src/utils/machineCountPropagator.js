@@ -3,7 +3,7 @@
  * Simplified approach: Calculate exact machines needed based on connection requirements
  */
 
-const EPSILON = 1e-10;
+const EPSILON = 1e-6;
 
 /**
  * Calculate machines needed to produce/consume a given rate

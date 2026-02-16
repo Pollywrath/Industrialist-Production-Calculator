@@ -496,8 +496,16 @@ const NodeRect = ({ side, index, width, input, onClick, nodeId, formatQuantity, 
 };
 
 const NodeHandle = ({ side, index, onClick, nodeId, productId, flows, onHandleDoubleClick, suggestions, input, data, leftCount, rightCount }) => {
-  // Use relaxed epsilon to handle floating-point precision from LP solver
-  const EPSILON = 1e-6;
+  // HiGHS LP solver has 6 significant figure precision
+  // Use relative tolerance: error scales with value magnitude
+  const RELATIVE_EPSILON = 0.001; // 0.1% relative tolerance
+  const ABSOLUTE_EPSILON = 1e-6;  // Minimum absolute tolerance for tiny values
+  
+  const isSignificant = (value, reference) => {
+    const relativeThreshold = Math.max(Math.abs(value), Math.abs(reference)) * RELATIVE_EPSILON;
+    const threshold = Math.max(relativeThreshold, ABSOLUTE_EPSILON);
+    return Math.abs(value) > threshold;
+  };
   
   // Get colors from CSS variables (theme)
   const cssVars = getComputedStyle(document.documentElement);
@@ -519,8 +527,9 @@ const NodeHandle = ({ side, index, onClick, nodeId, productId, flows, onHandleDo
         ? flowData.needed - flowData.connected
         : flowData.produced - flowData.connected;
       
-      // Only show as having issue if difference is truly > epsilon (not floating point error)
-      const hasIssue = Math.abs(difference) > EPSILON && difference > 0;
+      // Only show as having issue if difference is significant relative to reference value
+      const referenceValue = side === 'left' ? flowData.needed : flowData.produced;
+      const hasIssue = isSignificant(difference, referenceValue) && difference > 0;
       
       if (hasIssue) {
         handleColor = side === 'left' ? inputDeficient : outputExcess;

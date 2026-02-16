@@ -5,9 +5,18 @@ import { calculateSuggestions } from './suggestionCalculator';
 export const determineExcessAndDeficiency = (graph, flows) => {
   const excess = [];
   const deficiency = [];
-  // Use relaxed epsilon to handle floating-point precision from LP solver
-  // 1e-6 = 0.000001 (ignore differences smaller than this)
-  const EPSILON = 1e-6;
+  // HiGHS LP solver has 6 significant figure precision
+  // Use relative tolerance: error scales with value magnitude
+  // For value ~100: 0.1% = 0.1 tolerance
+  // For value ~0.001: uses absolute 1e-6 minimum
+  const RELATIVE_EPSILON = 0.001; // 0.1% relative tolerance
+  const ABSOLUTE_EPSILON = 1e-6;  // Minimum absolute tolerance for tiny values
+  
+  const isSignificant = (value, reference) => {
+    const relativeThreshold = Math.max(Math.abs(value), Math.abs(reference)) * RELATIVE_EPSILON;
+    const threshold = Math.max(relativeThreshold, ABSOLUTE_EPSILON);
+    return Math.abs(value) > threshold;
+  };
 
   Object.keys(graph.products).forEach(productId => {
     const productData = graph.products[productId];
@@ -18,8 +27,8 @@ export const determineExcessAndDeficiency = (graph, flows) => {
     const connectedConsumption = flowData.connectedFlow;
     const excessAmount = totalProduction - connectedConsumption;
 
-    // Only consider excess if difference is truly > epsilon (not just floating point error)
-    if (Math.abs(excessAmount) > EPSILON && excessAmount > 0) {
+    // Only consider excess if difference is significant relative to production
+    if (isSignificant(excessAmount, totalProduction) && excessAmount > 0) {
       const product = getProduct(productId);
       if (product) {
         excess.push({
@@ -37,8 +46,8 @@ export const determineExcessAndDeficiency = (graph, flows) => {
       const inputFlow = flows.byNode[consumer.nodeId]?.inputFlows[consumer.inputIndex];
       if (inputFlow) {
         const shortage = inputFlow.needed - inputFlow.connected;
-        // Only consider deficiency if difference is truly > epsilon (not just floating point error)
-        if (Math.abs(shortage) > EPSILON && shortage > 0) {
+        // Only consider deficiency if shortage is significant relative to need
+        if (isSignificant(shortage, inputFlow.needed) && shortage > 0) {
           const product = getProduct(productId);
           if (product) {
             let existingDeficiency = deficiency.find(d => d.productId === productId);

@@ -1,4 +1,16 @@
-const EPSILON = 1e-10;
+// HiGHS LP solver has 6 significant figure precision
+// Use relative tolerance for flow comparisons
+const RELATIVE_EPSILON = 0.001; // 0.1% relative tolerance
+const ABSOLUTE_EPSILON = 1e-6;  // Minimum absolute tolerance
+
+const isSignificantFlow = (value, reference) => {
+  const relativeThreshold = Math.max(Math.abs(value), Math.abs(reference)) * RELATIVE_EPSILON;
+  const threshold = Math.max(relativeThreshold, ABSOLUTE_EPSILON);
+  return Math.abs(value) > threshold;
+};
+
+// For machine counts and rates, use absolute epsilon (these should be precise)
+const EPSILON = 1e-6;
 
 /**
  * Find all outputs that could help supply a deficient input through connection chains
@@ -166,7 +178,7 @@ export const calculateSuggestions = (graph, flows) => {
       if (!inputFlow) return;
       
       const shortage = inputFlow.needed - inputFlow.connected;
-      if (shortage <= EPSILON) return;
+      if (!isSignificantFlow(shortage, inputFlow.needed) || shortage <= 0) return;
       
       const productId = input.productId;
       
@@ -304,7 +316,7 @@ export const calculateSuggestions = (graph, flows) => {
       if (!outputFlow) return;
       
       const excess = outputFlow.produced - outputFlow.connected;
-      if (excess <= EPSILON) return;
+      if (!isSignificantFlow(excess, outputFlow.produced) || excess <= 0) return;
       
       // Skip locked nodes for decrease suggestions
       const nodeMachineCountMode = node.machineCountMode || 'free';
