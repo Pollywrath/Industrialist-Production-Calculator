@@ -162,8 +162,6 @@ function App() {
   const [recipeTabFilter, setRecipeTabFilter] = useState('all'); // 'all', 'excess', 'deficiency'
   const [activeWeights, setActiveWeights] = useState(['Deficiencies', 'Model Count', 'Excesses', 'Pollution', 'Power', 'Cost']);
   const [unusedWeights, setUnusedWeights] = useState([]);
-  const [draggedWeight, setDraggedWeight] = useState(null);
-  const [dragOverIndex, setDragOverIndex] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [computeModal, setComputeModal] = useState(null);
   const reactFlowWrapper = useRef(null);
@@ -2990,194 +2988,135 @@ function App() {
                           Restore to Defaults
                         </button>
                       </div>
-                      {/* Active Weights Box */}
+                      {/* Weights List */}
                       <div>
                         <div style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 600, marginBottom: '8px' }}>
-                          Active Weights (Higher = More Priority)
+                          Objective Priority (Top = Highest)
                         </div>
-                        <div 
-                          style={{ 
-                            minHeight: '80px',
-                            padding: '10px',
-                            background: 'var(--bg-main)',
-                            border: '2px solid var(--border-primary)',
-                            borderRadius: 'var(--radius-md)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '8px'
-                          }}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            if (draggedWeight && draggedWeight !== 'Deficiencies' && unusedWeights.includes(draggedWeight)) {
-                              setUnusedWeights(prev => prev.filter(w => w !== draggedWeight));
-                              setActiveWeights(prev => [...prev, draggedWeight]);
-                            }
-                            setDraggedWeight(null);
-                            setDragOverIndex(null);
-                          }}
-                        >
-                          {activeWeights.length === 0 ? (
-                            <div style={{ 
-                              flex: 1, 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'center',
-                              color: 'var(--text-secondary)',
-                              fontSize: 'var(--font-size-xs)',
-                              fontStyle: 'italic'
-                            }}>
-                              Drag weights here
-                            </div>
-                          ) : (
-                            activeWeights.map((weight, index) => {
-                              // Calculate color based on position (red for high priority, green for low)
-                              const totalWeights = activeWeights.length;
-                              const ratio = totalWeights > 1 ? index / (totalWeights - 1) : 0;
-                              
-                              // Interpolate between red (239, 68, 68) and green (34, 197, 94)
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {(() => {
+                            const allWeights = [...activeWeights, ...unusedWeights];
+                            return allWeights.map((weight) => {
+                              const isActive = activeWeights.includes(weight);
+                              const isDeficiencies = weight === 'Deficiencies';
+                              const activeIndex = activeWeights.indexOf(weight);
+                              const totalActive = activeWeights.length;
+
+                              // Color for active weights: red (top) to green (bottom)
+                              const ratio = totalActive > 1 ? (activeIndex / (totalActive - 1)) : 0;
                               const r = Math.round(239 - (239 - 34) * ratio);
                               const g = Math.round(68 + (197 - 68) * ratio);
                               const b = Math.round(68 + (94 - 68) * ratio);
-                              const bgColor = `rgb(${r}, ${g}, ${b})`;
-                              
-                              return (
-                              <div
-                                key={weight}
-                                draggable={weight !== 'Deficiencies'}
-                                onDragStart={() => weight !== 'Deficiencies' && setDraggedWeight(weight)}
-                                onDragOver={(e) => {
-                                  e.preventDefault();
-                                  // Don't allow dropping on Deficiencies (index 0)
-                                  if (draggedWeight && draggedWeight !== weight && weight !== 'Deficiencies') {
-                                    setDragOverIndex(index);
-                                  }
-                                }}
-                                onDragLeave={() => setDragOverIndex(null)}
-                                onDrop={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  // Don't allow dropping on Deficiencies position
-                                  if (draggedWeight && draggedWeight !== weight && weight !== 'Deficiencies') {
-                                    // If dragging from unused to active
-                                    if (unusedWeights.includes(draggedWeight)) {
-                                      setUnusedWeights(prev => prev.filter(w => w !== draggedWeight));
-                                      setActiveWeights(prev => {
-                                        const newWeights = [...prev];
-                                        // Insert at the drop position (which is never 0 because we prevent dropping on Deficiencies)
-                                        newWeights.splice(index, 0, draggedWeight);
-                                        return newWeights;
-                                      });
-                                    }
-                                    // If reordering within active
-                                    else if (activeWeights.includes(draggedWeight)) {
-                                      setActiveWeights(prev => {
-                                        // Keep Deficiencies at index 0
-                                        const withoutDragged = prev.filter(w => w !== draggedWeight);
-                                        // Calculate the correct insertion index
-                                        const targetIndex = withoutDragged.indexOf(weight);
-                                        withoutDragged.splice(targetIndex, 0, draggedWeight);
-                                        return withoutDragged;
-                                      });
-                                    }
-                                  }
-                                  setDragOverIndex(null);
-                                  setDraggedWeight(null);
-                                }}
-                                style={{
-                                  padding: '10px 12px',
-                                  background: 'var(--bg-secondary)',
-                                  color: 'var(--text-primary)',
-                                  border: `3px solid ${bgColor}`,
-                                  borderRadius: 'var(--radius-sm)',
-                                  cursor: weight === 'Deficiencies' ? 'not-allowed' : 'grab',
-                                  fontWeight: 600,
-                                  fontSize: 'var(--font-size-sm)',
-                                  textAlign: 'center',
-                                  userSelect: 'none',
-                                  transition: 'all 0.2s',
-                                  opacity: weight === 'Deficiencies' ? 0.7 : (draggedWeight === weight ? 0.5 : 1),
-                                  // Don't show drop indicator on Deficiencies
-                                  boxShadow: (dragOverIndex === index && weight !== 'Deficiencies') ? '0 -3px 0 0 var(--color-primary-hover)' : 'none',
-                                  marginTop: (dragOverIndex === index && weight !== 'Deficiencies') ? '3px' : '0'
-                                }}
-                                onDragEnd={() => {
-                                  setDraggedWeight(null);
-                                  setDragOverIndex(null);
-                                }}
-                                title={weight === 'Deficiencies' ? 'Deficiencies must always be active' : ''}
-                              >
-                                {weight}
-                              </div>
-                            );
-                            })
-                          )}
-                        </div>
-                      </div>
+                              const borderColor = isActive ? `rgb(${r}, ${g}, ${b})` : 'var(--border-light)';
 
-                      {/* Unused Weights Box */}
-                      <div>
-                        <div style={{ color: 'var(--text-primary)', fontSize: 'var(--font-size-sm)', fontWeight: 600, marginBottom: '8px' }}>
-                          Unused Weights
-                        </div>
-                        <div 
-                          style={{ 
-                            minHeight: '80px',
-                            padding: '10px',
-                            background: 'var(--bg-main)',
-                            border: '2px solid var(--border-light)',
-                            borderRadius: 'var(--radius-md)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '8px'
-                          }}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            if (draggedWeight && draggedWeight !== 'Deficiencies' && activeWeights.includes(draggedWeight)) {
-                              setActiveWeights(prev => prev.filter(w => w !== draggedWeight));
-                              setUnusedWeights(prev => [...prev, draggedWeight]);
-                            }
-                            setDraggedWeight(null);
-                          }}
-                        >
-                          {unusedWeights.length === 0 ? (
-                            <div style={{ 
-                              flex: 1, 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'center',
-                              color: 'var(--text-secondary)',
-                              fontSize: 'var(--font-size-xs)',
-                              fontStyle: 'italic'
-                            }}>
-                              All weights active
-                            </div>
-                          ) : (
-                            unusedWeights.map(weight => (
-                              <div
-                                key={weight}
-                                draggable
-                                onDragStart={() => setDraggedWeight(weight)}
-                                style={{
-                                  padding: '10px 12px',
-                                  background: 'var(--bg-secondary)',
-                                  color: 'var(--text-secondary)',
-                                  border: '2px solid var(--border-light)',
-                                  borderRadius: 'var(--radius-sm)',
-                                  cursor: 'grab',
-                                  fontWeight: 600,
-                                  fontSize: 'var(--font-size-sm)',
-                                  textAlign: 'center',
-                                  userSelect: 'none',
-                                  transition: 'opacity 0.2s'
-                                }}
-                                onDragEnd={() => setDraggedWeight(null)}
-                              >
-                                {weight}
-                              </div>
-                            ))
-                          )}
+                              const canMoveUp = isActive && !isDeficiencies && activeIndex > 1;
+                              const canMoveDown = isActive && !isDeficiencies && activeIndex < totalActive - 1;
+
+                              const moveUp = () => {
+                                setActiveWeights(prev => {
+                                  const next = [...prev];
+                                  const i = next.indexOf(weight);
+                                  [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                                  return next;
+                                });
+                              };
+
+                              const moveDown = () => {
+                                setActiveWeights(prev => {
+                                  const next = [...prev];
+                                  const i = next.indexOf(weight);
+                                  [next[i + 1], next[i]] = [next[i], next[i + 1]];
+                                  return next;
+                                });
+                              };
+
+                              const toggleUsed = () => {
+                                if (isActive) {
+                                  setActiveWeights(prev => prev.filter(w => w !== weight));
+                                  setUnusedWeights(prev => [...prev, weight]);
+                                } else {
+                                  setUnusedWeights(prev => prev.filter(w => w !== weight));
+                                  setActiveWeights(prev => [...prev, weight]);
+                                }
+                              };
+
+                              const btnBase = {
+                                width: '24px', height: '24px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '1px solid var(--border-primary)',
+                                background: 'var(--bg-main)',
+                                color: 'var(--text-primary)',
+                                cursor: 'pointer',
+                                fontSize: '14px',
+                                lineHeight: 1,
+                                flexShrink: 0,
+                                transition: 'opacity 0.15s',
+                                padding: 0,
+                              };
+
+                              return (
+                                <div
+                                  key={weight}
+                                  style={{
+                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                    padding: '7px 10px',
+                                    background: 'var(--bg-secondary)',
+                                    border: `2px solid ${borderColor}`,
+                                    borderRadius: 'var(--radius-sm)',
+                                    opacity: isActive ? 1 : 0.5,
+                                    transition: 'opacity 0.2s, border-color 0.2s',
+                                  }}
+                                >
+                                  {/* Up / Down buttons */}
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <button
+                                      onClick={moveUp}
+                                      disabled={!canMoveUp}
+                                      style={{ ...btnBase, opacity: canMoveUp ? 1 : 0.25, cursor: canMoveUp ? 'pointer' : 'default' }}
+                                      title="Move up"
+                                    >↑</button>
+                                    <button
+                                      onClick={moveDown}
+                                      disabled={!canMoveDown}
+                                      style={{ ...btnBase, opacity: canMoveDown ? 1 : 0.25, cursor: canMoveDown ? 'pointer' : 'default' }}
+                                      title="Move down"
+                                    >↓</button>
+                                  </div>
+
+                                  {/* Label */}
+                                  <span style={{
+                                    flex: 1,
+                                    fontWeight: 600,
+                                    fontSize: 'var(--font-size-sm)',
+                                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                    userSelect: 'none',
+                                  }}>
+                                    {weight}
+                                  </span>
+
+                                  {/* Toggle button */}
+                                  <button
+                                    onClick={isDeficiencies ? undefined : toggleUsed}
+                                    disabled={isDeficiencies}
+                                    title={isDeficiencies ? 'Deficiencies must always be active' : isActive ? 'Disable' : 'Enable'}
+                                    style={{
+                                      ...btnBase,
+                                      width: '52px',
+                                      fontSize: '11px',
+                                      fontWeight: 600,
+                                      opacity: isDeficiencies ? 0.25 : 1,
+                                      cursor: isDeficiencies ? 'default' : 'pointer',
+                                      color: isActive ? '#fca5a5' : '#86efac',
+                                      borderColor: isActive ? 'rgba(239,68,68,0.4)' : 'rgba(34,197,94,0.4)',
+                                    }}
+                                  >
+                                    {isDeficiencies ? '—' : isActive ? 'Disable' : 'Enable'}
+                                  </button>
+                                </div>
+                              );
+                            });
+                          })()}
                         </div>
                       </div>
                     </div>

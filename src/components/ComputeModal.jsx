@@ -5,7 +5,15 @@ const TIPS = [
   'Tip: Use Shift+Click on a node to mark it as a target recipe.',
   'Tip: Capped nodes will not exceed their set machine count during solving.',
   'Tip: Connect excess outputs to inputs of other machines to reduce waste.',
-  'Tip: The LP solver prioritizes eliminating deficiencies above all else.',
+  'Tip: The LP solver prioritizes eliminating deficiencies above all else, other variables are compared using weighted sums.',
+  'Tip: Adjust objective weights in the view recipes panel to change what the solver optimizes for — reorder or disable Model Count, Excesses, Pollution, Power, and Cost.',
+  'Tip: Remove unused weights entirely to simplify the model — fewer active objectives means faster solving.',
+  'Tip: Line types and paths can be changed in the Theme Editor to make complex networks easier to read.',
+  'Tip: Excess and deficiency highlight colors are customizable in the Theme Editor — make them stand out more against your chosen theme.',
+  'Tip: Add different ways of producing an item to see which is better, solver will pick the flow with the least cost according to weights used',
+  'Tip: Double-click a handle to auto-balance a single connection without running the full solver.',
+  'Tip: Middle-click a node to duplicate it — useful for quickly scaling up a production line.',
+  'Tip: Use the per-second display mode to directly compare production rates across different recipe cycle times.',
 ];
 
 const Spinner = () => {
@@ -14,20 +22,41 @@ const Spinner = () => {
     if (!document.getElementById(id)) {
       const style = document.createElement('style');
       style.id = id;
-      style.textContent = '@keyframes lp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }';
+      style.textContent = `
+        @keyframes lp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes lp-dot-fade { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
+      `;
       document.head.appendChild(style);
     }
   }, []);
 
+  const DOT_COUNT = 10;
+  const RADIUS = 20;
+  const CENTER = 26;
+
   return (
-    <div style={{
-      width: '52px', height: '52px', flexShrink: 0,
-      border: '5px solid var(--border-primary)',
-      borderTopColor: 'var(--color-primary)',
-      borderRadius: '50%',
-      animation: 'lp-spin 0.9s linear infinite',
-      willChange: 'transform'
-    }} />
+    <svg width="52" height="52" style={{ flexShrink: 0, animation: 'lp-spin 1.1s linear infinite', willChange: 'transform' }}>
+      {Array.from({ length: DOT_COUNT }).map((_, i) => {
+        const angle = (i / DOT_COUNT) * 2 * Math.PI - Math.PI / 2;
+        const x = CENTER + RADIUS * Math.cos(angle);
+        const y = CENTER + RADIUS * Math.sin(angle);
+        const size = 2 + (i / (DOT_COUNT - 1)) * 3.5;
+        const delay = -(i / DOT_COUNT) * 1.1;
+        return (
+          <circle
+            key={i}
+            cx={x}
+            cy={y}
+            r={size / 2}
+            fill="var(--color-primary)"
+            style={{
+              animation: `lp-dot-fade 1.1s ease-in-out ${delay}s infinite`,
+              transformOrigin: `${x}px ${y}px`,
+            }}
+          />
+        );
+      })}
+    </svg>
   );
 };
 

@@ -16,27 +16,58 @@ const sanitizeVarName = (name) => {
   return name.replace(/-/g, '_');
 };
 
-// Objective weights (in strict priority order)
-// Priority tiers (each tier dominates all lower tiers):
-// Tier 1 (Critical): Deficiency count and amounts - MUST be zero
-// Tier 2 (Important): Model count, excess counts and amounts - should be minimized
-// Tier 3 (Optional): Pollution, power, cost - nice to minimize but low priority
+// Deficiency weights are pinned — always dominate all other objectives regardless of user ordering
+const DEFICIENCY_COUNT_WEIGHT  = 1e15;
+const DEFICIENCY_AMOUNT_WEIGHT = 1e12;
 
-// Tier 1: Deficiency (must dominate everything)
-const DEFICIENCY_COUNT_WEIGHT = 1e15;      // 1 quadrillion - count of deficient inputs (range: 1-3)
-const DEFICIENCY_AMOUNT_WEIGHT = 1e12;     // 1 trillion - amount of each deficiency (range: varies widely)
+// Normalized base weights per category. Chosen so that the default ordering
+// (Model Count > Excesses > Pollution > Power > Cost) with TIER_BASE=1e3 and
+// 5 active non-deficiency tiers produces the original weight values exactly.
+const BASE_MODEL_COUNT               = 1e-3;
+const BASE_EXCESS_CONNECTED_COUNT    = 1e-3;
+const BASE_EXCESS_UNCONNECTED_COUNT  = 1e-4;
+const BASE_EXCESS_CONNECTED_AMOUNT   = 1e-6;
+const BASE_EXCESS_UNCONNECTED_AMOUNT = 1e-7;
+const BASE_POLLUTION                 = 1e-5;
+const BASE_POWER                     = 1e-8;
+const BASE_COST                      = 1e-6;
 
-// Tier 2: Model count and excess (should dominate tier 3)
-const MODEL_COUNT_WEIGHT = 1e9;            // 1 billion - model count per machine (range: 3-20, uses ceiling)
-const CONNECTED_EXCESS_COUNT_WEIGHT = 1e6; // 1 million - count of connected excess outputs (range: 1-3)
-const CONNECTED_EXCESS_AMOUNT_WEIGHT = 1e3;// 1 thousand - amount of connected excess (range: varies)
-const UNCONNECTED_EXCESS_COUNT_WEIGHT = 1e5;// 100 thousand - count of unconnected excess (range: 1-3)
-const UNCONNECTED_EXCESS_AMOUNT_WEIGHT = 1e2;// 100 - amount of unconnected excess (range: varies)
+// Each priority tier is TIER_BASE times more important than the tier below it
+const TIER_BASE = 1e3;
 
-// Tier 3: Resource optimization (lowest priority)
-const POLLUTION_WEIGHT = 10;               // 10 - pollution per machine (range: 0.01-0.4, scales with machine count)
-const POWER_WEIGHT = 0.00001;              // 0.00001 - power per machine (range: 150-20M, scales with machine count)
-const COST_WEIGHT = 0.000001;              // 0.000001 - cost per machine (range: 80-200M, but mostly 1k-250k)
+/**
+ * Compute objective weights from the user-defined active weight ordering.
+ * Deficiency is always pinned at its constants above. The remaining active
+ * weights receive exponential tier scaling based on position in the list:
+ * top of list = highest tier = largest multiplier. Weights in unusedWeights
+ * are disabled (scale = 0). The four Excesses sub-weights all share the same
+ * tier scale, preserving their internal hierarchy.
+ */
+const computeObjectiveWeights = (activeWeights = [], unusedWeights = []) => {
+  const unusedSet = new Set(unusedWeights);
+  const nonDeficiency = activeWeights.filter(w => w !== 'Deficiencies');
+  const N = nonDeficiency.length;
+
+  const tierScale = (label) => {
+    if (unusedSet.has(label)) return 0;
+    const idx = nonDeficiency.indexOf(label);
+    if (idx === -1) return 0;
+    return Math.pow(TIER_BASE, N - 1 - idx);
+  };
+
+  const excessScale = tierScale('Excesses');
+
+  return {
+    MODEL_COUNT_WEIGHT:               BASE_MODEL_COUNT               * tierScale('Model Count'),
+    CONNECTED_EXCESS_COUNT_WEIGHT:    BASE_EXCESS_CONNECTED_COUNT    * excessScale,
+    UNCONNECTED_EXCESS_COUNT_WEIGHT:  BASE_EXCESS_UNCONNECTED_COUNT  * excessScale,
+    CONNECTED_EXCESS_AMOUNT_WEIGHT:   BASE_EXCESS_CONNECTED_AMOUNT   * excessScale,
+    UNCONNECTED_EXCESS_AMOUNT_WEIGHT: BASE_EXCESS_UNCONNECTED_AMOUNT * excessScale,
+    POLLUTION_WEIGHT:                 BASE_POLLUTION                  * tierScale('Pollution'),
+    POWER_WEIGHT:                     BASE_POWER                     * tierScale('Power'),
+    COST_WEIGHT:                      BASE_COST                      * tierScale('Cost'),
+  };
+};
 
 
 
@@ -46,13 +77,10 @@ let _createSCIP = null;
 
 const getOrLoadSCIPFactory = async () => {
   if (_createSCIP) {
-    console.log('[SCIP Solver] Reusing cached SCIP factory');
     return _createSCIP;
   }
 
-  console.log('[SCIP Solver] Loading SCIP module...');
   const scipUrl = import.meta.env.BASE_URL + 'scip.js';
-  console.log('[SCIP Solver] Loading from:', scipUrl);
 
   const response = await fetch(scipUrl);
   if (!response.ok) throw new Error(`Failed to fetch scip.js: ${response.status}`);
@@ -62,14 +90,13 @@ const getOrLoadSCIPFactory = async () => {
   URL.revokeObjectURL(blobUrl);
 
   _createSCIP = scipModule.default;
-  console.log('[SCIP Solver] SCIP factory cached');
   return _createSCIP;
 };
 
 /**
  * Solve the MPS model using SCIP WASM
  */
-const solveWithSCIP = async (graph, targetNodeIds) => {
+const solveWithSCIP = async (graph, targetNodeIds, weights) => {
   try {
     const stdoutLines = [];
     const createSCIP = await getOrLoadSCIPFactory();
@@ -82,17 +109,13 @@ const solveWithSCIP = async (graph, targetNodeIds) => {
 
     const { FS, callMain: main } = scip;
 
-    console.log('[SCIP Solver] Building MPS model...');
-    const { mpsString, varNameMap } = buildMPSString(graph, targetNodeIds);
-    console.log('[SCIP Solver] MPS model length:', mpsString.length);
+    const { mpsString, varNameMap } = buildMPSString(graph, targetNodeIds, weights);
 
     FS.writeFile('model.mps', mpsString);
 
-    console.log('[SCIP Solver] Solving...');
     main(['-c', 'read model.mps', '-c', 'optimize', '-c', 'display solution', '-c', 'quit']);
 
     const stdoutText = stdoutLines.join('\n');
-
     let solutionText;
     try {
       solutionText = FS.readFile('sol.txt', { encoding: 'utf8' });
@@ -112,7 +135,7 @@ const solveWithSCIP = async (graph, targetNodeIds) => {
 /**
  * Build MPS format string directly from graph (full double precision)
  */
-const buildMPSString = (graph, targetNodeIds = new Set()) => {
+const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
   const variables = [];
   const varSet = new Set();
   const integerVars = new Set(); // mc_ general integers
@@ -167,11 +190,15 @@ const buildMPSString = (graph, targetNodeIds = new Set()) => {
   // Full precision number formatter — MPS supports full doubles unlike LP format
   const fmt = (n) => String(n);
 
+  // Flags to skip unused variable types entirely from the MPS model
+  const useModelCount = weights.MODEL_COUNT_WEIGHT > 0;
+  const useExcess = weights.CONNECTED_EXCESS_COUNT_WEIGHT > 0;
+
   // ===== Machine count variables =====
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     const varName = registerVar(`m_${nodeId}`);
-    const ceilingVarName = registerVar(`mc_${nodeId}`, true); // general integer
+    const ceilingVarName = useModelCount ? registerVar(`mc_${nodeId}`, true) : null;
     const currentCount = node.machineCount || 0;
     const machineCountMode = node.machineCountMode || 'free';
     const cappedCount = node.cappedMachineCount;
@@ -207,12 +234,13 @@ const buildMPSString = (graph, targetNodeIds = new Set()) => {
       modelCountPerMachine = 1 + powerFactor + (inputOutputCount * 2);
     }
 
-    const machineObjCoeff = (POWER_WEIGHT * powerValue) + (POLLUTION_WEIGHT * pollutionValue) + (COST_WEIGHT * machineCost);
+    const machineObjCoeff = (weights.POWER_WEIGHT * powerValue) + (weights.POLLUTION_WEIGHT * pollutionValue) + (weights.COST_WEIGHT * machineCost);
     if (machineObjCoeff !== 0) addObjCoeff(varName, machineObjCoeff);
-    addObjCoeff(ceilingVarName, MODEL_COUNT_WEIGHT * modelCountPerMachine);
-
-    // Ceiling constraint: mc_ - m_ >= 0
-    addConstraint(`ceiling_${nodeId}`, [[ceilingVarName, 1], [varName, -1]], 0, 'min');
+    if (useModelCount) {
+      addObjCoeff(ceilingVarName, weights.MODEL_COUNT_WEIGHT * modelCountPerMachine);
+      // Ceiling constraint: mc_ - m_ >= 0
+      addConstraint(`ceiling_${nodeId}`, [[ceilingVarName, 1], [varName, -1]], 0, 'min');
+    }
 
     if (machineCountMode === 'locked') {
       addConstraint(`lock_${nodeId}`, [[varName, 1]], currentCount, 'equal');
@@ -230,13 +258,13 @@ const buildMPSString = (graph, targetNodeIds = new Set()) => {
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     node.outputs.forEach((output, outputIndex) => {
-      const excessIndicatorVar = registerVar(`excess_indicator_${nodeId}_${outputIndex}`, false, true);
-
       const outgoingConnections = graph.connections.filter(
         c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
       );
       const hasConnections = outgoingConnections.length > 0;
-      const excessCountWeight = hasConnections ? CONNECTED_EXCESS_COUNT_WEIGHT : UNCONNECTED_EXCESS_COUNT_WEIGHT;
+      if (!useExcess) return;
+      const excessIndicatorVar = registerVar(`excess_indicator_${nodeId}_${outputIndex}`, false, true);
+      const excessCountWeight = hasConnections ? weights.CONNECTED_EXCESS_COUNT_WEIGHT : weights.UNCONNECTED_EXCESS_COUNT_WEIGHT;
       addObjCoeff(excessIndicatorVar, excessCountWeight);
     });
   });
@@ -257,8 +285,12 @@ const buildMPSString = (graph, targetNodeIds = new Set()) => {
       );
 
       const hasConnections = outgoingConnections.length > 0;
-      const excessAmountWeight = hasConnections ? CONNECTED_EXCESS_AMOUNT_WEIGHT : UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
-      addObjCoeff(slackVar, isTargetNode ? 1 : excessAmountWeight);
+      const excessAmountWeight = hasConnections ? weights.CONNECTED_EXCESS_AMOUNT_WEIGHT : weights.UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
+      if (isTargetNode) {
+        addObjCoeff(slackVar, 1);
+      } else if (useExcess) {
+        addObjCoeff(slackVar, excessAmountWeight);
+      }
 
       let cycleTime = node.cycleTime;
       if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
@@ -267,11 +299,13 @@ const buildMPSString = (graph, targetNodeIds = new Set()) => {
       if (typeof quantity !== 'number') return;
 
       const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
-      const M = ratePerMachine * 10000;
 
-      // Link constraint: excess - M * indicator <= 0
-      addConstraint(`link_excess_${nodeId}_${outputIndex}`,
-        [[slackVar, 1], [excessIndicatorVar, -M]], 0, 'max');
+      // Link constraint: excess - M * indicator <= 0 (only when excess tracking is active)
+      if (useExcess) {
+        const M = ratePerMachine * 10000;
+        addConstraint(`link_excess_${nodeId}_${outputIndex}`,
+          [[slackVar, 1], [excessIndicatorVar, -M]], 0, 'max');
+      }
 
       // Flow conservation: rate * m_ - sum(f_out) - excess = 0
       const flowTerms = [[mVar, ratePerMachine], [slackVar, -1]];
@@ -443,18 +477,15 @@ const buildMPSString = (graph, targetNodeIds = new Set()) => {
  * Parse SCIP solution file text output
  */
 const parseSCIPSolution = (solutionText, varNameMap) => {
-  console.log('[SCIP Solver] Parsing solution...');
 
   if (!solutionText ||
       solutionText.includes('no solution available') ||
       solutionText.includes('infeasible')) {
-    console.log('[SCIP Solver] No feasible solution found');
     return { feasible: false };
   }
 
   if (!solutionText.includes('optimal solution found') &&
       !solutionText.includes('solution status: feasible')) {
-    console.log('[SCIP Solver] Solution not optimal, text:', solutionText.substring(0, 200));
     return { feasible: false };
   }
 
@@ -480,33 +511,27 @@ const parseSCIPSolution = (solutionText, varNameMap) => {
     }
   }
 
-  console.log('[SCIP Solver] Parsed variables:', Object.keys(solution).length - 1);
   return solution;
 };
 
 /**
  * Solve the full graph LP model
  */
-const solveFullGraph = async (graph, targetNodeIds = new Set()) => {
+const solveFullGraph = async (graph, targetNodeIds = new Set(), activeWeights = [], unusedWeights = []) => {
   const numNodes = Object.keys(graph.nodes).length;
   const numConnections = graph.connections.length;
   
-  console.log('%c[LP Solver] Model Statistics:', 'color: #3498db; font-weight: bold');
-  console.log(`  Graph: ${numNodes} nodes, ${numConnections} connections`);
-  
   // Solve the model
-  console.log('%c[LP Solver] Solving...', 'color: #f39c12; font-weight: bold');
   const solveStartTime = performance.now();
   
-  // Build MPS model and solve with SCIP
-  const result = await solveWithSCIP(graph, targetNodeIds);
+  // Compute objective weights from user ordering, then solve
+  const weights = computeObjectiveWeights(activeWeights, unusedWeights);
+  const result = await solveWithSCIP(graph, targetNodeIds, weights);
   
   const solveEndTime = performance.now();
   const solveTime = solveEndTime - solveStartTime;
   
   if (result.feasible) {
-    console.log(`%c[LP Solver] Solution found in ${solveTime.toFixed(2)}ms`, 'color: #2ecc71; font-weight: bold');
-    console.log('%c[LP Solver] Solution Found', 'color: #2ecc71; font-weight: bold');
     
     // Calculate actual objective value manually
     let actualCost = 0;
@@ -555,7 +580,7 @@ const solveFullGraph = async (graph, targetNodeIds = new Set()) => {
             c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
           );
           
-          const countWeight = hasConnections ? CONNECTED_EXCESS_COUNT_WEIGHT : UNCONNECTED_EXCESS_COUNT_WEIGHT;
+          const countWeight = hasConnections ? weights.CONNECTED_EXCESS_COUNT_WEIGHT : weights.UNCONNECTED_EXCESS_COUNT_WEIGHT;
           
           totalExcessCount += value;
           excessCountCost += value * countWeight;
@@ -573,7 +598,7 @@ const solveFullGraph = async (graph, targetNodeIds = new Set()) => {
             c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
           );
           
-          const weight = hasConnections ? CONNECTED_EXCESS_AMOUNT_WEIGHT : UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
+          const weight = hasConnections ? weights.CONNECTED_EXCESS_AMOUNT_WEIGHT : weights.UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
           
           if (hasConnections) {
             totalConnectedExcess += value;
@@ -621,7 +646,7 @@ const solveFullGraph = async (graph, targetNodeIds = new Set()) => {
         }
         
         const ceilingVarName = `mc_${nodeId}`;
-        const roundedMachineCount = result[ceilingVarName] !== undefined ? result[ceilingVarName] : Math.ceil(value);
+        const roundedMachineCount = weights.MODEL_COUNT_WEIGHT > 0 && result[ceilingVarName] !== undefined ? result[ceilingVarName] : Math.ceil(value);
         const nodeModelCount = roundedMachineCount * modelCountPerMachine;
         const nodePower = value * powerValue;
         const nodePollution = value * pollutionValue;
@@ -632,48 +657,16 @@ const solveFullGraph = async (graph, targetNodeIds = new Set()) => {
         totalPollution += nodePollution;
         totalMachineCost += nodeMachineCost;
         
-        modelCountCost += nodeModelCount * MODEL_COUNT_WEIGHT;
-        powerCost += nodePower * POWER_WEIGHT;
-        pollutionCost += nodePollution * POLLUTION_WEIGHT;
-        machineCost += nodeMachineCost * COST_WEIGHT;
+        modelCountCost += nodeModelCount * weights.MODEL_COUNT_WEIGHT;
+        powerCost += nodePower * weights.POWER_WEIGHT;
+        pollutionCost += nodePollution * weights.POLLUTION_WEIGHT;
+        machineCost += nodeMachineCost * weights.COST_WEIGHT;
       }
     });
     
     actualCost = deficiencyCountCost + deficiencyAmountCost + excessCountCost + excessAmountCost + modelCountCost + powerCost + pollutionCost + machineCost;
     
-    // Cost breakdown
-    console.log('  Cost Breakdown:');
-    console.log(`    Deficiency count: ${totalDeficitCount} inputs (cost: ${deficiencyCountCost.toExponential(2)})`);
-    console.log(`    Deficiency amount: ${totalDeficitAmount.toFixed(4)} (cost: ${deficiencyAmountCost.toExponential(2)})`);
-    console.log(`    Excess count: ${totalExcessCount} outputs (cost: ${excessCountCost.toExponential(2)})`);
-    console.log(`    Connected excess: ${totalConnectedExcess.toFixed(4)} (cost: ${(totalConnectedExcess * CONNECTED_EXCESS_AMOUNT_WEIGHT).toExponential(2)})`);
-    console.log(`    Unconnected excess: ${totalUnconnectedExcess.toFixed(4)} (cost: ${(totalUnconnectedExcess * UNCONNECTED_EXCESS_AMOUNT_WEIGHT).toExponential(2)})`);
-    console.log(`    Model count: ${totalModelCount.toFixed(0)} (cost: ${modelCountCost.toExponential(2)})`);
-    console.log(`    Power: ${totalPower.toFixed(0)} W (cost: ${powerCost.toFixed(2)})`);
-    console.log(`    Pollution: ${totalPollution.toFixed(2)} %/hr (cost: ${pollutionCost.toFixed(2)})`);
-    console.log(`    Machine cost: $${totalMachineCost.toFixed(0)} (cost: ${machineCost.toFixed(2)})`);
-    console.log(`    Total: ${actualCost.toExponential(2)}`);
-    
-    // Show changed machine counts only
-    console.log('  Machine Count Changes:');
-    let changesFound = false;
-    Object.keys(graph.nodes).forEach(nodeId => {
-      const node = graph.nodes[nodeId];
-      const varName = `m_${nodeId}`;
-      const newValue = result[varName] || 0;
-      const oldValue = node.machineCount || 0;
-      const changed = Math.abs(newValue - oldValue) > EPSILON;
-      if (changed) {
-        changesFound = true;
-        console.log(`    ${node?.recipe?.name || nodeId}: ${oldValue.toFixed(4)} → ${newValue.toFixed(4)}`);
-      }
-    });
-    if (!changesFound) {
-      console.log('    No changes needed');
     }
-  } else {
-    console.log('%c[LP Solver] No feasible solution', 'color: #e74c3c; font-weight: bold');
-  }
   
   return result;
 };
@@ -710,7 +703,7 @@ const extractMachineUpdates = (lpResult, graph) => {
  * Main compute function - adjusts machine counts to balance production
  */
 export const computeMachines = async (nodes, edges, targetProducts, options = {}) => {
-  const { allowDeficiency = false } = options;
+  const { allowDeficiency = false, activeWeights = [], unusedWeights = [] } = options;
   if (targetProducts.length === 0) {
     return {
       success: false,
@@ -726,7 +719,7 @@ export const computeMachines = async (nodes, edges, targetProducts, options = {}
   const targetNodeIds = new Set(targetProducts.map(t => t.recipeBoxId));
   
   // Solve with LP
-  const lpResult = await solveFullGraph(graph, targetNodeIds);
+  const lpResult = await solveFullGraph(graph, targetNodeIds, activeWeights, unusedWeights);
   
   if (!lpResult.feasible) {
     const errorMsg = lpResult.error

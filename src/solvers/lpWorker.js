@@ -3,18 +3,13 @@ import { updateMachines } from '../data/dataLoader.js';
 
 
 self.onmessage = async (e) => {
-  console.log('[LP Worker] Worker script loaded');
-
   try {
     const { nodes, edges, targetProducts, activeWeights, unusedWeights, machines } = e.data;
-
-    console.log('[LP Worker] Starting computation...');
 
     // Sync the live machines data from the main thread so getMachine() works correctly
     updateMachines(machines);
 
     // First pass: strict – no deficiency allowed
-    console.log('[LP Worker] Running first pass (strict)...');
     const result = await computeMachines(nodes, edges, targetProducts, {
       allowDeficiency: false,
       activeWeights,
@@ -25,7 +20,6 @@ self.onmessage = async (e) => {
     // can apply it immediately if the user confirms – no second round-trip needed
     let deficiencyResult = null;
     if (!result.success && result.hasDeficiency) {
-      console.log('[LP Worker] Running second pass (permissive)...');
       deficiencyResult = await computeMachines(nodes, edges, targetProducts, {
         allowDeficiency: true,
         activeWeights,
@@ -33,7 +27,6 @@ self.onmessage = async (e) => {
       });
     }
 
-    console.log('[LP Worker] Computation complete, sending results...');
     self.postMessage({ result, deficiencyResult });
   } catch (error) {
     console.error('[LP Worker] Fatal error:', error);
