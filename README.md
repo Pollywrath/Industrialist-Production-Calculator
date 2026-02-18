@@ -80,8 +80,14 @@ Resets all data to original game values. **Warning**: Clears canvas and custom d
 
 ## Project Structure
 ```
+public/                  # Static assets (Apache 2.0 — see License)
+├── scip.js
+├── scip.js.mem
+├── scip.wasm
+└── scip.wasm.js
 src/
 ├── components/          # React components
+│   ├── ComputeModal.jsx
 │   ├── CustomNode.jsx
 │   ├── CustomEdge.jsx
 │   ├── UnifiedSettings.jsx
@@ -110,14 +116,17 @@ src/
 │   ├── appUtilities.js
 │   ├── recipeBoxCreation.js
 │   ├── machineCountPropagator.js
-│   └── dataUtilities.js
+│   ├── dataUtilities.js
+│   ├── autoLayout.js
+│   └── saveDB.js
 ├── solvers/             # Production analysis (MIT)
 │   ├── productionSolver.js
 │   ├── graphBuilder.js
 │   ├── flowCalculator.js
 │   ├── excessCalculator.js
 │   ├── suggestionCalculator.js
-│   └── lpSolver.js
+│   ├── lpSolver.js
+│   └── lpWorker.js
 ├── App.jsx
 ├── index.css
 └── main.jsx
@@ -142,8 +151,7 @@ Game data from [Industrialist Wiki](https://industrialist.miraheze.org/):
   - `src/data/undergroundWasteFacility.js` (storage, consumption rates)
   - `src/data/liquidDump.js` (pollution rates)
   - `src/data/liquidBurner.js` (pollution rates)
-  - `src/utils/temperatureHandler.js` (heat source definitions, temperature calculations)
-  - `src/utils/temperatureDependentCycles.js` (temperature-dependent cycle formulas)
+  - `src/utils/temperatureUtils.js` (heat source definitions, temperature calculations, temperature-dependent cycle formulas)
 
 **Summary**: Code is freely usable (including commercial). Game data is non-commercial only with attribution.
 
@@ -152,6 +160,7 @@ Game data from [Industrialist Wiki](https://industrialist.miraheze.org/):
 - **Game Data**: [Industrialist Wiki](https://industrialist.miraheze.org/)
 - **Development**: Pollywrath
 - **Built With**: React, ReactFlow, Vite
+- **LP/MIP Solver**: [SCIP Optimization Suite](https://www.scipopt.org/) (Apache 2.0) — compiled to WebAssembly by [Jacob Strieb](https://github.com/jstrieb/poker-chipper)
 
 ## Support
 

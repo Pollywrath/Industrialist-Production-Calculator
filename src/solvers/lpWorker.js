@@ -6,17 +6,6 @@ self.onmessage = async (e) => {
   console.log('[LP Worker] Worker script loaded');
 
   try {
-    console.log('[LP Worker] Attempting to import highs...');
-    import('highs').then(mod => {
-      console.log('[LP Worker] highs imported successfully:', mod);
-    }).catch(err => {
-      console.error('[LP Worker] Failed to import highs:', err);
-    });
-  } catch (err) {
-    console.error('[LP Worker] Sync error importing highs:', err);
-  }
-
-  try {
     const { nodes, edges, targetProducts, activeWeights, unusedWeights, machines } = e.data;
 
     console.log('[LP Worker] Starting computation...');

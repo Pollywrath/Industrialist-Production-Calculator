@@ -168,19 +168,25 @@ const ComputeModal = ({ phase, nodeSnapshot, result, onCancel, onApply, onLocate
 
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '26px' }}>{result?.success ? '✅' : 'ℹ️'}</span>
+          <span style={{ fontSize: '26px' }}>
+            {result?.success ? '✅' : result?.solverError || result?.error ? '❌' : 'ℹ️'}
+          </span>
           <div>
             <div style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 700 }}>
-              {result?.success ? 'Computation Complete' : 'Computation Complete'}
+              {result?.success
+                ? 'Computation Complete'
+                : result?.solverError || result?.error
+                  ? 'Solver Error'
+                  : 'No Solution Found'}
             </div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '2px' }}>
-              {result?.message}
+            <div style={{ color: result?.success ? 'var(--text-secondary)' : '#fca5a5', fontSize: '12px', marginTop: '2px' }}>
+              {result?.message || result?.error || 'An unknown error occurred.'}
             </div>
           </div>
         </div>
 
-        {/* Changes */}
-        <div>
+        {/* Changes — hide entirely on solver error */}
+        {!result?.solverError && !result?.error && <div>
           {sectionTitle(`Machine Count Changes (${changesArr.length})`)}
           {hasChanges ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '240px', overflowY: 'auto' }}>
@@ -216,15 +222,15 @@ const ComputeModal = ({ phase, nodeSnapshot, result, onCancel, onApply, onLocate
               No changes — network is already balanced.
             </div>
           )}
-        </div>
+        </div>}
 
         {/* Solver Info */}
         <div>
           {sectionTitle('Solver Info')}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            {infoRow('Nodes Updated', changesArr.length)}
-            {infoRow('Converged', result?.converged ? 'Yes' : 'No')}
-            {infoRow('Iterations', result?.iterations ?? '—')}
+            {!result?.solverError && !result?.error && infoRow('Nodes Updated', changesArr.length)}
+            {!result?.solverError && !result?.error && infoRow('Converged', result?.converged ? 'Yes' : 'No')}
+            {!result?.solverError && !result?.error && infoRow('Iterations', result?.iterations ?? '—')}
             {result?.elapsedMs != null && infoRow('Solve Time', `${(result.elapsedMs / 1000).toFixed(2)}s`)}
           </div>
         </div>

@@ -3,6 +3,7 @@
  * Simplified approach: Calculate exact machines needed based on connection requirements
  */
 
+// Small threshold used as a zero-guard for machine counts and rates
 const EPSILON = 1e-6;
 
 /**

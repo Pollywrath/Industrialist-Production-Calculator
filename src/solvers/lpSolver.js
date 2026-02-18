@@ -1,6 +1,10 @@
 /**
- * Linear Programming Solver for Production Networks
- * Automatically adjusts machine counts to balance production for target recipes
+ * LP/MIP Solver for Production Networks
+ * Automatically adjusts machine counts to balance production for target recipes.
+ *
+ * Uses SCIP (Solving Constraint Integer Programs) compiled to WebAssembly.
+ * SCIP © Zuse Institute Berlin — Apache License 2.0
+ * https://www.scipopt.org/
  */
 
 import { getMachine } from '../data/dataLoader';
@@ -36,110 +40,145 @@ const COST_WEIGHT = 0.000001;              // 0.000001 - cost per machine (range
 
 
 
+// Cache the factory function only — createSCIP() must be called fresh each solve
+// since callMain() can only be invoked once per Emscripten instance
+let _createSCIP = null;
+
+const getOrLoadSCIPFactory = async () => {
+  if (_createSCIP) {
+    console.log('[SCIP Solver] Reusing cached SCIP factory');
+    return _createSCIP;
+  }
+
+  console.log('[SCIP Solver] Loading SCIP module...');
+  const scipUrl = import.meta.env.BASE_URL + 'scip.js';
+  console.log('[SCIP Solver] Loading from:', scipUrl);
+
+  const response = await fetch(scipUrl);
+  if (!response.ok) throw new Error(`Failed to fetch scip.js: ${response.status}`);
+  const blob = await response.blob();
+  const blobUrl = URL.createObjectURL(blob);
+  const scipModule = await import(/* @vite-ignore */ blobUrl);
+  URL.revokeObjectURL(blobUrl);
+
+  _createSCIP = scipModule.default;
+  console.log('[SCIP Solver] SCIP factory cached');
+  return _createSCIP;
+};
+
 /**
- * Convert the declarative model to HiGHS format and solve
+ * Solve the MPS model using SCIP WASM
  */
-const solveWithHiGHS = async (graph, targetNodeIds) => {
+const solveWithSCIP = async (graph, targetNodeIds) => {
   try {
-    console.log('[LP Solver] Initializing HiGHS...');
-    console.log('[LP Solver] WASM path:', import.meta.env.BASE_URL + 'highs.wasm');
-    
-    // Dynamically import highs to avoid blocking worker initialization
-    console.log('[LP Solver] Dynamically importing highs...');
-    const highsModule = await import('highs');
-    
-    // Get the highs function
-    const highs = highsModule.default;
-    
-    // Initialize HiGHS - WASM file is served from public folder
-    const h = await highs({
-      locateFile: (file) => {
-        if (file.endsWith('.wasm')) {
-          const wasmPath = import.meta.env.BASE_URL + 'highs.wasm';
-          console.log('[LP Solver] Loading WASM from:', wasmPath);
-          return wasmPath;
-        }
-        return file;
-      }
+    const stdoutLines = [];
+    const createSCIP = await getOrLoadSCIPFactory();
+
+    const scip = await createSCIP({
+      locateFile: (file) => import.meta.env.BASE_URL + file,
+      print: (text) => { stdoutLines.push(text); },
+      printErr: (text) => { stdoutLines.push(text); },
     });
-    
-    console.log('[LP Solver] HiGHS initialized successfully');
-    
-    // Build LP format string directly
-    const { lpString, varNameMap } = buildLPString(graph, targetNodeIds);
-    console.log('[LP Solver] Built LP format string, length:', lpString.length);
-    
-    // Solve using HiGHS
-    const solution = h.solve(lpString);
-    console.log('[LP Solver] Raw solution:', solution);
-    
-    // Parse solution using the variable name map
-    const parsedSolution = parseLPSolution(solution, varNameMap);
-    
-    return parsedSolution;
-    
+
+    const { FS, callMain: main } = scip;
+
+    console.log('[SCIP Solver] Building MPS model...');
+    const { mpsString, varNameMap } = buildMPSString(graph, targetNodeIds);
+    console.log('[SCIP Solver] MPS model length:', mpsString.length);
+
+    FS.writeFile('model.mps', mpsString);
+
+    console.log('[SCIP Solver] Solving...');
+    main(['-c', 'read model.mps', '-c', 'optimize', '-c', 'display solution', '-c', 'quit']);
+
+    const stdoutText = stdoutLines.join('\n');
+
+    let solutionText;
+    try {
+      solutionText = FS.readFile('sol.txt', { encoding: 'utf8' });
+    } catch (e) {
+      solutionText = stdoutText;
+    }
+    return parseSCIPSolution(solutionText, varNameMap);
+
   } catch (error) {
-    console.error('[LP Solver] HiGHS error:', error);
-    console.error('[LP Solver] Error type:', error.constructor.name);
-    console.error('[LP Solver] Error message:', error.message);
-    console.error('[LP Solver] Error stack:', error.stack);
+    console.error('[SCIP Solver] Error:', error);
+    console.error('[SCIP Solver] Error message:', error.message);
+    console.error('[SCIP Solver] Error stack:', error.stack);
     return { feasible: false, error: error.message, stack: error.stack };
   }
 };
 
 /**
- * Build LP format string directly from graph
+ * Build MPS format string directly from graph (full double precision)
  */
-const buildLPString = (graph, targetNodeIds = new Set()) => {
-  let lp = '';
-  const variables = new Set();
-  const integerVars = new Set();
-  const constraints = [];
-  const objectiveTerms = [];
-  const varNameMap = new Map(); // sanitized -> original mapping
-  
-  // Helper to register variable and track original name
-  const registerVar = (originalName, isInteger = false) => {
+const buildMPSString = (graph, targetNodeIds = new Set()) => {
+  const variables = [];
+  const varSet = new Set();
+  const integerVars = new Set(); // mc_ general integers
+  const binaryVars = new Set();  // indicator variables (0/1)
+  const varNameMap = new Map();
+
+  // Row storage: rowName -> { type: 'E'|'L'|'G', rhs: number, terms: Map(varName -> coeff) }
+  const rowMap = new Map();
+  const rowOrder = [];
+  const objCoeffs = new Map(); // varName -> coeff
+
+  const registerVar = (originalName, isInteger = false, isBinary = false) => {
     const sanitized = sanitizeVarName(originalName);
-    variables.add(sanitized);
-    varNameMap.set(sanitized, originalName);
-    if (isInteger) {
-      integerVars.add(sanitized);
+    if (!varSet.has(sanitized)) {
+      varSet.add(sanitized);
+      variables.push(sanitized);
+      varNameMap.set(sanitized, originalName);
+    }
+    if (isInteger) integerVars.add(sanitized);
+    if (isBinary) binaryVars.add(sanitized);
+    return sanitized;
+  };
+
+  const addObjCoeff = (varName, coeff) => {
+    if (coeff === 0) return;
+    objCoeffs.set(varName, (objCoeffs.get(varName) || 0) + coeff);
+  };
+
+  const registerRow = (name, type, rhs = 0) => {
+    const sanitized = sanitizeVarName(name);
+    if (!rowMap.has(sanitized)) {
+      rowMap.set(sanitized, { type, rhs, terms: new Map() });
+      rowOrder.push(sanitized);
     }
     return sanitized;
   };
-  
-  // Helper to add constraint
-  const addConstraint = (name, lhs, rhs, type) => {
-    const sanitizedName = sanitizeVarName(name);
-    if (type === 'equal') {
-      constraints.push(`${sanitizedName}: ${lhs} = ${rhs}`);
-    } else if (type === 'min') {
-      constraints.push(`${sanitizedName}: ${lhs} >= ${rhs}`);
-    } else if (type === 'max') {
-      constraints.push(`${sanitizedName}: ${lhs} <= ${rhs}`);
-    }
+
+  const addRowTerm = (rowName, varName, coeff) => {
+    if (coeff === 0) return;
+    const row = rowMap.get(rowName);
+    if (!row) return;
+    row.terms.set(varName, (row.terms.get(varName) || 0) + coeff);
   };
-  
-  // Helper to format coefficient
-  const formatCoeff = (coeff) => coeff >= 0 ? `+${coeff}` : `${coeff}`;
-  
-  // Create variables for each node's machine count
+
+  // terms: array of [varName, coeff] pairs
+  const addConstraint = (name, terms, rhs, type) => {
+    const mpsType = type === 'equal' ? 'E' : type === 'max' ? 'L' : 'G';
+    const rowName = registerRow(name, mpsType, rhs);
+    terms.forEach(([varName, coeff]) => addRowTerm(rowName, varName, coeff));
+  };
+
+  // Full precision number formatter — MPS supports full doubles unlike LP format
+  const fmt = (n) => String(n);
+
+  // ===== Machine count variables =====
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
-    const varName = `m_${nodeId}`;
-    const ceilingVarName = `mc_${nodeId}`;
+    const varName = registerVar(`m_${nodeId}`);
+    const ceilingVarName = registerVar(`mc_${nodeId}`, true); // general integer
     const currentCount = node.machineCount || 0;
     const machineCountMode = node.machineCountMode || 'free';
     const cappedCount = node.cappedMachineCount;
-    
-    registerVar(varName);
-    registerVar(ceilingVarName, true);
-    
-    // Calculate machine contribution to objective
+
     let cycleTime = node.cycleTime;
     if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
-    
+
     const power = node.recipe.power_consumption;
     let powerValue = 0;
     if (typeof power === 'number') {
@@ -147,276 +186,301 @@ const buildLPString = (graph, targetNodeIds = new Set()) => {
     } else if (typeof power === 'object' && power !== null && 'max' in power) {
       powerValue = power.max;
     }
-    
+
     const pollution = node.recipe.pollution;
     const pollutionValue = typeof pollution === 'number' ? pollution : 0;
-    
+
     const machine = getMachine(node.recipe.machine_id);
     const machineCost = machine && typeof machine.cost === 'number' ? machine.cost : 0;
-    
+
     const inputOutputCount = (node.recipe.inputs?.length || 0) + (node.recipe.outputs?.length || 0);
-    const powerFactor = Math.ceil(powerValue / 1500000) * 2;
-    const inputOutputFactor = inputOutputCount * 2;
-    const modelCountPerMachine = 1 + powerFactor + inputOutputFactor;
-    
-    // Add to objective function
+    const powerFactor = node.recipe.power_type === 'HV' ? 2 : Math.ceil(powerValue / 1500000) * 2;
+
+    let modelCountPerMachine;
+    if (node.recipe.machine_id === 'm_industrial_firebox') {
+      modelCountPerMachine = 1 + inputOutputCount * 2;
+    } else if (node.recipe.isTreeFarm && node.recipe.treeFarmSettings) {
+      const { trees, harvesters, sprinklers, controller, outputs } = node.recipe.treeFarmSettings;
+      const waterTanks = Math.ceil(sprinklers / 3);
+      modelCountPerMachine = trees + harvesters + sprinklers + (waterTanks * 3) + controller + (outputs * 3) + powerFactor;
+    } else {
+      modelCountPerMachine = 1 + powerFactor + (inputOutputCount * 2);
+    }
+
     const machineObjCoeff = (POWER_WEIGHT * powerValue) + (POLLUTION_WEIGHT * pollutionValue) + (COST_WEIGHT * machineCost);
-    if (machineObjCoeff !== 0) {
-      objectiveTerms.push(`${formatCoeff(machineObjCoeff)} ${sanitizeVarName(varName)}`);
-    }
-    
-    const ceilingObjCoeff = MODEL_COUNT_WEIGHT * modelCountPerMachine;
-    objectiveTerms.push(`${formatCoeff(ceilingObjCoeff)} ${sanitizeVarName(ceilingVarName)}`);
-    
-    // Ceiling constraint: mc_nodeId >= m_nodeId
-    addConstraint(`ceiling_${nodeId}`, 
-      `${sanitizeVarName(ceilingVarName)} -1 ${sanitizeVarName(varName)}`, 
-      0, 'min');
-    
-    // Non-negativity: m_nodeId >= 0
-    addConstraint(`nonneg_${nodeId}`, sanitizeVarName(varName), 0, 'min');
-    
-    // Handle locked and capped nodes
+    if (machineObjCoeff !== 0) addObjCoeff(varName, machineObjCoeff);
+    addObjCoeff(ceilingVarName, MODEL_COUNT_WEIGHT * modelCountPerMachine);
+
+    // Ceiling constraint: mc_ - m_ >= 0
+    addConstraint(`ceiling_${nodeId}`, [[ceilingVarName, 1], [varName, -1]], 0, 'min');
+
     if (machineCountMode === 'locked') {
-      addConstraint(`lock_${nodeId}`, sanitizeVarName(varName), currentCount, 'equal');
+      addConstraint(`lock_${nodeId}`, [[varName, 1]], currentCount, 'equal');
     } else if (machineCountMode === 'capped' && typeof cappedCount === 'number') {
-      addConstraint(`cap_${nodeId}`, sanitizeVarName(varName), cappedCount, 'max');
+      addConstraint(`cap_${nodeId}`, [[varName, 1]], cappedCount, 'max');
     }
   });
-  
-  // Create flow variables for each connection
+
+  // ===== Flow variables =====
   graph.connections.forEach(conn => {
-    const flowVar = `f_${conn.id}`;
-    registerVar(flowVar);
-    
-    // Flow non-negativity
-    addConstraint(`flow_nonneg_${conn.id}`, sanitizeVarName(flowVar), 0, 'min');
+    registerVar(`f_${conn.id}`);
   });
-  
-  // Create excess indicator variables
+
+  // ===== Excess indicator variables (binary) =====
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
-    
     node.outputs.forEach((output, outputIndex) => {
-      const excessIndicatorVar = `excess_indicator_${nodeId}_${outputIndex}`;
-      registerVar(excessIndicatorVar, true);
-      
+      const excessIndicatorVar = registerVar(`excess_indicator_${nodeId}_${outputIndex}`, false, true);
+
       const outgoingConnections = graph.connections.filter(
         c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
       );
       const hasConnections = outgoingConnections.length > 0;
       const excessCountWeight = hasConnections ? CONNECTED_EXCESS_COUNT_WEIGHT : UNCONNECTED_EXCESS_COUNT_WEIGHT;
-      
-      objectiveTerms.push(`${formatCoeff(excessCountWeight)} ${sanitizeVarName(excessIndicatorVar)}`);
-      
-      // Binary constraint: 0 <= indicator <= 1
-      addConstraint(`binary_${nodeId}_${outputIndex}_min`, sanitizeVarName(excessIndicatorVar), 0, 'min');
-      addConstraint(`binary_${nodeId}_${outputIndex}_max`, sanitizeVarName(excessIndicatorVar), 1, 'max');
+      addObjCoeff(excessIndicatorVar, excessCountWeight);
     });
   });
-  
-  // Flow conservation constraints for each node
+
+  // ===== Flow conservation constraints =====
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     const isTargetNode = targetNodeIds.has(nodeId);
-    
+    const mVar = sanitizeVarName(`m_${nodeId}`);
+
     // Output flow conservation
     node.outputs.forEach((output, outputIndex) => {
-      const slackVar = `excess_${nodeId}_${outputIndex}`;
-      const excessIndicatorVar = `excess_indicator_${nodeId}_${outputIndex}`;
-      registerVar(slackVar);
-      
+      const slackVar = registerVar(`excess_${nodeId}_${outputIndex}`);
+      const excessIndicatorVar = sanitizeVarName(`excess_indicator_${nodeId}_${outputIndex}`);
+
       const outgoingConnections = graph.connections.filter(
         c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
       );
-      
+
       const hasConnections = outgoingConnections.length > 0;
       const excessAmountWeight = hasConnections ? CONNECTED_EXCESS_AMOUNT_WEIGHT : UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
-      const actualExcessWeight = isTargetNode ? 1 : excessAmountWeight;
-      
-      objectiveTerms.push(`${formatCoeff(actualExcessWeight)} ${sanitizeVarName(slackVar)}`);
-      
-      // Build constraint: production = flows + excess
+      addObjCoeff(slackVar, isTargetNode ? 1 : excessAmountWeight);
+
       let cycleTime = node.cycleTime;
       if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
-      
+
       const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
       if (typeof quantity !== 'number') return;
-      
-      const ratePerMachine = (node.isMineshaftDrill ? quantity : quantity / cycleTime);
-      
+
+      const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
       const M = ratePerMachine * 10000;
-      
+
       // Link constraint: excess - M * indicator <= 0
       addConstraint(`link_excess_${nodeId}_${outputIndex}`,
-        `${sanitizeVarName(slackVar)} ${formatCoeff(-M)} ${sanitizeVarName(excessIndicatorVar)}`,
-        0, 'max');
-      
-      // Flow conservation: machineCount * rate - flows - excess = 0
-      let lhs = `${formatCoeff(ratePerMachine)} ${sanitizeVarName(`m_${nodeId}`)}`;
+        [[slackVar, 1], [excessIndicatorVar, -M]], 0, 'max');
+
+      // Flow conservation: rate * m_ - sum(f_out) - excess = 0
+      const flowTerms = [[mVar, ratePerMachine], [slackVar, -1]];
       outgoingConnections.forEach(conn => {
-        lhs += ` -1 ${sanitizeVarName(`f_${conn.id}`)}`;
+        flowTerms.push([sanitizeVarName(`f_${conn.id}`), -1]);
       });
-      lhs += ` -1 ${sanitizeVarName(slackVar)}`;
-      
-      addConstraint(`flow_out_${nodeId}_${outputIndex}`, lhs, 0, 'equal');
+      addConstraint(`flow_out_${nodeId}_${outputIndex}`, flowTerms, 0, 'equal');
     });
-    
+
     // Input flow conservation
     node.inputs.forEach((input, inputIndex) => {
       const incomingConnections = graph.connections.filter(
         c => c.targetNodeId === nodeId && c.targetInputIndex === inputIndex
       );
-      
       if (incomingConnections.length === 0) return;
-      
-      const slackVar = `deficit_${nodeId}_${inputIndex}`;
-      const deficitIndicatorVar = `deficit_indicator_${nodeId}_${inputIndex}`;
-      registerVar(slackVar);
-      registerVar(deficitIndicatorVar, true);
-      
-      objectiveTerms.push(`${formatCoeff(DEFICIENCY_AMOUNT_WEIGHT)} ${sanitizeVarName(slackVar)}`);
-      objectiveTerms.push(`${formatCoeff(DEFICIENCY_COUNT_WEIGHT)} ${sanitizeVarName(deficitIndicatorVar)}`);
-      
-      // Binary constraint for deficit indicator
-      addConstraint(`deficit_binary_${nodeId}_${inputIndex}_min`, sanitizeVarName(deficitIndicatorVar), 0, 'min');
-      addConstraint(`deficit_binary_${nodeId}_${inputIndex}_max`, sanitizeVarName(deficitIndicatorVar), 1, 'max');
-      
+
+      const slackVar = registerVar(`deficit_${nodeId}_${inputIndex}`);
+      const deficitIndicatorVar = registerVar(`deficit_indicator_${nodeId}_${inputIndex}`, false, true);
+
+      addObjCoeff(slackVar, DEFICIENCY_AMOUNT_WEIGHT);
+      addObjCoeff(deficitIndicatorVar, DEFICIENCY_COUNT_WEIGHT);
+
       let cycleTime = node.cycleTime;
       if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
-      
+
       const quantity = input.quantity;
       if (typeof quantity !== 'number') return;
-      
-      const ratePerMachine = (node.isMineshaftDrill ? quantity : quantity / cycleTime);
+
+      const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
       const M_deficit = ratePerMachine * 10000;
-      
+
       // Link deficit to indicator: deficit - M * indicator <= 0
       addConstraint(`deficit_link_${nodeId}_${inputIndex}`,
-        `${sanitizeVarName(slackVar)} ${formatCoeff(-M_deficit)} ${sanitizeVarName(deficitIndicatorVar)}`,
-        0, 'max');
-      
-      // Flow conservation: flows + deficit >= consumption
-      let lhs = '';
-      incomingConnections.forEach((conn, idx) => {
-        lhs += `${idx > 0 ? ' +' : ''}1 ${sanitizeVarName(`f_${conn.id}`)}`;
+        [[slackVar, 1], [deficitIndicatorVar, -M_deficit]], 0, 'max');
+
+      // Flow conservation: sum(f_in) + deficit - rate * m_ >= 0
+      const flowInTerms = [[slackVar, 1], [mVar, -ratePerMachine]];
+      incomingConnections.forEach(conn => {
+        flowInTerms.push([sanitizeVarName(`f_${conn.id}`), 1]);
       });
-      lhs += ` +1 ${sanitizeVarName(slackVar)} ${formatCoeff(-ratePerMachine)} ${sanitizeVarName(`m_${nodeId}`)}`;
-      
-      addConstraint(`flow_in_${nodeId}_${inputIndex}`, lhs, 0, 'min');
-      
-      // Max flow constraint: flow <= consumption capacity
-      let maxFlowLhs = '';
-      incomingConnections.forEach((conn, idx) => {
-        maxFlowLhs += `${idx > 0 ? ' +' : ''}1 ${sanitizeVarName(`f_${conn.id}`)}`;
+      addConstraint(`flow_in_${nodeId}_${inputIndex}`, flowInTerms, 0, 'min');
+
+      // Max flow constraint: sum(f_in) - rate * m_ <= 0
+      const maxFlowTerms = [[mVar, -ratePerMachine]];
+      incomingConnections.forEach(conn => {
+        maxFlowTerms.push([sanitizeVarName(`f_${conn.id}`), 1]);
       });
-      maxFlowLhs += ` ${formatCoeff(-ratePerMachine)} ${sanitizeVarName(`m_${nodeId}`)}`;
-      
-      addConstraint(`max_flow_in_${nodeId}_${inputIndex}`, maxFlowLhs, 0, 'max');
+      addConstraint(`max_flow_in_${nodeId}_${inputIndex}`, maxFlowTerms, 0, 'max');
     });
   });
-  
-  // Add minimum excess constraints for target nodes
+
+  // ===== Minimum excess constraints for target nodes =====
   targetNodeIds.forEach(nodeId => {
     const node = graph.nodes[nodeId];
     if (!node) return;
-    
+
     node.outputs.forEach((output, outputIndex) => {
-      const slackVar = `excess_${nodeId}_${outputIndex}`;
-      
+      const slackVar = sanitizeVarName(`excess_${nodeId}_${outputIndex}`);
+
       const outgoingConnections = graph.connections.filter(
         c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
       );
-      
+
       let cycleTime = node.cycleTime;
       if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
-      
+
       const quantity = output.originalQuantity !== undefined ? output.originalQuantity : output.quantity;
       if (typeof quantity !== 'number') return;
-      
-      const ratePerMachine = (node.isMineshaftDrill ? quantity : quantity / cycleTime);
+
+      const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
       const currentProduction = ratePerMachine * (node.machineCount || 0);
-      
+
       let currentConnectedFlow = 0;
       outgoingConnections.forEach(conn => {
         const targetNode = graph.nodes[conn.targetNodeId];
         if (!targetNode) return;
-        
         const targetInput = targetNode.inputs[conn.targetInputIndex];
         if (!targetInput) return;
-        
         let targetCycleTime = targetNode.cycleTime;
         if (typeof targetCycleTime !== 'number' || targetCycleTime <= 0) targetCycleTime = 1;
-        
         const targetQuantity = targetInput.quantity;
         if (typeof targetQuantity !== 'number') return;
-        
-        const targetRatePerMachine = (targetNode.isMineshaftDrill ? targetQuantity : targetQuantity / targetCycleTime);
+        const targetRatePerMachine = targetNode.isMineshaftDrill ? targetQuantity : targetQuantity / targetCycleTime;
         const targetDemand = targetRatePerMachine * (targetNode.machineCount || 0);
-        
         currentConnectedFlow += Math.min(currentProduction - currentConnectedFlow, targetDemand);
       });
-      
+
       const currentExcess = Math.max(0, currentProduction - currentConnectedFlow);
-      
-      addConstraint(`min_excess_${nodeId}_${outputIndex}`, sanitizeVarName(slackVar), currentExcess, 'min');
+      addConstraint(`min_excess_${nodeId}_${outputIndex}`, [[slackVar, 1]], currentExcess, 'min');
     });
   });
-  
-  // Build final LP string
-  lp += 'Minimize\n';
-  lp += 'obj: ' + objectiveTerms.join(' ') + '\n';
-  lp += 'Subject To\n';
-  lp += constraints.join('\n') + '\n';
-  lp += 'Bounds\n';
-  variables.forEach(varName => {
-    lp += `${varName} >= 0\n`;
+
+  // ===== Build MPS string =====
+
+  // Build column -> [(rowName, coeff)] mapping
+  const colEntries = new Map();
+  variables.forEach(v => colEntries.set(v, []));
+
+  objCoeffs.forEach((coeff, varName) => {
+    if (coeff !== 0) colEntries.get(varName)?.push(['obj', coeff]);
   });
-  if (integerVars.size > 0) {
-    lp += 'General\n';
-    integerVars.forEach(varName => {
-      lp += `${varName}\n`;
+
+  rowOrder.forEach(rowName => {
+    const row = rowMap.get(rowName);
+    row.terms.forEach((coeff, varName) => {
+      if (coeff !== 0) colEntries.get(varName)?.push([rowName, coeff]);
     });
+  });
+
+  // Separate variable types
+  const continuousVars = variables.filter(v => !integerVars.has(v) && !binaryVars.has(v));
+  const generalIntVars = variables.filter(v => integerVars.has(v) && !binaryVars.has(v));
+  const binaryVarsList = variables.filter(v => binaryVars.has(v));
+
+  const writeVarEntries = (varName, mpsStr) => {
+    const entries = colEntries.get(varName) || [];
+    if (entries.length === 0) {
+      return mpsStr + `    ${varName}  obj  0\n`;
+    }
+    entries.forEach(([rowName, coeff]) => {
+      mpsStr += `    ${varName}  ${rowName}  ${fmt(coeff)}\n`;
+    });
+    return mpsStr;
+  };
+
+  let mps = 'NAME          MODEL\n';
+
+  mps += 'ROWS\n';
+  mps += ' N  obj\n';
+  rowOrder.forEach(rowName => {
+    mps += ` ${rowMap.get(rowName).type}  ${rowName}\n`;
+  });
+
+  mps += 'COLUMNS\n';
+
+  continuousVars.forEach(v => { mps = writeVarEntries(v, mps); });
+  binaryVarsList.forEach(v => { mps = writeVarEntries(v, mps); });
+
+  if (generalIntVars.length > 0) {
+    mps += "    INT1      'MARKER'                 'INTORG'\n";
+    generalIntVars.forEach(v => { mps = writeVarEntries(v, mps); });
+    mps += "    INT1END   'MARKER'                 'INTEND'\n";
   }
-  lp += 'End\n';
-  
-  return { lpString: lp, varNameMap };
+
+  mps += 'RHS\n';
+  rowOrder.forEach(rowName => {
+    const row = rowMap.get(rowName);
+    if (row.rhs !== 0) {
+      mps += `    RHS  ${rowName}  ${fmt(row.rhs)}\n`;
+    }
+  });
+
+  mps += 'BOUNDS\n';
+  // General integers need explicit upper bound or MPS defaults them to [0,1] (binary)
+  generalIntVars.forEach(varName => {
+    mps += ` UP BND  ${varName}  1000000\n`;
+  });
+  // Binary indicators
+  binaryVarsList.forEach(varName => {
+    mps += ` BV BND  ${varName}\n`;
+  });
+
+  mps += 'ENDATA\n';
+
+  return { mpsString: mps, varNameMap };
 };
 
 /**
- * Parse HiGHS solution output (already structured as object)
+ * Parse SCIP solution file text output
  */
-const parseLPSolution = (solutionObj, varNameMap) => {
-  console.log('[LP Solver] Parsing solution...');
-  
-  // Check if optimal
-  if (solutionObj.Status !== 'Optimal') {
-    console.log('[LP Solver] Solution not optimal, status:', solutionObj.Status);
+const parseSCIPSolution = (solutionText, varNameMap) => {
+  console.log('[SCIP Solver] Parsing solution...');
+
+  if (!solutionText ||
+      solutionText.includes('no solution available') ||
+      solutionText.includes('infeasible')) {
+    console.log('[SCIP Solver] No feasible solution found');
     return { feasible: false };
   }
-  
+
+  if (!solutionText.includes('optimal solution found') &&
+      !solutionText.includes('solution status: feasible')) {
+    console.log('[SCIP Solver] Solution not optimal, text:', solutionText.substring(0, 200));
+    return { feasible: false };
+  }
+
   const solution = { feasible: true };
-  
-  // Extract column values (variables)
-  const columns = solutionObj.Columns;
-  
-  // Map sanitized variable names back to original using the map
-  Object.keys(columns).forEach(sanitizedVarName => {
-    const originalVarName = varNameMap.get(sanitizedVarName);
-    
-    if (!originalVarName) {
-      console.warn('[LP Solver] Unknown variable:', sanitizedVarName);
-      return;
+  const lines = solutionText.split('\n');
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith('solution status') || trimmed.startsWith('objective value')) continue;
+
+    // Match: varname  value  (optional trailing content)
+    const match = trimmed.match(/^(\S+)\s+([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)/);
+    if (!match) continue;
+
+    const sanitizedName = match[1];
+    const value = parseFloat(match[2]);
+    if (isNaN(value)) continue;
+
+    const originalName = varNameMap.get(sanitizedName);
+    if (originalName) {
+      solution[originalName] = value;
     }
-    
-    // Extract the Primal value from the column object
-    let value = columns[sanitizedVarName].Primal;
-    
-    solution[originalVarName] = value;
-  });
-  
-  console.log('[LP Solver] Parsed variables:', Object.keys(solution).length - 1);
-  
+  }
+
+  console.log('[SCIP Solver] Parsed variables:', Object.keys(solution).length - 1);
   return solution;
 };
 
@@ -434,8 +498,8 @@ const solveFullGraph = async (graph, targetNodeIds = new Set()) => {
   console.log('%c[LP Solver] Solving...', 'color: #f39c12; font-weight: bold');
   const solveStartTime = performance.now();
   
-  // Build LP string and solve with HiGHS
-  const result = await solveWithHiGHS(graph, targetNodeIds);
+  // Build MPS model and solve with SCIP
+  const result = await solveWithSCIP(graph, targetNodeIds);
   
   const solveEndTime = performance.now();
   const solveTime = solveEndTime - solveStartTime;
@@ -543,11 +607,21 @@ const solveFullGraph = async (graph, targetNodeIds = new Set()) => {
         const machineCostValue = machine && typeof machine.cost === 'number' ? machine.cost : 0;
         
         const inputOutputCount = (node.recipe.inputs?.length || 0) + (node.recipe.outputs?.length || 0);
-        const powerFactor = Math.ceil(powerValue / 1500000) * 2;
-        const inputOutputFactor = inputOutputCount * 2;
-        const modelCountPerMachine = 1 + powerFactor + inputOutputFactor;
+        const powerFactor = node.recipe.power_type === 'HV' ? 2 : Math.ceil(powerValue / 1500000) * 2;
+
+        let modelCountPerMachine;
+        if (node.recipe.machine_id === 'm_industrial_firebox') {
+          modelCountPerMachine = 1 + inputOutputCount * 2;
+        } else if (node.recipe.isTreeFarm && node.recipe.treeFarmSettings) {
+          const { trees, harvesters, sprinklers, controller, outputs } = node.recipe.treeFarmSettings;
+          const waterTanks = Math.ceil(sprinklers / 3);
+          modelCountPerMachine = trees + harvesters + sprinklers + (waterTanks * 3) + controller + (outputs * 3) + powerFactor;
+        } else {
+          modelCountPerMachine = 1 + powerFactor + (inputOutputCount * 2);
+        }
         
-        const roundedMachineCount = Math.ceil(value);
+        const ceilingVarName = `mc_${nodeId}`;
+        const roundedMachineCount = result[ceilingVarName] !== undefined ? result[ceilingVarName] : Math.ceil(value);
         const nodeModelCount = roundedMachineCount * modelCountPerMachine;
         const nodePower = value * powerValue;
         const nodePollution = value * pollutionValue;
@@ -655,12 +729,17 @@ export const computeMachines = async (nodes, edges, targetProducts, options = {}
   const lpResult = await solveFullGraph(graph, targetNodeIds);
   
   if (!lpResult.feasible) {
+    const errorMsg = lpResult.error
+      ? `Solver error: ${lpResult.error}`
+      : 'No feasible solution found — the model is infeasible given the current constraints.';
     return {
       success: false,
       updates: new Map(),
       converged: false,
       iterations: 0,
-      message: 'No feasible solution found (infeasible constraints)'
+      message: errorMsg,
+      solverError: !!lpResult.error,
+      errorDetail: lpResult.error || null
     };
   }
   

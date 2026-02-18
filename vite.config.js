@@ -4,9 +4,6 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/Industrialist-Production-Calculator/',
-  optimizeDeps: {
-    include: ['highs']
-  },
   server: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',

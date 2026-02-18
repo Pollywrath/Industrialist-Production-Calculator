@@ -5,12 +5,10 @@ import { calculateSuggestions } from './suggestionCalculator';
 export const determineExcessAndDeficiency = (graph, flows) => {
   const excess = [];
   const deficiency = [];
-  // HiGHS LP solver has 6 significant figure precision
-  // Use relative tolerance: error scales with value magnitude
-  // For value ~100: 0.1% = 0.1 tolerance
-  // For value ~0.001: uses absolute 1e-6 minimum
-  const RELATIVE_EPSILON = 0.001; // 0.1% relative tolerance
-  const ABSOLUTE_EPSILON = 1e-6;  // Minimum absolute tolerance for tiny values
+  // Excess/deficiency is only significant if the difference is >= 0.01% of the reference value.
+  // Absolute floor of 1e-6 prevents false positives on near-zero values.
+  const RELATIVE_EPSILON = 0.0001; // 0.01% relative tolerance
+  const ABSOLUTE_EPSILON = 1e-6;   // Minimum absolute tolerance for tiny values
   
   const isSignificant = (value, reference) => {
     const relativeThreshold = Math.max(Math.abs(value), Math.abs(reference)) * RELATIVE_EPSILON;

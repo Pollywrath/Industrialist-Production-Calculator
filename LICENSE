@@ -100,6 +100,30 @@ Full license text: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
 
 ---
 
+## SCIP WebAssembly Build
+
+The LP/MIP optimization in this project is powered by **SCIP** (Solving Constraint Integer Programs), compiled to WebAssembly.
+
+**Files covered**: `public/scip.js`, `public/scip.js.mem`, `public/scip.wasm`, `public/scip.wasm.js`  
+**Used by**: `src/solvers/lpSolver.js`, `src/solvers/lpWorker.js`
+
+### SCIP Solver (Apache License 2.0)
+
+The SCIP solver binary embedded in the above files is copyright © Zuse Institute Berlin (ZIB) and licensed under the Apache License, Version 2.0.
+
+- **Project**: https://www.scipopt.org/
+- **License**: https://www.apache.org/licenses/LICENSE-2.0
+
+### WebAssembly Compilation (Jacob Strieb)
+
+The SCIP WebAssembly build was produced by **Jacob Strieb** as part of the [Poker Chipper](https://github.com/jstrieb/poker-chipper) project. The Emscripten compilation configuration and associated glue code are his work.
+
+- **Source**: https://github.com/jstrieb/poker-chipper (`src/compiled/`)
+- **Blog post**: https://jstrieb.github.io/posts/scip-wasm/
+- **License status**: No LICENSE file was present in the poker-chipper repository at the time these files were obtained. The repository is public and the compilation process is openly documented, but no explicit open-source license has been granted by the author. If you reuse these files, consider contacting Jacob Strieb for clarification.
+
+---
+
 ## Summary
 
 - **Code**: Freely usable (MIT License) for any purpose, including commercial
