@@ -1,4 +1,5 @@
 import React from 'react';
+import { TIPS } from './ComputeModal';
 
 const HelpModal = ({ onClose }) => {
   return (
@@ -461,30 +462,12 @@ const HelpModal = ({ onClose }) => {
             </h3>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '15px' }}>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <span style={{ color: 'var(--color-primary)', fontSize: '16px', lineHeight: '20px' }}>💡</span>
-                <span>Use <span style={{ fontWeight: 600 }}>Shift+Click</span> to mark nodes as targets, then click <span style={{ fontWeight: 600 }}>Compute Machines</span> to balance your entire production line</span>
-              </div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <span style={{ color: 'var(--color-primary)', fontSize: '16px', lineHeight: '20px' }}>💡</span>
-                <span><span style={{ fontWeight: 600 }}>Machine Count Modes:</span> Free (🔓) allows LP/suggestions to change count, Capped (📊) limits max value, Locked (🔒) prevents all changes</span>
-              </div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <span style={{ color: 'var(--color-primary)', fontSize: '16px', lineHeight: '20px' }}>💡</span>
-                <span>Handle colors indicate flow status: deficient inputs and excess outputs are highlighted</span>
-              </div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <span style={{ color: 'var(--color-primary)', fontSize: '16px', lineHeight: '20px' }}>💡</span>
-                <span>Click input/output rectangles to auto-create and connect matching recipes</span>
-              </div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <span style={{ color: 'var(--color-primary)', fontSize: '16px', lineHeight: '20px' }}>💡</span>
-                <span>Use <span style={{ fontWeight: 600 }}>Apply to All</span> when editing machine counts to propagate changes through connected nodes</span>
-              </div>
-              <div style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                <span style={{ color: 'var(--color-primary)', fontSize: '16px', lineHeight: '20px' }}>💡</span>
-                <span>Favorite recipes (⭐) appear at the top of the recipe selector for quick access</span>
-              </div>
+              {TIPS.map((tip, i) => (
+                <div key={i} style={{ color: 'var(--text-secondary)', fontSize: '14px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <span style={{ color: 'var(--color-primary)', fontSize: '16px', lineHeight: '20px' }}>💡</span>
+                  <span>{tip.replace(/^Tip: /, '')}</span>
+                </div>
+              ))}
             </div>
           </div>
 

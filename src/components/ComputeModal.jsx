@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const TIPS = [
+export const TIPS = [
   'Tip: Lock nodes to prevent the solver from changing their machine counts.',
   'Tip: Use Shift+Click on a node to mark it as a target recipe.',
   'Tip: Capped nodes will not exceed their set machine count during solving.',
@@ -10,10 +10,15 @@ const TIPS = [
   'Tip: Remove unused weights entirely to simplify the model — fewer active objectives means faster solving.',
   'Tip: Line types and paths can be changed in the Theme Editor to make complex networks easier to read.',
   'Tip: Excess and deficiency highlight colors are customizable in the Theme Editor — make them stand out more against your chosen theme.',
-  'Tip: Add different ways of producing an item to see which is better, solver will pick the flow with the least cost according to weights used',
+  'Tip: Add different ways of producing an item to see which is better, solver will pick the flow with the least cost according to weights used.',
   'Tip: Double-click a handle to auto-balance a single connection without running the full solver.',
   'Tip: Middle-click a node to duplicate it — useful for quickly scaling up a production line.',
   'Tip: Use the per-second display mode to directly compare production rates across different recipe cycle times.',
+  'Tip: Machine Count Modes — Free (🔓) allows LP/suggestions to change count, Capped (📊) limits max value, Locked (🔒) prevents all changes.',
+  'Tip: Handle colors indicate flow status — deficient inputs and excess outputs are highlighted.',
+  'Tip: Click input/output rectangles to auto-create and connect matching recipes.',
+  'Tip: Use Apply to All when editing machine counts to propagate changes through connected nodes.',
+  'Tip: Favorite recipes (⭐) appear at the top of the recipe selector for quick access.',
 ];
 
 const Spinner = () => {
@@ -62,15 +67,26 @@ const Spinner = () => {
 
 const ComputeModal = ({ phase, nodeSnapshot, result, onCancel, onApply, onLocateNode }) => {
   const [elapsedMs, setElapsedMs] = useState(0);
-  const [tipIndex, setTipIndex] = useState(0);
+  const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * TIPS.length));
   const startRef = useRef(Date.now());
+  const recentTipsRef = useRef([]);
 
   useEffect(() => {
     if (phase !== 'loading') return;
     startRef.current = Date.now();
     setElapsedMs(0);
     const timer = setInterval(() => setElapsedMs(Date.now() - startRef.current), 100);
-    const tipTimer = setInterval(() => setTipIndex(i => (i + 1) % TIPS.length), 4000);
+    const tipTimer = setInterval(() => {
+      setTipIndex(current => {
+        const recent = recentTipsRef.current;
+        const allIndices = TIPS.map((_, i) => i);
+        const available = allIndices.filter(i => !recent.includes(i) && i !== current);
+        const pool = available.length > 0 ? available : allIndices.filter(i => i !== current);
+        const next = pool[Math.floor(Math.random() * pool.length)];
+        recentTipsRef.current = [...recent, next].slice(-5);
+        return next;
+      });
+    }, 4000);
     return () => { clearInterval(timer); clearInterval(tipTimer); };
   }, [phase]);
 

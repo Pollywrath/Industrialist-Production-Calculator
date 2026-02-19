@@ -86,12 +86,16 @@ export const saveCurrent = async (name, canvasData) => {
   try {
     const db = await initDB();
     const id = `save_${Date.now()}`;
+    const cleanedEdges = (canvasData.edges || []).map(e => {
+      const { edgePath, edgeStyle, ...restData } = e.data || {};
+      return { ...e, data: restData };
+    });
     const save = {
       id,
       name: name || 'Untitled Save',
       timestamp: Date.now(),
       nodeCount: canvasData.nodes?.length || 0,
-      data: canvasData
+      data: { ...canvasData, edges: cleanedEdges }
     };
 
     return new Promise((resolve, reject) => {

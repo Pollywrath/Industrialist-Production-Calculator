@@ -296,7 +296,7 @@ function App() {
     });
     
     setNodes(restoredNodes);
-    setEdges(savedState.edges || []);
+    setEdges((savedState.edges || []).map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: d }; }));
     setTargetProducts(savedState.targetProducts || []);
     setSoldProducts(savedState.soldProducts || {});
     setFavoriteRecipes(savedState.favoriteRecipes || []);
@@ -1708,10 +1708,10 @@ function App() {
     }));
   }, [setNodes]);
 
-  const handleAutoLayout = useCallback(() => {
-    const updatedNodes = autoLayout(nodes, edges);
+  const handleAutoLayout = useCallback(async () => {
+    const updatedNodes = await autoLayout(nodes, edges, edgeSettings);
     setNodes(updatedNodes);
-  }, [nodes, edges, setNodes]);
+  }, [nodes, edges, edgeSettings, setNodes]);
 
   const handleCompute = useCallback(() => {
     if (targetProducts.length === 0) {
@@ -1955,7 +1955,7 @@ function App() {
           clearAll();
           setTimeout(() => {
             setNodes(restoredNodes);
-            setEdges(imported.canvas.edges || []);
+            setEdges((imported.canvas.edges || []).map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: d }; }));
             setTargetProducts(imported.canvas.targetProducts || []);
             setSoldProducts(imported.canvas.soldProducts || {});
             setFavoriteRecipes(imported.canvas.favoriteRecipes || []);
@@ -2077,7 +2077,7 @@ function App() {
           clearAll();
           setTimeout(() => {
             setNodes(restoredNodes);
-            setEdges(imported.canvas.edges || []);
+            setEdges((imported.canvas.edges || []).map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: d }; }));
             setTargetProducts(imported.canvas.targetProducts || []);
             setSoldProducts(imported.canvas.soldProducts || {});
             setFavoriteRecipes(imported.canvas.favoriteRecipes || []);
@@ -2112,7 +2112,8 @@ function App() {
   }, [products, machines, recipes]);
 
   const handleExportCanvas = useCallback(() => {
-    const canvas = { nodes: nodes.map(cleanNodeForSave), edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig };
+    const cleanedEdges = edges.map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: d }; });
+    const canvas = { nodes: nodes.map(cleanNodeForSave), edges: cleanedEdges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig };
     const blob = new Blob([JSON.stringify({ canvas }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2123,7 +2124,8 @@ function App() {
  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig, cleanNodeForSave]);
 
   const handleExport = useCallback(() => {
-    const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes: nodes.map(cleanNodeForSave), edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig } }, null, 2)], { type: 'application/json' });
+    const cleanedEdges = edges.map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: d }; });
+    const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes: nodes.map(cleanNodeForSave), edges: cleanedEdges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig } }, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -2174,7 +2176,7 @@ function App() {
     clearAll();
     setTimeout(() => {
       setNodes(restoredNodes);
-      setEdges(saveData.edges || []);
+      setEdges((saveData.edges || []).map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: d }; }));
       setTargetProducts(saveData.targetProducts || []);
       setSoldProducts(saveData.soldProducts || {});
       setFavoriteRecipes(saveData.favoriteRecipes || []);
