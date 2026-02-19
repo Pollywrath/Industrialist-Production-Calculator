@@ -1,6 +1,6 @@
 import ELK from 'elkjs/lib/elk.bundled.js';
 
-// Constants from CustomNode.jsx
+// Must match constants in CustomNode.jsx
 const RECT_HEIGHT = 44;
 const RECT_GAP = 8;
 const BASE_INFO_HEIGHT = 120;
@@ -11,9 +11,7 @@ const elk = new ELK();
 const calculateNodeHeight = (node) => {
   const recipe = node.data?.recipe;
   if (!recipe) return BASE_INFO_HEIGHT + 100;
-  const leftCount = recipe.inputs?.length || 0;
-  const rightCount = recipe.outputs?.length || 0;
-  const maxCount = Math.max(leftCount, rightCount, 1);
+  const maxCount = Math.max(recipe.inputs?.length || 0, recipe.outputs?.length || 0, 1);
   const ioColumnPadding = 24;
   const ioAreaHeight = (maxCount * RECT_HEIGHT) + ((maxCount - 1) * RECT_GAP) + ioColumnPadding;
   return BASE_INFO_HEIGHT + ioAreaHeight + 12;
@@ -25,6 +23,7 @@ const getHandleY = (index) => {
   return ioAreaTop + index * (RECT_HEIGHT + RECT_GAP) + RECT_HEIGHT / 2;
 };
 
+// Groups nodes into islands of connected nodes so each island is laid out independently
 const findConnectedComponents = (nodes, edges) => {
   const adjacency = new Map();
   nodes.forEach(n => adjacency.set(n.id, new Set()));
@@ -34,6 +33,7 @@ const findConnectedComponents = (nodes, edges) => {
       adjacency.get(e.target).add(e.source);
     }
   });
+
   const visited = new Set();
   const components = [];
   nodes.forEach(node => {
@@ -56,10 +56,12 @@ const findConnectedComponents = (nodes, edges) => {
 
 const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}) => {
   const edgePath = edgeSettings.edgePath || 'orthogonal';
-  const elkRouting = { orthogonal: 'ORTHOGONAL', bezier: 'SPLINES', straight: 'POLYLINE' }[edgePath] || 'ORTHOGONAL';
-  const nodeNodeSpacing = edgePath === 'straight' ? '260' : '200';
-  const layerSpacing = edgePath === 'straight' ? '260' : '200';
-  const edgeNodeSpacing = edgePath === 'bezier' ? '80' : '100';
+
+  // Bezier edges use ORTHOGONAL routing so ELK produces clean geometric waypoints.
+  // Those waypoints are discarded anyway — we only use ELK's node placement to
+  // minimise crossings, and catmullRom draws a natural S-curve between positioned nodes.
+  const elkRouting = edgePath === 'straight' ? 'POLYLINE' : 'ORTHOGONAL';
+  const spacing = edgePath === 'straight' ? '260' : '200';
 
   const elkNodes = componentNodes.map(node => {
     const width = NODE_WIDTH;
@@ -90,18 +92,18 @@ const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}
     };
   });
 
+  // Mark backward edges so ELK routes them as feedback edges
   const nodeLayerMap = new Map();
   componentNodes.forEach((node, i) => nodeLayerMap.set(node.id, i));
 
   const elkEdges = componentEdges.map(edge => {
     const sourceIdx = nodeLayerMap.get(edge.source) ?? 0;
     const targetIdx = nodeLayerMap.get(edge.target) ?? 0;
-    const isBackward = targetIdx <= sourceIdx;
     return {
       id: edge.id,
       sources: [`${edge.source}__${edge.sourceHandle || 'right-0'}`],
       targets: [`${edge.target}__${edge.targetHandle || 'left-0'}`],
-      properties: isBackward ? { 'elk.layered.feedbackEdge': 'true' } : {},
+      properties: targetIdx <= sourceIdx ? { 'elk.layered.feedbackEdge': 'true' } : {},
     };
   });
 
@@ -113,9 +115,9 @@ const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}
       'elk.edgeRouting': elkRouting,
       'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
       'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
-      'elk.layered.spacing.nodeNodeBetweenLayers': layerSpacing,
-      'elk.spacing.nodeNode': nodeNodeSpacing,
-      'elk.layered.spacing.edgeNodeBetweenLayers': edgeNodeSpacing,
+      'elk.layered.spacing.nodeNodeBetweenLayers': spacing,
+      'elk.spacing.nodeNode': spacing,
+      'elk.layered.spacing.edgeNodeBetweenLayers': '100',
       'elk.layered.spacing.edgeEdgeBetweenLayers': edgePath === 'straight' ? '40' : '20',
       'elk.spacing.edgeNode': edgePath === 'orthogonal' ? '80' : '20',
       'elk.layered.feedbackEdges': 'true',
@@ -132,6 +134,7 @@ const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}
   };
 };
 
+// Packs multiple disconnected components into rows, widest first
 const packComponents = (componentResults) => {
   const sorted = [...componentResults].sort((a, b) => b.bounds.width - a.bounds.width);
   const GAP = 200;
@@ -182,7 +185,6 @@ export const autoLayout = async (nodes, edges, edgeSettings = {}) => {
         });
 
         return {
-          nodeIds: componentNodeIds,
           layoutedChildren,
           layoutedEdges,
           bounds: { x: minX, y: minY, width: maxX - minX, height: maxY - minY },
@@ -190,7 +192,6 @@ export const autoLayout = async (nodes, edges, edgeSettings = {}) => {
       } catch (err) {
         console.error('ELK layout failed for component:', err);
         return {
-          nodeIds: componentNodeIds,
           layoutedChildren: componentNodes.map(n => ({
             id: n.id, x: n.position.x, y: n.position.y,
             width: NODE_WIDTH, height: calculateNodeHeight(n),
@@ -204,7 +205,7 @@ export const autoLayout = async (nodes, edges, edgeSettings = {}) => {
 
   const { sorted, positions } = packComponents(componentResults);
 
-  // Build final node positions
+  // Build final node positions offset by each component's packing position
   const finalPositions = new Map();
   sorted.forEach((comp, i) => {
     const { offsetX, offsetY } = positions.get(i);
@@ -216,7 +217,10 @@ export const autoLayout = async (nodes, edges, edgeSettings = {}) => {
     });
   });
 
-  // Extract edge routing data from ELK bend points
+  // Derive edge data from ELK bend points.
+  // Orthogonal: extract midpoint for the draggable segment handle.
+  // Bezier: clear all manual waypoints — ELK node placement already minimises
+  // crossings and catmullRom produces a clean default S-curve.
   const edgeUpdates = new Map();
 
   sorted.forEach((comp, i) => {
@@ -225,56 +229,40 @@ export const autoLayout = async (nodes, edges, edgeSettings = {}) => {
     const ty = (y) => y - comp.bounds.y + offsetY;
 
     comp.layoutedEdges.forEach(elkEdge => {
-      const section = elkEdge.sections?.[0];
-      if (!section) return;
-
-      const bendPoints = (section.bendPoints || []).map(p => ({ x: tx(p.x), y: ty(p.y) }));
-      if (bendPoints.length === 0) return;
-
       const originalEdge = edgeMap.get(elkEdge.id);
       if (!originalEdge) return;
 
-      const sourceNodeData = nodeMap.get(originalEdge.source);
-      const targetNodeData = nodeMap.get(originalEdge.target);
-      if (!sourceNodeData || !targetNodeData) return;
-
-      const sourcePos = finalPositions.get(originalEdge.source);
-      const targetPos = finalPositions.get(originalEdge.target);
-      if (!sourcePos || !targetPos) return;
-
-      const sourceHandleIdx = parseInt(originalEdge.sourceHandle?.split('-')[1] || '0');
-      const targetHandleIdx = parseInt(originalEdge.targetHandle?.split('-')[1] || '0');
-      const sourceX = sourcePos.x + NODE_WIDTH;
-      const sourceY = sourcePos.y + getHandleY(sourceHandleIdx);
-      const targetX = targetPos.x;
-      const targetY = targetPos.y + getHandleY(targetHandleIdx);
+      if (edgePath === 'bezier') {
+        edgeUpdates.set(elkEdge.id, { bezierPoints: [], orthoMidX: undefined, orthoMidY: undefined });
+        return;
+      }
 
       if (edgePath === 'orthogonal') {
+        const section = elkEdge.sections?.[0];
+        if (!section) return;
+        const bendPoints = (section.bendPoints || []).map(p => ({ x: tx(p.x), y: ty(p.y) }));
+        if (bendPoints.length === 0) return;
+
+        const sourcePos = finalPositions.get(originalEdge.source);
+        const targetPos = finalPositions.get(originalEdge.target);
+        if (!sourcePos || !targetPos) return;
+
+        const sourceX = sourcePos.x + NODE_WIDTH;
+        const targetX = targetPos.x;
         const isBackwardEdge = targetX <= sourceX + 60;
+
         if (isBackwardEdge) {
-          // Backward edge: midY comes from the middle horizontal segment
-          // ELK bend points are: [exitRight, turnDown, turnUp, entryLeft] — skip first and last
+          // Middle bend points give the Y of the horizontal bypass segment
           const middleBendPoints = bendPoints.slice(1, -1);
           if (middleBendPoints.length > 0) {
             const midY = middleBendPoints.reduce((s, p) => s + p.y, 0) / middleBendPoints.length;
-            edgeUpdates.set(elkEdge.id, { orthoMidY: midY, orthoMidX: undefined, bezierOffset: undefined });
+            edgeUpdates.set(elkEdge.id, { orthoMidY: midY, orthoMidX: undefined });
           }
         } else {
-          // Forward edge: average x of bend points = position of the vertical segment
+          // Average X of all bend points gives the vertical segment position
           const midX = bendPoints.reduce((s, p) => s + p.x, 0) / bendPoints.length;
-          edgeUpdates.set(elkEdge.id, { orthoMidX: midX, orthoMidY: undefined, bezierOffset: undefined });
+          edgeUpdates.set(elkEdge.id, { orthoMidX: midX, orthoMidY: undefined });
         }
-      } else if (edgePath === 'bezier') {
-        // Average bend point relative to the direct line midpoint
-        const avgX = bendPoints.reduce((s, p) => s + p.x, 0) / bendPoints.length;
-        const avgY = bendPoints.reduce((s, p) => s + p.y, 0) / bendPoints.length;
-        edgeUpdates.set(elkEdge.id, {
-          bezierOffset: {
-            x: avgX - (sourceX + targetX) / 2,
-            y: avgY - (sourceY + targetY) / 2,
-          },
-          orthoMidX: undefined,
-        });
       }
     });
   });
@@ -286,8 +274,7 @@ export const autoLayout = async (nodes, edges, edgeSettings = {}) => {
 
   const updatedEdges = edges.map(edge => {
     const update = edgeUpdates.get(edge.id);
-    if (!update) return edge;
-    return { ...edge, data: { ...edge.data, ...update } };
+    return update ? { ...edge, data: { ...edge.data, ...update } } : edge;
   });
 
   return { nodes: updatedNodes, edges: updatedEdges };
