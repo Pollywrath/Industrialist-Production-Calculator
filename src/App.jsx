@@ -1709,9 +1709,10 @@ function App() {
   }, [setNodes]);
 
   const handleAutoLayout = useCallback(async () => {
-    const updatedNodes = await autoLayout(nodes, edges, edgeSettings);
+    const { nodes: updatedNodes, edges: updatedEdges } = await autoLayout(nodes, edges, edgeSettings);
     setNodes(updatedNodes);
-  }, [nodes, edges, edgeSettings, setNodes]);
+    setEdges(updatedEdges);
+  }, [nodes, edges, edgeSettings, setNodes, setEdges]);
 
   const handleCompute = useCallback(() => {
     if (targetProducts.length === 0) {
