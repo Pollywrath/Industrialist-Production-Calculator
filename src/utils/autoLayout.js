@@ -90,11 +90,20 @@ const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}
     };
   });
 
-  const elkEdges = componentEdges.map(edge => ({
-    id: edge.id,
-    sources: [`${edge.source}__${edge.sourceHandle || 'right-0'}`],
-    targets: [`${edge.target}__${edge.targetHandle || 'left-0'}`],
-  }));
+  const nodeLayerMap = new Map();
+  componentNodes.forEach((node, i) => nodeLayerMap.set(node.id, i));
+
+  const elkEdges = componentEdges.map(edge => {
+    const sourceIdx = nodeLayerMap.get(edge.source) ?? 0;
+    const targetIdx = nodeLayerMap.get(edge.target) ?? 0;
+    const isBackward = targetIdx <= sourceIdx;
+    return {
+      id: edge.id,
+      sources: [`${edge.source}__${edge.sourceHandle || 'right-0'}`],
+      targets: [`${edge.target}__${edge.targetHandle || 'left-0'}`],
+      properties: isBackward ? { 'elk.layered.feedbackEdge': 'true' } : {},
+    };
+  });
 
   const graph = {
     id: 'root',
@@ -108,7 +117,9 @@ const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}
       'elk.spacing.nodeNode': nodeNodeSpacing,
       'elk.layered.spacing.edgeNodeBetweenLayers': edgeNodeSpacing,
       'elk.layered.spacing.edgeEdgeBetweenLayers': edgePath === 'straight' ? '40' : '20',
-      'elk.padding': '[top=50, left=50, bottom=50, right=50]',
+      'elk.spacing.edgeNode': edgePath === 'orthogonal' ? '80' : '20',
+      'elk.layered.feedbackEdges': 'true',
+      'elk.padding': '[top=120, left=120, bottom=120, right=120]',
     },
     children: elkNodes,
     edges: elkEdges,
@@ -239,9 +250,20 @@ export const autoLayout = async (nodes, edges, edgeSettings = {}) => {
       const targetY = targetPos.y + getHandleY(targetHandleIdx);
 
       if (edgePath === 'orthogonal') {
-        // Average x of bend points = position of the vertical segment
-        const midX = bendPoints.reduce((s, p) => s + p.x, 0) / bendPoints.length;
-        edgeUpdates.set(elkEdge.id, { orthoMidX: midX, bezierOffset: undefined });
+        const isBackwardEdge = targetX <= sourceX + 60;
+        if (isBackwardEdge) {
+          // Backward edge: midY comes from the middle horizontal segment
+          // ELK bend points are: [exitRight, turnDown, turnUp, entryLeft] — skip first and last
+          const middleBendPoints = bendPoints.slice(1, -1);
+          if (middleBendPoints.length > 0) {
+            const midY = middleBendPoints.reduce((s, p) => s + p.y, 0) / middleBendPoints.length;
+            edgeUpdates.set(elkEdge.id, { orthoMidY: midY, orthoMidX: undefined, bezierOffset: undefined });
+          }
+        } else {
+          // Forward edge: average x of bend points = position of the vertical segment
+          const midX = bendPoints.reduce((s, p) => s + p.x, 0) / bendPoints.length;
+          edgeUpdates.set(elkEdge.id, { orthoMidX: midX, orthoMidY: undefined, bezierOffset: undefined });
+        }
       } else if (edgePath === 'bezier') {
         // Average bend point relative to the direct line midpoint
         const avgX = bendPoints.reduce((s, p) => s + p.x, 0) / bendPoints.length;

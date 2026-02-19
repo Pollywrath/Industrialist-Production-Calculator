@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react'
 import { ReactFlow, Background, Controls, MiniMap, addEdge, useNodesState, useEdgesState, Panel } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import CustomNode from './components/CustomNode';
-import CustomEdge from './components/CustomEdge';
+import CustomEdge, { setCanvasBusy } from './components/CustomEdge';
 import ThemeEditor, { applyTheme, loadTheme } from './components/ThemeEditor';
 import HelpModal from './components/HelpModal';
 import SaveManager from './components/SaveManager';
@@ -296,7 +296,7 @@ function App() {
     });
     
     setNodes(restoredNodes);
-    setEdges((savedState.edges || []).map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: d }; }));
+    setEdges((savedState.edges || []).map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: { ...d, ...edgeSettings } }; }));
     setTargetProducts(savedState.targetProducts || []);
     setSoldProducts(savedState.soldProducts || {});
     setFavoriteRecipes(savedState.favoriteRecipes || []);
@@ -1956,7 +1956,7 @@ function App() {
           clearAll();
           setTimeout(() => {
             setNodes(restoredNodes);
-            setEdges((imported.canvas.edges || []).map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: d }; }));
+            setEdges((imported.canvas.edges || []).map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: { ...d, ...edgeSettings } }; }));
             setTargetProducts(imported.canvas.targetProducts || []);
             setSoldProducts(imported.canvas.soldProducts || {});
             setFavoriteRecipes(imported.canvas.favoriteRecipes || []);
@@ -2078,7 +2078,7 @@ function App() {
           clearAll();
           setTimeout(() => {
             setNodes(restoredNodes);
-            setEdges((imported.canvas.edges || []).map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: d }; }));
+            setEdges((imported.canvas.edges || []).map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: { ...d, ...edgeSettings } }; }));
             setTargetProducts(imported.canvas.targetProducts || []);
             setSoldProducts(imported.canvas.soldProducts || {});
             setFavoriteRecipes(imported.canvas.favoriteRecipes || []);
@@ -2177,7 +2177,7 @@ function App() {
     clearAll();
     setTimeout(() => {
       setNodes(restoredNodes);
-      setEdges((saveData.edges || []).map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: d }; }));
+      setEdges((saveData.edges || []).map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: { ...d, ...edgeSettings } }; }));
       setTargetProducts(saveData.targetProducts || []);
       setSoldProducts(saveData.soldProducts || {});
       setFavoriteRecipes(saveData.favoriteRecipes || []);
@@ -2283,6 +2283,10 @@ function App() {
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
       <ReactFlow
+        onNodeDragStart={() => setCanvasBusy(true)}
+        onNodeDragStop={() => setCanvasBusy(false)}
+        onConnectStart={() => setCanvasBusy(true)}
+        onConnectEnd={() => setCanvasBusy(false)}
         ref={reactFlowWrapper}
         nodes={nodes}
         edges={edges}
