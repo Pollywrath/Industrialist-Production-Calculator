@@ -254,13 +254,23 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
     registerVar(`f_${conn.id}`);
   });
 
+  // ===== Pre-index connections for O(1) lookup =====
+  const outgoingByOutput = new Map(); // `nodeId:outputIndex` -> [connections]
+  const incomingByInput = new Map();  // `nodeId:inputIndex` -> [connections]
+  graph.connections.forEach(conn => {
+    const outKey = `${conn.sourceNodeId}:${conn.sourceOutputIndex}`;
+    if (!outgoingByOutput.has(outKey)) outgoingByOutput.set(outKey, []);
+    outgoingByOutput.get(outKey).push(conn);
+    const inKey = `${conn.targetNodeId}:${conn.targetInputIndex}`;
+    if (!incomingByInput.has(inKey)) incomingByInput.set(inKey, []);
+    incomingByInput.get(inKey).push(conn);
+  });
+
   // ===== Excess indicator variables (binary) =====
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     node.outputs.forEach((output, outputIndex) => {
-      const outgoingConnections = graph.connections.filter(
-        c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
-      );
+      const outgoingConnections = outgoingByOutput.get(`${nodeId}:${outputIndex}`) || [];
       const hasConnections = outgoingConnections.length > 0;
       if (!useExcess) return;
       const excessIndicatorVar = registerVar(`excess_indicator_${nodeId}_${outputIndex}`, false, true);
@@ -280,9 +290,7 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
       const slackVar = registerVar(`excess_${nodeId}_${outputIndex}`);
       const excessIndicatorVar = sanitizeVarName(`excess_indicator_${nodeId}_${outputIndex}`);
 
-      const outgoingConnections = graph.connections.filter(
-        c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
-      );
+      const outgoingConnections = outgoingByOutput.get(`${nodeId}:${outputIndex}`) || [];
 
       const hasConnections = outgoingConnections.length > 0;
       const excessAmountWeight = hasConnections ? weights.CONNECTED_EXCESS_AMOUNT_WEIGHT : weights.UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
@@ -317,9 +325,7 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
 
     // Input flow conservation
     node.inputs.forEach((input, inputIndex) => {
-      const incomingConnections = graph.connections.filter(
-        c => c.targetNodeId === nodeId && c.targetInputIndex === inputIndex
-      );
+      const incomingConnections = incomingByInput.get(`${nodeId}:${inputIndex}`) || [];
       if (incomingConnections.length === 0) return;
 
       const slackVar = registerVar(`deficit_${nodeId}_${inputIndex}`);
@@ -341,19 +347,14 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
       addConstraint(`deficit_link_${nodeId}_${inputIndex}`,
         [[slackVar, 1], [deficitIndicatorVar, -M_deficit]], 0, 'max');
 
-      // Flow conservation: sum(f_in) + deficit - rate * m_ >= 0
+      // Flow conservation equality: sum(f_in) + deficit = rate * m_
+      // Replaces the previous G + L pair — mathematically equivalent since deficit >= 0
+      // and the objective minimizes deficit, making the equality tighter and faster to solve.
       const flowInTerms = [[slackVar, 1], [mVar, -ratePerMachine]];
       incomingConnections.forEach(conn => {
         flowInTerms.push([sanitizeVarName(`f_${conn.id}`), 1]);
       });
-      addConstraint(`flow_in_${nodeId}_${inputIndex}`, flowInTerms, 0, 'min');
-
-      // Max flow constraint: sum(f_in) - rate * m_ <= 0
-      const maxFlowTerms = [[mVar, -ratePerMachine]];
-      incomingConnections.forEach(conn => {
-        maxFlowTerms.push([sanitizeVarName(`f_${conn.id}`), 1]);
-      });
-      addConstraint(`max_flow_in_${nodeId}_${inputIndex}`, maxFlowTerms, 0, 'max');
+      addConstraint(`flow_in_${nodeId}_${inputIndex}`, flowInTerms, 0, 'equal');
     });
   });
 
@@ -365,9 +366,7 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
     node.outputs.forEach((output, outputIndex) => {
       const slackVar = sanitizeVarName(`excess_${nodeId}_${outputIndex}`);
 
-      const outgoingConnections = graph.connections.filter(
-        c => c.sourceNodeId === nodeId && c.sourceOutputIndex === outputIndex
-      );
+      const outgoingConnections = outgoingByOutput.get(`${nodeId}:${outputIndex}`) || [];
 
       let cycleTime = node.cycleTime;
       if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
@@ -420,57 +419,57 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
   const generalIntVars = variables.filter(v => integerVars.has(v) && !binaryVars.has(v));
   const binaryVarsList = variables.filter(v => binaryVars.has(v));
 
-  const writeVarEntries = (varName, mpsStr) => {
-    const entries = colEntries.get(varName) || [];
-    if (entries.length === 0) {
-      return mpsStr + `    ${varName}  obj  0\n`;
-    }
-    entries.forEach(([rowName, coeff]) => {
-      mpsStr += `    ${varName}  ${rowName}  ${fmt(coeff)}\n`;
-    });
-    return mpsStr;
-  };
+  const out = ['NAME          MODEL\n'];
 
-  let mps = 'NAME          MODEL\n';
-
-  mps += 'ROWS\n';
-  mps += ' N  obj\n';
+  out.push('ROWS\n');
+  out.push(' N  obj\n');
   rowOrder.forEach(rowName => {
-    mps += ` ${rowMap.get(rowName).type}  ${rowName}\n`;
+    out.push(` ${rowMap.get(rowName).type}  ${rowName}\n`);
   });
 
-  mps += 'COLUMNS\n';
+  out.push('COLUMNS\n');
 
-  continuousVars.forEach(v => { mps = writeVarEntries(v, mps); });
-  binaryVarsList.forEach(v => { mps = writeVarEntries(v, mps); });
+  const writeVarEntries = (varName) => {
+    const entries = colEntries.get(varName) || [];
+    if (entries.length === 0) {
+      out.push(`    ${varName}  obj  0\n`);
+      return;
+    }
+    entries.forEach(([rowName, coeff]) => {
+      out.push(`    ${varName}  ${rowName}  ${fmt(coeff)}\n`);
+    });
+  };
+
+  continuousVars.forEach(v => writeVarEntries(v));
+  binaryVarsList.forEach(v => writeVarEntries(v));
 
   if (generalIntVars.length > 0) {
-    mps += "    INT1      'MARKER'                 'INTORG'\n";
-    generalIntVars.forEach(v => { mps = writeVarEntries(v, mps); });
-    mps += "    INT1END   'MARKER'                 'INTEND'\n";
+    out.push("    INT1      'MARKER'                 'INTORG'\n");
+    generalIntVars.forEach(v => writeVarEntries(v));
+    out.push("    INT1END   'MARKER'                 'INTEND'\n");
   }
 
-  mps += 'RHS\n';
+  out.push('RHS\n');
   rowOrder.forEach(rowName => {
     const row = rowMap.get(rowName);
     if (row.rhs !== 0) {
-      mps += `    RHS  ${rowName}  ${fmt(row.rhs)}\n`;
+      out.push(`    RHS  ${rowName}  ${fmt(row.rhs)}\n`);
     }
   });
 
-  mps += 'BOUNDS\n';
+  out.push('BOUNDS\n');
   // General integers need explicit upper bound or MPS defaults them to [0,1] (binary)
   generalIntVars.forEach(varName => {
-    mps += ` UP BND  ${varName}  1000000\n`;
+    out.push(` UP BND  ${varName}  1000000\n`);
   });
   // Binary indicators
   binaryVarsList.forEach(varName => {
-    mps += ` BV BND  ${varName}\n`;
+    out.push(` BV BND  ${varName}\n`);
   });
 
-  mps += 'ENDATA\n';
+  out.push('ENDATA\n');
 
-  return { mpsString: mps, varNameMap };
+  return { mpsString: out.join(''), varNameMap };
 };
 
 /**

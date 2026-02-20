@@ -751,7 +751,7 @@ function App() {
         const waterTanks = Math.ceil(sprinklers / 3);
         
         addMachine('m_tree', Math.ceil(trees * machineCount), getMachine('m_tree')?.cost || 0);
-        addMachine('m_tree_harvester', Math.ceil(harvesters * machineCount), getMachine('m_tree_harvester')?.cost || 0);
+        addMachine('m_farm_harvester', Math.ceil(harvesters * machineCount), getMachine('m_farm_harvester')?.cost || 0);
         addMachine('m_tree_farm_sprinkler', Math.ceil(sprinklers * machineCount), getMachine('m_tree_farm_sprinkler')?.cost || 0);
         addMachine('m_tree_farm_water_tank', Math.ceil(waterTanks * machineCount), getMachine('m_tree_farm_water_tank')?.cost || 0);
         addMachine('m_tree_farm_output', Math.ceil(outputs * machineCount), getMachine('m_tree_farm_output')?.cost || 0);
@@ -3593,10 +3593,6 @@ function App() {
       {showDataManager && (
         <DataManager
           onClose={() => setShowDataManager(false)}
-          defaultProducts={defaultProductsJSON}
-          defaultMachines={defaultMachinesJSON}
-          defaultRecipes={defaultRecipesJSON}
-          onDataChange={handleDataChange}
         />
       )}
 

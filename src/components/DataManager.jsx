@@ -1,991 +1,793 @@
-import React, { useState, useEffect, useRef } from 'react';
-import RecipeEditor from './RecipeEditor';
-import { 
-  getCustomProducts, 
-  getCustomMachines, 
-  getCustomRecipes,
-  updateProduct,
-  updateMachine,
-  updateRecipe,
-  saveCustomProducts,
-  saveCustomMachines,
-  saveCustomRecipes,
-  exportData,
-  importData,
-  restoreDefaultProducts,
-  restoreDefaultMachines,
-  restoreDefaultRecipes
-} from '../utils/dataUtilities';
-import { metricFormat } from '../utils/appUtilities';
+import React, { useState, useMemo } from 'react';
+import { getCustomProducts, getCustomMachines, getCustomRecipes } from '../utils/dataUtilities';
 
-const DataManager = ({ onClose, defaultProducts, defaultMachines, defaultRecipes, onDataChange }) => {
-  const [activeTab, setActiveTab] = useState('products');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [exportProducts, setExportProducts] = useState(true);
-  const [exportMachines, setExportMachines] = useState(true);
-  const [exportRecipes, setExportRecipes] = useState(true);
-  const fileInputRef = useRef(null);
+// ─── JSON Helpers ─────────────────────────────────────────────────────────────
+
+function parseCompareJson(text) {
+  const trimmed = text.trim();
+  if (!trimmed) return { data: null, error: null };
+  let json = trimmed;
+  if (!json.startsWith('[')) json = '[' + json + ']';
+  json = json.replace(/,\s*\]/g, ']').replace(/,\s*\}/g, '}');
+  try {
+    const parsed = JSON.parse(json);
+    return { data: Array.isArray(parsed) ? parsed : [parsed], error: null };
+  } catch (e) {
+    return { data: null, error: e.message };
+  }
+}
+
+function downloadJson(data, filename) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  Object.assign(document.createElement('a'), { href: url, download: filename }).click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── ID / Value Helpers ───────────────────────────────────────────────────────
+
+const noneIfNull = val => (val === null || val === undefined || val === '') ? 'none' : val;
+
+function toProductId(name) {
+  return 'p_' + name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '');
+}
+function toMachineId(name) {
+  return 'm_' + name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+}
+function toRecipeId(machineId, existingIds) {
+  const prefix = 'r_' + machineId.replace(/^m_/, '') + '_';
+  const used = new Set(existingIds.filter(id => id.startsWith(prefix)).map(id => id.slice(prefix.length)));
+  let n = 1;
+  while (used.has(String(n).padStart(2, '0'))) n++;
+  return prefix + String(n).padStart(2, '0');
+}
+
+function normalizeRpMultiplier(val) {
+  if (val == null) return null;
+  const n = parseFloat(String(val).replace(/x$/i, '').trim());
+  return isNaN(n) ? String(val).replace(/x$/i, '').trim() : n;
+}
+
+function parseUnitToken(token) {
+  const s = token.trim().toUpperCase().replace(/\/S$/, '');
+  const suffixes = [['TMF', 1e12], ['GMF', 1e9], ['MMF', 1e6], ['KMF', 1e3], ['MF', 1],
+                    ['T', 1e12], ['G', 1e9], ['M', 1e6], ['K', 1e3]];
+  for (const [sfx, mult] of suffixes) {
+    if (s.endsWith(sfx)) return parseFloat(s) * mult;
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? null : n;
+}
+
+function parseCapacity(val) {
+  if (val == null) return null;
+  const s = String(val).trim().replace(/\s/g, '');
+  let total = 0;
+  for (const addend of s.split('+')) {
+    let product = null;
+    for (const factor of addend.split('*')) {
+      const v = parseUnitToken(factor);
+      if (v === null) return null;
+      product = product === null ? v : product * v;
+    }
+    if (product === null) return null;
+    total += product;
+  }
+  return Math.round(total);
+}
+
+function sanitizeItemName(name) {
+  if (!name) return name;
+  return name
+    .replace(/<sup>(.*?)<\/sup>/gi, '^$1').replace(/<sub>(.*?)<\/sub>/gi, '_$1')
+    .replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+}
+
+// ─── Compare Logic ────────────────────────────────────────────────────────────
+
+function runProductsCompare(existing, pasted) {
+  const results = { new: [], missing: [], changed: [], same: [] };
+  const byName = Object.fromEntries(existing.map(e => [e.name.toLowerCase(), e]));
+  const pastedNames = new Set();
+
+  pasted.forEach(p => {
+    if (!p.Page) return;
+    pastedNames.add(p.Page.toLowerCase());
+    const ex = byName[p.Page.toLowerCase()];
+    if (!ex) { results.new.push({ name: p.Page, data: p }); return; }
+    const changes = [];
+    const price = parseFloat(p.sellValue);
+    if (!isNaN(price) && price !== ex.price) changes.push({ field: 'sellValue → price', from: ex.price, to: price });
+    const rp = normalizeRpMultiplier(p.resValue);
+    if (rp !== normalizeRpMultiplier(ex.rp_multiplier)) changes.push({ field: 'resValue → rp_multiplier', from: normalizeRpMultiplier(ex.rp_multiplier), to: rp });
+    if (changes.length) results.changed.push({ item: { id: ex.id, name: p.Page }, existing: ex, changes });
+    else results.same.push({ id: ex.id, name: p.Page });
+  });
+  existing.forEach(ex => { if (!pastedNames.has(ex.name.toLowerCase())) results.missing.push(ex); });
+  return results;
+}
+
+const MACHINE_INFO_FIELDS = ['Size', 'Pollution', 'PowerInput', 'PowerOutput', 'TransferRate', 'Capacity', 'Category', 'Subcategory', 'Variant', 'Limited'];
+
+function runMachinesCompare(existing, pasted) {
+  const results = { new: [], missing: [], changed: [], same: [] };
+  const byName = Object.fromEntries(existing.map(e => [e.name.toLowerCase(), e]));
+  const pastedNames = new Set();
+
+  pasted.forEach(p => {
+    if (!p.Page) return;
+    pastedNames.add(p.Page.toLowerCase());
+    const ex = byName[p.Page.toLowerCase()];
+    const infoFields = MACHINE_INFO_FIELDS.filter(f => p[f] != null).map(f => ({ field: f, value: p[f] }));
+    if (!ex) { results.new.push({ name: p.Page, data: p, infoFields }); return; }
+    const changes = [];
+    if (String(p.Tier ?? null) !== String(ex.tier ?? null))
+      changes.push({ field: 'Tier → tier', from: ex.tier ?? null, to: p.Tier ?? null });
+    if (changes.length) results.changed.push({ item: { id: ex.id, name: p.Page }, existing: ex, changes, infoFields });
+    else results.same.push({ id: ex.id, name: p.Page, infoFields });
+  });
+  existing.forEach(ex => { if (!pastedNames.has(ex.name.toLowerCase())) results.missing.push(ex); });
+  return results;
+}
+
+function diffIOItems(existingIO, pastedIO) {
+  const exMap = Object.fromEntries(existingIO.map(i => [i.name.toLowerCase(), i]));
+  const pastedMap = Object.fromEntries(pastedIO.map(i => [i.name.toLowerCase(), i]));
+  const added = pastedIO.filter(i => !exMap[i.name.toLowerCase()]);
+  const removed = existingIO.filter(i => !pastedMap[i.name.toLowerCase()]);
+  const qtyChanged = pastedIO
+    .filter(i => exMap[i.name.toLowerCase()] && Number(i.qty) !== Number(exMap[i.name.toLowerCase()].qty))
+    .map(i => ({ name: i.name, from: exMap[i.name.toLowerCase()].qty, to: i.qty }));
+  return { added, removed, qtyChanged, hasChanges: !!(added.length || removed.length || qtyChanged.length) };
+}
+
+function buildPastedRecipes(infoItems, inputItems, outputItems) {
+  const map = {};
+  const ensure = (id, page, machine) => {
+    if (!map[id]) map[id] = { id, page, machine, time: null, mamyflux: null, c_mode: null, inputs: [], outputs: [] };
+    return map[id];
+  };
+  infoItems.forEach(r => {
+    const e = ensure(r.id, r.Page, r.machine);
+    Object.assign(e, { time: r.time, mamyflux: r.mamyflux, c_mode: r['time mode'] ?? null });
+  });
+  inputItems.forEach(r => ensure(r.id, r.Page, r.machine).inputs.push({ name: sanitizeItemName(r.item), qty: r.amount, q_mode: r['amount mode'] ?? null }));
+  outputItems.forEach(r => ensure(r.id, r.Page, r.machine).outputs.push({ name: sanitizeItemName(r.item), qty: r.amount, q_mode: r['amount mode'] ?? null }));
+  return map;
+}
+
+function runRecipesCompare(existing, pastedMap, productNameById) {
+  const results = { new: [], missing: [], changed: [], same: [] };
+  const matchedIds = new Set();
+
+  const byId = {}, byIdNoPrefix = {}, byMachineId = {};
+  existing.forEach(r => {
+    byId[r.id.toLowerCase()] = r;
+    byIdNoPrefix[(r.id.startsWith('r_') ? r.id.slice(2) : r.id).toLowerCase()] = r;
+    const mk = r.machine_id.toLowerCase();
+    (byMachineId[mk] = byMachineId[mk] || []).push(r);
+  });
+
+  const resolveIO = r => ({
+    inputs:  (r.inputs  || []).map(i => ({ name: productNameById[i.product_id] || i.product_id, qty: i.quantity })),
+    outputs: (r.outputs || []).map(i => ({ name: productNameById[i.product_id] || i.product_id, qty: i.quantity })),
+  });
+
+  const ioMatch = (exR, pIns, pOuts) => {
+    const sorted = arr => arr.map(i => i.name.toLowerCase()).sort();
+    const eq = (a, b) => a.length === b.length && a.every((v, i) => v === b[i]);
+    const ex = resolveIO(exR);
+    return eq(sorted(ex.inputs), sorted(pIns)) && eq(sorted(ex.outputs), sorted(pOuts));
+  };
+
+  Object.values(pastedMap).forEach(p => {
+    const pid = (p.id || '').toLowerCase();
+    let found = byId[pid] || byId['r_' + pid] || byIdNoPrefix[pid];
+    let idMismatch = null;
+
+    if (found) {
+      if (!ioMatch(found, p.inputs, p.outputs)) {
+        const alt = (byMachineId[found.machine_id.toLowerCase()] || []).filter(r => r.id !== found.id).find(r => ioMatch(r, p.inputs, p.outputs));
+        if (alt) { idMismatch = { pastedId: p.id, existingId: alt.id }; found = alt; }
+      }
+    } else {
+      const candidates = Object.values(byId).filter(r =>
+        (productNameById[r.machine_id.toLowerCase()] || r.machine_id || '').toLowerCase() === (p.machine || '').toLowerCase()
+      );
+      const alt = candidates.find(r => ioMatch(r, p.inputs, p.outputs));
+      if (alt) { idMismatch = { pastedId: p.id, existingId: alt.id }; found = alt; }
+    }
+
+    if (!found) { results.new.push({ id: p.id, name: p.page || p.id, machine: p.machine, pasted: p }); return; }
+
+    matchedIds.add(found.id);
+    const changes = [];
+    if (idMismatch) changes.push({ field: 'id mismatch', from: idMismatch.existingId, to: idMismatch.pastedId });
+    if (p.time != null && Number(p.time) !== Number(found.cycle_time))
+      changes.push({ field: 'time / cycle_time', from: found.cycle_time, to: p.time });
+    if (p.mamyflux != null && Number(p.mamyflux) !== Number(found.power_consumption))
+      changes.push({ field: 'mamyflux / power_consumption', from: found.power_consumption, to: p.mamyflux });
+    const inDiff  = diffIOItems(resolveIO(found).inputs,  p.inputs);
+    const outDiff = diffIOItems(resolveIO(found).outputs, p.outputs);
+    if (inDiff.hasChanges)  changes.push({ field: 'inputs',  diff: inDiff });
+    if (outDiff.hasChanges) changes.push({ field: 'outputs', diff: outDiff });
+
+    if (changes.length) results.changed.push({ id: p.id, name: p.page || found.name, machine: p.machine, changes, pasted: p, existing: found });
+    else                results.same.push({ id: p.id, name: p.page || found.name, machine: p.machine });
+  });
+
+  existing.forEach(ex => { if (!matchedIds.has(ex.id)) results.missing.push({ id: ex.id, name: ex.name, machine: ex.machine_id }); });
+  return results;
+}
+
+// ─── Export Builders ──────────────────────────────────────────────────────────
+
+function applyChangedEntry(merged, changes, isChecked, fieldMap) {
+  // isChecked → apply pasted values; unchecked → only fill nulls
+  changes.forEach(c => {
+    const key = fieldMap[c.field];
+    if (!key) return;
+    if (isChecked) merged[key] = c.to;
+    else if (merged[key] === null || merged[key] === undefined) merged[key] = c.to;
+  });
+}
+
+function buildProductsExport(existing, results, selectedKeys) {
+  const byId = Object.fromEntries(existing.map(e => [e.id, e]));
+  const toRow = e => ({ id: e.id, name: e.name, type: noneIfNull(e.type), price: e.price ?? null, rp_multiplier: e.rp_multiplier ?? null });
+  const hasSame = [...selectedKeys].some(k => k.startsWith('same:'));
+  const out = [];
+
+  results.same.forEach((entry, i) => {
+    if (!selectedKeys.has(`same:${entry.id || entry.name || i}`)) return;
+    const ex = byId[entry.id];
+    if (ex) out.push(toRow(ex));
+  });
+  results.changed.forEach((entry, i) => {
+    const isChecked = selectedKeys.has(`changed:${entry.item?.id || entry.item?.name || i}`);
+    if (!isChecked && !hasSame) return;
+    const merged = { ...entry.existing };
+    applyChangedEntry(merged, entry.changes, isChecked, { 'sellValue → price': 'price', 'resValue → rp_multiplier': 'rp_multiplier' });
+    out.push(toRow(merged));
+  });
+  results.missing.forEach((entry, i) => {
+    if (!selectedKeys.has(`missing:${entry.id || entry.name || i}`)) return;
+    out.push(toRow(entry));
+  });
+  results.new.forEach((entry, i) => {
+    if (!selectedKeys.has(`new:${entry.name || i}`)) return;
+    out.push({ id: toProductId(entry.name), name: entry.name, type: 'none', price: parseFloat(entry.data?.sellValue) || null, rp_multiplier: normalizeRpMultiplier(entry.data?.resValue) });
+  });
+  return out;
+}
+
+const MACHINE_FIELD_MAP = { Size: 'size', TransferRate: 'transfer_rate', Capacity: 'capacity', Category: 'category', Subcategory: 'subcategory', Variant: 'variant', Limited: 'limited' };
+
+function applyMachineInfo(row, infoFields) {
+  if (!infoFields) return row;
+  infoFields.forEach(({ field, value }) => {
+    const key = MACHINE_FIELD_MAP[field];
+    if (!key) return;
+    if (key === 'capacity') row[key] = parseCapacity(value);
+    else if (key === 'transfer_rate') row[key] = Math.round(parseCapacity(value) ?? 0);
+    else if (key === 'variant') row[key] = (value && String(value).toLowerCase() !== 'none') ? 'm_' + String(value).toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') : 'none';
+    else if (key === 'limited') { const v = String(value).toLowerCase(); row[key] = v === 'yes' || v === 'true' || v === '1'; }
+    else row[key] = value;
+  });
+  return row;
+}
+
+function buildMachinesExport(existing, results, selectedKeys) {
+  const byId = Object.fromEntries(existing.map(e => [e.id, e]));
+  const toRow = (e, infoFields) => applyMachineInfo({
+    id: e.id, name: e.name, cost: e.cost ?? null, size: e.size ?? null, tier: e.tier ?? null,
+    transfer_rate: e.transfer_rate ?? 0, capacity: e.capacity ?? null, category: e.category ?? null,
+    subcategory: e.subcategory ?? null,
+    variant: (e.variant && e.variant !== 'none') ? 'm_' + String(e.variant).toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') : 'none',
+    limited: e.limited != null ? !!e.limited : false, gamemode: e.gamemode ?? 'any'
+  }, infoFields);
+  const hasSame = [...selectedKeys].some(k => k.startsWith('same:'));
+  const out = [];
+
+  results.same.forEach((entry, i) => {
+    if (!selectedKeys.has(`same:${entry.id || entry.name || i}`)) return;
+    const ex = byId[entry.id];
+    if (ex) out.push(toRow(ex, entry.infoFields));
+  });
+  results.changed.forEach((entry, i) => {
+    const isChecked = selectedKeys.has(`changed:${entry.item?.id || entry.item?.name || i}`);
+    if (!isChecked && !hasSame) return;
+    const merged = { ...entry.existing };
+    applyChangedEntry(merged, entry.changes, isChecked, { 'Tier → tier': 'tier' });
+    out.push(toRow(merged, entry.infoFields));
+  });
+  results.missing.forEach((entry, i) => {
+    if (!selectedKeys.has(`missing:${entry.id || entry.name || i}`)) return;
+    out.push(toRow(entry, null));
+  });
+  results.new.forEach((entry, i) => {
+    if (!selectedKeys.has(`new:${entry.name || i}`)) return;
+    out.push(applyMachineInfo({ id: toMachineId(entry.name), name: entry.name, cost: null, size: null, tier: entry.data?.Tier ?? null, transfer_rate: 0, capacity: null, category: null, subcategory: null, variant: 'none', limited: false, gamemode: 'any' }, entry.infoFields));
+  });
+  return out;
+}
+
+function buildRecipesExport(existing, results, selectedKeys, productIdByName, machineIdByName) {
+  const byId = Object.fromEntries(existing.map(e => [e.id, e]));
+  const toRow = e => ({
+    id: e.id, name: e.name, machine_id: e.machine_id,
+    cycle_time: e.cycle_time ?? null, c_mode: noneIfNull(e.c_mode),
+    power_consumption: e.power_consumption ?? null, power_type: noneIfNull(e.power_type),
+    pollution: e.pollution ?? 0,
+    inputs:  (e.inputs  || []).map(i => ({ product_id: i.product_id, quantity: i.quantity, q_mode: noneIfNull(i.q_mode) })),
+    outputs: (e.outputs || []).map(o => ({ product_id: o.product_id, quantity: o.quantity, q_mode: noneIfNull(o.q_mode) })),
+  });
+  const resolveIO = items => items.map(item => ({
+    product_id: productIdByName[(item.name || '').toLowerCase()] || toProductId(item.name || ''),
+    quantity: Number(item.qty), q_mode: noneIfNull(item.q_mode),
+  }));
+  const allIds = Object.keys(byId);
+  const hasSame = [...selectedKeys].some(k => k.startsWith('same:'));
+  const out = [];
+
+  results.same.forEach((entry, i) => {
+    if (!selectedKeys.has(`same:${entry.id || i}`)) return;
+    const ex = byId[entry.id] || byId['r_' + entry.id];
+    if (ex) out.push(toRow(ex));
+  });
+  results.changed.forEach((entry, i) => {
+    const isChecked = selectedKeys.has(`changed:${entry.id || i}`);
+    if (!isChecked && !hasSame) return;
+    const merged = { ...entry.existing };
+    applyChangedEntry(merged, entry.changes, isChecked, { 'time / cycle_time': 'cycle_time', 'mamyflux / power_consumption': 'power_consumption' });
+    const hasInputChange  = entry.changes.find(c => c.field === 'inputs');
+    const hasOutputChange = entry.changes.find(c => c.field === 'outputs');
+    if (isChecked) {
+      if (hasInputChange)  merged.inputs  = resolveIO(entry.pasted.inputs  || []);
+      if (hasOutputChange) merged.outputs = resolveIO(entry.pasted.outputs || []);
+      if (entry.pasted?.c_mode !== undefined) merged.c_mode = entry.pasted.c_mode;
+    } else {
+      if (!merged.inputs?.length  && entry.pasted?.inputs?.length)  merged.inputs  = resolveIO(entry.pasted.inputs);
+      if (!merged.outputs?.length && entry.pasted?.outputs?.length) merged.outputs = resolveIO(entry.pasted.outputs);
+      if ((merged.c_mode == null || merged.c_mode === 'none') && entry.pasted?.c_mode != null) merged.c_mode = entry.pasted.c_mode;
+    }
+    out.push(toRow(merged));
+  });
+  results.missing.forEach((entry, i) => {
+    if (!selectedKeys.has(`missing:${entry.id || i}`)) return;
+    const ex = byId[entry.id];
+    if (ex) out.push(toRow(ex));
+  });
+  results.new.forEach((entry, i) => {
+    if (!selectedKeys.has(`new:${entry.id || i}`)) return;
+    const p = entry.pasted;
+    const machine_id = machineIdByName[(p.machine || '').toLowerCase()] || toMachineId(p.machine || '');
+    const newId = toRecipeId(machine_id, allIds);
+    allIds.push(newId);
+    out.push({ id: newId, name: p.page || p.id, machine_id, cycle_time: p.time ?? null, c_mode: noneIfNull(p.c_mode), power_consumption: p.mamyflux ?? null, power_type: 'none', pollution: 0, inputs: resolveIO(p.inputs || []), outputs: resolveIO(p.outputs || []) });
+  });
+  return out;
+}
+
+// ─── UI Components ────────────────────────────────────────────────────────────
+
+const COMPARE_STATUS = {
+  new:     { label: 'New',       color: '#22c55e' },
+  missing: { label: 'Missing',   color: '#f59e0b' },
+  changed: { label: 'Changed',   color: '#3b82f6' },
+  same:    { label: 'Unchanged', color: 'var(--text-muted)' },
+};
+
+const Tag = ({ children, color, bg, border }) => (
+  <span style={{ fontSize: '11px', padding: '1px 5px', background: bg, border: `1px solid ${border}`, color, borderRadius: 'var(--radius-sm)' }}>{children}</span>
+);
+
+const FieldBadge = ({ field, from, to }) => (
+  <span style={{ fontSize: '11px', padding: '2px 6px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}>
+    {field}: <span style={{ color: '#f87171' }}>{String(from)}</span> → <span style={{ color: '#4ade80' }}>{String(to)}</span>
+  </span>
+);
+
+const CompareItemRow = ({ children, accent }) => (
+  <div style={{ padding: '6px 10px', background: 'var(--bg-main)', borderRadius: 'var(--radius-sm)', fontSize: '13px', borderLeft: `3px solid ${accent || 'transparent'}` }}>
+    {children}
+  </div>
+);
+
+const CompareSummaryBar = ({ results }) => (
+  <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexWrap: 'wrap' }}>
+    {Object.entries(COMPARE_STATUS).map(([key, { label, color }]) => (
+      <div key={key} style={{ padding: '4px 12px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', fontSize: '12px', border: `1px solid ${color}44` }}>
+        <span style={{ color }}>{label}:</span> <strong style={{ color: 'var(--text-primary)' }}>{results[key].length}</strong>
+      </div>
+    ))}
+  </div>
+);
+
+const CompareFilterBar = ({ filters, onToggle, search, onSearch }) => (
+  <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+    {Object.entries(COMPARE_STATUS).map(([key, { label, color }]) => (
+      <button key={key} onClick={() => onToggle(key)} className="btn btn-secondary"
+        style={{ padding: '3px 10px', fontSize: '12px', minWidth: 'auto', width: 'auto', opacity: filters.includes(key) ? 1 : 0.35, color: filters.includes(key) ? color : undefined, borderColor: filters.includes(key) ? color : undefined }}>
+        {label}
+      </button>
+    ))}
+    <input type="text" placeholder="Search..." value={search} onChange={e => onSearch(e.target.value)}
+      className="input" style={{ flex: 1, minWidth: '100px', padding: '4px 8px', fontSize: '12px' }} />
+  </div>
+);
+
+const CompareSection = ({ status, items, renderItem, selectedKeys, onToggleKey, getKey }) => {
+  const [open, setOpen] = useState(true);
+  const { label, color } = COMPARE_STATUS[status];
+  if (!items.length) return null;
+  const keys = items.map(getKey);
+  const allSelected = keys.every(k => selectedKeys.has(k));
+  const someSelected = !allSelected && keys.some(k => selectedKeys.has(k));
+  return (
+    <div style={{ marginBottom: '10px', border: '1px solid var(--border-divider)', borderRadius: 'var(--radius-sm)', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 12px', background: 'var(--bg-secondary)', cursor: 'pointer' }} onClick={() => setOpen(o => !o)}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <input type="checkbox" checked={allSelected} ref={el => { if (el) el.indeterminate = someSelected; }}
+            onChange={e => { e.stopPropagation(); keys.forEach(k => onToggleKey(k, !allSelected)); }}
+            onClick={e => e.stopPropagation()} style={{ cursor: 'pointer', flexShrink: 0 }} />
+          <span style={{ color, fontWeight: 600, fontSize: '13px' }}>{label}</span>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <span style={{ background: color, color: '#fff', borderRadius: '999px', padding: '1px 8px', fontSize: '11px', fontWeight: 700 }}>{items.length}</span>
+          <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>{open ? '▲' : '▼'}</span>
+        </div>
+      </div>
+      {open && (
+        <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          {items.map((item, i) => (
+            <div key={keys[i]} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+              <input type="checkbox" checked={selectedKeys.has(keys[i])} onChange={() => onToggleKey(keys[i])}
+                style={{ marginTop: '8px', flexShrink: 0, cursor: 'pointer' }} />
+              <div style={{ flex: 1, minWidth: 0 }}>{renderItem(item, i)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const HintBox = ({ children }) => (
+  <div style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', padding: '8px 12px', marginBottom: '10px', lineHeight: '1.6', border: '1px solid var(--border-divider)' }}>
+    {children}
+  </div>
+);
+
+// ─── Shared Compare Panel ─────────────────────────────────────────────────────
+
+const useToggleSet = () => {
+  const [set, setSet] = useState(new Set());
+  const toggle = (k, forceTo) => setSet(prev => {
+    const next = new Set(prev);
+    (forceTo !== undefined ? forceTo : !next.has(k)) ? next.add(k) : next.delete(k);
+    return next;
+  });
+  return [set, setSet, toggle];
+};
+
+const ComparePanel = ({ typeName, existing, compareFn, renderNew, renderMissing, renderChanged, renderSame, exportBuilder, hint }) => {
+  const [paste, setPaste] = useState('');
+  const [results, setResults] = useState(null);
+  const [error, setError] = useState(null);
+  const [filters, setFilters] = useState(['new', 'missing', 'changed']);
+  const [search, setSearch] = useState('');
+  const [selectedKeys, , toggleKey] = useToggleSet();
+
+  const getKey = (status, item) => {
+    const base = item.item || item;
+    return `${status}:${base.id || base.name}`;
+  };
+
+  const handleCompare = () => {
+    const { data, error: err } = parseCompareJson(paste);
+    if (err) { setError(err); setResults(null); return; }
+    if (!data?.length) { setError('No valid JSON array found'); return; }
+    setError(null);
+    setResults(compareFn(existing, data));
+  };
+
+  const filtered = useMemo(() => {
+    if (!results) return null;
+    const s = search.toLowerCase();
+    const f = arr => arr.filter(i => { const it = i.item || i; return !s || (it.name || it.id || '').toLowerCase().includes(s); });
+    return { new: f(results.new), missing: f(results.missing), changed: f(results.changed), same: f(results.same) };
+  }, [results, search]);
+
+  const toggleFilter = k => setFilters(p => p.includes(k) ? p.filter(x => x !== k) : [...p, k]);
 
   const handleExport = () => {
-    const data = exportData(exportProducts, exportMachines, exportRecipes);
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `industrialist-data-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    if (!results) return;
+    downloadJson(exportBuilder(existing, results, selectedKeys), `${typeName.toLowerCase()}_export.json`);
   };
 
-  const handleImport = () => {
-    fileInputRef.current?.click();
+  return (
+    <div>
+      {hint && <HintBox>{hint}</HintBox>}
+      <textarea value={paste} onChange={e => setPaste(e.target.value)} className="input"
+        placeholder={`Paste ${typeName} JSON array...\n[\n  { "Page": "...", ... },\n  ...\n]`}
+        style={{ width: '100%', minHeight: '110px', fontFamily: 'monospace', fontSize: '12px', resize: 'vertical', marginBottom: '8px', boxSizing: 'border-box' }} />
+      {error && <div style={{ color: '#f87171', fontSize: '12px', marginBottom: '8px' }}>⚠ {error}</div>}
+      <button onClick={handleCompare} className="btn btn-primary" style={{ width: '100%', marginBottom: '14px' }} disabled={!paste.trim()}>
+        Compare {typeName}
+      </button>
+      {filtered && <>
+        <CompareSummaryBar results={filtered} />
+        <CompareFilterBar filters={filters} onToggle={toggleFilter} search={search} onSearch={setSearch} />
+        {['new', 'missing', 'changed', 'same'].filter(s => filters.includes(s)).map(status => (
+          <CompareSection key={status} status={status} items={filtered[status]}
+            renderItem={status === 'changed' ? renderChanged : status === 'new' ? renderNew : status === 'missing' ? renderMissing : renderSame}
+            selectedKeys={selectedKeys} onToggleKey={toggleKey}
+            getKey={(item, i) => getKey(status, item) || `${status}:${i}`} />
+        ))}
+        {selectedKeys.size > 0 && (
+          <button onClick={handleExport} className="btn btn-primary" style={{ width: '100%', marginTop: '10px', background: '#16a34a', borderColor: '#16a34a' }}>
+            ↓ Export {selectedKeys.size} selected item{selectedKeys.size !== 1 ? 's' : ''} as JSON
+          </button>
+        )}
+      </>}
+    </div>
+  );
+};
+
+// ─── Recipe Compare Panel ─────────────────────────────────────────────────────
+
+const RecipeComparePanel = ({ existing }) => {
+  const [pastes, setPastes] = useState({ info: '', inputs: '', outputs: '' });
+  const [results, setResults] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [filters, setFilters] = useState(['new', 'missing', 'changed']);
+  const [search, setSearch] = useState('');
+  const [selectedKeys, , toggleKey] = useToggleSet();
+
+  const getKey = (status, item, i) => `${status}:${item.id || i}`;
+
+  const handleCompare = () => {
+    const parsed = Object.fromEntries(Object.entries(pastes).map(([k, v]) => [k, parseCompareJson(v)]));
+    const errs = Object.fromEntries(Object.entries(parsed).filter(([, v]) => v.error).map(([k, v]) => [k, v.error]));
+    setErrors(errs);
+    if (Object.keys(errs).length) { setResults(null); return; }
+    if (!parsed.info.data && !parsed.inputs.data && !parsed.outputs.data) { setErrors({ general: 'Nothing pasted' }); return; }
+    const pastedMap = buildPastedRecipes(parsed.info.data || [], parsed.inputs.data || [], parsed.outputs.data || []);
+    const productNameById = Object.fromEntries(getCustomProducts().map(p => [p.id, p.name]));
+    setResults(runRecipesCompare(existing, pastedMap, productNameById));
   };
 
-  const processImport = (event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const imported = JSON.parse(e.target.result);
-        
-        // Check if this file only contains canvas data
-        const hasData = imported.products || imported.machines || imported.recipes;
-        const hasCanvas = imported.canvas;
-        
-        if (!hasData && hasCanvas) {
-          alert('This file only contains canvas data. Please use Save Manager to import canvas layouts.');
-          event.target.value = '';
-          return;
-        }
-        
-        if (!hasData) {
-          alert('This file does not contain any game data (products, machines, or recipes).');
-          event.target.value = '';
-          return;
-        }
-        
-        // Warn if file contains canvas data that will be ignored
-        if (hasCanvas) {
-          if (!window.confirm('This file contains canvas data which will be IGNORED.\n\nOnly game data (products/machines/recipes) will be imported.\n\nTo import canvas data, use Save Manager > Import Canvas.\n\nContinue with data-only import?')) {
-            event.target.value = '';
-            return;
-          }
-        }
-        
-        const results = importData(imported);
-        
-        let message = 'Import complete:\n';
-        if (results.products > 0) message += `- ${results.products} products imported/updated\n`;
-        if (results.machines > 0) message += `- ${results.machines} machines imported/updated\n`;
-        if (results.recipes > 0) message += `- ${results.recipes} recipes imported/updated\n`;
-        if (results.errors.length > 0) message += `\nErrors: ${results.errors.join(', ')}`;
-        
-        alert(message);
-        onDataChange();
-      } catch (error) {
-        alert(`Import failed: ${error.message}`);
-      }
-    };
-    reader.readAsText(file);
-    event.target.value = '';
+  const handleExport = () => {
+    if (!results) return;
+    const productIdByName = Object.fromEntries(getCustomProducts().map(p => [p.name.toLowerCase(), p.id]));
+    const machineIdByName = Object.fromEntries(getCustomMachines().map(m => [m.name.toLowerCase(), m.id]));
+    downloadJson(buildRecipesExport(existing, results, selectedKeys, productIdByName, machineIdByName), 'recipes_export.json');
   };
+
+  const filtered = useMemo(() => {
+    if (!results) return null;
+    const s = search.toLowerCase();
+    const f = arr => arr.filter(i => !s || (i.name || i.id || '').toLowerCase().includes(s) || (i.machine || '').toLowerCase().includes(s));
+    return { new: f(results.new), missing: f(results.missing), changed: f(results.changed), same: f(results.same) };
+  }, [results, search]);
+
+  const toggleFilter = k => setFilters(p => p.includes(k) ? p.filter(x => x !== k) : [...p, k]);
+  const taStyle = { width: '100%', minHeight: '100px', fontFamily: 'monospace', fontSize: '12px', resize: 'vertical', boxSizing: 'border-box' };
+
+  const renderChanged = (item, i) => (
+    <CompareItemRow key={item.id || i} accent="#3b82f6">
+      <div style={{ fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>{item.name} <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({item.id})</span></div>
+      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+        {item.changes.filter(c => c.field !== 'inputs' && c.field !== 'outputs').map(c => <FieldBadge key={c.field} {...c} />)}
+      </div>
+      {item.changes.filter(c => c.field === 'inputs' || c.field === 'outputs').map(c => (
+        <div key={c.field} style={{ marginTop: '4px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{c.field} changes</div>
+          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+            {c.diff.added.map((io, idx)      => <Tag key={idx} color="#4ade80" bg="#052e16" border="#166534">+ {io.name} ×{io.qty}</Tag>)}
+            {c.diff.removed.map((io, idx)    => <Tag key={idx} color="#f87171" bg="#2d0a0a" border="#7c2d12">− {io.name} ×{io.qty}</Tag>)}
+            {c.diff.qtyChanged.map((io, idx) => <Tag key={idx} color="#93c5fd" bg="var(--bg-secondary)" border="#1e40af">{io.name}: ×{io.from} → ×{io.to}</Tag>)}
+          </div>
+        </div>
+      ))}
+    </CompareItemRow>
+  );
+
+  return (
+    <div>
+      <HintBox>
+        Paste data from each wiki table into the fields below, then click <strong>Compare Recipes</strong>.<br />
+        <strong>Checked</strong> items export with pasted values applied. <strong>Unchecked</strong> Changed items (when any Unchanged are selected) export using existing values, filling only empty fields from pasted data.
+      </HintBox>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '8px' }}>
+        {[
+          { key: 'info',    label: 'Recipe Info',    hint: 'Page, id, machine, time, mamyflux' },
+          { key: 'inputs',  label: 'Recipe Inputs',  hint: 'id, item, amount' },
+          { key: 'outputs', label: 'Recipe Outputs', hint: 'id, item, amount' },
+        ].map(({ key, label, hint }) => (
+          <div key={key}>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>{label} <span style={{ opacity: 0.6 }}>({hint})</span></div>
+            <textarea value={pastes[key]} onChange={e => setPastes(p => ({ ...p, [key]: e.target.value }))} className="input" style={taStyle} />
+            {errors[key] && <div style={{ color: '#f87171', fontSize: '12px', marginTop: '4px' }}>⚠ {errors[key]}</div>}
+          </div>
+        ))}
+      </div>
+      {errors.general && <div style={{ color: '#f87171', fontSize: '12px', marginBottom: '8px' }}>⚠ {errors.general}</div>}
+      <button onClick={handleCompare} className="btn btn-primary" style={{ width: '100%', marginBottom: '14px' }}
+        disabled={!pastes.info.trim() && !pastes.inputs.trim() && !pastes.outputs.trim()}>
+        Compare Recipes
+      </button>
+      {filtered && <>
+        <CompareSummaryBar results={filtered} />
+        <CompareFilterBar filters={filters} onToggle={toggleFilter} search={search} onSearch={setSearch} />
+        {filters.includes('new') && (
+          <CompareSection status="new" items={filtered.new} selectedKeys={selectedKeys} onToggleKey={toggleKey}
+            getKey={(item, i) => getKey('new', item, i)}
+            renderItem={(item, i) => (
+              <CompareItemRow key={item.id || i} accent="#22c55e">
+                <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{item.name} <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({item.id})</span></div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  machine: {item.machine}{item.pasted?.time != null ? ` · time: ${item.pasted.time}s` : ''}{item.pasted?.mamyflux != null ? ` · mamyflux: ${item.pasted.mamyflux}` : ''}
+                </div>
+                {(item.pasted?.inputs?.length > 0 || item.pasted?.outputs?.length > 0) && (
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '4px', flexWrap: 'wrap' }}>
+                    {item.pasted?.inputs?.length  > 0 && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>In:  {item.pasted.inputs.map(io  => `${io.name} ×${io.qty}`).join(', ')}</div>}
+                    {item.pasted?.outputs?.length > 0 && <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Out: {item.pasted.outputs.map(io => `${io.name} ×${io.qty}`).join(', ')}</div>}
+                  </div>
+                )}
+              </CompareItemRow>
+            )} />
+        )}
+        {filters.includes('missing') && (
+          <CompareSection status="missing" items={filtered.missing} selectedKeys={selectedKeys} onToggleKey={toggleKey}
+            getKey={(item, i) => getKey('missing', item, i)}
+            renderItem={(item, i) => (
+              <CompareItemRow key={item.id || i} accent="#f59e0b">
+                <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{item.name} <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({item.id})</span></div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>machine: {item.machine}</div>
+              </CompareItemRow>
+            )} />
+        )}
+        {filters.includes('changed') && (
+          <CompareSection status="changed" items={filtered.changed} selectedKeys={selectedKeys} onToggleKey={toggleKey}
+            getKey={(item, i) => getKey('changed', item, i)} renderItem={renderChanged} />
+        )}
+        {filters.includes('same') && (
+          <CompareSection status="same" items={filtered.same} selectedKeys={selectedKeys} onToggleKey={toggleKey}
+            getKey={(item, i) => getKey('same', item, i)}
+            renderItem={(item, i) => (
+              <CompareItemRow key={item.id || i}>
+                <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.name}</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '6px' }}>({item.id}) · {item.machine}</span>
+              </CompareItemRow>
+            )} />
+        )}
+        {selectedKeys.size > 0 && (
+          <button onClick={handleExport} className="btn btn-primary" style={{ width: '100%', marginTop: '10px', background: '#16a34a', borderColor: '#16a34a' }}>
+            ↓ Export {selectedKeys.size} selected item{selectedKeys.size !== 1 ? 's' : ''} as JSON
+          </button>
+        )}
+      </>}
+    </div>
+  );
+};
+
+// ─── Data Manager Modal ───────────────────────────────────────────────────────
+
+const PRODUCT_HINT = 'Paste a JSON array from the wiki products table. Matched by name using the "Page" field. Checked items export with pasted values; unchecked Changed items (when any Unchanged are selected) keep existing values and only fill empty fields.';
+const MACHINE_HINT = 'Paste a JSON array from the wiki machines table. Matched by name using the "Page" field. Info fields (Size, Capacity, etc.) are applied on top of existing data during export.';
+
+const DataManager = ({ onClose }) => {
+  const [activeTab, setActiveTab] = useState('products');
+  const products = getCustomProducts();
+  const machines = getCustomMachines();
+  const recipes  = getCustomRecipes();
+
+  const tabs = [
+    { key: 'products', label: 'Products', count: products.length },
+    { key: 'machines', label: 'Machines', count: machines.length },
+    { key: 'recipes',  label: 'Recipes',  count: recipes.length  },
+  ];
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: '750px', maxWidth: '95vw', maxHeight: '90vh' }}>
-        <h2 className="modal-title">Data Manager</h2>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ width: '1600px', maxWidth: '98vw', maxHeight: '92vh' }}>
+        <h2 className="modal-title">Data Comparator</h2>
 
-        {/* Import/Export Section */}
-        <div style={{ 
-          marginBottom: '20px', 
-          padding: '15px', 
-          background: 'var(--bg-main)', 
-          borderRadius: 'var(--radius-md)', 
-          border: '2px solid var(--border-divider)' 
-        }}>
-          <h3 style={{ color: 'var(--text-primary)', fontSize: '14px', fontWeight: 600, marginBottom: '12px' }}>
-            Import/Export Data
-          </h3>
-          
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                <input type="checkbox" checked={exportProducts} onChange={(e) => setExportProducts(e.target.checked)} 
-                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--color-primary)' }} />
-                Products
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                <input type="checkbox" checked={exportMachines} onChange={(e) => setExportMachines(e.target.checked)}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--color-primary)' }} />
-                Machines
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                <input type="checkbox" checked={exportRecipes} onChange={(e) => setExportRecipes(e.target.checked)}
-                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--color-primary)' }} />
-                Recipes
-              </label>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={handleImport} className="btn btn-secondary">Import JSON</button>
-              <button onClick={handleExport} className="btn btn-primary">Export Data</button>
-            </div>
-          </div>
-          
-          <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={processImport} />
-        </div>
-
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', borderBottom: '2px solid var(--border-divider)' }}>
-          <button
-            onClick={() => setActiveTab('products')}
-            className={`btn ${activeTab === 'products' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ flex: 1, borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0' }}
-          >
-            Products
-          </button>
-          <button
-            onClick={() => setActiveTab('machines')}
-            className={`btn ${activeTab === 'machines' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ flex: 1, borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0' }}
-          >
-            Machines
-          </button>
-          <button
-            onClick={() => setActiveTab('recipes')}
-            className={`btn ${activeTab === 'recipes' ? 'btn-primary' : 'btn-secondary'}`}
-            style={{ flex: 1, borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0' }}
-          >
-            Recipes
-          </button>
+          {tabs.map(({ key, label, count }) => (
+            <button key={key} onClick={() => setActiveTab(key)}
+              className={`btn ${activeTab === key ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ flex: 1, borderRadius: 'var(--radius-sm) var(--radius-sm) 0 0' }}>
+              {label} <span style={{ opacity: 0.6, fontSize: '11px' }}>({count})</span>
+            </button>
+          ))}
         </div>
 
-        {/* Search */}
-        <div style={{ marginBottom: '15px' }}>
-          <input
-            type="text"
-            placeholder={`Search ${activeTab}...`}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="input"
-          />
-        </div>
-
-        {/* Tab Content */}
-        <div className="modal-content" style={{ maxHeight: 'calc(90vh - 400px)', overflowY: 'auto' }}>
+        <div className="modal-content" style={{ maxHeight: 'calc(92vh - 180px)', overflowY: 'auto' }}>
           {activeTab === 'products' && (
-            <ProductsTab 
-              searchTerm={searchTerm} 
-              defaultProducts={defaultProducts}
-              onDataChange={onDataChange}
+            <ComparePanel typeName="Products" existing={products} compareFn={runProductsCompare} exportBuilder={buildProductsExport} hint={PRODUCT_HINT}
+              renderNew={({ name, data }, i) => (
+                <CompareItemRow key={name || i} accent="#22c55e">
+                  <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{name}</div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '3px' }}>
+                    {data?.sellValue !== undefined && <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>sellValue: {data.sellValue}</span>}
+                    {data?.resValue  !== undefined && <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>resValue: {data.resValue}</span>}
+                  </div>
+                </CompareItemRow>
+              )}
+              renderMissing={(item, i) => (
+                <CompareItemRow key={item.id || i} accent="#f59e0b">
+                  <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{item.name} <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({item.id})</span></div>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '3px' }}>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>price: {item.price}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>rp: {item.rp_multiplier}</span>
+                  </div>
+                </CompareItemRow>
+              )}
+              renderChanged={({ item, existing: ex, changes }, i) => (
+                <CompareItemRow key={item.id || i} accent="#3b82f6">
+                  <div style={{ fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>{item.name || ex.name} <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({item.id})</span></div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {changes.map(c => <FieldBadge key={c.field} {...c} />)}
+                  </div>
+                </CompareItemRow>
+              )}
+              renderSame={({ id, name }, i) => (
+                <CompareItemRow key={id || i}>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{name}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '6px' }}>({id})</span>
+                </CompareItemRow>
+              )}
             />
           )}
+
           {activeTab === 'machines' && (
-            <MachinesTab 
-              searchTerm={searchTerm} 
-              defaultMachines={defaultMachines}
-              onDataChange={onDataChange}
+            <ComparePanel typeName="Machines" existing={machines} compareFn={runMachinesCompare} exportBuilder={buildMachinesExport} hint={MACHINE_HINT}
+              renderNew={({ name, data, infoFields }, i) => (
+                <CompareItemRow key={name || i} accent="#22c55e">
+                  <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{name}</div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '3px' }}>
+                    {data?.Tier !== undefined && <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Tier: {data.Tier}</span>}
+                    {infoFields?.map(f => <span key={f.field} style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{f.field}: {String(f.value)}</span>)}
+                  </div>
+                </CompareItemRow>
+              )}
+              renderMissing={(item, i) => (
+                <CompareItemRow key={item.id || i} accent="#f59e0b">
+                  <div style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{item.name} <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({item.id})</span></div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>tier: {item.tier}</span>
+                </CompareItemRow>
+              )}
+              renderChanged={({ item, existing: ex, changes, infoFields }, i) => (
+                <CompareItemRow key={item.id || i} accent="#3b82f6">
+                  <div style={{ fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>{item.name || ex.name} <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>({item.id})</span></div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {changes.map(c => <FieldBadge key={c.field} {...c} />)}
+                    {infoFields?.map(f => <span key={f.field} style={{ fontSize: '11px', padding: '2px 6px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)' }}>{f.field}: {String(f.value)}</span>)}
+                  </div>
+                </CompareItemRow>
+              )}
+              renderSame={({ id, name, infoFields }, i) => (
+                <CompareItemRow key={id || i}>
+                  <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{name}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: '11px', marginLeft: '6px' }}>({id})</span>
+                  {infoFields?.length > 0 && (
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '3px' }}>
+                      {infoFields.map(f => <span key={f.field} style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{f.field}: {String(f.value)}</span>)}
+                    </div>
+                  )}
+                </CompareItemRow>
+              )}
             />
           )}
-          {activeTab === 'recipes' && (
-            <RecipesTab 
-              searchTerm={searchTerm} 
-              defaultRecipes={defaultRecipes}
-              defaultMachines={defaultMachines}
-              defaultProducts={defaultProducts}
-              onDataChange={onDataChange}
-            />
-          )}
+
+          {activeTab === 'recipes' && <RecipeComparePanel existing={recipes} />}
         </div>
 
-        <button onClick={onClose} className="btn btn-secondary" style={{ marginTop: '20px', width: '100%' }}>
-          Close
-        </button>
+        <button onClick={onClose} className="btn btn-secondary" style={{ marginTop: '15px', width: '100%' }}>Close</button>
       </div>
-    </div>
-  );
-};
-
-// Products Tab Component
-const ProductsTab = ({ searchTerm, defaultProducts, onDataChange }) => {
-  const [products, setProducts] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [editValues, setEditValues] = useState({});
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    type: 'item',
-    price: 0,
-    rp_multiplier: 1
-  });
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  const loadProducts = () => {
-    setProducts(getCustomProducts());
-  };
-
-  const filteredProducts = products
-    .filter(p => 
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.id.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  const startEdit = (product) => {
-    setEditingId(product.id);
-    setEditValues({
-      price: product.price === 'Variable' ? '' : product.price,
-      rp_multiplier: product.rp_multiplier === 'Variable' ? '' : product.rp_multiplier,
-      type: product.type
-    });
-  };
-
-  const saveEdit = (productId) => {
-    const updates = {
-      price: editValues.price === '' ? 'Variable' : parseFloat(editValues.price),
-      rp_multiplier: editValues.rp_multiplier === '' ? 'Variable' : parseFloat(editValues.rp_multiplier),
-      type: editValues.type
-    };
-
-    if (updateProduct(productId, updates)) {
-      loadProducts();
-      onDataChange();
-      setEditingId(null);
-    } else {
-      alert('Failed to update product');
-    }
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditValues({});
-  };
-
-  const resetToDefault = (productId) => {
-    const defaultProduct = defaultProducts.find(p => p.id === productId);
-    
-    if (!defaultProduct) {
-      alert('Default product not found');
-      return;
-    }
-    
-    const updates = {
-      price: defaultProduct.price,
-      rp_multiplier: defaultProduct.rp_multiplier,
-      type: defaultProduct.type
-    };
-    
-    if (updateProduct(productId, updates)) {
-      loadProducts();
-      onDataChange();
-    } else {
-      alert('Failed to reset product to default');
-    }
-  };
-
-  const generateProductId = (name) => {
-    return 'p_' + name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-  };
-
-  const handleAddProduct = () => {
-    if (!newProduct.name.trim()) {
-      alert('Product name is required');
-      return;
-    }
-
-    const productId = generateProductId(newProduct.name);
-    
-    if (products.find(p => p.id === productId)) {
-      alert(`Product ID "${productId}" already exists. Please use a different name.`);
-      return;
-    }
-
-    const productToAdd = {
-      id: productId,
-      name: newProduct.name.trim(),
-      type: newProduct.type,
-      price: parseFloat(newProduct.price) || 0,
-      rp_multiplier: parseFloat(newProduct.rp_multiplier) || 1
-    };
-
-    const updatedProducts = [...products, productToAdd];
-    if (saveCustomProducts(updatedProducts)) {
-      loadProducts();
-      onDataChange();
-      setShowAddForm(false);
-      setNewProduct({ name: '', type: 'item', price: 0, rp_multiplier: 1 });
-    } else {
-      alert('Failed to add product');
-    }
-  };
-
-  const handleDeleteProduct = (productId) => {
-    if (!window.confirm(`Delete product "${products.find(p => p.id === productId)?.name}"? This cannot be undone.`)) {
-      return;
-    }
-
-    const updatedProducts = products.filter(p => p.id !== productId);
-    if (saveCustomProducts(updatedProducts)) {
-      loadProducts();
-      onDataChange();
-    } else {
-      alert('Failed to delete product');
-    }
-  };
-
-  return (
-    <div>
-      <div style={{ marginBottom: '15px' }}>
-        <button 
-          onClick={() => setShowAddForm(!showAddForm)} 
-          className="btn btn-primary"
-          style={{ width: '100%' }}
-        >
-          {showAddForm ? 'Cancel' : '+ Add New Product'}
-        </button>
-      </div>
-
-      {showAddForm && (
-        <div style={{
-          padding: '15px',
-          background: 'var(--bg-secondary)',
-          borderRadius: 'var(--radius-md)',
-          marginBottom: '15px',
-          border: '2px solid var(--border-primary)'
-        }}>
-          <h4 style={{ color: 'var(--text-primary)', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>
-            New Product
-          </h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-            <div>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Name</label>
-              <input
-                type="text"
-                value={newProduct.name}
-                onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-                className="input"
-                placeholder="Product name"
-              />
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                ID: {newProduct.name ? generateProductId(newProduct.name) : 'p_...'}
-              </div>
-            </div>
-            <div>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Type</label>
-              <select
-                value={newProduct.type}
-                onChange={(e) => setNewProduct({ ...newProduct, type: e.target.value })}
-                className="select"
-              >
-                <option value="item">Item</option>
-                <option value="fluid">Fluid</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Price</label>
-              <input
-                type="number"
-                value={newProduct.price}
-                onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-                className="input"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>RP Multiplier</label>
-              <input
-                type="number"
-                step="0.1"
-                value={newProduct.rp_multiplier}
-                onChange={(e) => setNewProduct({ ...newProduct, rp_multiplier: e.target.value })}
-                className="input"
-                placeholder="1"
-              />
-            </div>
-          </div>
-          <button onClick={handleAddProduct} className="btn btn-primary" style={{ width: '100%' }}>
-            Create Product
-          </button>
-        </div>
-      )}
-
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 80px 100px 100px 130px',
-        gap: '8px',
-        padding: '10px',
-        background: 'var(--bg-secondary)',
-        borderRadius: 'var(--radius-sm)',
-        fontWeight: 600,
-        fontSize: '13px',
-        color: 'var(--text-primary)',
-        marginBottom: '10px'
-      }}>
-        <div>Product Name</div>
-        <div>Type</div>
-        <div>Price</div>
-        <div>RP Mult</div>
-        <div>Actions</div>
-      </div>
-
-      {filteredProducts.map(product => (
-        <div key={product.id} style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 80px 100px 100px 130px',
-          gap: '8px',
-          padding: '10px',
-          background: 'var(--bg-main)',
-          borderRadius: 'var(--radius-sm)',
-          marginBottom: '8px',
-          alignItems: 'center',
-          fontSize: '13px'
-        }}>
-          <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{product.name}</div>
-          
-          {editingId === product.id ? (
-            <>
-              <select
-                value={editValues.type}
-                onChange={(e) => setEditValues({ ...editValues, type: e.target.value })}
-                className="select"
-                style={{ padding: '6px', fontSize: '12px' }}
-              >
-                <option value="item">Item</option>
-                <option value="fluid">Fluid</option>
-              </select>
-              <input
-                type="number"
-                value={editValues.price}
-                onChange={(e) => setEditValues({ ...editValues, price: e.target.value })}
-                placeholder="Variable"
-                className="input"
-                style={{ padding: '6px', fontSize: '12px' }}
-                disabled={product.price === 'Variable'}
-                title={product.price === 'Variable' ? 'Cannot edit Variable values' : ''}
-              />
-              <input
-                type="number"
-                value={editValues.rp_multiplier}
-                onChange={(e) => setEditValues({ ...editValues, rp_multiplier: e.target.value })}
-                placeholder="Variable"
-                className="input"
-                style={{ padding: '6px', fontSize: '12px' }}
-                disabled={product.rp_multiplier === 'Variable'}
-                title={product.rp_multiplier === 'Variable' ? 'Cannot edit Variable values' : ''}
-              />
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button onClick={() => saveEdit(product.id)} className="btn btn-primary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Save">
-                  ✓
-                </button>
-                <button onClick={cancelEdit} className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Cancel">
-                  ✗
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div style={{ color: 'var(--text-secondary)' }}>{product.type}</div>
-              <div style={{ color: 'var(--text-secondary)' }}>
-                {product.price === 'Variable' ? 'Variable' : `$${metricFormat(product.price)}`}
-              </div>
-              <div style={{ color: 'var(--text-secondary)' }}>
-                {product.rp_multiplier === 'Variable' ? 'Variable' : `${product.rp_multiplier >= 1000 ? metricFormat(product.rp_multiplier) : product.rp_multiplier}x`}
-              </div>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button onClick={() => startEdit(product)} className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Edit">
-                  ✎
-                </button>
-                <button onClick={() => resetToDefault(product.id)} className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Reset">
-                  ↻
-                </button>
-                <button onClick={() => handleDeleteProduct(product.id)} className="btn btn-delete" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Delete">
-                  ✕
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// Machines Tab Component
-const MachinesTab = ({ searchTerm, defaultMachines, onDataChange }) => {
-  const [machines, setMachines] = useState([]);
-  const [editingId, setEditingId] = useState(null);
-  const [editValues, setEditValues] = useState({});
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [newMachine, setNewMachine] = useState({
-    name: '',
-    cost: 0,
-    tier: 1
-  });
-
-  useEffect(() => {
-    loadMachines();
-  }, []);
-
-  const loadMachines = () => {
-    setMachines(getCustomMachines());
-  };
-
-  const filteredMachines = machines
-    .filter(m =>
-      m.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.id.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  const startEdit = (machine) => {
-    setEditingId(machine.id);
-    setEditValues({
-      cost: machine.cost,
-      tier: machine.tier || 1
-    });
-  };
-
-  const saveEdit = (machineId) => {
-    const updates = {
-      cost: parseFloat(editValues.cost),
-      tier: parseInt(editValues.tier)
-    };
-
-    if (updateMachine(machineId, updates)) {
-      loadMachines();
-      onDataChange();
-      setEditingId(null);
-    } else {
-      alert('Failed to update machine');
-    }
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditValues({});
-  };
-
-  const resetToDefault = (machineId) => {
-    const defaultMachine = defaultMachines.find(m => m.id === machineId);
-    if (!defaultMachine) {
-      alert('Default machine not found');
-      return;
-    }
-    
-    const updates = {
-      cost: defaultMachine.cost,
-      tier: defaultMachine.tier
-    };
-    
-    if (updateMachine(machineId, updates)) {
-      loadMachines();
-      onDataChange();
-    } else {
-      alert('Failed to reset machine to default');
-    }
-  };
-
-  const generateMachineId = (name) => {
-    return 'm_' + name.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-  };
-
-  const handleAddMachine = () => {
-    if (!newMachine.name.trim()) {
-      alert('Machine name is required');
-      return;
-    }
-
-    const machineId = generateMachineId(newMachine.name);
-    
-    if (machines.find(m => m.id === machineId)) {
-      alert(`Machine ID "${machineId}" already exists. Please use a different name.`);
-      return;
-    }
-
-    const machineToAdd = {
-      id: machineId,
-      name: newMachine.name.trim(),
-      cost: parseFloat(newMachine.cost) || 0,
-      tier: parseInt(newMachine.tier) || 1
-    };
-
-    const updatedMachines = [...machines, machineToAdd];
-    if (saveCustomMachines(updatedMachines)) {
-      loadMachines();
-      onDataChange();
-      setShowAddForm(false);
-      setNewMachine({ name: '', cost: 0, tier: 1 });
-    } else {
-      alert('Failed to add machine');
-    }
-  };
-
-  const handleDeleteMachine = (machineId) => {
-    if (!window.confirm(`Delete machine "${machines.find(m => m.id === machineId)?.name}"? This cannot be undone.`)) {
-      return;
-    }
-
-    const updatedMachines = machines.filter(m => m.id !== machineId);
-    if (saveCustomMachines(updatedMachines)) {
-      loadMachines();
-      onDataChange();
-    } else {
-      alert('Failed to delete machine');
-    }
-  };
-
-  return (
-    <div>
-      <div style={{ marginBottom: '15px' }}>
-        <button 
-          onClick={() => setShowAddForm(!showAddForm)} 
-          className="btn btn-primary"
-          style={{ width: '100%' }}
-        >
-          {showAddForm ? 'Cancel' : '+ Add New Machine'}
-        </button>
-      </div>
-
-      {showAddForm && (
-        <div style={{
-          padding: '15px',
-          background: 'var(--bg-secondary)',
-          borderRadius: 'var(--radius-md)',
-          marginBottom: '15px',
-          border: '2px solid var(--border-primary)'
-        }}>
-          <h4 style={{ color: 'var(--text-primary)', marginBottom: '12px', fontSize: '14px', fontWeight: 600 }}>
-            New Machine
-          </h4>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '10px' }}>
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Name</label>
-              <input
-                type="text"
-                value={newMachine.name}
-                onChange={(e) => setNewMachine({ ...newMachine, name: e.target.value })}
-                className="input"
-                placeholder="Machine name"
-              />
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                ID: {newMachine.name ? generateMachineId(newMachine.name) : 'm_...'}
-              </div>
-            </div>
-            <div>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Cost</label>
-              <input
-                type="number"
-                value={newMachine.cost}
-                onChange={(e) => setNewMachine({ ...newMachine, cost: e.target.value })}
-                className="input"
-                placeholder="0"
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '12px', marginBottom: '4px' }}>Tier</label>
-              <select
-                value={newMachine.tier}
-                onChange={(e) => setNewMachine({ ...newMachine, tier: e.target.value })}
-                className="select"
-              >
-                <option value="1">Tier 1</option>
-                <option value="2">Tier 2</option>
-                <option value="3">Tier 3</option>
-                <option value="4">Tier 4</option>
-                <option value="5">Tier 5</option>
-              </select>
-            </div>
-          </div>
-          <button onClick={handleAddMachine} className="btn btn-primary" style={{ width: '100%' }}>
-            Create Machine
-          </button>
-        </div>
-      )}
-
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 120px 80px 130px',
-        gap: '8px',
-        padding: '10px',
-        background: 'var(--bg-secondary)',
-        borderRadius: 'var(--radius-sm)',
-        fontWeight: 600,
-        fontSize: '13px',
-        color: 'var(--text-primary)',
-        marginBottom: '10px'
-      }}>
-        <div>Machine Name</div>
-        <div>Cost</div>
-        <div>Tier</div>
-        <div>Actions</div>
-      </div>
-
-      {filteredMachines.map(machine => (
-        <div key={machine.id} style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 120px 80px 130px',
-          gap: '8px',
-          padding: '10px',
-          background: 'var(--bg-main)',
-          borderRadius: 'var(--radius-sm)',
-          marginBottom: '8px',
-          alignItems: 'center',
-          fontSize: '13px'
-        }}>
-          <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{machine.name}</div>
-
-          {editingId === machine.id ? (
-            <>
-              <input
-                type="number"
-                value={editValues.cost}
-                onChange={(e) => setEditValues({ ...editValues, cost: e.target.value })}
-                className="input"
-                style={{ padding: '6px', fontSize: '12px' }}
-              />
-              <input
-                type="number"
-                min="1"
-                max="5"
-                value={editValues.tier}
-                onChange={(e) => setEditValues({ ...editValues, tier: e.target.value })}
-                className="input"
-                style={{ padding: '6px', fontSize: '12px' }}
-              />
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button onClick={() => saveEdit(machine.id)} className="btn btn-primary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Save">
-                  ✓
-                </button>
-                <button onClick={cancelEdit} className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Cancel">
-                  ✗
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div style={{ color: 'var(--text-secondary)' }}>${metricFormat(machine.cost)}</div>
-              <div style={{ color: 'var(--text-secondary)' }}>Tier {machine.tier || 1}</div>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button onClick={() => startEdit(machine)} className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Edit">
-                  ✎
-                </button>
-                <button onClick={() => resetToDefault(machine.id)} className="btn btn-secondary" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Reset">
-                  ↻
-                </button>
-                <button onClick={() => handleDeleteMachine(machine.id)} className="btn btn-delete" style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }} title="Delete">
-                  ✕
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// Recipes Tab Component (Simplified for now - can be expanded)
-const RecipesTab = ({ searchTerm, defaultRecipes, defaultMachines, defaultProducts, onDataChange }) => {
-  const [recipes, setRecipes] = useState([]);
-  const [products, setProducts] = useState([]);
-  const [machines, setMachines] = useState([]);
-  const [editingRecipe, setEditingRecipe] = useState(null);
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
-
-  useEffect(() => {
-    loadRecipes();
-    loadProducts();
-    loadMachines();
-  }, []);
-
-  const loadRecipes = () => {
-    setRecipes(getCustomRecipes());
-  };
-
-  const loadProducts = () => {
-    setProducts(getCustomProducts());
-  };
-
-  const loadMachines = () => {
-    setMachines(getCustomMachines());
-  };
-
-  const handleSaveRecipe = (updatedRecipe, isNew = false) => {
-    if (isNew) {
-      const updatedRecipes = [...recipes, updatedRecipe];
-      if (saveCustomRecipes(updatedRecipes)) {
-        loadRecipes();
-        loadProducts();
-        loadMachines();
-        onDataChange();
-      } else {
-        alert('Failed to create recipe');
-      }
-    } else {
-      if (updateRecipe(updatedRecipe.id, updatedRecipe)) {
-        loadRecipes();
-        loadProducts();
-        loadMachines();
-        onDataChange();
-      } else {
-        alert('Failed to save recipe');
-      }
-    }
-  };
-
-  const handleDeleteRecipe = (recipeId) => {
-    if (!window.confirm(`Delete recipe "${recipes.find(r => r.id === recipeId)?.name || recipeId}"? This cannot be undone.`)) {
-      return;
-    }
-
-    const updatedRecipes = recipes.filter(r => r.id !== recipeId);
-    if (saveCustomRecipes(updatedRecipes)) {
-      loadRecipes();
-      loadProducts();
-      loadMachines();
-      onDataChange();
-    } else {
-      alert('Failed to delete recipe');
-    }
-  };
-
-  const handleCreateNew = () => {
-    setEditingRecipe({
-      id: '',
-      name: '',
-      machine_id: '',
-      cycle_time: 1,
-      power_consumption: 0,
-      power_type: 'MV',
-      pollution: 0,
-      inputs: [],
-      outputs: []
-    });
-    setIsCreatingNew(true);
-  };
-
-  const filteredRecipes = recipes
-    .filter(r =>
-      r.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.id.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => {
-      const nameA = a.name || a.id;
-      const nameB = b.name || b.id;
-      return nameA.localeCompare(nameB);
-    });
-
-  return (
-    <div>
-      <div style={{ marginBottom: '15px' }}>
-        <button 
-          onClick={handleCreateNew} 
-          className="btn btn-primary"
-          style={{ width: '100%' }}
-        >
-          + Add New Recipe
-        </button>
-      </div>
-
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr 110px 110px 110px',
-        gap: '8px',
-        padding: '10px',
-        background: 'var(--bg-secondary)',
-        borderRadius: 'var(--radius-sm)',
-        fontWeight: 600,
-        fontSize: '13px',
-        color: 'var(--text-primary)',
-        marginBottom: '10px'
-      }}>
-        <div>Recipe Name</div>
-        <div>Machine</div>
-        <div>Cycle Time</div>
-        <div>Power</div>
-        <div>Actions</div>
-      </div>
-
-      {filteredRecipes.map(recipe => (
-        <div key={recipe.id} style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr 110px 110px 110px',
-          gap: '8px',
-          padding: '10px',
-          background: 'var(--bg-main)',
-          borderRadius: 'var(--radius-sm)',
-          marginBottom: '8px',
-          alignItems: 'center',
-          fontSize: '13px'
-        }}>
-          <div style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{recipe.name || recipe.id}</div>
-          <div style={{ 
-            color: (() => {
-              const machine = machines.find(m => m.id === recipe.machine_id);
-              if (!machine) return 'var(--text-secondary)';
-              switch(machine.tier) {
-                case 1: return 'var(--tier-1-color)';
-                case 2: return 'var(--tier-2-color)';
-                case 3: return 'var(--tier-3-color)';
-                case 4: return 'var(--tier-4-color)';
-                case 5: return 'var(--tier-5-color)';
-                default: return 'var(--text-secondary)';
-              }
-            })(),
-            fontWeight: 500
-          }}>
-            {(() => {
-              const machine = machines.find(m => m.id === recipe.machine_id);
-              return machine ? machine.name : recipe.machine_id;
-            })()}
-          </div>
-          <div style={{ color: 'var(--text-secondary)' }}>
-            {typeof recipe.cycle_time === 'number' ? `${recipe.cycle_time}s` : String(recipe.cycle_time)}
-          </div>
-          <div style={{ color: 'var(--text-secondary)' }}>
-            {typeof recipe.power_consumption === 'number' 
-              ? `${metricFormat(recipe.power_consumption)}W` 
-              : typeof recipe.power_consumption === 'object' && recipe.power_consumption !== null
-              ? `${metricFormat(recipe.power_consumption.max || recipe.power_consumption.average || 0)}W`
-              : String(recipe.power_consumption)}
-          </div>
-          <div style={{ display: 'flex', gap: '4px' }}>
-            <button 
-              onClick={() => { setEditingRecipe(recipe); setIsCreatingNew(false); }} 
-              className="btn btn-secondary" 
-              style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }}
-              title="Edit"
-            >
-              ✎
-            </button>
-            <button 
-              onClick={() => handleDeleteRecipe(recipe.id)} 
-              className="btn btn-delete" 
-              style={{ padding: '2px 6px', fontSize: '11px', minWidth: 'auto', width: 'auto' }}
-              title="Delete"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      ))}
-
-      {editingRecipe && (
-        <RecipeEditor
-          recipe={editingRecipe}
-          onClose={() => { setEditingRecipe(null); setIsCreatingNew(false); }}
-          onSave={(recipe) => handleSaveRecipe(recipe, isCreatingNew)}
-          availableProducts={products}
-          defaultMachines={machines}
-          allRecipes={recipes}
-          isCreatingNew={isCreatingNew}
-        />
-      )}
     </div>
   );
 };

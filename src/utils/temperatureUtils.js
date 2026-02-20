@@ -23,9 +23,9 @@ export const HEAT_SOURCES = {
   m_electric_water_heater: { 
     id: 'm_electric_water_heater', name: 'Electric Water Heater', type: 'configurable',
     tempOptions: [
-      { temp: 120, power: 1000000 },
-      { temp: 220, power: 2500000 },
-      { temp: 320, power: 5000000 }
+      { temp: 120, power: 300000 },
+      { temp: 220, power: 800000 },
+      { temp: 320, power: 1500000 }
     ]
   },
   m_gas_burner: { 
