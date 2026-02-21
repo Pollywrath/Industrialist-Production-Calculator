@@ -13,5 +13,18 @@ export default defineConfig({
   worker: {
     format: 'es'
   },
-  assetsInclude: ['**/*.wasm']
+  assetsInclude: ['**/*.wasm'],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/@xyflow')) return 'vendor-xyflow';
+          if (id.includes('node_modules/elkjs')) return 'vendor-elk';
+          if (id.includes('node_modules/react')) return 'vendor-react';
+          if (id.includes('/src/solvers/')) return 'solvers';
+          if (id.includes('/src/data/')) return 'game-data';
+        }
+      }
+    }
+  }
 })

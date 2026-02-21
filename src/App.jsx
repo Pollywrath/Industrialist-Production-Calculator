@@ -4,10 +4,11 @@ import '@xyflow/react/dist/style.css';
 import CustomNode from './components/CustomNode';
 import CustomEdge, { setCanvasBusy } from './components/CustomEdge';
 import ThemeEditor, { applyTheme, loadTheme } from './components/ThemeEditor';
-import HelpModal from './components/HelpModal';
-import SaveManager from './components/SaveManager';
 import { initializeSaveSystem } from './utils/saveDB';
-import DataManager from './components/DataManager';
+const HelpModal = React.lazy(() => import('./components/HelpModal'));
+const SaveManager = React.lazy(() => import('./components/SaveManager'));
+const DataManager = React.lazy(() => import('./components/DataManager'));
+const ComputeModal = React.lazy(() => import('./components/ComputeModal'));
 import { initializeCustomData, getCustomProducts, getCustomMachines, getCustomRecipes, restoreDefaultProducts, restoreDefaultMachines, restoreDefaultRecipes } from './utils/dataUtilities';
 import { products, machines, recipes, getMachine, getProduct, updateProducts, updateMachines, 
   updateRecipes, saveCanvasState, loadCanvasState, restoreDefaults } from './data/dataLoader';
@@ -35,8 +36,28 @@ import { configureSpecialRecipe, calculateMachineCountForAutoConnect, getSpecial
 import { propagateMachineCount, propagateFromHandle, calculateMachineCountForNewConnection } from './utils/machineCountPropagator';
 import { buildProductionGraph } from './solvers/graphBuilder';
 import { autoLayout } from './utils/autoLayout';
-import ComputeModal from './components/ComputeModal';
   
+const ModalLoadingFallback = () => (
+  <div className="modal-overlay">
+    <div style={{
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px',
+      background: 'var(--bg-secondary)', border: '2px solid var(--border-primary)',
+      borderRadius: 'var(--radius-lg)', padding: '40px 60px', boxShadow: 'var(--shadow-lg)'
+    }}>
+      <svg width="52" height="52" style={{ animation: 'lp-spin 1.1s linear infinite' }} viewBox="0 0 52 52">
+        <style>{'@keyframes lp-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }'}</style>
+        {Array.from({ length: 10 }).map((_, i) => {
+          const angle = (i / 10) * 2 * Math.PI - Math.PI / 2;
+          const x = 26 + 20 * Math.cos(angle);
+          const y = 26 + 20 * Math.sin(angle);
+          return <circle key={i} cx={x} cy={y} r={1 + (i / 9) * 1.75} fill="var(--color-primary)" opacity={0.2 + (i / 9) * 0.8} />;
+        })}
+      </svg>
+      <div style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}>Loading...</div>
+    </div>
+  </div>
+);
+
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 
@@ -3550,6 +3571,7 @@ function App() {
         </div>
       )}
 
+      <React.Suspense fallback={<ModalLoadingFallback />}>
       {computeModal && (
         <ComputeModal
           phase={computeModal.phase}
@@ -3595,6 +3617,7 @@ function App() {
           onClose={() => setShowDataManager(false)}
         />
       )}
+      </React.Suspense>
 
       {isMobile && mobileActionMode !== 'pan' && (
             <div style={{
