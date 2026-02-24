@@ -502,6 +502,37 @@ const parseSCIPSolution = (solutionText, varNameMap) => {
 };
 
 /**
+ * Raw MPS solver — accepts a pre-built MPS string and varNameMap.
+ * Used by autoCompleter to reuse the SCIP infrastructure without the graph layer.
+ */
+export const solveMPSRaw = async (mpsString, varNameMap) => {
+  try {
+    const stdoutLines = [];
+    const createSCIP = await getOrLoadSCIPFactory();
+    const scip = await createSCIP({
+      locateFile: (file) => import.meta.env.BASE_URL + file,
+      print: (text) => { stdoutLines.push(text); },
+      printErr: (text) => { stdoutLines.push(text); },
+    });
+    const { FS, callMain: main } = scip;
+    console.log(`[SCIP AutoComplete] MPS size: ${(mpsString.length / 1024).toFixed(1)} KB`);
+    FS.writeFile('model.mps', mpsString);
+    main(['-c', 'read model.mps', '-c', 'optimize', '-c', 'display solution', '-c', 'quit']);
+    const stdoutText = stdoutLines.join('\n');
+    let solutionText;
+    try {
+      solutionText = FS.readFile('sol.txt', { encoding: 'utf8' });
+    } catch (e) {
+      solutionText = stdoutText;
+    }
+    return parseSCIPSolution(solutionText, varNameMap);
+  } catch (error) {
+    console.error('[SCIP AutoComplete] Error:', error);
+    return { feasible: false, error: error.message };
+  }
+};
+
+/**
  * Solve the full graph LP model
  */
 const solveFullGraph = async (graph, targetNodeIds = new Set(), activeWeights = [], unusedWeights = []) => {

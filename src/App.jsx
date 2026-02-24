@@ -29,6 +29,7 @@ import { DEFAULT_WASTE_FACILITY_RECIPE, calculateWasteFacilityMetrics, buildWast
 import { DEFAULT_LIQUID_DUMP_RECIPE, calculateLiquidDumpPollution, buildLiquidDumpInputs } from './data/liquidDump';
 import { DEFAULT_LIQUID_BURNER_RECIPE, calculateLiquidBurnerPollution, buildLiquidBurnerInputs } from './data/liquidBurner';
 import { solveProductionNetwork, getExcessProducts, getDeficientProducts } from './solvers/productionSolver';
+import { runAutoComplete } from './solvers/autoCompleteHandler';
 import { clearFlowCache } from './solvers/flowCalculator';
 import { smartFormat, metricFormat, formatPowerDisplay, getRecipesUsingProduct, getRecipesProducingProductFiltered, 
   getRecipesForMachine, canDrillUseProduct, canLogicAssemblerUseProduct, canTreeFarmUseProduct, applyTemperatureToOutputs, 
@@ -1814,6 +1815,42 @@ function App() {
     );
   }, []);
 
+  const handleAutoComplete = useCallback(async () => {
+    try {
+    const result = await runAutoComplete({
+      nodes,
+      flows: productionSolution?.flows,
+      currentNodeId: nodeId,
+      activeWeights,
+      unusedWeights,
+      createNodeCallbacks,
+      edgeSettings,
+      displayMode,
+      machineDisplayMode,
+      globalPollution,
+    });
+
+    if (!result.feasible) {
+      alert('AutoComplete: Could not find a feasible solution for the remaining deficiencies.');
+      return;
+    }
+
+    if (result.newNodes.length === 0) {
+      alert('AutoComplete: No new nodes needed — all deficiencies are already satisfied or are raw materials.');
+      return;
+    }
+
+    setNodes(nds => [...nds, ...result.newNodes]);
+    setEdges(eds => [...eds, ...result.newEdges]);
+    setNodeId(result.nextNodeId);
+    clearFlowCache();
+    triggerRecalculation('node');
+    } catch (err) {
+      console.error('[AutoComplete] Error:', err);
+      alert(`AutoComplete failed: ${err.message}`);
+    }
+  }, [nodes, productionSolution, nodeId, activeWeights, unusedWeights, createNodeCallbacks, edgeSettings, displayMode, machineDisplayMode, globalPollution, setNodes, setEdges, setNodeId, triggerRecalculation]);
+
   const handleComputeApply = useCallback((result) => {
     if (result?.success) {
       setNodes(nds => nds.map(n => {
@@ -2395,6 +2432,14 @@ function App() {
                   <button onClick={() => { setShowRecipesModal(true); setRecipesModalTab('targets'); }} className="btn btn-secondary">View Recipes</button>
                   <button onClick={handleCompute} className="btn btn-secondary" disabled={computeModal !== null}>
                     {computeModal !== null ? 'Computing...' : 'Compute Machines'}
+                  </button>
+                  <button
+                    onClick={handleAutoComplete}
+                    className="btn btn-secondary"
+                    disabled={computeModal !== null || !productionSolution}
+                    title={!productionSolution ? 'Run LP solve first' : 'Auto-complete missing recipe chains'}
+                  >
+                    AutoComplete
                   </button>
                   <button onClick={handleAutoLayout} className="btn btn-secondary">Auto Layout</button>
                   <div style={{ display: 'flex', gap: '10px' }}>
