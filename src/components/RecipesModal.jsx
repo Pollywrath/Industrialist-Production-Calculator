@@ -63,8 +63,7 @@ const bestOutput = (outputs) => {
 const WEIGHT_COLORS = {
   Deficiencies: 'var(--handle-input-deficient)',
   'Model Count': 'var(--color-primary)',
-  Excesses:     'var(--tier-5-color)',
-  Pollution:    'var(--handle-output-excess)',
+  Pollution:    'var(--tier-2-color)',
   Power:        'var(--tier-3-color)',
   Cost:         'var(--tier-4-color)',
 };
@@ -242,7 +241,7 @@ const SolverTab = ({ activeWeights, unusedWeights, setActiveWeights, setUnusedWe
             <WeightDonut activeWeights={activeWeights} />
           </div>
           <button
-            onClick={() => { setActiveWeights(['Deficiencies', 'Model Count', 'Excesses', 'Pollution', 'Power', 'Cost']); setUnusedWeights([]); }}
+            onClick={() => { setActiveWeights(['Deficiencies', 'Model Count', 'Pollution', 'Power', 'Cost']); setUnusedWeights([]); }}
             className="btn btn-secondary"
             style={{ padding: '8px 12px', fontSize: 'var(--font-size-sm)' }}
           >

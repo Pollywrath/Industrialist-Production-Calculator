@@ -6,7 +6,7 @@ export const TIPS = [
   'Tip: Capped nodes will not exceed their set machine count during solving.',
   'Tip: Connect excess outputs to inputs of other machines to reduce waste.',
   'Tip: The LP solver prioritizes eliminating deficiencies above all else, other variables are compared using weighted sums.',
-  'Tip: Adjust objective weights in the view recipes panel to change what the solver optimizes for — reorder or disable Model Count, Excesses, Pollution, Power, and Cost.',
+  'Tip: Adjust objective weights in the view recipes panel to change what the solver optimizes for — reorder or disable Model Count, Pollution, Power, and Cost.',
   'Tip: Remove unused weights entirely to simplify the model — fewer active objectives means faster solving.',
   'Tip: Line types and paths can be changed in the Theme Editor to make complex networks easier to read.',
   'Tip: Excess and deficiency highlight colors are customizable in the Theme Editor — make them stand out more against your chosen theme.',

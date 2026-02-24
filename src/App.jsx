@@ -182,7 +182,7 @@ function App() {
   const [pendingNode, setPendingNode] = useState(null);
   const [editingRecipeMachineCounts, setEditingRecipeMachineCounts] = useState({});
   const [recipeTabFilter, setRecipeTabFilter] = useState('all'); // 'all', 'excess', 'deficiency'
-  const [activeWeights, setActiveWeights] = useState(['Deficiencies', 'Model Count', 'Excesses', 'Pollution', 'Power', 'Cost']);
+  const [activeWeights, setActiveWeights] = useState(['Deficiencies', 'Model Count', 'Pollution', 'Power', 'Cost']);
   const [unusedWeights, setUnusedWeights] = useState([]);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [computeModal, setComputeModal] = useState(null);

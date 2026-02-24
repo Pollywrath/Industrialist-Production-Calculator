@@ -17,17 +17,14 @@ const sanitizeVarName = (name) => {
 };
 
 // Deficiency weights are pinned — always dominate all other objectives regardless of user ordering
-const DEFICIENCY_COUNT_WEIGHT  = 1e15;
-const DEFICIENCY_AMOUNT_WEIGHT = 1e12;
+const DEFICIENCY_COUNT_WEIGHT          = 1e15;
+const DEFICIENCY_AMOUNT_WEIGHT         = 1e12;
+const DEFICIENCY_AMOUNT_WEIGHT_NONTARGET = 1e14;
 
 // Normalized base weights per category. Chosen so that the default ordering
 // (Model Count > Excesses > Pollution > Power > Cost) with TIER_BASE=1e3 and
 // 5 active non-deficiency tiers produces the original weight values exactly.
 const BASE_MODEL_COUNT               = 1e-3;
-const BASE_EXCESS_CONNECTED_COUNT    = 1e-3;
-const BASE_EXCESS_UNCONNECTED_COUNT  = 1e-4;
-const BASE_EXCESS_CONNECTED_AMOUNT   = 1e-6;
-const BASE_EXCESS_UNCONNECTED_AMOUNT = 1e-7;
 const BASE_POLLUTION                 = 1e-5;
 const BASE_POWER                     = 1e-8;
 const BASE_COST                      = 1e-6;
@@ -55,17 +52,11 @@ const computeObjectiveWeights = (activeWeights = [], unusedWeights = []) => {
     return Math.pow(TIER_BASE, N - 1 - idx);
   };
 
-  const excessScale = tierScale('Excesses');
-
   return {
-    MODEL_COUNT_WEIGHT:               BASE_MODEL_COUNT               * tierScale('Model Count'),
-    CONNECTED_EXCESS_COUNT_WEIGHT:    BASE_EXCESS_CONNECTED_COUNT    * excessScale,
-    UNCONNECTED_EXCESS_COUNT_WEIGHT:  BASE_EXCESS_UNCONNECTED_COUNT  * excessScale,
-    CONNECTED_EXCESS_AMOUNT_WEIGHT:   BASE_EXCESS_CONNECTED_AMOUNT   * excessScale,
-    UNCONNECTED_EXCESS_AMOUNT_WEIGHT: BASE_EXCESS_UNCONNECTED_AMOUNT * excessScale,
-    POLLUTION_WEIGHT:                 BASE_POLLUTION                  * tierScale('Pollution'),
-    POWER_WEIGHT:                     BASE_POWER                     * tierScale('Power'),
-    COST_WEIGHT:                      BASE_COST                      * tierScale('Cost'),
+    MODEL_COUNT_WEIGHT: BASE_MODEL_COUNT * tierScale('Model Count'),
+    POLLUTION_WEIGHT:   BASE_POLLUTION   * tierScale('Pollution'),
+    POWER_WEIGHT:       BASE_POWER       * tierScale('Power'),
+    COST_WEIGHT:        BASE_COST        * tierScale('Cost'),
   };
 };
 
@@ -109,7 +100,8 @@ const solveWithSCIP = async (graph, targetNodeIds, weights) => {
 
     const { FS, callMain: main } = scip;
 
-    const { mpsString, varNameMap } = buildMPSString(graph, targetNodeIds, weights);
+    const { mpsString, varNameMap, stats } = buildMPSString(graph, targetNodeIds, weights);
+    console.log(`[SCIP] MPS size: ${(mpsString.length / 1024).toFixed(1)} KB | rows: ${stats.rows} | binary: ${stats.binary} | integer: ${stats.integer} | continuous: ${stats.continuous}`);
 
     FS.writeFile('model.mps', mpsString);
 
@@ -192,13 +184,11 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
 
   // Flags to skip unused variable types entirely from the MPS model
   const useModelCount = weights.MODEL_COUNT_WEIGHT > 0;
-  const useExcess = weights.CONNECTED_EXCESS_COUNT_WEIGHT > 0;
 
   // ===== Machine count variables =====
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     const varName = registerVar(`m_${nodeId}`);
-    const ceilingVarName = useModelCount ? registerVar(`mc_${nodeId}`, true) : null;
     const currentCount = node.machineCount || 0;
     const machineCountMode = node.machineCountMode || 'free';
     const cappedCount = node.cappedMachineCount;
@@ -234,13 +224,12 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
       modelCountPerMachine = 1 + powerFactor + (inputOutputCount * 2);
     }
 
-    const machineObjCoeff = (weights.POWER_WEIGHT * powerValue) + (weights.POLLUTION_WEIGHT * pollutionValue) + (weights.COST_WEIGHT * machineCost);
+    const machineObjCoeff =
+      (weights.POWER_WEIGHT * powerValue) +
+      (weights.POLLUTION_WEIGHT * pollutionValue) +
+      (weights.COST_WEIGHT * machineCost) +
+      (useModelCount ? weights.MODEL_COUNT_WEIGHT * modelCountPerMachine : 0);
     if (machineObjCoeff !== 0) addObjCoeff(varName, machineObjCoeff);
-    if (useModelCount) {
-      addObjCoeff(ceilingVarName, weights.MODEL_COUNT_WEIGHT * modelCountPerMachine);
-      // Ceiling constraint: mc_ - m_ >= 0
-      addConstraint(`ceiling_${nodeId}`, [[ceilingVarName, 1], [varName, -1]], 0, 'min');
-    }
 
     if (machineCountMode === 'locked') {
       addConstraint(`lock_${nodeId}`, [[varName, 1]], currentCount, 'equal');
@@ -266,19 +255,6 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
     incomingByInput.get(inKey).push(conn);
   });
 
-  // ===== Excess indicator variables (binary) =====
-  Object.keys(graph.nodes).forEach(nodeId => {
-    const node = graph.nodes[nodeId];
-    node.outputs.forEach((output, outputIndex) => {
-      const outgoingConnections = outgoingByOutput.get(`${nodeId}:${outputIndex}`) || [];
-      const hasConnections = outgoingConnections.length > 0;
-      if (!useExcess) return;
-      const excessIndicatorVar = registerVar(`excess_indicator_${nodeId}_${outputIndex}`, false, true);
-      const excessCountWeight = hasConnections ? weights.CONNECTED_EXCESS_COUNT_WEIGHT : weights.UNCONNECTED_EXCESS_COUNT_WEIGHT;
-      addObjCoeff(excessIndicatorVar, excessCountWeight);
-    });
-  });
-
   // ===== Flow conservation constraints =====
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
@@ -287,17 +263,16 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
 
     // Output flow conservation
     node.outputs.forEach((output, outputIndex) => {
-      const slackVar = registerVar(`excess_${nodeId}_${outputIndex}`);
-      const excessIndicatorVar = sanitizeVarName(`excess_indicator_${nodeId}_${outputIndex}`);
-
       const outgoingConnections = outgoingByOutput.get(`${nodeId}:${outputIndex}`) || [];
 
-      const hasConnections = outgoingConnections.length > 0;
-      const excessAmountWeight = hasConnections ? weights.CONNECTED_EXCESS_AMOUNT_WEIGHT : weights.UNCONNECTED_EXCESS_AMOUNT_WEIGHT;
+      // Skip unconnected outputs on non-target nodes — no constraint needed,
+      // m_ is already driven by deficit constraints on the input side.
+      if (!isTargetNode && outgoingConnections.length === 0) return;
+
+      const slackVar = registerVar(`excess_${nodeId}_${outputIndex}`);
+
       if (isTargetNode) {
         addObjCoeff(slackVar, 1);
-      } else if (useExcess) {
-        addObjCoeff(slackVar, excessAmountWeight);
       }
 
       let cycleTime = node.cycleTime;
@@ -307,13 +282,6 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
       if (typeof quantity !== 'number') return;
 
       const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
-
-      // Link constraint: excess - M * indicator <= 0 (only when excess tracking is active)
-      if (useExcess) {
-        const M = ratePerMachine * 10000;
-        addConstraint(`link_excess_${nodeId}_${outputIndex}`,
-          [[slackVar, 1], [excessIndicatorVar, -M]], 0, 'max');
-      }
 
       // Flow conservation: rate * m_ - sum(f_out) - excess = 0
       const flowTerms = [[mVar, ratePerMachine], [slackVar, -1]];
@@ -329,10 +297,12 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
       if (incomingConnections.length === 0) return;
 
       const slackVar = registerVar(`deficit_${nodeId}_${inputIndex}`);
-      const deficitIndicatorVar = registerVar(`deficit_indicator_${nodeId}_${inputIndex}`, false, true);
+      const deficitIndicatorVar = isTargetNode
+        ? registerVar(`deficit_indicator_${nodeId}_${inputIndex}`, false, true)
+        : null;
 
-      addObjCoeff(slackVar, DEFICIENCY_AMOUNT_WEIGHT);
-      addObjCoeff(deficitIndicatorVar, DEFICIENCY_COUNT_WEIGHT);
+      addObjCoeff(slackVar, isTargetNode ? DEFICIENCY_AMOUNT_WEIGHT : DEFICIENCY_AMOUNT_WEIGHT_NONTARGET);
+      if (isTargetNode) addObjCoeff(deficitIndicatorVar, DEFICIENCY_COUNT_WEIGHT);
 
       let cycleTime = node.cycleTime;
       if (typeof cycleTime !== 'number' || cycleTime <= 0) cycleTime = 1;
@@ -340,12 +310,14 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
       const quantity = input.quantity;
       if (typeof quantity !== 'number') return;
 
-      const ratePerMachine = node.isMineshaftDrill ? quantity : quantity / cycleTime;
-      const M_deficit = ratePerMachine * 10000;
+      const ratePerMachine = node.isMineshaftDrill ?
+        quantity : quantity / cycleTime;
 
-      // Link deficit to indicator: deficit - M * indicator <= 0
-      addConstraint(`deficit_link_${nodeId}_${inputIndex}`,
-        [[slackVar, 1], [deficitIndicatorVar, -M_deficit]], 0, 'max');
+      if (isTargetNode) {
+        const M_deficit = ratePerMachine * 10000;
+        addConstraint(`deficit_link_${nodeId}_${inputIndex}`,
+          [[slackVar, 1], [deficitIndicatorVar, -M_deficit]], 0, 'max');
+      }
 
       // Flow conservation equality: sum(f_in) + deficit = rate * m_
       // Replaces the previous G + L pair — mathematically equivalent since deficit >= 0
@@ -399,18 +371,22 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
 
   // ===== Build MPS string =====
 
-  // Build column -> [(rowName, coeff)] mapping
+  // Build column -> [(rowName, coeff)] mapping directly to avoid a full matrix copy.
+  // We iterate rows once to populate per-variable entry lists on demand.
   const colEntries = new Map();
-  variables.forEach(v => colEntries.set(v, []));
+  const getColEntries = (v) => {
+    if (!colEntries.has(v)) colEntries.set(v, []);
+    return colEntries.get(v);
+  };
 
   objCoeffs.forEach((coeff, varName) => {
-    if (coeff !== 0) colEntries.get(varName)?.push(['obj', coeff]);
+    if (coeff !== 0) getColEntries(varName).push(['obj', coeff]);
   });
 
   rowOrder.forEach(rowName => {
     const row = rowMap.get(rowName);
     row.terms.forEach((coeff, varName) => {
-      if (coeff !== 0) colEntries.get(varName)?.push([rowName, coeff]);
+      if (coeff !== 0) getColEntries(varName).push([rowName, coeff]);
     });
   });
 
@@ -457,6 +433,9 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
     }
   });
 
+  // Free rowMap now that RHS section is done
+  rowMap.clear();
+
   out.push('BOUNDS\n');
   // General integers need explicit upper bound or MPS defaults them to [0,1] (binary)
   generalIntVars.forEach(varName => {
@@ -469,7 +448,16 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
 
   out.push('ENDATA\n');
 
-  return { mpsString: out.join(''), varNameMap };
+  return {
+    mpsString: out.join(''),
+    varNameMap,
+    stats: {
+      binary: binaryVarsList.length,
+      integer: generalIntVars.length,
+      continuous: continuousVars.length,
+      rows: rowOrder.length,
+    }
+  };
 };
 
 /**
@@ -517,9 +505,6 @@ const parseSCIPSolution = (solutionText, varNameMap) => {
  * Solve the full graph LP model
  */
 const solveFullGraph = async (graph, targetNodeIds = new Set(), activeWeights = [], unusedWeights = []) => {
-  const numNodes = Object.keys(graph.nodes).length;
-  const numConnections = graph.connections.length;
-  
   // Solve the model
   const solveStartTime = performance.now();
   
@@ -605,12 +590,14 @@ export const computeMachines = async (nodes, edges, targetProducts, options = {}
   Object.keys(lpResult).forEach(key => {
     if (key.startsWith('deficit_') && !key.includes('indicator')) {
       const deficitAmount = lpResult[key] || 0;
-      if (deficitAmount > EPSILON) {
+      const parts = key.split('_');
+      const inputIndex = parseInt(parts[parts.length - 1]);
+      const nodeId = parts.slice(1, -1).join('_');
+      const node = graph.nodes[nodeId];
+      const rate = node?.inputs?.[inputIndex]?.quantity;
+      const relativeThreshold = typeof rate === 'number' && rate > 0 ? rate * 1e-6 : EPSILON;
+      if (deficitAmount > relativeThreshold) {
         hasDeficiency = true;
-        const parts = key.split('_');
-        const inputIndex = parseInt(parts[parts.length - 1]);
-        const nodeId = parts.slice(1, -1).join('_');
-        const node = graph.nodes[nodeId];
         if (node) {
           const input = node.inputs[inputIndex];
           deficientNodes.push({
