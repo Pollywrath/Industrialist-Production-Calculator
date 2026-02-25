@@ -12,6 +12,7 @@
 
 import { getMachine } from '../data/dataLoader';
 import { initializeRecipeTemperatures } from '../utils/appUtilities';
+import { HEAT_SOURCES } from '../utils/temperatureUtils';
 import { solveAutoComplete } from './autoCompleter';
 import { clearFlowCache } from './flowCalculator';
 
@@ -150,10 +151,22 @@ const buildEdges = (newNodes, existingNodes, edgeSettings) => {
 
   // Build a lookup: productId → [{ node, outputIndex }]
   const producers = new Map();
+  const WATER_PRODUCT_IDS = new Set(['p_water', 'p_filtered_water', 'p_distilled_water']);
+
+  // Boiler water outputs are reserved exclusively for the boiler's own input[0] self-feed.
+  // They must never be routed to other nodes or other boilers.
+  // Map: boilerNodeId → { node, outputIndex, productId }
+  const boilerWaterOutputs = new Map();
 
   const registerOutputs = (node) => {
+    const isBoi = node.data.recipe.machine_id === 'm_boiler';
     node.data.recipe.outputs?.forEach((output, idx) => {
       if (!output.product_id || output.product_id === 'p_variableproduct') return;
+      // Boiler water outputs are reserved for self-feed — exclude from general producers
+      if (isBoi && WATER_PRODUCT_IDS.has(output.product_id)) {
+        boilerWaterOutputs.set(node.id, { node, outputIndex: idx, productId: output.product_id });
+        return;
+      }
       if (!producers.has(output.product_id)) producers.set(output.product_id, []);
       producers.get(output.product_id).push({ node, outputIndex: idx });
     });
@@ -184,11 +197,42 @@ const buildEdges = (newNodes, existingNodes, edgeSettings) => {
 
   // Wire inputs of all new nodes — prefer new nodes as sources, fall back to existing
   for (const targetNode of newNodes) {
+    const isTargetBoiler = targetNode.data.recipe.machine_id === 'm_boiler';
     targetNode.data.recipe.inputs?.forEach((input, inputIdx) => {
       const productId = input.product_id;
       if (!productId || productId === 'p_variableproduct') return;
-      const candidates = producers.get(productId) || [];
+      let candidates = producers.get(productId) || [];
       if (candidates.length === 0) return;
+
+      // Boiler input[0] — cold water port.
+      // If this boiler itself produces water (self-feed loop), wire that exclusively.
+      // No external source is wired alongside a self-feed.
+      if (isTargetBoiler && inputIdx === 0 && WATER_PRODUCT_IDS.has(productId)) {
+        const selfFeed = boilerWaterOutputs.get(targetNode.id);
+        if (selfFeed && selfFeed.productId === productId) {
+          addEdge(selfFeed.node, selfFeed.outputIndex, targetNode, inputIdx);
+          return; // self-feed only — no other source wired to this input
+        }
+        // Cold water port: explicitly exclude heat sources — they produce HOT water
+        // reserved for input[1]. Only pumps, condensers, and other cold-water producers
+        // belong here.
+        const coldWaterOnly = candidates.filter(c => !HEAT_SOURCES[c.node.data.recipe.machine_id]);
+        if (coldWaterOnly.length === 0) return;
+        candidates = coldWaterOnly;
+      }
+
+      // Boiler input[1] — heat source port.
+      // Only non-boiler heat source machines may feed this input.
+      // Boilers cannot feed another boiler's (or their own) heat source port.
+      if (isTargetBoiler && inputIdx === 1) {
+        const heatSourceOnly = candidates.filter(c => {
+          const hs = HEAT_SOURCES[c.node.data.recipe.machine_id];
+          return hs && hs.type !== 'boiler';
+        });
+        if (heatSourceOnly.length === 0) return; // no valid heat source placed — skip
+        candidates = heatSourceOnly;
+      }
+
       const newCandidate      = candidates.find(c => newNodes.includes(c.node));
       const existingCandidate = candidates.find(c => existingNodes.includes(c.node));
       const chosen = newCandidate || existingCandidate;
@@ -202,9 +246,23 @@ const buildEdges = (newNodes, existingNodes, edgeSettings) => {
     sourceNode.data.recipe.outputs?.forEach((output, outputIdx) => {
       const productId = output.product_id;
       if (!productId || productId === 'p_variableproduct') return;
+      // Boiler water outputs are reserved for self-feed only — never route outward
+      const boilerSelfFeed = boilerWaterOutputs.get(sourceNode.id);
+      if (boilerSelfFeed && boilerSelfFeed.outputIndex === outputIdx) return;
+      const isSourceNonBoilerHeatSource = (() => {
+        const hs = HEAT_SOURCES[sourceNode.data.recipe.machine_id];
+        return hs && hs.type !== 'boiler';
+      })();
       for (const existingNode of existingNodes) {
+        const isExistingBoiler = existingNode.data.recipe.machine_id === 'm_boiler';
         existingNode.data.recipe.inputs?.forEach((input, inputIdx) => {
           if (input.product_id !== productId) return;
+          if (isExistingBoiler && WATER_PRODUCT_IDS.has(productId)) {
+            // Heat sources must only wire to input[1] (heat source port).
+            // Non-heat-source water producers must only wire to input[0] (cold water port).
+            if (isSourceNonBoilerHeatSource && inputIdx !== 1) return;
+            if (!isSourceNonBoilerHeatSource && inputIdx === 1) return;
+          }
           addEdge(sourceNode, outputIdx, existingNode, inputIdx);
         });
       }
@@ -288,8 +346,32 @@ export const runAutoComplete = async ({
   const deficits          = extractDeficits(nodes, flows);
   const committedProducts = extractCommittedProducts(nodes);
 
+  // For committed products (already produced on canvas), decide whether the deficit
+  // is a rate/wiring issue or a genuine under-supply:
+  //
+  //  • totalProduction >= deficitAmount → sufficient production exists, just needs
+  //    balancing or manual wiring. Filter the deficit — Compute Machines handles it.
+  //  • totalProduction < deficitAmount  → not enough being produced. Keep the deficit
+  //    AND remove from committedProducts so the BFS is allowed to find new producers.
+  for (const productId of [...deficits.keys()]) {
+    if (!committedProducts.has(productId)) continue;
+    const totalProduction  = flows?.byProduct?.[productId]?.totalProduction  ?? 0;
+    const totalConsumption = flows?.byProduct?.[productId]?.totalConsumption ?? 0;
+    // Net excess = production that isn't already spoken for by connected consumers.
+    // Only suppress the deficit if that free excess is enough to cover it —
+    // comparing against totalProduction alone is wrong because that production
+    // may already be fully consumed, leaving nothing for the unconnected input.
+    const netExcess    = totalProduction - totalConsumption;
+    const deficitAmount = deficits.get(productId);
+    if (netExcess >= deficitAmount - EPSILON) {
+      deficits.delete(productId);
+    } else {
+      committedProducts.delete(productId);
+    }
+  }
+
   if (deficits.size === 0) {
-    return { newNodes: [], newEdges: [], nextNodeId: currentNodeId, feasible: true, stats: { recipesEvaluated: 0, recipesSelected: 0, message: 'No deficiencies found — graph is already satisfied.' } };
+    return { newNodes: [], newEdges: [], nextNodeId: currentNodeId, feasible: true, stats: { recipesEvaluated: 0, recipesSelected: 0, message: 'No new recipes needed — any remaining deficiencies are balancing issues that Compute Machines can resolve.' } };
   }
 
   console.log(`[AutoComplete] Found ${deficits.size} deficient products:`, [...deficits.entries()].map(([k, v]) => `${k}: ${v.toFixed(4)}/s`).join(', '));

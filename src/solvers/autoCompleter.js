@@ -46,13 +46,25 @@ const isValidRecipe = (recipe) =>
  */
 const expandWaterProducers = (
   productId, includeHeatSources,
-  reachableRecipes, committedProductIds, visitedProducts, queue
+  reachableRecipes, committedProductIds, visitedProducts, queue,
+  excludeSteamConsumers = false
 ) => {
   for (const recipe of getRecipesProducingProduct(productId)) {
     if (reachableRecipes.has(recipe.id)) continue;
     if (!isValidRecipe(recipe)) continue;
     const isHS = HEAT_SOURCE_MACHINE_IDS.has(recipe.machine_id);
     if (isHS && !includeHeatSources) continue;
+
+    // Skip recipes where the water product is a byproduct, not the primary output.
+    // e.g. condensers produce water as output[1] — we don't want to select them
+    // just to supply water. Heat sources are exempt since producing hot water IS
+    // their primary purpose even if it's not technically output[0].
+    if (!isHS && recipe.outputs[0]?.product_id !== productId) continue;
+
+    // When called for a boiler's cold water port, exclude any recipe that consumes
+    // steam — those recipes (e.g. large turbine) create an unresolvable loop:
+    // boiler produces steam → turbine consumes it → turbine outputs water → boiler.
+    if (excludeSteamConsumers && recipe.inputs.some(i => STEAM_PRODUCTS.has(i.product_id))) continue;
 
     reachableRecipes.set(recipe.id, recipe);
 
@@ -148,10 +160,12 @@ export const collectReachableRecipes = (deficientProductIds, committedProductIds
                 reachableRecipes, committedProductIds, visitedProducts, queue
               );
             } else {
-              // Cold water port — any water producer
+              // Cold water port — exclude heat sources and steam-consuming recipes
+              // to prevent boiler→steam→turbine→water→boiler loops.
               expandWaterProducers(
-                input.product_id, true,
-                reachableRecipes, committedProductIds, visitedProducts, queue
+                input.product_id, false,
+                reachableRecipes, committedProductIds, visitedProducts, queue,
+                true
               );
             }
           } else if (!TEMPERATURE_PRODUCTS.includes(input.product_id)) {
@@ -166,6 +180,14 @@ export const collectReachableRecipes = (deficientProductIds, committedProductIds
     for (const recipe of getRecipesProducingProduct(productId)) {
       if (reachableRecipes.has(recipe.id)) continue;
       if (!isValidRecipe(recipe)) continue;
+
+      // Only pull in this recipe if the needed product is its primary (first) output.
+      // This prevents byproduct chains from bloating the reachable set — e.g. don't
+      // include an industrial oil separator (crude oil is output[1]) just because the
+      // BFS is looking for crude oil, which would then drag in fracking towers, quarries, etc.
+      // Recipes already in the reachable set (added via a different product path) are
+      // unaffected — their byproduct outputs remain available to the LP as a bonus.
+      if (recipe.outputs[0]?.product_id !== productId) continue;
 
       reachableRecipes.set(recipe.id, recipe);
 
@@ -286,9 +308,10 @@ const buildAutoCompleteMPS = (
 
       out.push(`    ${varName}  ${productRow(output.product_id)}  ${output.quantity}\n`);
 
-      // Heat sources ALSO write to the synthetic hot-water row so the LP can
-      // route their output to a boiler's heat-source port
-      if (isHeatSource && WATER_PRODUCTS.has(output.product_id)) {
+      // Non-boiler heat sources ALSO write to the synthetic hot-water row so the LP can
+      // route their output to a boiler's heat-source port.
+      // Boilers are excluded — they must not satisfy their own heat-source port.
+      if (isHeatSource && !isBoiler && WATER_PRODUCTS.has(output.product_id)) {
         const hp = hotProduct(output.product_id);
         if (hotWaterRows.has(hp)) {
           out.push(`    ${varName}  ${productRow(hp)}  ${output.quantity}\n`);

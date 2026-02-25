@@ -241,7 +241,7 @@ const SolverTab = ({ activeWeights, unusedWeights, setActiveWeights, setUnusedWe
             <WeightDonut activeWeights={activeWeights} />
           </div>
           <button
-            onClick={() => { setActiveWeights(['Deficiencies', 'Model Count', 'Pollution', 'Power', 'Cost']); setUnusedWeights([]); }}
+            onClick={() => { setActiveWeights(['Deficiencies', 'Pollution', 'Power', 'Cost']); setUnusedWeights(['Model Count']); }}
             className="btn btn-secondary"
             style={{ padding: '8px 12px', fontSize: 'var(--font-size-sm)' }}
           >

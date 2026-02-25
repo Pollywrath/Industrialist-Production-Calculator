@@ -224,12 +224,18 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
       modelCountPerMachine = 1 + powerFactor + (inputOutputCount * 2);
     }
 
-    const machineObjCoeff =
+    // Continuous costs — scale with actual fractional machine count
+    const continuousObjCoeff =
       (weights.POWER_WEIGHT * powerValue) +
-      (weights.POLLUTION_WEIGHT * pollutionValue) +
+      (weights.POLLUTION_WEIGHT * pollutionValue);
+    if (continuousObjCoeff !== 0) addObjCoeff(varName, continuousObjCoeff);
+    const mcVarName = registerVar(`mc_${nodeId}`, true); // general integer
+    addConstraint(`ceil_${nodeId}`, [[mcVarName, 1], [varName, -1]], 0, 'min');
+
+    const integerObjCoeff =
       (weights.COST_WEIGHT * machineCost) +
       (useModelCount ? weights.MODEL_COUNT_WEIGHT * modelCountPerMachine : 0);
-    if (machineObjCoeff !== 0) addObjCoeff(varName, machineObjCoeff);
+    if (integerObjCoeff !== 0) addObjCoeff(mcVarName, integerObjCoeff);
 
     if (machineCountMode === 'locked') {
       addConstraint(`lock_${nodeId}`, [[varName, 1]], currentCount, 'equal');
