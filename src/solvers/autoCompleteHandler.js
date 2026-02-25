@@ -294,26 +294,8 @@ export const runAutoComplete = async ({
 
   console.log(`[AutoComplete] Found ${deficits.size} deficient products:`, [...deficits.entries()].map(([k, v]) => `${k}: ${v.toFixed(4)}/s`).join(', '));
 
-  // ── 2. Compute LP weights from user ordering ──
-  // Mirror the weight logic from lpSolver.js computeObjectiveWeights
-  const unusedSet = new Set(unusedWeights);
-  const nonDeficiency = activeWeights.filter(w => w !== 'Deficiencies');
-  const N = nonDeficiency.length;
-  const TIER_BASE = 1e3;
-  const tierScale = (label) => {
-    if (unusedSet.has(label)) return 0;
-    const idx = nonDeficiency.indexOf(label);
-    return idx === -1 ? 0 : Math.pow(TIER_BASE, N - 1 - idx);
-  };
-  const weights = {
-    MODEL_COUNT_WEIGHT: 1e-3 * tierScale('Model Count'),
-    POLLUTION_WEIGHT:   1e-5 * tierScale('Pollution'),
-    POWER_WEIGHT:       1e-8 * tierScale('Power'),
-    COST_WEIGHT:        1e-6 * tierScale('Cost'),
-  };
-
   // ── 3. Solve ──
-  const { feasible, recipes, stats } = await solveAutoComplete(deficits, committedProducts, weights);
+  const { feasible, recipes, stats } = await solveAutoComplete(deficits, committedProducts, activeWeights, unusedWeights);
 
   if (!feasible || recipes.length === 0) {
     return { newNodes: [], newEdges: [], nextNodeId: currentNodeId, feasible, stats: { ...stats, message: 'AutoComplete LP returned no feasible solution.' } };

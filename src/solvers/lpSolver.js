@@ -40,7 +40,7 @@ const TIER_BASE = 1e3;
  * are disabled (scale = 0). The four Excesses sub-weights all share the same
  * tier scale, preserving their internal hierarchy.
  */
-const computeObjectiveWeights = (activeWeights = [], unusedWeights = []) => {
+export const computeObjectiveWeights = (activeWeights = [], unusedWeights = []) => {
   const unusedSet = new Set(unusedWeights);
   const nonDeficiency = activeWeights.filter(w => w !== 'Deficiencies');
   const N = nonDeficiency.length;

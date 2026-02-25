@@ -1,65 +1,182 @@
 /**
  * AutoCompleter — Automatically resolves unconnected deficiencies in a balanced graph.
  *
- * Strategy (similar to factorio calcs):
+ * Strategy (Kirk McDonald style):
  *   1. BFS from each deficient product → collect every reachable recipe transitively
  *   2. Build a product×recipe matrix LP (one variable per recipe = its run rate)
  *   3. Solve with SCIP — inferior/unused recipes get zeroed out by the objective
  *   4. Return surviving recipes with machine counts for the caller to place on canvas
  *
- * This file only handles the solve. Translating results into canvas nodes/edges
- * is the caller's responsibility.
+ * Boiler handling:
+ *   The boiler has two water inputs with distinct roles:
+ *     input[0] — cold water source: any water producer (pumps, condensers, heat sources)
+ *     input[1] — heat source port: ONLY recipes from heat source machines whose output
+ *                product matches the input product (firebox, electric heater, gas burner…)
+ *   In the MPS, input[1] is modelled via a synthetic "hot water" product row
+ *   (p_ac_hot_<productId>) so the LP cannot satisfy it with a plain water pump or by
+ *   looping the boiler's own cooled-water output back into this port.
  */
 
-import { getRecipesProducingProduct } from '../data/dataLoader';
-import { solveMPSRaw } from './lpSolver';
+import { getRecipesProducingProduct, getMachine } from '../data/dataLoader';
+import { solveMPSRaw, computeObjectiveWeights } from './lpSolver';
 import { TEMPERATURE_PRODUCTS, HEAT_SOURCES } from '../utils/temperatureUtils';
 
 const EPSILON = 1e-6;
-
 const sanitize = (name) => name.replace(/[-. ]/g, '_');
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const WATER_PRODUCTS      = new Set(['p_water', 'p_filtered_water', 'p_distilled_water']);
+const STEAM_PRODUCTS      = new Set(['p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam']);
+const HEAT_SOURCE_MACHINE_IDS = new Set(Object.keys(HEAT_SOURCES));
+
+// Synthetic product row for the boiler's heat-source port.
+// Only heat source machines write to these rows.
+const hotProduct = (productId) => `p_ac_hot_${productId}`;
+
+// ─── BFS helpers ──────────────────────────────────────────────────────────────
+
+const isValidRecipe = (recipe) =>
+  typeof recipe.cycle_time === 'number' && recipe.cycle_time > 0;
+
+/**
+ * Expand producers of a water product as cold-water sources.
+ *   includeHeatSources=true  → boiler input[0] or heat source's own cold-water input
+ *   includeHeatSources=false → non-boiler recipes that need water: no heat sources
+ */
+const expandWaterProducers = (
+  productId, includeHeatSources,
+  reachableRecipes, committedProductIds, visitedProducts, queue
+) => {
+  for (const recipe of getRecipesProducingProduct(productId)) {
+    if (reachableRecipes.has(recipe.id)) continue;
+    if (!isValidRecipe(recipe)) continue;
+    const isHS = HEAT_SOURCE_MACHINE_IDS.has(recipe.machine_id);
+    if (isHS && !includeHeatSources) continue;
+
+    reachableRecipes.set(recipe.id, recipe);
+
+    for (const input of recipe.inputs) {
+      if (!input.product_id || input.product_id === 'p_variableproduct') continue;
+      if (committedProductIds.has(input.product_id)) continue;
+      if (WATER_PRODUCTS.has(input.product_id)) {
+        // Heat source's own cold-water input — do NOT allow further heat-source chaining
+        expandWaterProducers(
+          input.product_id, false,
+          reachableRecipes, committedProductIds, visitedProducts, queue
+        );
+      } else if (!TEMPERATURE_PRODUCTS.includes(input.product_id)) {
+        if (!visitedProducts.has(input.product_id)) queue.push(input.product_id);
+      }
+    }
+  }
+};
+
+/**
+ * Expand ONLY heat source recipes whose output product matches productId.
+ * Used exclusively for boiler input[1] (heat source port).
+ */
+const expandHeatSourceProducers = (
+  productId,
+  reachableRecipes, committedProductIds, visitedProducts, queue
+) => {
+  for (const recipe of getRecipesProducingProduct(productId)) {
+    if (reachableRecipes.has(recipe.id)) continue;
+    if (!isValidRecipe(recipe)) continue;
+    if (!HEAT_SOURCE_MACHINE_IDS.has(recipe.machine_id)) continue;
+
+    reachableRecipes.set(recipe.id, recipe);
+
+    for (const input of recipe.inputs) {
+      if (!input.product_id || input.product_id === 'p_variableproduct') continue;
+      if (committedProductIds.has(input.product_id)) continue;
+      if (WATER_PRODUCTS.has(input.product_id)) {
+        // Heat source cold-water inlet — any water producer, but no further heat-source chaining
+        expandWaterProducers(
+          input.product_id, false,
+          reachableRecipes, committedProductIds, visitedProducts, queue
+        );
+      } else if (!TEMPERATURE_PRODUCTS.includes(input.product_id)) {
+        if (!visitedProducts.has(input.product_id)) queue.push(input.product_id);
+      }
+    }
+  }
+};
 
 // ─── BFS ──────────────────────────────────────────────────────────────────────
 
-/**
- * Collect every recipe transitively reachable from a set of deficient products.
- *
- * @param {string[]}  deficientProductIds   Products that need to be produced
- * @param {Set}       committedProductIds   Products already produced in the committed graph —
- *                                          we wire to these rather than expanding them
- * @returns {Map<string, object>}           recipeId → recipe object
- */
 export const collectReachableRecipes = (deficientProductIds, committedProductIds = new Set()) => {
-  // Products we've already queued/visited — seeded with committed products so we
-  // don't cross that boundary
   const visitedProducts = new Set(committedProductIds);
-  const reachableRecipes = new Map(); // recipeId → recipe
+  const reachableRecipes = new Map();
   const queue = [...deficientProductIds];
 
   while (queue.length > 0) {
     const productId = queue.shift();
-
     if (visitedProducts.has(productId)) continue;
     visitedProducts.add(productId);
 
-    // Temperature products (steam, hot water) require manual heat source setup — skip
-    if (TEMPERATURE_PRODUCTS.includes(productId)) continue;
+    // ── Water ────────────────────────────────────────────────────────────────
+    // Any recipe needing water can get it from any producer (pumps + heat sources).
+    if (WATER_PRODUCTS.has(productId)) {
+      expandWaterProducers(
+        productId, true,
+        reachableRecipes, committedProductIds, visitedProducts, queue
+      );
+      continue;
+    }
 
-    const producers = getRecipesProducingProduct(productId);
+    // ── Steam ─────────────────────────────────────────────────────────────────
+    // Only expand through boilers. Handle their two inputs differently.
+    if (STEAM_PRODUCTS.has(productId)) {
+      for (const recipe of getRecipesProducingProduct(productId)) {
+        if (reachableRecipes.has(recipe.id)) continue;
+        if (!isValidRecipe(recipe)) continue;
+        if (recipe.machine_id !== 'm_boiler') continue;
 
-    for (const recipe of producers) {
+        reachableRecipes.set(recipe.id, recipe);
+
+        for (let idx = 0; idx < recipe.inputs.length; idx++) {
+          const input = recipe.inputs[idx];
+          if (!input.product_id || input.product_id === 'p_variableproduct') continue;
+          if (committedProductIds.has(input.product_id)) continue;
+
+          if (WATER_PRODUCTS.has(input.product_id)) {
+            if (idx === 1) {
+              // Heat source port — only heat source machines
+              expandHeatSourceProducers(
+                input.product_id,
+                reachableRecipes, committedProductIds, visitedProducts, queue
+              );
+            } else {
+              // Cold water port — any water producer
+              expandWaterProducers(
+                input.product_id, true,
+                reachableRecipes, committedProductIds, visitedProducts, queue
+              );
+            }
+          } else if (!TEMPERATURE_PRODUCTS.includes(input.product_id)) {
+            if (!visitedProducts.has(input.product_id)) queue.push(input.product_id);
+          }
+        }
+      }
+      continue;
+    }
+
+    // ── Normal products ───────────────────────────────────────────────────────
+    for (const recipe of getRecipesProducingProduct(productId)) {
       if (reachableRecipes.has(recipe.id)) continue;
-
-      // Skip recipes with Variable cycle time — the LP can't model them
-      if (typeof recipe.cycle_time !== 'number' || recipe.cycle_time <= 0) continue;
+      if (!isValidRecipe(recipe)) continue;
 
       reachableRecipes.set(recipe.id, recipe);
 
-      // Queue up inputs so we recurse deeper
       for (const input of recipe.inputs) {
         if (!input.product_id || input.product_id === 'p_variableproduct') continue;
-        if (!visitedProducts.has(input.product_id)) {
-          queue.push(input.product_id);
+        if (committedProductIds.has(input.product_id)) continue;
+        // Water/steam inputs queue their product so the branches above handle them
+        if (WATER_PRODUCTS.has(input.product_id) || STEAM_PRODUCTS.has(input.product_id)) {
+          if (!visitedProducts.has(input.product_id)) queue.push(input.product_id);
+        } else if (!TEMPERATURE_PRODUCTS.includes(input.product_id)) {
+          if (!visitedProducts.has(input.product_id)) queue.push(input.product_id);
         }
       }
     }
@@ -70,28 +187,13 @@ export const collectReachableRecipes = (deficientProductIds, committedProductIds
 
 // ─── MPS Builder ──────────────────────────────────────────────────────────────
 
-/**
- * Build MPS string.
- *
- * Variables:  r_<recipeId>  — run rate of the recipe (runs/second), continuous >= 0
- * Rows:       one per unique product — net flow (production − consumption) >= 0
- *             for deficient products the RHS is the required deficit rate instead of 0
- * Objective:  minimize weighted sum of power + pollution + model count per recipe
- *
- * @param {Map<string, number>}  deficits         productId → required rate (units/s)
- * @param {Map<string, object>}  reachableRecipes recipeId  → recipe object
- * @param {object}               weights          LP objective weights from user settings
- * @returns {{ mpsString: string, varNameMap: Map<string, string> }}
- */
-const buildAutoCompleteMPS = (deficits, reachableRecipes, committedProductIds = new Set(), weights = {}) => {
-  const {
-    MODEL_COUNT_WEIGHT = 1e-3,
-    POWER_WEIGHT       = 1e-8,
-    POLLUTION_WEIGHT   = 1e-5,
-    COST_WEIGHT        = 1e-6,
-  } = weights;
+const buildAutoCompleteMPS = (
+  deficits, reachableRecipes, committedProductIds = new Set(),
+  activeWeights = [], unusedWeights = []
+) => {
+  const weights = computeObjectiveWeights(activeWeights, unusedWeights);
 
-  // Collect every product touched by any reachable recipe
+  // Collect all product rows
   const allProducts = new Set(deficits.keys());
   for (const recipe of reachableRecipes.values()) {
     for (const io of [...recipe.inputs, ...recipe.outputs]) {
@@ -101,90 +203,123 @@ const buildAutoCompleteMPS = (deficits, reachableRecipes, committedProductIds = 
     }
   }
 
-  // sanitized row name per product
+  // Pre-compute which products have at least one producer in the reachable set
+  const producibleProducts = new Set();
+  for (const recipe of reachableRecipes.values()) {
+    for (const output of recipe.outputs) {
+      if (output.product_id && output.product_id !== 'p_variableproduct') {
+        producibleProducts.add(output.product_id);
+      }
+    }
+  }
+
+  // Collect synthetic hot-water rows needed by boiler recipes
+  const hotWaterRows = new Set();
+  for (const recipe of reachableRecipes.values()) {
+    if (recipe.machine_id !== 'm_boiler') continue;
+    const input1 = recipe.inputs[1];
+    if (input1?.product_id && WATER_PRODUCTS.has(input1.product_id)) {
+      hotWaterRows.add(hotProduct(input1.product_id));
+    }
+  }
+
   const productRow = (productId) => sanitize(`prod_${productId}`);
 
-  // varNameMap: sanitizedVarName → recipeId  (for parsing solution back)
   const varNameMap = new Map();
   for (const recipeId of reachableRecipes.keys()) {
     varNameMap.set(sanitize(`r_${recipeId}`), recipeId);
   }
 
   const out = [];
-
-  // ── NAME ──
   out.push('NAME AUTOCOMPLETE\n');
 
-  // Only constrain products that are consumed by at least one reachable recipe,
-  // or are explicitly deficient. Pure byproducts with no consumers in the reachable
-  // set get no constraint — they become excess, not a trigger for more recipes.
-  const consumedProducts = new Set(deficits.keys());
-  for (const recipe of reachableRecipes.values()) {
-    for (const input of recipe.inputs) {
-      if (input.product_id && input.product_id !== 'p_variableproduct') {
-        consumedProducts.add(input.product_id);
-      }
-    }
-  }
-
-  // ── ROWS ──
+  // ── ROWS ──────────────────────────────────────────────────────────────────
   out.push('ROWS\n');
   out.push(' N  obj\n');
   for (const productId of allProducts) {
-    if (consumedProducts.has(productId)) {
-      out.push(` G  ${productRow(productId)}\n`);
-    }
-    // Unconstrained products (pure byproducts) get no row — LP ignores them
+    out.push(` G  ${productRow(productId)}\n`);
+  }
+  // Synthetic hot-water rows for boiler heat-source ports
+  for (const hp of hotWaterRows) {
+    out.push(` G  ${productRow(hp)}\n`);
   }
 
-  // ── COLUMNS ──
+  // ── COLUMNS ───────────────────────────────────────────────────────────────
   out.push('COLUMNS\n');
 
   for (const [recipeId, recipe] of reachableRecipes) {
-    const varName = sanitize(`r_${recipeId}`);
-    const cycleTime = recipe.cycle_time; // already validated > 0 in BFS
+    const varName   = sanitize(`r_${recipeId}`);
+    const cycleTime = recipe.cycle_time;
 
-    // Objective: cost per run-per-second
     const power = typeof recipe.power_consumption === 'number'
       ? recipe.power_consumption
       : (recipe.power_consumption?.max ?? 0);
     const pollution = typeof recipe.pollution === 'number' ? recipe.pollution : 0;
 
-    // Fixed cost per recipe ensures LP avoids selecting unnecessary recipes even
-    // when power/pollution/cost are near zero. Scaled so it's always meaningful.
-    const FIXED_RECIPE_COST = 10.0;
-    const objCoeff =
-      FIXED_RECIPE_COST +
-      MODEL_COUNT_WEIGHT * cycleTime +
-      POWER_WEIGHT       * power +
-      POLLUTION_WEIGHT   * pollution * cycleTime +
-      COST_WEIGHT        * cycleTime;
+    const machine = getMachine(recipe.machine_id);
+    const machineCost = machine && typeof machine.cost === 'number' ? machine.cost : 0;
+    const inputOutputCount = (recipe.inputs?.length || 0) + (recipe.outputs?.length || 0);
+    const powerFactor = recipe.power_type === 'HV' ? 2 : Math.ceil(power / 1500000) * 2;
+    const modelCountPerMachine = 1 + powerFactor + (inputOutputCount * 2);
 
+    // Per-machine cost × cycleTime converts "per machine" to "per run/s"
+    const machineObjCoeff =
+      weights.MODEL_COUNT_WEIGHT * modelCountPerMachine +
+      weights.POWER_WEIGHT       * power +
+      weights.POLLUTION_WEIGHT   * pollution +
+      weights.COST_WEIGHT        * machineCost;
+
+    const FIXED_RECIPE_COST = weights.MODEL_COUNT_WEIGHT > 0
+      ? weights.MODEL_COUNT_WEIGHT * 0.01
+      : 1e-6;
+
+    const objCoeff = FIXED_RECIPE_COST + machineObjCoeff * cycleTime;
     out.push(`    ${varName}  obj  ${objCoeff}\n`);
 
-    // Outputs → positive contribution to product rows (only if row exists)
+    const isHeatSource = HEAT_SOURCE_MACHINE_IDS.has(recipe.machine_id);
+    const isBoiler     = recipe.machine_id === 'm_boiler';
+
+    // ── Outputs ──────────────────────────────────────────────────────────
     for (const output of recipe.outputs) {
       if (!output.product_id || output.product_id === 'p_variableproduct') continue;
       if (typeof output.quantity !== 'number') continue;
-      if (!consumedProducts.has(output.product_id)) continue;
+
       out.push(`    ${varName}  ${productRow(output.product_id)}  ${output.quantity}\n`);
+
+      // Heat sources ALSO write to the synthetic hot-water row so the LP can
+      // route their output to a boiler's heat-source port
+      if (isHeatSource && WATER_PRODUCTS.has(output.product_id)) {
+        const hp = hotProduct(output.product_id);
+        if (hotWaterRows.has(hp)) {
+          out.push(`    ${varName}  ${productRow(hp)}  ${output.quantity}\n`);
+        }
+      }
     }
 
-    // Inputs → negative contribution to product rows
-    // Skip committed products — already available from the existing graph
-    // Skip temperature products — water is freely available as raw input,
-    // steam/hot water come from heat sources autocomplete can't place automatically
-    for (const input of recipe.inputs) {
+    // ── Inputs ───────────────────────────────────────────────────────────
+    for (let i = 0; i < recipe.inputs.length; i++) {
+      const input = recipe.inputs[i];
       if (!input.product_id || input.product_id === 'p_variableproduct') continue;
       if (typeof input.quantity !== 'number') continue;
       if (committedProductIds.has(input.product_id)) continue;
-      if (TEMPERATURE_PRODUCTS.includes(input.product_id)) continue;
-      out.push(`    ${varName}  ${productRow(input.product_id)}  ${-input.quantity}\n`);
+
+      if (isBoiler && i === 1 && WATER_PRODUCTS.has(input.product_id)) {
+        // Heat-source port: consume from the synthetic row ONLY.
+        // This prevents the LP from using a plain pump or looping the boiler's
+        // own cooled-water output back into this port.
+        const hp = hotProduct(input.product_id);
+        if (hotWaterRows.has(hp)) {
+          out.push(`    ${varName}  ${productRow(hp)}  ${-input.quantity}\n`);
+        }
+      } else {
+        // Skip temperature product inputs if nothing in the reachable set produces them
+        if (TEMPERATURE_PRODUCTS.includes(input.product_id) && !producibleProducts.has(input.product_id)) continue;
+        out.push(`    ${varName}  ${productRow(input.product_id)}  ${-input.quantity}\n`);
+      }
     }
   }
 
-  // ── RHS ──
-  // For deficient products set the minimum required production rate
+  // ── RHS ───────────────────────────────────────────────────────────────────
   out.push('RHS\n');
   for (const [productId, requiredRate] of deficits) {
     if (requiredRate > 0) {
@@ -192,42 +327,38 @@ const buildAutoCompleteMPS = (deficits, reachableRecipes, committedProductIds = 
     }
   }
 
-  // ── BOUNDS ──
-  // All variables default to [0, +∞) — no explicit bounds needed
-
   out.push('ENDATA\n');
+
+  // ── Debug: print boiler and heat source MPS rows ──────────────────────────
+  console.group('[AutoComplete] MPS debug — boiler & heat source rows');
+  console.log('hotWaterRows:', [...hotWaterRows]);
+  for (const [recipeId, recipe] of reachableRecipes) {
+    const isHS  = HEAT_SOURCE_MACHINE_IDS.has(recipe.machine_id);
+    const isBoi = recipe.machine_id === 'm_boiler';
+    if (!isHS && !isBoi) continue;
+    const varName = sanitize(`r_${recipeId}`);
+    const mpsText = out.join('');
+    const lines = mpsText.split('\n').filter(l => l.includes(varName));
+    console.log(`  [${recipeId}] ${recipe.name} (${recipe.machine_id}) MPS lines:`);
+    lines.forEach(l => console.log(`    ${l}`));
+  }
+  console.groupEnd();
 
   return { mpsString: out.join(''), varNameMap };
 };
 
 // ─── Main Solve ───────────────────────────────────────────────────────────────
 
-/**
- * Solve autocomplete for a set of deficient products.
- *
- * @param {Map<string, number>}  deficits
- *   productId → required production rate (units/s).
- *   Typically derived from committed nodes' unconnected input rates × machine counts.
- *
- * @param {Set<string>}  committedProductIds
- *   Products already being produced in the committed graph.
- *   BFS stops here and wires to existing nodes instead of expanding.
- *
- * @param {object}  weights
- *   LP objective weights from user settings (MODEL_COUNT_WEIGHT, POWER_WEIGHT, etc.)
- *
- * @returns {Promise<{
- *   feasible: boolean,
- *   recipes: Array<{ recipeId, recipe, machineCount, rate }>,
- *   stats: { recipesEvaluated, recipesSelected }
- * }>}
- */
-export const solveAutoComplete = async (deficits, committedProductIds = new Set(), weights = {}) => {
+export const solveAutoComplete = async (
+  deficits,
+  committedProductIds = new Set(),
+  activeWeights = [],
+  unusedWeights = []
+) => {
   if (!deficits || deficits.size === 0) {
     return { feasible: false, recipes: [], stats: { recipesEvaluated: 0, recipesSelected: 0 } };
   }
 
-  // ── BFS ──
   const reachableRecipes = collectReachableRecipes([...deficits.keys()], committedProductIds);
 
   if (reachableRecipes.size === 0) {
@@ -250,8 +381,9 @@ export const solveAutoComplete = async (deficits, committedProductIds = new Set(
   });
   console.groupEnd();
 
-  // ── Build + Solve MPS ──
-  const { mpsString, varNameMap } = buildAutoCompleteMPS(deficits, reachableRecipes, committedProductIds, weights);
+  const { mpsString, varNameMap } = buildAutoCompleteMPS(
+    deficits, reachableRecipes, committedProductIds, activeWeights, unusedWeights
+  );
   const solution = await solveMPSRaw(mpsString, varNameMap);
 
   if (!solution.feasible) {
@@ -259,18 +391,11 @@ export const solveAutoComplete = async (deficits, committedProductIds = new Set(
     return { feasible: false, recipes: [], stats: { recipesEvaluated: reachableRecipes.size, recipesSelected: 0 } };
   }
 
-  // ── Extract Results ──
-  // solution keys are recipeIds (mapped back via varNameMap in parseSCIPSolution)
   const results = [];
-
   for (const [recipeId, recipe] of reachableRecipes) {
     const rate = solution[recipeId] ?? 0;
-    if (rate < EPSILON) continue; // LP zeroed this out
-
-    const cycleTime = recipe.cycle_time;
-    // machine count = runs/second × seconds/run
-    const machineCount = rate * cycleTime;
-
+    if (rate < EPSILON) continue;
+    const machineCount = rate * recipe.cycle_time;
     results.push({ recipeId, recipe, machineCount, rate });
   }
 
@@ -285,9 +410,6 @@ export const solveAutoComplete = async (deficits, committedProductIds = new Set(
   return {
     feasible: true,
     recipes: results,
-    stats: {
-      recipesEvaluated: reachableRecipes.size,
-      recipesSelected: results.length,
-    },
+    stats: { recipesEvaluated: reachableRecipes.size, recipesSelected: results.length },
   };
 };
