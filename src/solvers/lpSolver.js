@@ -85,36 +85,60 @@ const getOrLoadSCIPFactory = async () => {
 };
 
 /**
+ * Execute a pre-built MPS string through SCIP WASM
+ */
+const runSCIP = async (mpsString, varNameMap, label = 'SCIP') => {
+  const stdoutLines = [];
+  const createSCIP = await getOrLoadSCIPFactory();
+  const scip = await createSCIP({
+    locateFile: (file) => import.meta.env.BASE_URL + file,
+    print: (text) => { stdoutLines.push(text); },
+    printErr: (text) => { stdoutLines.push(text); },
+  });
+  const { FS, callMain: main } = scip;
+  FS.writeFile('model.mps', mpsString);
+  main(['-c', 'read model.mps', '-c', 'optimize', '-c', 'display solution', '-c', 'quit']);
+  const stdoutText = stdoutLines.join('\n');
+  let solutionText;
+  try {
+    solutionText = FS.readFile('sol.txt', { encoding: 'utf8' });
+  } catch (e) {
+    solutionText = stdoutText;
+  }
+  return parseSCIPSolution(solutionText, varNameMap);
+};
+
+/**
  * Solve the MPS model using SCIP WASM
  */
 const solveWithSCIP = async (graph, targetNodeIds, weights) => {
   try {
-    const stdoutLines = [];
-    const createSCIP = await getOrLoadSCIPFactory();
+    const needsCeilVars = weights.COST_WEIGHT > 0 || weights.MODEL_COUNT_WEIGHT > 0;
 
-    const scip = await createSCIP({
-      locateFile: (file) => import.meta.env.BASE_URL + file,
-      print: (text) => { stdoutLines.push(text); },
-      printErr: (text) => { stdoutLines.push(text); },
-    });
+    if (needsCeilVars) {
+      // Phase 1: pure LP with cost/model count approximated on continuous m_ variables
+      // This gives us tight per-node machine count bounds for the MILP phase
+      const { mpsString: mps1, varNameMap: vm1, stats: s1 } = buildMPSString(graph, targetNodeIds, weights, null);
+      console.log(`[SCIP Phase 1 LP] MPS size: ${(mps1.length / 1024).toFixed(1)} KB | rows: ${s1.rows} | binary: ${s1.binary} | integer: ${s1.integer} | continuous: ${s1.continuous}`);
+      const phase1Result = await runSCIP(mps1, vm1);
 
-    const { FS, callMain: main } = scip;
+      // Extract per-node LP values to build tight bounds — fall back to 0 if phase 1 failed
+      const phaseBounds = new Map();
+      Object.keys(graph.nodes).forEach(nodeId => {
+        const val = phase1Result.feasible ? (phase1Result[`m_${nodeId}`] || 0) : 0;
+        phaseBounds.set(nodeId, val);
+      });
 
-    const { mpsString, varNameMap, stats } = buildMPSString(graph, targetNodeIds, weights);
-    console.log(`[SCIP] MPS size: ${(mpsString.length / 1024).toFixed(1)} KB | rows: ${stats.rows} | binary: ${stats.binary} | integer: ${stats.integer} | continuous: ${stats.continuous}`);
-
-    FS.writeFile('model.mps', mpsString);
-
-    main(['-c', 'read model.mps', '-c', 'optimize', '-c', 'display solution', '-c', 'quit']);
-
-    const stdoutText = stdoutLines.join('\n');
-    let solutionText;
-    try {
-      solutionText = FS.readFile('sol.txt', { encoding: 'utf8' });
-    } catch (e) {
-      solutionText = stdoutText;
+      // Phase 2: MILP with tight mc_ bounds derived from phase 1 LP solution
+      const { mpsString: mps2, varNameMap: vm2, stats: s2 } = buildMPSString(graph, targetNodeIds, weights, phaseBounds);
+      console.log(`[SCIP Phase 2 MILP] MPS size: ${(mps2.length / 1024).toFixed(1)} KB | rows: ${s2.rows} | binary: ${s2.binary} | integer: ${s2.integer} | continuous: ${s2.continuous}`);
+      return await runSCIP(mps2, vm2);
     }
-    return parseSCIPSolution(solutionText, varNameMap);
+
+    // No ceil vars needed — single pure LP solve
+    const { mpsString, varNameMap, stats } = buildMPSString(graph, targetNodeIds, weights, null);
+    console.log(`[SCIP] MPS size: ${(mpsString.length / 1024).toFixed(1)} KB | rows: ${stats.rows} | binary: ${stats.binary} | integer: ${stats.integer} | continuous: ${stats.continuous}`);
+    return await runSCIP(mpsString, varNameMap);
 
   } catch (error) {
     console.error('[SCIP Solver] Error:', error);
@@ -127,7 +151,7 @@ const solveWithSCIP = async (graph, targetNodeIds, weights) => {
 /**
  * Build MPS format string directly from graph (full double precision)
  */
-const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
+const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}, phaseBounds = null) => {
   const variables = [];
   const varSet = new Set();
   const integerVars = new Set(); // mc_ general integers
@@ -184,6 +208,7 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
 
   // Flags to skip unused variable types entirely from the MPS model
   const useModelCount = weights.MODEL_COUNT_WEIGHT > 0;
+  const mcUpperBounds = new Map(); // mcVarName -> tight upper bound from phase 1
 
   // ===== Machine count variables =====
   Object.keys(graph.nodes).forEach(nodeId => {
@@ -229,13 +254,36 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
       (weights.POWER_WEIGHT * powerValue) +
       (weights.POLLUTION_WEIGHT * pollutionValue);
     if (continuousObjCoeff !== 0) addObjCoeff(varName, continuousObjCoeff);
-    const mcVarName = registerVar(`mc_${nodeId}`, true); // general integer
-    addConstraint(`ceil_${nodeId}`, [[mcVarName, 1], [varName, -1]], 0, 'min');
 
-    const integerObjCoeff =
-      (weights.COST_WEIGHT * machineCost) +
-      (useModelCount ? weights.MODEL_COUNT_WEIGHT * modelCountPerMachine : 0);
-    if (integerObjCoeff !== 0) addObjCoeff(mcVarName, integerObjCoeff);
+    const wantsCeilVar = weights.COST_WEIGHT > 0 || useModelCount;
+    if (wantsCeilVar) {
+      const approxObjCoeff =
+        (weights.COST_WEIGHT * machineCost) +
+        (useModelCount ? weights.MODEL_COUNT_WEIGHT * modelCountPerMachine : 0);
+
+      if (phaseBounds !== null) {
+        const lpValue = phaseBounds.get(nodeId) || 0;
+        const ceilValue = Math.ceil(lpValue);
+
+        if (lpValue > 1000) {
+          // Large machine counts — integer precision negligible, use continuous approximation
+          if (approxObjCoeff !== 0) addObjCoeff(varName, approxObjCoeff);
+          console.log(`[SCIP Phase 2] mc_${nodeId}: continuous fallback (lpValue=${lpValue.toFixed(4)})`);
+        } else {
+          const mcVarName = registerVar(`mc_${nodeId}`, true);
+          addConstraint(`ceil_${nodeId}`, [[mcVarName, 1], [varName, -1]], 0, 'min');
+          const buffer = Math.max(2, Math.ceil(lpValue * 0.05));
+          const mcLower = ceilValue;
+          const mcUpper = ceilValue + buffer;
+          mcUpperBounds.set(mcVarName, { lower: mcLower, upper: mcUpper });
+          if (approxObjCoeff !== 0) addObjCoeff(mcVarName, approxObjCoeff);
+          console.log(`[SCIP Phase 2] mc_${nodeId}: [${mcLower}, ${mcUpper}] (lpValue=${lpValue.toFixed(4)}, buffer=${buffer})`);
+        }
+      } else {
+        // Phase 1: approximate on continuous m_ so LP solution is meaningful
+        if (approxObjCoeff !== 0) addObjCoeff(varName, approxObjCoeff);
+      }
+    }
 
     if (machineCountMode === 'locked') {
       addConstraint(`lock_${nodeId}`, [[varName, 1]], currentCount, 'equal');
@@ -443,9 +491,15 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}) => {
   rowMap.clear();
 
   out.push('BOUNDS\n');
-  // General integers need explicit upper bound or MPS defaults them to [0,1] (binary)
+  // Per-node tight bounds from phase 1 LP solution — LO and UP only, never FX
   generalIntVars.forEach(varName => {
-    out.push(` UP BND  ${varName}  1000000\n`);
+    const info = mcUpperBounds.get(varName);
+    if (info) {
+      out.push(` LO BND  ${varName}  ${info.lower}\n`);
+      out.push(` UP BND  ${varName}  ${info.upper}\n`);
+    } else {
+      out.push(` UP BND  ${varName}  1000000\n`);
+    }
   });
   // Binary indicators
   binaryVarsList.forEach(varName => {
