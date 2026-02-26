@@ -370,6 +370,167 @@ const buildAutoCompleteMPS = (
   return { mpsString: out.join(''), varNameMap };
 };
 
+// ─── Phase 2 MILP Builder ─────────────────────────────────────────────────────
+//
+// Takes only the recipes selected by the Phase 1 LP and builds a small MILP
+// where each variable m_r is an INTEGER machine count (not a run rate).
+// Coefficients are expressed as rate-per-machine (qty / cycle_time), so the
+// product conservation constraints correctly enforce flow ratios between recipes.
+// The objective uses true integer costs: cost * m_r, model_count * m_r.
+//
+const buildPhase2MPS = (
+  deficits, selectedRecipes, committedProductIds = new Set(),
+  activeWeights = [], unusedWeights = [], phase1Solution = {}
+) => {
+  const weights = computeObjectiveWeights(activeWeights, unusedWeights);
+
+  // Synthetic hot-water rows needed by boilers in the selected set
+  const hotWaterRows = new Set();
+  for (const recipe of selectedRecipes.values()) {
+    if (recipe.machine_id !== 'm_boiler') continue;
+    const input1 = recipe.inputs[1];
+    if (input1?.product_id && WATER_PRODUCTS.has(input1.product_id)) {
+      hotWaterRows.add(hotProduct(input1.product_id));
+    }
+  }
+
+  // constrainedProducts = products we actually add G rows for.
+  // Only include a product if it has at least one producer in the selected set.
+  // Products with no producer are treated as freely available (externally supplied).
+  // Deficit products are always included — Phase 1 guarantees they are producible.
+  const constrainedProducts = new Set([...deficits.keys()]);
+
+  for (const recipe of selectedRecipes.values()) {
+    const isHeatSource = HEAT_SOURCE_MACHINE_IDS.has(recipe.machine_id);
+    const isBoiler     = recipe.machine_id === 'm_boiler';
+    for (const output of recipe.outputs) {
+      if (!output.product_id || output.product_id === 'p_variableproduct') continue;
+      constrainedProducts.add(output.product_id);
+      // Heat sources also produce to the synthetic hot-water row
+      if (isHeatSource && !isBoiler && WATER_PRODUCTS.has(output.product_id)) {
+        const hp = hotProduct(output.product_id);
+        if (hotWaterRows.has(hp)) constrainedProducts.add(hp);
+      }
+    }
+  }
+
+  const productRow = (productId) => sanitize(`prod_${productId}`);
+  const varNameMap = new Map();
+  for (const recipeId of selectedRecipes.keys()) {
+    varNameMap.set(sanitize(`m_${recipeId}`), recipeId);
+  }
+
+  const out = [];
+  out.push('NAME AUTOCOMPLETE_P2\n');
+
+  // ── ROWS: only constrained products ───────────────────────────────────────
+  out.push('ROWS\n');
+  out.push(' N  obj\n');
+  for (const productId of constrainedProducts) {
+    out.push(` G  ${productRow(productId)}\n`);
+  }
+
+  // ── COLUMNS (all integer) ─────────────────────────────────────────────────
+  out.push('COLUMNS\n');
+  out.push("    INT1      'MARKER'                 'INTORG'\n");
+
+  for (const [recipeId, recipe] of selectedRecipes) {
+    const varName   = sanitize(`m_${recipeId}`);
+    const cycleTime = recipe.cycle_time;
+
+    const power = typeof recipe.power_consumption === 'number'
+      ? recipe.power_consumption
+      : (recipe.power_consumption?.max ?? 0);
+    const pollution   = typeof recipe.pollution === 'number' ? recipe.pollution : 0;
+    const machine     = getMachine(recipe.machine_id);
+    const machineCost = machine && typeof machine.cost === 'number' ? machine.cost : 0;
+    const inputOutputCount = (recipe.inputs?.length || 0) + (recipe.outputs?.length || 0);
+    const powerFactor = recipe.power_type === 'HV' ? 2 : Math.ceil(power / 1500000) * 2;
+    const modelCountPerMachine = 1 + powerFactor + (inputOutputCount * 2);
+
+    const objCoeff =
+      (weights.MODEL_COUNT_WEIGHT * modelCountPerMachine) +
+      (weights.COST_WEIGHT        * machineCost) +
+      (weights.POWER_WEIGHT       * power) +
+      (weights.POLLUTION_WEIGHT   * pollution) +
+      1e-4;
+
+    out.push(`    ${varName}  obj  ${objCoeff}\n`);
+
+    const isHeatSource = HEAT_SOURCE_MACHINE_IDS.has(recipe.machine_id);
+    const isBoiler     = recipe.machine_id === 'm_boiler';
+
+    // Outputs — only write if the product has a row
+    for (const output of recipe.outputs) {
+      if (!output.product_id || output.product_id === 'p_variableproduct') continue;
+      if (typeof output.quantity !== 'number') continue;
+      if (!constrainedProducts.has(output.product_id)) continue;
+
+      const ratePerMachine = output.quantity / cycleTime;
+      out.push(`    ${varName}  ${productRow(output.product_id)}  ${ratePerMachine}\n`);
+
+      // Heat sources also write to the synthetic hot-water row
+      if (isHeatSource && !isBoiler && WATER_PRODUCTS.has(output.product_id)) {
+        const hp = hotProduct(output.product_id);
+        if (constrainedProducts.has(hp)) {
+          out.push(`    ${varName}  ${productRow(hp)}  ${ratePerMachine}\n`);
+        }
+      }
+    }
+
+    // Inputs — only write if the product has a row
+    for (let i = 0; i < recipe.inputs.length; i++) {
+      const input = recipe.inputs[i];
+      if (!input.product_id || input.product_id === 'p_variableproduct') continue;
+      if (typeof input.quantity !== 'number') continue;
+      if (committedProductIds.has(input.product_id)) continue;
+
+      const ratePerMachine = input.quantity / cycleTime;
+
+      if (isBoiler && i === 1 && WATER_PRODUCTS.has(input.product_id)) {
+        // Heat-source port consumes from synthetic hot-water row
+        const hp = hotProduct(input.product_id);
+        if (constrainedProducts.has(hp)) {
+          out.push(`    ${varName}  ${productRow(hp)}  ${-ratePerMachine}\n`);
+        }
+      } else {
+        if (!constrainedProducts.has(input.product_id)) continue;
+        if (TEMPERATURE_PRODUCTS.includes(input.product_id) && !constrainedProducts.has(input.product_id)) continue;
+        out.push(`    ${varName}  ${productRow(input.product_id)}  ${-ratePerMachine}\n`);
+      }
+    }
+  }
+
+  out.push("    INT1END   'MARKER'                 'INTEND'\n");
+
+  // ── RHS ───────────────────────────────────────────────────────────────────
+  out.push('RHS\n');
+  for (const [productId, requiredRate] of deficits) {
+    if (requiredRate > 0) {
+      out.push(`    rhs  ${productRow(productId)}  ${requiredRate}\n`);
+    }
+  }
+
+  // ── BOUNDS ────────────────────────────────────────────────────────────────
+  // SCIP integer vars in INTORG/INTEND default to [0,1] without explicit UP BND.
+  // Derive upper bounds from Phase 1 fractional machine counts with a buffer.
+  out.push('BOUNDS\n');
+  for (const recipeId of selectedRecipes.keys()) {
+    const varName = sanitize(`m_${recipeId}`);
+    const recipe = selectedRecipes.get(recipeId);
+    const fractionalMachines = (phase1Solution[recipeId] ?? 0) * recipe.cycle_time;
+    const ceilMachines = Math.ceil(fractionalMachines);
+    const upperBound = Math.max(ceilMachines + 5, Math.ceil(ceilMachines * 1.5), 10);
+    out.push(` UP BND  ${varName}  ${upperBound}\n`);
+  }
+
+  out.push('ENDATA\n');
+
+  console.log(`[AutoComplete Phase 2] MPS: ${(out.join('').length / 1024).toFixed(1)} KB | constrained products: ${constrainedProducts.size} | recipes: ${selectedRecipes.size}`);
+
+  return { mpsString: out.join(''), varNameMap };
+};
+
 // ─── Main Solve ───────────────────────────────────────────────────────────────
 
 export const solveAutoComplete = async (
@@ -396,37 +557,80 @@ export const solveAutoComplete = async (
   console.group('[AutoComplete] Committed products (BFS stops here)');
   console.log([...committedProductIds].join(', ') || '(none)');
   console.groupEnd();
-  console.group('[AutoComplete] All reachable recipes (BFS result)');
-  reachableRecipes.forEach((recipe, id) => {
-    const inputs  = recipe.inputs.map(i => `${i.product_id}×${i.quantity}`).join(', ') || '—';
-    const outputs = recipe.outputs.map(o => `${o.product_id}×${o.quantity}`).join(', ');
-    console.log(`  [${id}] ${recipe.name} | IN: ${inputs} | OUT: ${outputs}`);
-  });
-  console.groupEnd();
 
-  const { mpsString, varNameMap } = buildAutoCompleteMPS(
+  // ── Phase 1: continuous LP to select which recipes are needed ──────────────
+  console.log(`[AutoComplete Phase 1] Running LP over ${reachableRecipes.size} candidate recipes...`);
+  const { mpsString: mps1, varNameMap: vm1 } = buildAutoCompleteMPS(
     deficits, reachableRecipes, committedProductIds, activeWeights, unusedWeights
   );
-  const solution = await solveMPSRaw(mpsString, varNameMap);
+  const phase1Solution = await solveMPSRaw(mps1, vm1);
 
-  if (!solution.feasible) {
-    console.warn('[AutoComplete] LP infeasible — deficiencies may be unresolvable with available recipes');
+  if (!phase1Solution.feasible) {
+    console.warn('[AutoComplete Phase 1] LP infeasible — deficiencies may be unresolvable with available recipes');
     return { feasible: false, recipes: [], stats: { recipesEvaluated: reachableRecipes.size, recipesSelected: 0 } };
   }
 
-  const results = [];
+  // Collect all recipes Phase 1 assigned any positive rate to
+  const selectedRecipes = new Map();
   for (const [recipeId, recipe] of reachableRecipes) {
-    const rate = solution[recipeId] ?? 0;
-    if (rate < EPSILON) continue;
-    const machineCount = rate * recipe.cycle_time;
-    results.push({ recipeId, recipe, machineCount, rate });
+    const rate = phase1Solution[recipeId] ?? 0;
+    if (rate > EPSILON) {
+      selectedRecipes.set(recipeId, recipe);
+    }
   }
 
-  console.group(`[AutoComplete] LP selected ${results.length} / ${reachableRecipes.size} recipes`);
-  results.forEach(({ recipeId, recipe, machineCount, rate }) => {
+  console.log(`[AutoComplete Phase 1] Selected ${selectedRecipes.size} / ${reachableRecipes.size} recipes with positive rate`);
+  console.group('[AutoComplete Phase 1] Selected recipes');
+  for (const [recipeId, recipe] of selectedRecipes) {
+    const rate = phase1Solution[recipeId];
+    console.log(`  [${recipeId}] ${recipe.name} — rate=${rate.toFixed(6)}/s fractional_machines=${(rate * recipe.cycle_time).toFixed(4)}`);
+  }
+  console.groupEnd();
+
+  if (selectedRecipes.size === 0) {
+    console.warn('[AutoComplete Phase 1] No recipes selected despite feasible solution');
+    return { feasible: false, recipes: [], stats: { recipesEvaluated: reachableRecipes.size, recipesSelected: 0 } };
+  }
+
+  // ── Phase 2: MILP over selected recipes with integer machine count variables ─
+  console.log(`[AutoComplete Phase 2] Running MILP over ${selectedRecipes.size} selected recipes...`);
+  const { mpsString: mps2, varNameMap: vm2 } = buildPhase2MPS(
+    deficits, selectedRecipes, committedProductIds, activeWeights, unusedWeights, phase1Solution
+  );
+  const phase2Solution = await solveMPSRaw(mps2, vm2);
+
+  if (!phase2Solution.feasible) {
+    // Phase 2 MILP failed — fall back to Phase 1 with ceil'd machine counts
+    console.warn('[AutoComplete Phase 2] MILP infeasible — falling back to Phase 1 ceil results');
+    const fallbackResults = [];
+    for (const [recipeId, recipe] of selectedRecipes) {
+      const rate = phase1Solution[recipeId] ?? 0;
+      const machineCount = Math.ceil(rate * recipe.cycle_time);
+      if (machineCount > 0) {
+        fallbackResults.push({ recipeId, recipe, machineCount, rate });
+      }
+    }
+    return {
+      feasible: true,
+      recipes: fallbackResults,
+      stats: { recipesEvaluated: reachableRecipes.size, recipesSelected: fallbackResults.length, usedFallback: true },
+    };
+  }
+
+  // Extract integer machine counts directly from Phase 2 solution
+  const results = [];
+  for (const [recipeId, recipe] of selectedRecipes) {
+    const machineCount = Math.round(phase2Solution[recipeId] ?? 0);
+    if (machineCount > 0) {
+      results.push({ recipeId, recipe, machineCount, rate: machineCount / recipe.cycle_time });
+    }
+  }
+
+  console.group(`[AutoComplete Phase 2] MILP selected ${results.length} recipes`);
+  results.forEach(({ recipeId, recipe, machineCount }) => {
     const inputs  = recipe.inputs.map(i => `${i.product_id}×${i.quantity}`).join(', ') || '—';
     const outputs = recipe.outputs.map(o => `${o.product_id}×${o.quantity}`).join(', ');
-    console.log(`  [${recipeId}] ${recipe.name} | rate=${rate.toFixed(6)}/s machines=${machineCount.toFixed(4)} | IN: ${inputs} | OUT: ${outputs}`);
+    console.log(`  [${recipeId}] ${recipe.name} | machines=${machineCount} | IN: ${inputs} | OUT: ${outputs}`);
   });
   console.groupEnd();
 

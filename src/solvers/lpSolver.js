@@ -272,7 +272,7 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}, phaseBou
         } else {
           const mcVarName = registerVar(`mc_${nodeId}`, true);
           addConstraint(`ceil_${nodeId}`, [[mcVarName, 1], [varName, -1]], 0, 'min');
-          const buffer = Math.max(2, Math.ceil(lpValue * 0.05));
+          const buffer = Math.max(2, Math.ceil(lpValue * 0.5));
           const mcLower = ceilValue;
           const mcUpper = ceilValue + buffer;
           mcUpperBounds.set(mcVarName, { lower: mcLower, upper: mcUpper });

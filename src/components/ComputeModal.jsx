@@ -65,7 +65,7 @@ const Spinner = () => {
   );
 };
 
-const ComputeModal = ({ phase, nodeSnapshot, result, onCancel, onApply, onLocateNode }) => {
+const ComputeModal = ({ phase, nodeSnapshot, result, onCancel, onApply, onLocateNode, onAutoComplete }) => {
   const [elapsedMs, setElapsedMs] = useState(0);
   const [tipIndex, setTipIndex] = useState(() => Math.floor(Math.random() * TIPS.length));
   const startRef = useRef(Date.now());
@@ -281,10 +281,20 @@ const ComputeModal = ({ phase, nodeSnapshot, result, onCancel, onApply, onLocate
         </div>
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-          <button onClick={onCancel} className="btn btn-secondary">Dismiss</button>
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+          <button onClick={onCancel} className="btn btn-secondary" style={{ minWidth: 'auto', padding: '10px 16px' }}>Dismiss</button>
+          {!result?.solverError && !result?.error && !result?.hasDeficiency && (
+            <button
+              onClick={() => { onCancel(); onAutoComplete(); }}
+              className="btn btn-secondary"
+              title="Auto-complete missing recipe chains"
+              style={{ minWidth: 'auto', padding: '10px 16px' }}
+            >
+              Auto Complete
+            </button>
+          )}
           {hasChanges && (
-            <button onClick={() => onApply(result)} className="btn btn-primary">Apply Changes</button>
+            <button onClick={() => onApply(result)} className="btn btn-primary" style={{ padding: '10px 16px' }}>Apply Changes</button>
           )}
         </div>
       </div>

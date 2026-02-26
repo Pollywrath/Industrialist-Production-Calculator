@@ -2433,14 +2433,6 @@ function App() {
                   <button onClick={handleCompute} className="btn btn-secondary" disabled={computeModal !== null}>
                     {computeModal !== null ? 'Computing...' : 'Compute Machines'}
                   </button>
-                  <button
-                    onClick={handleAutoComplete}
-                    className="btn btn-secondary"
-                    disabled={computeModal !== null || !productionSolution}
-                    title={!productionSolution ? 'Run LP solve first' : 'Auto-complete missing recipe chains'}
-                  >
-                    AutoComplete
-                  </button>
                   <button onClick={handleAutoLayout} className="btn btn-secondary">Auto Layout</button>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <button onClick={() => setExtendedPanelOpen(!extendedPanelOpen)} className="btn btn-secondary btn-square"
@@ -3031,6 +3023,7 @@ function App() {
           onConfirmDeficiency={handleComputeConfirmDeficiency}
           onApply={handleComputeApply}
           onLocateNode={handleLocateNode}
+          onAutoComplete={handleAutoComplete}
         />
       )}
 
