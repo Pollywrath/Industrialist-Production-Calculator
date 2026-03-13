@@ -934,7 +934,7 @@ function App() {
   }, []);
 
   const openRecipeSelectorForInput = useCallback((productId, nodeId, inputIndex, event) => {
-    if (event?.ctrlKey) {
+    if (event?.ctrlKey || event?.metaKey) {
       setEdges(eds => eds.filter(edge => !(edge.target === nodeId && edge.targetHandle === `left-${inputIndex}`)));
       clearFlowCache();
       triggerRecalculation('connection');
@@ -951,7 +951,7 @@ function App() {
   }, [setEdges, isMobile, mobileActionMode, triggerRecalculation]);
 
   const openRecipeSelectorForOutput = useCallback((productId, nodeId, outputIndex, event) => {
-    if (event?.ctrlKey) {
+    if (event?.ctrlKey || event?.metaKey) {
       setEdges(eds => eds.filter(edge => !(edge.source === nodeId && edge.sourceHandle === `right-${outputIndex}`)));
       clearFlowCache();
       triggerRecalculation('connection');
@@ -1544,7 +1544,7 @@ function App() {
     
     // Desktop keyboard shortcuts
     if (event.shiftKey && !event.ctrlKey && !event.altKey) toggleTargetStatus(node);
-    else if (event.ctrlKey && event.altKey) deleteRecipeBoxAndTarget(node.id);
+    else if ((event.ctrlKey || event.metaKey) && event.altKey) deleteRecipeBoxAndTarget(node.id);
   }, [isMobile, mobileActionMode, toggleTargetStatus, deleteRecipeBoxAndTarget]);
 
   const onNodeDoubleClick = useCallback((event, node) => {
@@ -1614,6 +1614,10 @@ function App() {
   }, [pendingNode, nodeId, displayMode, machineDisplayMode, globalPollution, setNodes, createNodeCallbacks, triggerRecalculation]);
 
   const handleCancelPlacement = useCallback((event) => {
+    if (event.altKey || event.metaKey || event.ctrlKey) {
+      event.preventDefault();
+      return;
+    }
     if (event.button === 2) setPendingNode(null);
   }, []);
   const handleMachineCountUpdate = useCallback((propagate = false) => {

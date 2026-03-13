@@ -51,7 +51,7 @@ const HelpModal = ({ onClose }) => {
                   <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Set Target:</span> Shift+Click node
                 </div>
                 <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Delete:</span> Ctrl+Alt+Click node
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Delete:</span> Ctrl+Alt+Click node <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>(Mac: ⌘+⌥+Click)</span>
                 </div>
                 <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
                   <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Duplicate:</span> Middle-click node, left-click to place
@@ -68,7 +68,7 @@ const HelpModal = ({ onClose }) => {
               <h4 style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600, marginBottom: '10px' }}>Connection Actions</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingLeft: '15px' }}>
                 <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
-                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Delete:</span> Ctrl+Click input/output rectangle
+                  <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Delete:</span> Ctrl+Click input/output rectangle <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>(Mac: ⌘+Click)</span>
                 </div>
                 <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>
                   <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>Auto-Connect:</span> Click input/output rectangle

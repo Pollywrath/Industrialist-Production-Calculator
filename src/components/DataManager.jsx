@@ -79,8 +79,13 @@ function parseCapacity(val) {
 function sanitizeItemName(name) {
   if (!name) return name;
   return name
-    .replace(/<sup>(.*?)<\/sup>/gi, '^$1').replace(/<sub>(.*?)<\/sub>/gi, '_$1')
-    .replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+    .replace(/<sup>(.*?)<\/sup>/gi, '^$1')
+    .replace(/<sub>(.*?)<\/sub>/gi, '_$1')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/<[^>]+>/g, ''); 
 }
 
 // ─── Compare Logic ────────────────────────────────────────────────────────────
