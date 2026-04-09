@@ -90,9 +90,9 @@
   --radius-lg: 12px;
   
   /* Shadows */
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: none;
   --shadow-target: 0 4px 12px rgba(245, 213, 106, 0.3);
   
   /* Typography */
@@ -435,19 +435,18 @@ input[type="number"] {
   border: 2px solid var(--node-border);
   color: var(--text-primary);
   font-weight: 500;
-  box-shadow: none; /* Remove shadow during interactions */
   position: relative;
   display: flex;
   flex-direction: column;
-  will-change: transform; /* GPU acceleration for dragging */
-  transform: translateZ(0); /* Force GPU acceleration and prevent blur */
-  backface-visibility: hidden;
-  -webkit-font-smoothing: subpixel-antialiased;
+  overflow: visible;
 }
 
-/* Only show shadow when not dragging */
-.custom-node:not(.dragging) {
-  box-shadow: var(--shadow-md);
+/* Remove shadow when dragging since it's expensive */
+.custom-node.dragging,
+.custom-node:active {
+  will-change: transform;
+  transform: translateZ(0);
+  z-index: 1000;
 }
 
 .custom-node.target {

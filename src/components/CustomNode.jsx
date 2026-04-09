@@ -1,5 +1,5 @@
-import React, { useState, memo, useCallback, useMemo } from 'react';
-import { Handle, Position } from '@xyflow/react';
+import React, { useState, memo, useCallback, useMemo, useEffect } from 'react';
+import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react';
 import { getProduct } from '../data/dataLoader';
 import { getProductName, formatPowerConsumption, formatPollution } from '../utils/variableHandler';
 import { isTemperatureProduct, formatTemperature, needsTemperatureConfig, needsBoilerConfig, HEAT_SOURCES, 
@@ -16,10 +16,17 @@ const CustomNode = memo(({ data, id }) => {
     onDrillSettingsChange, onLogicAssemblerSettingsChange, onTreeFarmSettingsChange, onIndustrialFireboxSettingsChange, 
     onTemperatureSettingsChange, onBoilerSettingsChange, onChemicalPlantSettingsChange, globalPollution, flows, isMobile, mobileActionMode, onMachineCountModeChange, zoomLevel } = data;
   
-  // Determine detail level based on zoom
   const showDetails = !zoomLevel || zoomLevel >= 0.25;
   
+  const updateNodeInternals = useUpdateNodeInternals();
   const [settingsModal, setSettingsModal] = useState(null);
+  
+  const leftCount = recipe.inputs.length;
+  const rightCount = recipe.outputs.length;
+
+  useEffect(() => {
+    updateNodeInternals(id);
+  }, [id, leftCount, rightCount, updateNodeInternals]);
   
   if (!recipe?.inputs || !recipe?.outputs || !machine) return null;
   
@@ -155,8 +162,6 @@ const CustomNode = memo(({ data, id }) => {
   // Add HV suffix if power type is HV
   const powerSuffix = recipe.power_type === 'HV' ? ' HV' : '';
   
-  const leftCount = recipe.inputs.length;
-  const rightCount = recipe.outputs.length;
   const maxCount = Math.max(leftCount, rightCount, 1);
   const multiplier = maxCount >= 5 ? 8 : 24;
   

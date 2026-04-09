@@ -3,9 +3,6 @@ import defaultMachinesData from './machines.json';
 import defaultRecipesData from './recipes.json';
 
 const STORAGE_KEYS = { 
-  PRODUCTS: 'industrialist_products', 
-  MACHINES: 'industrialist_machines', 
-  RECIPES: 'industrialist_recipes', 
   CANVAS_STATE: 'industrialist_canvas_state' 
 };
 
@@ -29,11 +26,15 @@ const saveToStorage = (key, data) => {
   }
 };
 
-let products = loadFromStorage(STORAGE_KEYS.PRODUCTS, defaultProductsData);
-let machines = loadFromStorage(STORAGE_KEYS.MACHINES, defaultMachinesData);
-let recipes = loadFromStorage(STORAGE_KEYS.RECIPES, defaultRecipesData);
+let products = defaultProductsData;
+let machines = defaultMachinesData;
+let recipes = defaultRecipesData;
 
 export { products, machines, recipes };
+
+export const updateProducts = (newProducts) => { products = newProducts; };
+export const updateMachines = (newMachines) => { machines = newMachines; };
+export const updateRecipes = (newRecipes) => { recipes = newRecipes; };
 
 export const getProduct = (productId) => products.find(p => p.id === productId);
 export const getMachine = (machineId) => machines.find(m => m.id === machineId);
@@ -43,16 +44,6 @@ export const getRecipesProducingProduct = (productId) =>
 
 export const getDisposalRecipes = () => 
   recipes.filter(r => ['r_underground_waste_facility', 'r_liquid_dump', 'r_liquid_burner'].includes(r.id));
-
-const updateArray = (arr, newData, key) => {
-  arr.length = 0;
-  arr.push(...newData);
-  saveToStorage(key, arr);
-};
-
-export const updateProducts = (newProducts) => updateArray(products, newProducts, STORAGE_KEYS.PRODUCTS);
-export const updateMachines = (newMachines) => updateArray(machines, newMachines, STORAGE_KEYS.MACHINES);
-export const updateRecipes = (newRecipes) => updateArray(recipes, newRecipes, STORAGE_KEYS.RECIPES);
 
 export const saveCanvasState = (nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts = {}) => {
   saveToStorage(STORAGE_KEYS.CANVAS_STATE, { 
@@ -66,8 +57,5 @@ export const clearCanvasState = () => {
 };
 
 export const restoreDefaults = () => {
-  updateProducts(defaultProductsData);
-  updateMachines(defaultMachinesData);
-  updateRecipes(defaultRecipesData);
   clearCanvasState();
-};
+};

@@ -72,17 +72,27 @@ const COL = { product: 360, rate: 90, machine: 170, count: 70, power: 110, pollu
 
 const GUIDE_W = 18;
 const GUIDE_COLOR = 'var(--border-light)';
-const guideSegment = (() => {
+const guideSegment = (type, key) => {
   const c = GUIDE_COLOR;
-  const base = { width: GUIDE_W, flexShrink: 0, alignSelf: 'stretch', backgroundRepeat: 'no-repeat' };
-  const cache = {
-    pass:  { ...base, backgroundImage: `linear-gradient(${c} 0%,${c} 100%)`, backgroundSize: '2px 100%', backgroundPosition: '8px 0' },
-    tee:   { ...base, backgroundImage: `linear-gradient(${c},${c}),linear-gradient(${c},${c})`, backgroundSize: '2px 100%, calc(50% - 8px) 2px', backgroundPosition: '8px 0, 10px 50%' },
-    elbow: { ...base, backgroundImage: `linear-gradient(${c},${c}),linear-gradient(${c},${c})`, backgroundSize: '2px 50%, calc(50% - 8px) 2px', backgroundPosition: '8px 0, 10px 50%' },
-    empty: { width: GUIDE_W, flexShrink: 0 },
-  };
-  return (type) => cache[type] || cache.empty;
-})();
+  if (type === 'empty') return <div key={key} style={{ width: GUIDE_W, flexShrink: 0 }} />;
+  
+  return (
+    <div key={key} style={{ width: GUIDE_W, flexShrink: 0, alignSelf: 'stretch', position: 'relative' }}>
+      {/* Vertical line part */}
+      <div style={{
+        position: 'absolute', left: '8px', top: 0, bottom: type === 'elbow' ? '50%' : 0,
+        width: '2px', background: c
+      }} />
+      {/* Horizontal line part */}
+      {(type === 'tee' || type === 'elbow') && (
+        <div style={{
+          position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)',
+          height: '2px', right: 0, background: c
+        }} />
+      )}
+    </div>
+  );
+};
 const TOTAL_WIDTH = Object.values(COL).reduce((a, b) => a + b, 0);
 
 const HEADER_STYLE = {
@@ -330,7 +340,7 @@ const StubRow = ({ node, outputIdx, depth, kind, onLocateNode, lineStates = [], 
     }}>
       <div style={{ ...CELL_STYLE, width: COL.product, flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0' }}>
         {lineStates.map((hasMore, d) => (
-          <div key={d} style={guideSegment(d === depth - 1 ? (isLast ? 'elbow' : 'tee') : (hasMore ? 'pass' : 'empty'))} />
+          guideSegment(d === depth - 1 ? (isLast ? 'elbow' : 'tee') : (hasMore ? 'pass' : 'empty'), d)
         ))}
         <span style={{ width: '14px', flexShrink: 0 }} />
         <span style={{
@@ -436,7 +446,7 @@ const TreeRowInner = ({ node, depth, connectingOutputIdx, childrenOf, nodeMap, a
         {/* Product */}
         <div style={{ ...CELL_STYLE, width: COL.product, flexShrink: 0, display: 'flex', alignItems: 'center', gap: '0' }}>
           {lineStates.map((hasMore, d) => (
-            <div key={d} style={guideSegment(d === depth - 1 ? (isLast ? 'elbow' : 'tee') : (hasMore ? 'pass' : 'empty'))} />
+            guideSegment(d === depth - 1 ? (isLast ? 'elbow' : 'tee') : (hasMore ? 'pass' : 'empty'), d)
           ))}
           {hasChildren ? (
             <button

@@ -3,7 +3,7 @@ import { DEPTH_OUTPUTS } from '../data/mineshaftDrill';
 import { MICROCHIP_STAGES } from '../data/logicAssembler';
 import { HEAT_SOURCES, calculateOutputTemperature, DEFAULT_BOILER_INPUT_TEMPERATURE, 
   DEFAULT_WATER_TEMPERATURE, DEFAULT_STEAM_TEMPERATURE, getDefaultTemperatureSettings, isTemperatureProduct,
-  hasTempDependentCycle, TEMP_DEPENDENT_MACHINES } from './temperatureUtils';
+  hasTempDependentCycle, TEMP_DEPENDENT_MACHINES, getPowerConsumptionForTemperature } from './temperatureUtils';
 import { DEFAULT_WASTE_FACILITY_RECIPE } from '../data/undergroundWasteFacility';
 import { DEFAULT_LIQUID_DUMP_RECIPE } from '../data/liquidDump';
 import { DEFAULT_LIQUID_BURNER_RECIPE } from '../data/liquidBurner';
@@ -148,6 +148,15 @@ export const initializeRecipeTemperatures = (recipe, machineId) => {
     const updatedOutputs = applyTemperatureToOutputs(recipe.outputs, outputTemp, isBoiler, heatSource, inputTemp);
 
     updatedRecipe = { ...updatedRecipe, outputs: updatedOutputs, temperatureSettings: settingsWithCoolant };
+    
+    // Initialize power consumption for configurable sources
+    if (heatSource.type === 'configurable') {
+      const initialPower = getPowerConsumptionForTemperature(machineId, settingsWithCoolant.temperature);
+      if (initialPower !== null) {
+        updatedRecipe.power_consumption = initialPower;
+        updatedRecipe.power_type = 'MV'; // Electric heaters are always MV
+      }
+    }
   }
   
   // Initialize temperature-dependent input temperatures (for machines with temp-dependent cycles)

@@ -119,9 +119,9 @@ const industrialDrillSeconds = (tempC) => {
 
 const alloyerSeconds = (tempC) => {
   if (tempC <= 0) return 40;
-  if (tempC <= 300) return 1500 / tempC + 5;
-  if (tempC < 350) return 10 - (tempC - 300) / 25;
-  return 8;
+  if (tempC < 300) return 1500 / tempC + 5;
+  if (tempC >= 400) return 8;
+  return 4000 / (tempC + 100);
 };
 
 const coalLiquefactionSeconds = (tempC) => {
@@ -188,7 +188,22 @@ export const propagateTemperatures = (graph, flows) => {
     });
     
     node.outputs.forEach((output, outputIndex) => {
-      outputTemperatures.set(`${nodeId}:${outputIndex}`, DEFAULT_WATER_TEMPERATURE);
+      let initialTemp = DEFAULT_WATER_TEMPERATURE;
+      
+      // Smart initialization: start fixed/configurable sources at their target temps
+      const machineId = node.recipe.machine_id;
+      const heatSource = HEAT_SOURCES[machineId];
+      if (heatSource) {
+        if (heatSource.type === 'fixed') {
+          initialTemp = heatSource.outputTemp;
+        } else if (heatSource.type === 'configurable') {
+          initialTemp = node.recipe.temperatureSettings?.temperature || heatSource.tempOptions[0].temp;
+        } else if (heatSource.type === 'product_dependent') {
+          initialTemp = heatSource.temps.p_water || 400;
+        }
+      }
+      
+      outputTemperatures.set(`${nodeId}:${outputIndex}`, initialTemp);
     });
   });
   
@@ -219,34 +234,31 @@ export const propagateTemperatures = (graph, flows) => {
       let temperature = DEFAULT_WATER_TEMPERATURE;
       
       if (heatSource) {
+        const firstInputTemp = node.inputs.length > 0 ? (inputTemperatures.get(`${nodeId}:0`) || DEFAULT_WATER_TEMPERATURE) : DEFAULT_WATER_TEMPERATURE;
+
         if (heatSource.type === 'fixed') {
-          // Fixed temperature output
-          temperature = heatSource.outputTemp;
+          // Fixed temperature output, but passthrough if input is already hotter
+          temperature = Math.max(firstInputTemp, heatSource.outputTemp);
           
         } else if (heatSource.type === 'additive') {
-          // Geothermal: input + 80°C up to 220°C max, or passthrough if > 220°C
-          if (node.inputs.length > 0) {
-            const firstInputTemp = inputTemperatures.get(`${nodeId}:0`) || DEFAULT_WATER_TEMPERATURE;
-            
-            if (firstInputTemp > heatSource.maxTemp) {
-              // Passthrough if input exceeds max
-              temperature = firstInputTemp;
-            } else {
-              // Add temperature increase, capped at max
-              temperature = Math.min(firstInputTemp + heatSource.tempIncrease, heatSource.maxTemp);
-            }
+          // Geothermal: input + 80°C up to 220°C max, or passthrough if already > 220°C
+          if (firstInputTemp >= heatSource.maxTemp) {
+            temperature = firstInputTemp;
+          } else {
+            // Add temperature increase, capped at max
+            temperature = Math.min(firstInputTemp + heatSource.tempIncrease, heatSource.maxTemp);
           }
           
         } else if (heatSource.type === 'configurable') {
-          // Electric water heater: user-configured temperature
-          temperature = node.recipe.temperatureSettings?.temperature || heatSource.tempOptions[0].temp;
+          // Electric water heater: user-configured temperature, passthrough if input is already hotter
+          const targetTemp = node.recipe.temperatureSettings?.temperature || heatSource.tempOptions[0].temp;
+          temperature = Math.max(firstInputTemp, targetTemp);
           
         } else if (heatSource.type === 'product_dependent') {
-          // Gas burner: different temps for different water types
-          if (node.inputs.length > 0) {
-            const firstInputProductId = node.inputs[0].productId;
-            temperature = heatSource.temps[firstInputProductId] || heatSource.temps.p_water || 400;
-          }
+          // Gas burner: different temps for different water types, passthrough if input is already hotter
+          const firstInputProductId = node.inputs.length > 0 ? node.inputs[0].productId : 'p_water';
+          const targetTemp = heatSource.temps[firstInputProductId] || heatSource.temps.p_water || 400;
+          temperature = Math.max(firstInputTemp, targetTemp);
           
         } else if (heatSource.type === 'boiler') {
           // Boiler: dual outputs with different temperatures
@@ -374,14 +386,17 @@ const calculateInputTemperature = (graph, flows, nodeId, inputIndex, outputTempe
   const totalFlow = tempFlowPairs.reduce((sum, pair) => sum + pair.flow, 0);
   
   // Use flow-weighted average if flows are available and non-zero
-  if (totalFlow > 0) {
+  if (totalFlow > 1e-9) {
     const weightedTemp = tempFlowPairs.reduce((sum, pair) => sum + (pair.temp * pair.flow), 0);
     return Math.round((weightedTemp / totalFlow) * 1e10) / 1e10;
   }
   
-  // Fall back to simple average if no flow data (e.g., during cycle iterations)
-  const simpleAvgTemp = tempFlowPairs.reduce((sum, pair) => sum + pair.temp, 0);
-  return Math.round((simpleAvgTemp / tempFlowPairs.length) * 1e10) / 1e10;
+  // Fall back to simple average if no flow data (ensures temperature propagates even to zero-flow branches)
+  const validTemps = tempFlowPairs.filter(pair => pair.temp != null);
+  if (validTemps.length === 0) return useDefaults ? DEFAULT_WATER_TEMPERATURE : null;
+  
+  const simpleAvgTemp = validTemps.reduce((sum, pair) => sum + pair.temp, 0);
+  return Math.round((simpleAvgTemp / validTemps.length) * 1e10) / 1e10;
 };
 
 const topologicalSortWithCycles = (graph) => {

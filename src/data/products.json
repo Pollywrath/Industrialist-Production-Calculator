@@ -1495,84 +1495,84 @@
     "name": "2x Microchip",
     "type": "item",
     "price": 4000,
-    "rp_multiplier": "Variable"
+    "rp_multiplier": 1
   },
   {
     "id": "p_4x_microchip",
     "name": "4x Microchip",
     "type": "item",
     "price": 8400,
-    "rp_multiplier": "Variable"
+    "rp_multiplier": 1
   },
   {
     "id": "p_8x_microchip",
     "name": "8x Microchip",
     "type": "item",
     "price": 13200,
-    "rp_multiplier": "Variable"
+    "rp_multiplier": 1
   },
   {
     "id": "p_16x_microchip",
     "name": "16x Microchip",
     "type": "item",
     "price": 17600,
-    "rp_multiplier": "Variable"
+    "rp_multiplier": 1
   },
   {
     "id": "p_32x_microchip",
     "name": "32x Microchip",
     "type": "item",
     "price": 22000,
-    "rp_multiplier": "Variable"
+    "rp_multiplier": 1
   },
   {
     "id": "p_64x_microchip",
     "name": "64x Microchip",
     "type": "item",
     "price": 28220,
-    "rp_multiplier": "Variable"
+    "rp_multiplier": 1
   },
   {
     "id": "p_2x64x_microchip",
     "name": "2x64x Microchip",
     "type": "item",
     "price": 100000,
-    "rp_multiplier": "Variable"
+    "rp_multiplier": 1
   },
   {
     "id": "p_3x64x_microchip",
     "name": "3x64x Microchip",
     "type": "item",
     "price": 250000,
-    "rp_multiplier": "Variable"
+    "rp_multiplier": 1
   },
   {
     "id": "p_4x64x_microchip",
     "name": "4x64x Microchip",
     "type": "item",
     "price": 375000,
-    "rp_multiplier": "Variable"
+    "rp_multiplier": 100
   },
   {
     "id": "p_5x64x_microchip",
     "name": "5x64x Microchip",
     "type": "item",
     "price": 1000000,
-    "rp_multiplier": "Variable"
+    "rp_multiplier": 150
   },
   {
     "id": "p_6x64x_microchip",
     "name": "6x64x Microchip",
     "type": "item",
     "price": 2000000,
-    "rp_multiplier": "Variable"
+    "rp_multiplier": 200
   },
   {
     "id": "p_7x64x_microchip",
     "name": "7x64x Microchip",
     "type": "item",
     "price": 3000000,
-    "rp_multiplier": "Variable"
+    "rp_multiplier": 250
   },
   {
     "id": "p_8x64x_microchip",

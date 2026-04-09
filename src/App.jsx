@@ -7,15 +7,9 @@ import ThemeEditor, { applyTheme, loadTheme } from './components/ThemeEditor';
 import { initializeSaveSystem } from './utils/saveDB';
 const HelpModal = React.lazy(() => import('./components/HelpModal'));
 const SaveManager = React.lazy(() => import('./components/SaveManager'));
-const DataManager = React.lazy(() => import('./components/DataManager'));
 const ComputeModal = React.lazy(() => import('./components/ComputeModal'));
 const RecipesModal = React.lazy(() => import('./components/RecipesModal'));
-import { initializeCustomData, getCustomProducts, getCustomMachines, getCustomRecipes, restoreDefaultProducts, restoreDefaultMachines, restoreDefaultRecipes } from './utils/dataUtilities';
-import { products, machines, recipes, getMachine, getProduct, updateProducts, updateMachines, 
-  updateRecipes, saveCanvasState, loadCanvasState, restoreDefaults } from './data/dataLoader';
-import defaultProductsJSON from './data/products.json';
-import defaultMachinesJSON from './data/machines.json';
-import defaultRecipesJSON from './data/recipes.json';
+import { products, machines, recipes, getMachine, getProduct, saveCanvasState, loadCanvasState, restoreDefaults } from './data/dataLoader';
 import { getProductName, formatIngredient } from './utils/variableHandler';
 import { calculateOutputTemperature, isTemperatureProduct, HEAT_SOURCES, DEFAULT_BOILER_INPUT_TEMPERATURE, 
   DEFAULT_WATER_TEMPERATURE, DEFAULT_STEAM_TEMPERATURE, hasTempDependentCycle, TEMP_DEPENDENT_MACHINES, 
@@ -146,7 +140,6 @@ function App() {
   const [showThemeEditor, setShowThemeEditor] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showSaveManager, setShowSaveManager] = useState(false);
-  const [showDataManager, setShowDataManager] = useState(false);
   const [extendedPanelOpen, setExtendedPanelOpen] = useState(false);
   const [edgeSettings, setEdgeSettings] = useState(() => {
     const theme = loadTheme();
@@ -231,8 +224,6 @@ function App() {
     applyTheme(theme);
     setEdgeSettings({ edgePath: theme.edgePath || 'orthogonal', edgeStyle: theme.edgeStyle || 'animated' });
     
-    // Initialize custom data from defaults if not present
-    initializeCustomData(products, machines, recipes);
 
     // Mobile detection - detect actual mobile devices with improved pointer detection
     const checkMobile = () => {
@@ -1682,6 +1673,13 @@ function App() {
       }
     } else if (newNodePendingMachineCount) {
       updateNodeData(newNodePendingMachineCount, data => ({ ...data, machineCount: value }));
+      setSelectedProduct(null);
+      setSelectedMachine(null);
+      setSelectorMode('product');
+      setSearchTerm('');
+      setRecipeFilter('all');
+      setAutoConnectTarget(null);
+      setSelectorOpenedFrom('button');
     }
     
     setShowMachineCountEditor(false);
@@ -1690,7 +1688,7 @@ function App() {
     setEditingMachineCountMode('free');
     setNewNodePendingMachineCount(null);
     triggerRecalculation('machineCount');
-  }, [editingNodeId, editingMachineCount, editingMachineCountMode, newNodePendingMachineCount, nodes, edges, productionSolution, setNodes, deleteRecipeBoxAndTarget, triggerRecalculation]);
+  }, [editingNodeId, editingMachineCount, editingMachineCountMode, newNodePendingMachineCount, nodes, edges, productionSolution, setNodes, deleteRecipeBoxAndTarget, triggerRecalculation, setSelectedProduct, setSelectedMachine, setSelectorMode, setSearchTerm, setRecipeFilter, setAutoConnectTarget, setSelectorOpenedFrom]);
 
   const handleMachineCountCancel = useCallback(() => {
     if (newNodePendingMachineCount) {
@@ -1935,15 +1933,8 @@ function App() {
     setTargetProducts([]);
     setTargetIdCounter(0);
     setSoldProducts({});
-    setLastDrillConfig(null);
-    setLastAssemblerConfig(null);
-    setLastTreeFarmConfig(null);
-    setLastFireboxConfig(null);
-    setLastWasteFacilityConfig(null);
     clearFlowCache();
-  }, [setNodes, setEdges, setNodeId, setTargetProducts, setTargetIdCounter, setSoldProducts,
-      setLastDrillConfig, setLastAssemblerConfig, setLastTreeFarmConfig, setLastFireboxConfig,
-      setLastWasteFacilityConfig]);
+  }, [setNodes, setEdges, setNodeId, setTargetProducts, setTargetIdCounter, setSoldProducts]);
 
   const handleCanvasOnlyImport = useCallback(() => {
     const input = document.createElement('input');
@@ -2053,34 +2044,10 @@ function App() {
         const isDataImport = imported.products || imported.machines || imported.recipes;
         const isCanvasImport = imported.canvas;
         
-        if (isDataImport) {
-          const productMap = new Map((imported.products || []).map(p => [p.id, p]));
-          const uniqueProducts = Array.from(productMap.values());
-          const machineIds = new Set(imported.machines?.map(m => m.id) || []);
-          const cleanedRecipes = (imported.recipes || []).filter(r => machineIds.has(r.machine_id));
-          const currentProducts = [...products];
-          uniqueProducts.forEach(newProduct => {
-            const existingIndex = currentProducts.findIndex(p => p.id === newProduct.id);
-            existingIndex >= 0 ? (currentProducts[existingIndex] = newProduct) : currentProducts.push(newProduct);
-          });
-          updateProducts(currentProducts);
-          if (imported.machines?.length > 0) {
-            const currentMachines = [...machines];
-            const importedMachineIdSet = new Set(imported.machines.map(m => m.id));
-            const recipesWithoutImportedMachines = recipes.filter(r => !importedMachineIdSet.has(r.machine_id));
-            imported.machines.forEach(newMachine => {
-              const existingIndex = currentMachines.findIndex(m => m.id === newMachine.id);
-              existingIndex >= 0 ? (currentMachines[existingIndex] = newMachine) : currentMachines.push(newMachine);
-            });
-            updateMachines(currentMachines);
-            updateRecipes([...recipesWithoutImportedMachines, ...cleanedRecipes]);
-          }
-          
-          if (!isCanvasImport) {
-            alert('Data import successful!');
-            window.location.reload();
-            return;
-          }
+        if (isDataImport && !isCanvasImport) {
+          alert('Data import is no longer supported. All data is now sourced directly from JSON files.');
+          event.target.value = '';
+          return;
         }
         
         if (isCanvasImport) {
@@ -2165,15 +2132,6 @@ function App() {
     event.target.value = '';
   }, [displayMode, machineDisplayMode, globalPollution, createNodeCallbacks, clearAll, setNodes, setEdges, setTargetProducts, setSoldProducts, setFavoriteRecipes, setLastDrillConfig, setLastAssemblerConfig, setLastTreeFarmConfig, setNodeId, setTargetIdCounter]);
 
-  const handleExportData = useCallback(() => {
-    const blob = new Blob([JSON.stringify({ products, machines, recipes }, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `industrialist-data-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [products, machines, recipes]);
 
   const handleExportCanvas = useCallback(() => {
     const cleanedEdges = edges.map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: d }; });
@@ -2187,30 +2145,7 @@ function App() {
     URL.revokeObjectURL(url);
  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig, cleanNodeForSave]);
 
-  const handleExport = useCallback(() => {
-    const cleanedEdges = edges.map(e => { const { edgePath, edgeStyle, ...d } = e.data || {}; return { ...e, data: d }; });
-    const blob = new Blob([JSON.stringify({ products, machines, recipes, canvas: { nodes: nodes.map(cleanNodeForSave), edges: cleanedEdges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, lastWasteFacilityConfig } }, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `industrialist-export-${Date.now()}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }, [nodes, edges, targetProducts, nodeId, targetIdCounter, soldProducts, favoriteRecipes, lastDrillConfig, lastAssemblerConfig, lastTreeFarmConfig, lastFireboxConfig, cleanNodeForSave]);
 
-  const handleDataChange = useCallback(() => {
-    // Reload custom data and update app state
-    const customProducts = getCustomProducts();
-    const customMachines = getCustomMachines();
-    const customRecipes = getCustomRecipes();
-    
-    updateProducts(customProducts);
-    updateMachines(customMachines);
-    updateRecipes(customRecipes);
-    
-    // Trigger recalculation to update any nodes with changed data
-    triggerRecalculation('node');
-  }, [triggerRecalculation]);
 
   const handleLoadSave = useCallback((saveData) => {
     const callbacks = createNodeCallbacks();
@@ -2256,29 +2191,6 @@ function App() {
     }, 50);
   }, [displayMode, machineDisplayMode, globalPollution, createNodeCallbacks, clearAll, setNodes, setEdges, setTargetProducts, setSoldProducts, setFavoriteRecipes, setLastDrillConfig, setLastAssemblerConfig, setLastTreeFarmConfig, setLastFireboxConfig, setLastWasteFacilityConfig, setNodeId, setTargetIdCounter, triggerRecalculation]);
 
-  const handleRestoreDefaults = useCallback(() => {
-    if (window.confirm('Restore all data to defaults? This will clear the canvas and reset all products, machines, and recipes.')) {
-      restoreDefaults();
-      
-      // Also restore custom data in localStorage to defaults
-      restoreDefaultProducts(defaultProductsJSON);
-      restoreDefaultMachines(defaultMachinesJSON);
-      restoreDefaultRecipes(defaultRecipesJSON);
-      
-      setNodes([]);
-      setEdges([]);
-      setNodeId(0);
-      setTargetProducts([]);
-      setTargetIdCounter(0);
-      setSoldProducts({});
-      setLastDrillConfig(null);
-      setLastAssemblerConfig(null);
-      setLastTreeFarmConfig(null);
-      setLastFireboxConfig(null);
-      setLastWasteFacilityConfig(null);
-      window.location.reload();
-    }
-  }, [setNodes, setEdges, products, machines, recipes]);
 
   useEffect(() => {
     const handleStorageChange = (e) => {
@@ -2588,8 +2500,6 @@ function App() {
               <button onClick={() => { clearAll(); triggerRecalculation('node'); }}
                 className="btn btn-secondary">Clear All</button>
               <button onClick={() => setShowSaveManager(true)} className="btn btn-secondary">Saves</button>
-              <button onClick={() => setShowDataManager(true)} className="btn btn-secondary">Data</button>
-              <button onClick={handleRestoreDefaults} className="btn btn-secondary">Restore Defaults</button>
               <button onClick={() => setShowThemeEditor(true)} className="btn btn-secondary">Theme Editor</button>
               <button onClick={() => setShowHelpModal(true)} className="btn btn-secondary">Help</button>
             </div>
@@ -3058,11 +2968,6 @@ function App() {
         />
       )}
 
-      {showDataManager && (
-        <DataManager
-          onClose={() => setShowDataManager(false)}
-        />
-      )}
       </React.Suspense>
 
       {isMobile && mobileActionMode !== 'pan' && (
