@@ -92,12 +92,15 @@ export const calculateMachineCountForAutoConnect = (recipe, targetNode, autoConn
     }
   }
   
+  const isLiquidDisposal = recipe.isLiquidDump || recipe.id === 'r_liquid_dump' || recipe.isLiquidBurner || recipe.id === 'r_liquid_burner';
+  const finalize = (count) => isLiquidDisposal ? Math.ceil(count) : count;
+
   // Calculate how many machines of the new recipe are needed
   if (autoConnect.isOutput) {
     const newInput = configuredRecipe.inputs.find(item => item.product_id === autoConnect.productId);
     if (newInput && typeof newInput.quantity === 'number' && newInput.quantity > 0) {
       const newRatePerMachine = newInput.quantity / recipeCycleTime;
-      return targetRate / newRatePerMachine;
+      return finalize(targetRate / newRatePerMachine);
     }
   } else {
     const newOutput = configuredRecipe.outputs.find(item => item.product_id === autoConnect.productId);
@@ -105,12 +108,12 @@ export const calculateMachineCountForAutoConnect = (recipe, targetNode, autoConn
       const quantityForCalculation = newOutput.originalQuantity !== undefined ? newOutput.originalQuantity : newOutput.quantity;
       if (typeof quantityForCalculation === 'number' && quantityForCalculation > 0) {
         const newRatePerMachine = quantityForCalculation / recipeCycleTime;
-        return targetRate / newRatePerMachine;
+        return finalize(targetRate / newRatePerMachine);
       }
     }
   }
   
-  return 1;
+  return finalize(1);
 };
 
 /**
@@ -265,10 +268,7 @@ export const configureSpecialRecipe = (recipe, autoConnect, selectedProduct, las
     
     if (searchedProductId) {
       // If selecting concrete blocks or lead ingots, don't modify defaults (will auto-connect to proper input)
-      if (searchedProductId === 'p_concrete_block' || searchedProductId === 'p_lead_ingot') {
-        defaultItemProductId = 'p_fission_byproducts';
-        defaultFluidProductId = 'p_depleted_uf6_waste';
-      } else {
+      if (searchedProductId !== 'p_concrete_block' && searchedProductId !== 'p_lead_ingot') {
         const product = getProduct(searchedProductId);
         if (product?.type === 'item') {
           defaultItemProductId = searchedProductId;
@@ -278,25 +278,15 @@ export const configureSpecialRecipe = (recipe, autoConnect, selectedProduct, las
           defaultFluidProductId = searchedProductId;
         }
       }
-    } else {
-      // Default values when created from machine menu
-      defaultItemProductId = 'p_fission_byproducts';
-      defaultFluidProductId = 'p_depleted_uf6_waste';
     }
     
-    const wasteFacilityInputs = buildWasteFacilityInputs(0, 0, defaultItemProductId, defaultFluidProductId, 'p_concrete_block');
+    const wasteFacilityInputs = buildWasteFacilityInputs(0, 0, defaultItemProductId, defaultFluidProductId);
     const metrics = calculateWasteFacilityMetrics(0, 0);
     
     configuredRecipe = {
       ...configuredRecipe,
       inputs: wasteFacilityInputs,
       outputs: [],
-      wasteFacilitySettings: { 
-        itemProductId: defaultItemProductId,
-        fluidProductId: defaultFluidProductId,
-        itemFlowRate: 0,
-        fluidFlowRate: 0
-      },
       cycle_time: metrics.cycleTime,
       power_consumption: 1000000,
       pollution: 0

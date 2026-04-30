@@ -1,5 +1,7 @@
 import { hasTempDependentCycle, getTempDependentCycleTime, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, 
   getSteamInputIndex, DEFAULT_STEAM_TEMPERATURE } from '../utils/temperatureUtils';
+import { productsMatch } from '../utils/variableHandler';
+import { isSpecialRecipe as isSpecialRecipeFull } from '../utils/recipeBoxCreation';
 
 export const buildProductionGraph = (nodes, edges) => {
   // Early return for empty graphs
@@ -16,18 +18,17 @@ export const buildProductionGraph = (nodes, edges) => {
     const recipe = node.data?.recipe;
     const machineCount = node.data?.machineCount || 0;
     const machine = node.data?.machine;
-    if (!recipe) return;
+    if (!recipe) continue;
 
+    const isSpecialRecipe = isSpecialRecipeFull(recipe);
     const isMineshaftDrill = recipe.isMineshaftDrill || recipe.id === 'r_mineshaft_drill';
     const isLogicAssembler = recipe.isLogicAssembler || recipe.id === 'r_logic_assembler';
     const isTreeFarm = recipe.isTreeFarm || recipe.id === 'r_tree_farm';
-    const isIndustrialFirebox = machine && machine.id === 'm_industrial_firebox';
     const isTempDependentVariable = machine && hasTempDependentCycle(machine.id);
-    const isSpecialRecipe = isMineshaftDrill || isLogicAssembler || isTreeFarm || isIndustrialFirebox || isTempDependentVariable;
 
     let cycleTime = recipe.cycle_time;
     if (cycleTime === 'Variable' || typeof cycleTime !== 'number' || cycleTime <= 0) {
-      if (!isSpecialRecipe) return;
+      if (!isSpecialRecipe) continue;
       cycleTime = 1;
     }
     
@@ -62,7 +63,7 @@ export const buildProductionGraph = (nodes, edges) => {
 
     recipe.inputs?.forEach((input, index) => {
       const productId = input.product_id;
-      if (productId === 'p_variableproduct') return;
+      const isVariable = productId === 'p_variableproduct';
 
       const quantity = typeof input.quantity === 'number' ? input.quantity : 0;
       if (input.quantity === 'Variable' && !isSpecialRecipe) return;
@@ -84,10 +85,12 @@ export const buildProductionGraph = (nodes, edges) => {
         temperature: null 
       });
 
-      if (!graph.products[productId]) {
-        graph.products[productId] = { producers: [], consumers: [], connections: [] };
+      if (!isVariable) {
+        if (!graph.products[productId]) {
+          graph.products[productId] = { producers: [], consumers: [], connections: [] };
+        }
+        graph.products[productId].consumers.push({ nodeId, inputIndex: actualInputIndex, rate });
       }
-      graph.products[productId].consumers.push({ nodeId, inputIndex: actualInputIndex, rate });
     });
 
     // Water treatment plant uses standard outputs without modification
@@ -96,7 +99,7 @@ export const buildProductionGraph = (nodes, edges) => {
 
     outputsToUse?.forEach((output, index) => {
     const productId = output.product_id;
-    if (productId === 'p_variableproduct') return;
+    const isVariable = productId === 'p_variableproduct';
 
     const quantity = typeof output.quantity === 'number' ? output.quantity : 0;
     if (output.quantity === 'Variable' && !isSpecialRecipe) return;
@@ -112,10 +115,12 @@ export const buildProductionGraph = (nodes, edges) => {
       temperature: output.temperature || null 
     });
 
-    if (!graph.products[productId]) {
-      graph.products[productId] = { producers: [], consumers: [], connections: [] };
+    if (!isVariable) {
+      if (!graph.products[productId]) {
+        graph.products[productId] = { producers: [], consumers: [], connections: [] };
+      }
+      graph.products[productId].producers.push({ nodeId, outputIndex: actualOutputIndex, rate });
     }
-    graph.products[productId].producers.push({ nodeId, outputIndex: actualOutputIndex, rate });
   });
 
     graph.nodes[nodeId] = graphNode;
@@ -134,9 +139,21 @@ export const buildProductionGraph = (nodes, edges) => {
     const sourceOutput = sourceNode.outputs.find(o => o.recipeIndex === sourceHandleIndex);
     const targetInput = targetNode.inputs.find(i => i.recipeIndex === targetHandleIndex);
 
-    if (!sourceOutput || !targetInput || sourceOutput.productId !== targetInput.productId) return;
+    if (!sourceOutput || !targetInput || !productsMatch(sourceOutput.productId, targetInput.productId)) continue;
 
     const productId = sourceOutput.productId;
+    
+    // Handle variable product resolution
+    if (targetInput.productId === 'p_variableproduct') {
+      targetInput.productId = productId;
+      if (!graph.products[productId]) {
+        graph.products[productId] = { producers: [], consumers: [], connections: [] };
+      }
+      // Ensure node is added as a consumer of the resolved product
+      if (!graph.products[productId].consumers.some(c => c.nodeId === edge.target && c.inputIndex === targetInput.index)) {
+        graph.products[productId].consumers.push({ nodeId: edge.target, inputIndex: targetInput.index, rate: targetInput.rate });
+      }
+    }
 
     if (sourceOutput.temperature !== undefined && sourceOutput.temperature !== null) {
       targetInput.temperature = sourceOutput.temperature;

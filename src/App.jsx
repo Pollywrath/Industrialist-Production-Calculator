@@ -617,19 +617,28 @@ function App() {
        JSON.stringify(node.data.suggestions) !== JSON.stringify(suggestions || []));
     
     if (recipe?.isWasteFacility) {
-      const itemFlow = Math.min(nodeFlows?.inputFlows[0]?.connected || 0, 240);
-      const fluidFlow = Math.min(nodeFlows?.inputFlows[1]?.connected || 0, 240);
+      const itemFlowData = nodeFlows?.inputFlows?.find(f => f.recipeIndex === 0);
+      const fluidFlowData = nodeFlows?.inputFlows?.find(f => f.recipeIndex === 1);
+      
+      const itemFlow = Math.min(itemFlowData?.connected || 0, 240);
+      const fluidFlow = Math.min(fluidFlowData?.connected || 0, 240);
+      
+      const itemProductId = itemFlowData?.productId || recipe.inputs[0].product_id;
+      const fluidProductId = fluidFlowData?.productId || recipe.inputs[1].product_id;
+      
       const settings = recipe.wasteFacilitySettings || {};
       
-      // Only update if flows actually changed
+      // Only update if flows or product IDs actually changed
       if (!flowsChanged && !suggestionsChanged && 
           settings.itemFlowRate === itemFlow && 
-          settings.fluidFlowRate === fluidFlow) {
+          settings.fluidFlowRate === fluidFlow &&
+          recipe.inputs[0].product_id === itemProductId &&
+          recipe.inputs[1].product_id === fluidProductId) {
         return node;
       }
       
       const metrics = calculateWasteFacilityMetrics(itemFlow, fluidFlow);
-      const updatedInputs = buildWasteFacilityInputs(itemFlow, fluidFlow, recipe.inputs[0].product_id, recipe.inputs[1].product_id);
+      const updatedInputs = buildWasteFacilityInputs(itemFlow, fluidFlow, itemProductId, fluidProductId);
       
       return {
         ...node,
@@ -658,7 +667,13 @@ function App() {
         const flowData = nodeFlows?.inputFlows?.find(f => f.recipeIndex === idx);
         const connectedFlow = flowData?.connected || 0;
         const actualFlow = Math.min(connectedFlow, maxCapacity);
-        return { ...input, quantity: actualFlow };
+        const productId = flowData?.productId || input.product_id;
+        return { 
+          ...input, 
+          product_id: productId, 
+          quantity: actualFlow,
+          isAnyProduct: productId === 'p_variableproduct' || productId === 'p_any_fluid'
+        };
       });
       
       // Pollution is based on actual flow rates
@@ -693,7 +708,13 @@ function App() {
         const flowData = nodeFlows?.inputFlows?.find(f => f.recipeIndex === idx);
         const connectedFlow = flowData?.connected || 0;
         const actualFlow = Math.min(connectedFlow, maxCapacity);
-        return { ...input, quantity: actualFlow };
+        const productId = flowData?.productId || input.product_id;
+        return { 
+          ...input, 
+          product_id: productId, 
+          quantity: actualFlow,
+          isAnyProduct: productId === 'p_variableproduct' || productId === 'p_any_fluid'
+        };
       });
       
       // Pollution is based on actual flow rates
@@ -952,12 +973,16 @@ function App() {
         const recipe = n.data?.recipe;
         const isLiquidMachine = recipe && (recipe.isLiquidDump || recipe.id === 'r_liquid_dump' || 
                                 recipe.isLiquidBurner || recipe.id === 'r_liquid_burner');
-        if (!isLiquidMachine) return n;
+        const isWasteFacility = recipe && (recipe.isWasteFacility || recipe.id === 'r_underground_waste_facility');
+        
+        if (!isLiquidMachine && !isWasteFacility) return n;
         
         let updated = false;
         const updatedInputs = [...recipe.inputs];
         
         recipe.inputs.forEach((input, idx) => {
+          // For waste facility, only first two inputs are variable
+          if (isWasteFacility && idx > 1) return;
           if (input.product_id === 'p_variableproduct') return;
           
           const targetHandle = `left-${idx}`;
@@ -968,8 +993,8 @@ function App() {
               ...input,
               product_id: 'p_variableproduct',
               isAnyProduct: true,
-              acceptedType: 'fluid',
-              quantity: input.maxFlow || 15 // Reset quantity as well
+              acceptedType: isWasteFacility ? (idx === 0 ? 'item' : 'fluid') : 'fluid',
+              quantity: isWasteFacility ? 7000 : (input.maxFlow || 15)
             };
             updated = true;
           }

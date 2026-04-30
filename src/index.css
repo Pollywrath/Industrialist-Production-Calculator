@@ -465,7 +465,9 @@ input[type="number"] {
 
 .custom-node.target {
   background: var(--node-target-bg);
-  border: 3px solid var(--node-target-border);
+  border: 2px solid var(--node-target-border);
+  outline: 2px solid var(--node-target-border);
+  outline-offset: 2px;
   box-shadow: none; /* Remove during drag */
 }
 
@@ -477,6 +479,8 @@ input[type="number"] {
   padding: 15px 20px 0 20px;
   display: flex;
   flex-direction: column;
+  height: 117px; /* 9 * 13px */
+  overflow: hidden;
 }
 
 .node-recipe-name {
@@ -582,7 +586,7 @@ input[type="number"] {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 0;
+  padding: 17px 0; /* Adjusted to align handles with 13px grid: 117 + 17 + 22 (rect center) = 156 (12 * 13) */
   position: relative;
 }
 

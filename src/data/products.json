@@ -463,7 +463,7 @@
   },
   {
     "id": "p_gasolinee10",
-    "name": "Gasolinee10",
+    "name": "GasolineE10",
     "type": "fluid",
     "price": 57,
     "rp_multiplier": 13
@@ -841,7 +841,7 @@
   },
   {
     "id": "p_meg",
-    "name": "Meg",
+    "name": "MEG",
     "type": "fluid",
     "price": 2.9,
     "rp_multiplier": 0.2
@@ -1037,7 +1037,7 @@
   },
   {
     "id": "p_pta",
-    "name": "Pta",
+    "name": "PTA",
     "type": "fluid",
     "price": 2.9,
     "rp_multiplier": 0.2

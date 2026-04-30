@@ -15,9 +15,6 @@ import {
 import { 
   calculateChemicalPlantMetrics 
 } from '../data/chemicalPlant';
-import { 
-  calculateWasteFacilityMetrics, buildWasteFacilityInputs 
-} from '../data/undergroundWasteFacility';
 
 import { 
   HEAT_SOURCES, calculateOutputTemperature, getPowerConsumptionForTemperature, 
@@ -51,9 +48,6 @@ export const getSettingsConfig = (recipeType, recipe, globalPollution) => {
       return getBoilerConfig();
     case 'chemicalPlant':
       return getChemicalPlantConfig();
-    case 'wasteFacility':
-      return getWasteFacilityConfig();
-
     default:
       return null;
   }
@@ -499,71 +493,4 @@ const getChemicalPlantConfig = () => ({
     return { settings, inputs: [], outputs: [], metrics: null };
   }
 });
-
-// Waste Facility configuration
-const getWasteFacilityConfig = () => {
-  const itemProducts = products
-    .filter(p => p.type === 'item')
-    .sort((a, b) => a.name.localeCompare(b.name));
-  const fluidProducts = products
-    .filter(p => p.type === 'fluid')
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  return {
-    title: 'Underground Waste Facility Settings',
-    defaultSettings: { itemProductId: 'p_any_item', fluidProductId: 'p_any_fluid', itemSearchTerm: '', fluidSearchTerm: '' },
-    fields: [
-      {
-        type: 'text-input',
-        key: 'itemSearchTerm',
-        label: 'Search Items:',
-        placeholder: 'Search items...',
-        noMargin: true
-      },
-      {
-        type: 'select',
-        key: 'itemProductId',
-        label: 'Item Input Product:',
-        options: [
-          { value: 'p_any_item', label: 'Any Item' },
-          ...itemProducts.map(p => ({ value: p.id, label: p.name }))
-        ]
-      },
-      {
-        type: 'text-input',
-        key: 'fluidSearchTerm',
-        label: 'Search Fluids:',
-        placeholder: 'Search fluids...',
-        noMargin: true
-      },
-      {
-        type: 'select',
-        key: 'fluidProductId',
-        label: 'Fluid Input Product:',
-        options: [
-          { value: 'p_any_fluid', label: 'Any Fluid' },
-          ...fluidProducts.map(p => ({ value: p.id, label: p.name }))
-        ]
-      },
-      {
-        type: 'info-box',
-        title: '💡 How it works:',
-        background: 'rgba(59, 130, 246, 0.1)',
-        titleColor: '#60a5fa',
-        render: () => (
-          <>
-            <div>• Each input accepts up to 240/s</div>
-            <div>• Fixed requirements per cycle:</div>
-            <div style={{ marginLeft: '15px' }}>- 4.8 Concrete Blocks/s</div>
-            <div style={{ marginLeft: '15px' }}>- 2.4 Lead Ingots/s</div>
-          </>
-        )
-      }
-    ],
-    onApply: (settings) => {
-      const inputs = buildWasteFacilityInputs(0, 0, settings.itemProductId, settings.fluidProductId, 'p_concrete_block');
-      return { settings, inputs, outputs: [], metrics: null };
-    }
-  };
-};
 

@@ -493,8 +493,8 @@ export const calculateProductFlows = (graph) => {
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     flows.byNode[nodeId] = {
-      inputFlows: node.inputs.map(input => ({ connected: 0, needed: input.rate, recipeIndex: input.recipeIndex })),
-      outputFlows: node.outputs.map(output => ({ connected: 0, produced: output.rate, recipeIndex: output.recipeIndex }))
+      inputFlows: node.inputs.map(input => ({ productId: input.productId, connected: 0, needed: input.rate, recipeIndex: input.recipeIndex })),
+      outputFlows: node.outputs.map(output => ({ productId: output.productId, connected: 0, produced: output.rate, recipeIndex: output.recipeIndex }))
     };
   });
 

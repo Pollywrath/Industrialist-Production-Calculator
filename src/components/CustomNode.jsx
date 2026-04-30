@@ -8,7 +8,7 @@ import { isTemperatureProduct, formatTemperature, needsTemperatureConfig, needsB
   recipeUsesSteam, getSteamInputIndex } from '../utils/temperatureUtils';
 import UnifiedSettings from './UnifiedSettings';
 
-const RECT_HEIGHT = 44, RECT_GAP = 8, SIDE_PADDING = 10, COLUMN_GAP = 20, NODE_WIDTH = 380, BASE_INFO_HEIGHT = 120;
+const RECT_HEIGHT = 44, RECT_GAP = 8, SIDE_PADDING = 10, COLUMN_GAP = 20, NODE_WIDTH = 380, BASE_INFO_HEIGHT = 117;
 
 const smartFormat = (num) => typeof num === 'number' ? Math.round(num * 10000) / 10000 : num;
 
@@ -185,11 +185,11 @@ const CustomNode = memo(({ data, id }) => {
   
   // Calculate height based on number of rectangles
   // The io-area has 12px padding on top and bottom for the columns
-  const ioColumnPadding = 24; // 12px top + 12px bottom
+  const ioColumnPadding = 34; // 17px top + 17px bottom
   const ioAreaHeight = (maxCount * RECT_HEIGHT) + ((maxCount - 1) * RECT_GAP) + ioColumnPadding;
   
   // Add bottom padding to balance the top io-column padding (12px)
-  const bottomPadding = 12;
+  const bottomPadding = 13;
   
   const height = BASE_INFO_HEIGHT + ioAreaHeight + bottomPadding;
   const displayMachineCount = machineCount ?? 0;
@@ -359,7 +359,7 @@ const CustomNode = memo(({ data, id }) => {
         </div>
 
         {/* Input/Output Area */}
-        <div className="node-io-area">
+        <div className="node-io-area" style={{ height: `${ioAreaHeight}px`, flex: 'none' }}>
           <div className="node-io-columns" style={{ 
             gridTemplateColumns: hasLeft && hasRight ? `${leftWidth}px 1fr ${rightWidth}px` : '1fr',
             padding: `0 ${SIDE_PADDING}px`
@@ -553,7 +553,7 @@ const NodeHandle = ({ side, index, onClick, nodeId, productId, flows, onHandleDo
   // Handles are positioned relative to node-io-area
   // The node-io-columns has padding, and node-io-column has 12px top padding
   // Need to account for both when calculating position
-  const topPosition = 12 + verticalOffset + (index * (RECT_HEIGHT + RECT_GAP)) + (RECT_HEIGHT / 2) + 11;
+  const topPosition = 17 + verticalOffset + (index * (RECT_HEIGHT + RECT_GAP)) + (RECT_HEIGHT / 2);
   
   return (
     <Handle

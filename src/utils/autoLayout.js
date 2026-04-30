@@ -1,10 +1,21 @@
 import ELK from 'elkjs/lib/elk.bundled.js';
 
-// Must match constants in CustomNode.jsx
+// Must match constants in CustomNode.jsx and App.jsx
 const RECT_HEIGHT = 44;
 const RECT_GAP = 8;
-const BASE_INFO_HEIGHT = 120;
+const BASE_INFO_HEIGHT = 117;
 const NODE_WIDTH = 380;
+const IO_COLUMN_TOP_PAD = 17;
+const HANDLE_STEP = RECT_HEIGHT + RECT_GAP; // 52px per handle slot
+
+// Grid constants — must match App.jsx (GRID_SIZE_X = NODE_WIDTH/20, GRID_SIZE_Y = HANDLE_STEP/4)
+const GRID_X = 19;
+const GRID_Y = 13;
+const snapToGrid = (x, y) => ({
+  x: Math.round(x / GRID_X) * GRID_X,
+  y: Math.round(y / GRID_Y) * GRID_Y,
+});
+const snapX = (x) => Math.round(x / GRID_X) * GRID_X;
 
 const elk = new ELK();
 
@@ -12,15 +23,21 @@ const calculateNodeHeight = (node) => {
   const recipe = node.data?.recipe;
   if (!recipe) return BASE_INFO_HEIGHT + 100;
   const maxCount = Math.max(recipe.inputs?.length || 0, recipe.outputs?.length || 0, 1);
-  const ioColumnPadding = 24;
+  const ioColumnPadding = 34; // 17px top + 17px bottom
   const ioAreaHeight = (maxCount * RECT_HEIGHT) + ((maxCount - 1) * RECT_GAP) + ioColumnPadding;
-  return BASE_INFO_HEIGHT + ioAreaHeight + 12;
+  return BASE_INFO_HEIGHT + ioAreaHeight + 13;
 };
 
-const getHandleY = (index) => {
-  const ioColumnPadding = 24;
-  const ioAreaTop = BASE_INFO_HEIGHT + ioColumnPadding / 2;
-  return ioAreaTop + index * (RECT_HEIGHT + RECT_GAP) + RECT_HEIGHT / 2;
+/**
+ * Calculate handle Y relative to the node's top edge.
+ * Exactly mirrors CustomNode.jsx NodeHandle's topPosition formula,
+ * including vertical centering of the shorter column.
+ */
+const getHandleY = (side, index, inputCount, outputCount) => {
+  const maxCount = Math.max(inputCount, outputCount);
+  const sideCount = side === 'left' ? inputCount : outputCount;
+  const verticalOffset = ((maxCount - sideCount) * HANDLE_STEP) / 2;
+  return BASE_INFO_HEIGHT + IO_COLUMN_TOP_PAD + verticalOffset + (index * HANDLE_STEP) + (RECT_HEIGHT / 2);
 };
 
 // Groups nodes into islands of connected nodes so each island is laid out independently
@@ -61,7 +78,6 @@ const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}
   // Those waypoints are discarded anyway — we only use ELK's node placement to
   // minimise crossings, and catmullRom draws a natural S-curve between positioned nodes.
   const elkRouting = edgePath === 'straight' ? 'POLYLINE' : 'ORTHOGONAL';
-  const spacing = edgePath === 'straight' ? '260' : '200';
 
   const elkNodes = componentNodes.map(node => {
     const width = NODE_WIDTH;
@@ -72,15 +88,15 @@ const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}
 
     const inputPorts = Array.from({ length: inputCount }, (_, i) => ({
       id: `${node.id}__left-${i}`,
-      properties: { 'port.side': 'WEST', 'port.index': i },
+      properties: { 'port.side': 'WEST', 'port.index': String(i) },
       x: 0,
-      y: getHandleY(i),
+      y: getHandleY('left', i, inputCount, outputCount),
     }));
     const outputPorts = Array.from({ length: outputCount }, (_, i) => ({
       id: `${node.id}__right-${i}`,
-      properties: { 'port.side': 'EAST', 'port.index': i },
+      properties: { 'port.side': 'EAST', 'port.index': String(i) },
       x: width,
-      y: getHandleY(i),
+      y: getHandleY('right', i, inputCount, outputCount),
     }));
 
     return {
@@ -105,7 +121,7 @@ const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}
       targets: [`${edge.target}__${edge.targetHandle || 'left-0'}`],
       properties: {
         ...(targetIdx <= sourceIdx ? { 'elk.layered.feedbackEdge': 'true' } : {}),
-        'elk.layered.priority.straightness': '100'
+        'elk.layered.priority.straightness': '1000'
       },
     };
   });
@@ -120,13 +136,15 @@ const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}
       'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
       'elk.layered.nodePlacement.favorStraightEdges': 'true',
       'elk.layered.nodePlacement.bk.edgeStraightening': 'IMPROVE_STRAIGHTNESS',
-      'elk.layered.spacing.nodeNodeBetweenLayers': spacing,
-      'elk.spacing.nodeNode': spacing,
-      'elk.layered.spacing.edgeNodeBetweenLayers': '100',
-      'elk.layered.spacing.edgeEdgeBetweenLayers': edgePath === 'straight' ? '40' : '20',
-      'elk.spacing.edgeNode': edgePath === 'orthogonal' ? '80' : '20',
+      'elk.layered.nodePlacement.networkSimplex.nodeFlexibility.default': 'NODE_HEIGHT',
+      'elk.layered.compaction.postCompaction.strategy': 'NONE',
+      'elk.layered.spacing.nodeNodeBetweenLayers': edgePath === 'straight' ? '152' : '114',
+      'elk.spacing.nodeNode': '39',
+      'elk.layered.spacing.edgeNodeBetweenLayers': '38',
+      'elk.layered.spacing.edgeEdgeBetweenLayers': edgePath === 'straight' ? '38' : '19',
+      'elk.spacing.edgeNode': edgePath === 'orthogonal' ? '38' : '19',
       'elk.layered.feedbackEdges': 'true',
-      'elk.padding': '[top=120, left=120, bottom=120, right=120]',
+      'elk.padding': '[top=57, left=57, bottom=57, right=57]',
     },
     children: elkNodes,
     edges: elkEdges,
@@ -142,7 +160,7 @@ const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}
 // Packs multiple disconnected components into rows, widest first
 const packComponents = (componentResults) => {
   const sorted = [...componentResults].sort((a, b) => b.bounds.width - a.bounds.width);
-  const GAP = 200;
+  const GAP = snapX(152);
   const MAX_ROW_WIDTH = Math.max(3000, (sorted[0]?.bounds.width || 0) + GAP * 2);
 
   const positions = new Map();
@@ -150,12 +168,12 @@ const packComponents = (componentResults) => {
 
   sorted.forEach((comp, i) => {
     if (rowX > 0 && rowX + comp.bounds.width > MAX_ROW_WIDTH) {
-      rowY += rowMaxHeight + GAP;
+      rowY += snapX(rowMaxHeight + GAP); // snap row Y advance
       rowX = 0;
       rowMaxHeight = 0;
     }
     positions.set(i, { offsetX: rowX, offsetY: rowY });
-    rowX += comp.bounds.width + GAP;
+    rowX += snapX(comp.bounds.width + GAP); // snap next column X
     rowMaxHeight = Math.max(rowMaxHeight, comp.bounds.height);
   });
 
@@ -210,15 +228,16 @@ export const autoLayout = async (nodes, edges, edgeSettings = {}) => {
 
   const { sorted, positions } = packComponents(componentResults);
 
-  // Build final node positions offset by each component's packing position
+  // Build final node positions, snapped to the 19×13 grid
   const finalPositions = new Map();
   sorted.forEach((comp, i) => {
     const { offsetX, offsetY } = positions.get(i);
     comp.layoutedChildren.forEach(elkNode => {
-      finalPositions.set(elkNode.id, {
+      const raw = {
         x: elkNode.x - comp.bounds.x + offsetX,
         y: elkNode.y - comp.bounds.y + offsetY,
-      });
+      };
+      finalPositions.set(elkNode.id, snapToGrid(raw.x, raw.y));
     });
   });
 
@@ -261,12 +280,24 @@ export const autoLayout = async (nodes, edges, edgeSettings = {}) => {
           const middleBendPoints = bendPoints.slice(1, -1);
           if (middleBendPoints.length > 0) {
             const midY = middleBendPoints.reduce((s, p) => s + p.y, 0) / middleBendPoints.length;
-            edgeUpdates.set(elkEdge.id, { orthoMidY: midY, orthoMidX: undefined });
+            edgeUpdates.set(elkEdge.id, { orthoMidY: Math.round(midY / GRID_Y) * GRID_Y, orthoMidX: undefined });
           }
         } else {
-          // Average X of all bend points gives the vertical segment position
-          const midX = bendPoints.reduce((s, p) => s + p.x, 0) / bendPoints.length;
-          edgeUpdates.set(elkEdge.id, { orthoMidX: midX, orthoMidY: undefined });
+          // Find the dominant vertical segment in ELK's bend points.
+          // ELK routes edges through channels between layers; the longest
+          // vertical span identifies the primary channel to use as midX.
+          let bestX = bendPoints[0].x;
+          let bestSpan = 0;
+          for (let i = 0; i < bendPoints.length - 1; i++) {
+            if (Math.abs(bendPoints[i].x - bendPoints[i + 1].x) < 1) {
+              const span = Math.abs(bendPoints[i + 1].y - bendPoints[i].y);
+              if (span > bestSpan) {
+                bestSpan = span;
+                bestX = bendPoints[i].x;
+              }
+            }
+          }
+          edgeUpdates.set(elkEdge.id, { orthoMidX: snapX(bestX), orthoMidY: undefined });
         }
       }
     });
