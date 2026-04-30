@@ -57,6 +57,14 @@ const ModalLoadingFallback = () => (
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
 
+// Grid constants (Matching CustomNode.jsx and autoLayout.js)
+const NODE_WIDTH = 380;
+const RECT_HEIGHT = 44;
+const RECT_GAP = 8;
+const HEIGHT_INCREMENT = RECT_HEIGHT + RECT_GAP; // 52
+const GRID_SIZE_X = NODE_WIDTH / 20; // 19
+const GRID_SIZE_Y = HEIGHT_INCREMENT / 4; // 13
+
 // Helper: Format rate to 4 decimals
 const formatRate = (rate) => typeof rate === 'number' ? rate.toFixed(4) : '0';
 
@@ -105,9 +113,7 @@ const TargetExcessInput = ({ productName, connectedFlow, currentExcess, onTarget
 };
 
 const calculateResidueAmount = (globalPollution) => {
-  if (globalPollution < 0) return 0;
-  const lnArg = 1 + (5429 * globalPollution) / 7322;
-  return Math.pow(Math.log(lnArg), 1.1);
+  return Math.max(1, globalPollution * 0.1);
 };
 
 function App() {
@@ -215,9 +221,7 @@ function App() {
     }
   }, [onNodesChangeBase]);
   
-  const onEdgesChange = useCallback((changes) => {
-    onEdgesChangeBase(changes);
-  }, [onEdgesChangeBase]);
+
 
   useEffect(() => { 
     const theme = loadTheme();
@@ -269,8 +273,7 @@ function App() {
     onBoilerSettingsChange: handleBoilerSettingsChange,
     onChemicalPlantSettingsChange: handleChemicalPlantSettingsChange,
     onWasteFacilitySettingsChange: handleWasteFacilitySettingsChange,
-    onLiquidDumpSettingsChange: handleLiquidDumpSettingsChange,
-    onLiquidBurnerSettingsChange: handleLiquidBurnerSettingsChange,
+
     onMiddleClick: onNodeMiddleClick,
     onHandleDoubleClick: handleHandleDoubleClick,
     onMachineCountModeChange: handleMachineCountModeChange
@@ -398,7 +401,13 @@ function App() {
       if (!recipe) continue;
       
       const pollution = typeof recipe.pollution === 'number' ? recipe.pollution : parseFloat(recipe.pollution);
-      if (!isNaN(pollution) && isFinite(pollution)) totalPollution += pollution * machineCount;
+      if (!isNaN(pollution) && isFinite(pollution)) {
+        if (recipe.isLiquidDump || recipe.id === 'r_liquid_dump' || recipe.isLiquidBurner || recipe.id === 'r_liquid_burner') {
+          totalPollution += pollution;
+        } else {
+          totalPollution += pollution * machineCount;
+        }
+      }
       
       const inputOutputCount = (recipe.inputs?.length || 0) + (recipe.outputs?.length || 0);
       const roundedMachineCount = Math.ceil(machineCount);
@@ -542,14 +551,27 @@ function App() {
     shouldRecalculate.current = true;
   }, []);
 
+  const onEdgesChange = useCallback((changes) => {
+    onEdgesChangeBase(changes);
+    if (changes.some(c => c.type === 'remove')) {
+      triggerRecalculation('connection');
+    }
+  }, [onEdgesChangeBase, triggerRecalculation]);
+
+
   useEffect(() => {
-    if (!shouldRecalculate.current) return;
     
     if (solverTimeoutRef.current) clearTimeout(solverTimeoutRef.current);
     
     solverTimeoutRef.current = setTimeout(() => {
-      const currentHash = `${nodes.length}-${edges.length}-${nodes.map(n => 
-        `${n.id}:${n.data?.machineCount}:${JSON.stringify(n.data?.recipe?.temperatureSettings || {})}:${JSON.stringify(n.data?.recipe?.drillSettings || {})}:${JSON.stringify(n.data?.recipe?.assemblerSettings || {})}:${JSON.stringify(n.data?.recipe?.treeFarmSettings || {})}:${JSON.stringify(n.data?.recipe?.fireboxSettings || {})}:${JSON.stringify(n.data?.recipe?.chemicalPlantSettings || {})}`
+      // Smart hash: only include globalPollution if there are pollution-sensitive nodes
+      const hasPollutionSensitiveNodes = nodes.some(n => 
+        n.data?.machine?.id === 'm_air_separation_unit' || n.data?.recipe?.isTreeFarm || 
+        n.data?.recipe?.isLiquidDump || n.data?.recipe?.isLiquidBurner
+      );
+      
+      const currentHash = `${nodes.length}-${edges.length}-${hasPollutionSensitiveNodes ? globalPollution : 'paused'}-${nodes.map(n => 
+        `${n.id}:${n.data?.machineCount}:${JSON.stringify(n.data?.recipe || {})}`
       ).join(',')}`;
       
       if (currentHash !== lastSolverHash.current) {
@@ -571,7 +593,7 @@ function App() {
     }, 100);
     
     return () => clearTimeout(solverTimeoutRef.current);
-  }, [nodes, edges, productionSolution]);
+  }, [nodes, edges, productionSolution, globalPollution]);
 
   const excessProductsRaw = useMemo(() => getExcessProducts(productionSolution), [productionSolution]);
   const deficientProducts = useMemo(() => getDeficientProducts(productionSolution), [productionSolution]);
@@ -628,14 +650,24 @@ function App() {
     
     if (recipe?.isLiquidDump) {
       const machineCount = node.data?.machineCount || 1;
-      const flowRatesPerMachine = recipe.inputs.map((input, idx) => {
-        const totalFlow = Math.min(nodeFlows?.inputFlows[idx]?.connected || 0, 15 * machineCount);
-        return totalFlow / machineCount;
+      const maxFlowPerInput = recipe.inputs[0]?.maxFlow || 15;
+      const maxCapacity = maxFlowPerInput * machineCount;
+      
+      // Input quantities = actual connected flow (capped at max capacity)
+      const updatedInputs = recipe.inputs.map((input, idx) => {
+        const flowData = nodeFlows?.inputFlows?.find(f => f.recipeIndex === idx);
+        const connectedFlow = flowData?.connected || 0;
+        const actualFlow = Math.min(connectedFlow, maxCapacity);
+        return { ...input, quantity: actualFlow };
       });
-      const pollution = calculateLiquidDumpPollution(recipe.inputs, flowRatesPerMachine);
+      
+      // Pollution is based on actual flow rates
+      const flowRates = updatedInputs.map(input => input.quantity);
+      const pollution = calculateLiquidDumpPollution(updatedInputs, flowRates);
       
       // Only update if actually changed
-      if (!flowsChanged && !suggestionsChanged && recipe.pollution === pollution) {
+      const inputsChanged = updatedInputs.some((input, idx) => input.quantity !== recipe.inputs[idx]?.quantity);
+      if (!flowsChanged && !suggestionsChanged && !inputsChanged && recipe.pollution === pollution) {
         return node;
       }
       
@@ -643,7 +675,7 @@ function App() {
         ...node,
         data: {
           ...node.data,
-          recipe: { ...recipe, pollution },
+          recipe: { ...recipe, inputs: updatedInputs, pollution },
           flows: nodeFlows || null,
           suggestions: suggestions || [],
           zoomLevel: node.data.zoomLevel
@@ -653,14 +685,24 @@ function App() {
     
     if (recipe?.isLiquidBurner) {
       const machineCount = node.data?.machineCount || 1;
-      const flowRatesPerMachine = recipe.inputs.map((input, idx) => {
-        const totalFlow = Math.min(nodeFlows?.inputFlows[idx]?.connected || 0, 15 * machineCount);
-        return totalFlow / machineCount;
+      const maxFlowPerInput = recipe.inputs[0]?.maxFlow || 120;
+      const maxCapacity = maxFlowPerInput * machineCount;
+      
+      // Input quantities = actual connected flow (capped at max capacity)
+      const updatedInputs = recipe.inputs.map((input, idx) => {
+        const flowData = nodeFlows?.inputFlows?.find(f => f.recipeIndex === idx);
+        const connectedFlow = flowData?.connected || 0;
+        const actualFlow = Math.min(connectedFlow, maxCapacity);
+        return { ...input, quantity: actualFlow };
       });
-      const pollution = calculateLiquidBurnerPollution(recipe.inputs, flowRatesPerMachine);
+      
+      // Pollution is based on actual flow rates
+      const flowRates = updatedInputs.map(input => input.quantity);
+      const pollution = calculateLiquidBurnerPollution(updatedInputs, flowRates);
       
       // Only update if actually changed
-      if (!flowsChanged && !suggestionsChanged && recipe.pollution === pollution) {
+      const inputsChanged = updatedInputs.some((input, idx) => input.quantity !== recipe.inputs[idx]?.quantity);
+      if (!flowsChanged && !suggestionsChanged && !inputsChanged && recipe.pollution === pollution) {
         return node;
       }
       
@@ -668,7 +710,7 @@ function App() {
         ...node,
         data: {
           ...node.data,
-          recipe: { ...recipe, pollution },
+          recipe: { ...recipe, inputs: updatedInputs, pollution },
           flows: nodeFlows || null,
           suggestions: suggestions || [],
           zoomLevel: node.data.zoomLevel
@@ -722,7 +764,7 @@ function App() {
     }, 250);
     
     return () => clearTimeout(flowUpdateTimeoutRef.current);
-  }, [productionSolution, setNodes, updateNodeWithFlows]);
+  }, [productionSolution, setNodes, updateNodeWithFlows, globalPollution]);
   
   const excessProducts = useMemo(() => excessProductsRaw.map(item => {
     // Check if this product is an output of any target node
@@ -902,6 +944,57 @@ function App() {
     clearFlowCache();
     triggerRecalculation('connection');
   }, [setEdges, nodes, edgeSettings, triggerRecalculation, setNodes, productionSolution]);
+
+  useEffect(() => {
+    setNodes(nds => {
+      let hasChanges = false;
+      const updatedNodes = nds.map(n => {
+        const recipe = n.data?.recipe;
+        const isLiquidMachine = recipe && (recipe.isLiquidDump || recipe.id === 'r_liquid_dump' || 
+                                recipe.isLiquidBurner || recipe.id === 'r_liquid_burner');
+        if (!isLiquidMachine) return n;
+        
+        let updated = false;
+        const updatedInputs = [...recipe.inputs];
+        
+        recipe.inputs.forEach((input, idx) => {
+          if (input.product_id === 'p_variableproduct') return;
+          
+          const targetHandle = `left-${idx}`;
+          const hasEdges = edges.some(e => e.target === n.id && e.targetHandle === targetHandle);
+          
+          if (!hasEdges) {
+            updatedInputs[idx] = {
+              ...input,
+              product_id: 'p_variableproduct',
+              isAnyProduct: true,
+              acceptedType: 'fluid',
+              quantity: input.maxFlow || 15 // Reset quantity as well
+            };
+            updated = true;
+          }
+        });
+        
+        if (updated) {
+          hasChanges = true;
+          const pollution = recipe.isLiquidDump 
+            ? calculateLiquidDumpPollution(updatedInputs)
+            : calculateLiquidBurnerPollution(updatedInputs);
+            
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              recipe: { ...recipe, inputs: updatedInputs, pollution }
+            }
+          };
+        }
+        return n;
+      });
+      
+      return hasChanges ? updatedNodes : nds;
+    });
+  }, [edges, setNodes]);
 
   const resetSelector = () => {
     setShowRecipeSelector(false);
@@ -1215,47 +1308,7 @@ function App() {
     triggerRecalculation('settings');
   }, [cleanupInvalidConnections, triggerRecalculation, setNodes]);
 
-  const handleLiquidDumpSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
-    setNodes(nds => nds.map(n => {
-      if (n.id !== nodeId) return n;
-      return {
-        ...n,
-        data: {
-          ...n.data,
-          recipe: {
-            ...n.data.recipe,
-            inputs: inputs.length > 0 ? inputs : n.data.recipe.inputs,
-            liquidDumpSettings: settings,
-            pollution: calculateLiquidDumpPollution(inputs)
-          },
-          leftHandles: Math.max(inputs.length, 1)
-        }
-      };
-    }));
-    cleanupInvalidConnections(nodeId, inputs, outputs);
-    triggerRecalculation('settings');
-  }, [cleanupInvalidConnections, triggerRecalculation, setNodes]);
 
-  const handleLiquidBurnerSettingsChange = useCallback((nodeId, settings, inputs, outputs) => {
-    setNodes(nds => nds.map(n => {
-      if (n.id !== nodeId) return n;
-      return {
-        ...n,
-        data: {
-          ...n.data,
-          recipe: {
-            ...n.data.recipe,
-            inputs: inputs.length > 0 ? inputs : n.data.recipe.inputs,
-            liquidBurnerSettings: settings,
-            pollution: calculateLiquidBurnerPollution(inputs)
-          },
-          leftHandles: Math.max(inputs.length, 1)
-        }
-      };
-    }));
-    cleanupInvalidConnections(nodeId, inputs, outputs);
-    triggerRecalculation('settings');
-  }, [cleanupInvalidConnections, triggerRecalculation, setNodes]);
   const createRecipeBox = useCallback((recipe, overrideMachineCount = null) => {
     const machine = getMachine(recipe.machine_id);
     if (!machine || !recipe.inputs || !recipe.outputs) {
@@ -1734,9 +1787,11 @@ function App() {
   }, [setNodes]);
 
   const handleAutoLayout = useCallback(async () => {
-    const { nodes: updatedNodes, edges: updatedEdges } = await autoLayout(nodes, edges, edgeSettings);
-    setNodes(updatedNodes);
-    setEdges(updatedEdges);
+    if (window.confirm('This will rearrange all nodes on the canvas. Are you sure you want to continue?')) {
+      const { nodes: updatedNodes, edges: updatedEdges } = await autoLayout(nodes, edges, edgeSettings);
+      setNodes(updatedNodes);
+      setEdges(updatedEdges);
+    }
   }, [nodes, edges, edgeSettings, setNodes, setEdges]);
 
   const handleCompute = useCallback(() => {
@@ -2297,7 +2352,8 @@ function App() {
         zoomOnDoubleClick={false}
         preventScrolling={true}
         nodeOrigin={[0, 0]}
-        snapToGrid={false}
+        snapToGrid={true}
+        snapGrid={[GRID_SIZE_X, GRID_SIZE_Y]}
         onlyRenderVisibleElements={true}
         disableKeyboardA11y={true}
         deleteKeyCode={null}
@@ -2312,7 +2368,7 @@ function App() {
           strokeDasharray: edgeSettings.edgeStyle === 'animated' || edgeSettings.edgeStyle === 'dashed' ? '8 4' : 'none'
         }}
         defaultEdgeOptions={{ type: 'custom' }}>
-        <Background color="#333" gap={16} size={1} />
+        <Background color="#333" gap={[GRID_SIZE_X, GRID_SIZE_Y]} size={1} />
         {!isMobile && (
           <Controls 
             className={(extendedPanelOpen || extendedPanelClosing) && !leftPanelCollapsed ? 'controls-shifted' : ''} 
@@ -2497,8 +2553,13 @@ function App() {
           <div className={`menu-container ${menuOpen ? '' : 'closed'}`} style={isMobile ? { maxWidth: 'calc(100vw - 10px)' } : {}}>
             <button onClick={() => setMenuOpen(!menuOpen)} className="btn btn-secondary btn-menu-toggle" style={isMobile ? { fontSize: 'var(--font-size-sm)', padding: '6px 10px' } : {}}>{menuOpen ? '>' : '<'}</button>
             <div className="menu-buttons" style={isMobile ? { maxHeight: 'calc(100vh - 100px)', overflowY: 'auto' } : {}}>
-              <button onClick={() => { clearAll(); triggerRecalculation('node'); }}
-                className="btn btn-secondary">Clear All</button>
+                  <button onClick={() => {
+                    if (window.confirm('This will remove all recipes and connections from the canvas. This action cannot be undone.')) {
+                      clearAll();
+                      triggerRecalculation('node');
+                    }
+                  }}
+                    className="btn btn-secondary">Clear All</button>
               <button onClick={() => setShowSaveManager(true)} className="btn btn-secondary">Saves</button>
               <button onClick={() => setShowThemeEditor(true)} className="btn btn-secondary">Theme Editor</button>
               <button onClick={() => setShowHelpModal(true)} className="btn btn-secondary">Help</button>
@@ -2969,6 +3030,8 @@ function App() {
       )}
 
       </React.Suspense>
+      
+
 
       {isMobile && mobileActionMode !== 'pan' && (
             <div style={{

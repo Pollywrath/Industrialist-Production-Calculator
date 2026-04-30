@@ -410,18 +410,7 @@ const dinic = (network) => {
           bottleneck = Math.min(bottleneck, residual);
           
           // Find parent node
-          let found = false;
-          for (let node = 0; node < nodeCount; node++) {
-            const nodeAdj = adj[node];
-            for (let i = 0; i < nodeAdj.length; i++) {
-              if (nodeAdj[i] === edgeIdx) {
-                current = node;
-                found = true;
-                break;
-              }
-            }
-            if (found) break;
-          }
+          current = edges[edges[edgeIdx].rev].to;
         }
         
         // Push flow
@@ -432,18 +421,7 @@ const dinic = (network) => {
           edges[edges[edgeIdx].rev].flow -= bottleneck;
           
           // Find parent node
-          let found = false;
-          for (let node = 0; node < nodeCount; node++) {
-            const nodeAdj = adj[node];
-            for (let i = 0; i < nodeAdj.length; i++) {
-              if (nodeAdj[i] === edgeIdx) {
-                current = node;
-                found = true;
-                break;
-              }
-            }
-            if (found) break;
-          }
+          current = edges[edges[edgeIdx].rev].to;
         }
         
         return bottleneck;
@@ -515,8 +493,8 @@ export const calculateProductFlows = (graph) => {
   Object.keys(graph.nodes).forEach(nodeId => {
     const node = graph.nodes[nodeId];
     flows.byNode[nodeId] = {
-      inputFlows: node.inputs.map(input => ({ connected: 0, needed: input.rate })),
-      outputFlows: node.outputs.map(output => ({ connected: 0, produced: output.rate }))
+      inputFlows: node.inputs.map(input => ({ connected: 0, needed: input.rate, recipeIndex: input.recipeIndex })),
+      outputFlows: node.outputs.map(output => ({ connected: 0, produced: output.rate, recipeIndex: output.recipeIndex }))
     };
   });
 

@@ -9,23 +9,20 @@ export const FUEL_PRODUCTS = [
 export const RECIPE_ENERGY_REQUIREMENTS = {
   // Sulfur Dioxide (900k energy)
   'r_industrial_firebox_01': 900000,
-  // Boron (900k energy)
-  'r_industrial_firebox_02': 900000,
-  // Hot Water (300k energy)
+  // Water (300k energy)
+  'r_industrial_firebox_02': 300000,
+  // Filtered Water (300k energy)
   'r_industrial_firebox_03': 300000,
-  // Hot Filtered Water (300k energy)
+  // Distilled Water (300k energy)
   'r_industrial_firebox_04': 300000,
-  // Hot Distilled Water (300k energy)
-  'r_industrial_firebox_05': 300000,
   // Salt Solution (300k energy)
-  'r_industrial_firebox_06': 300000,
-  // Sodium Carbonate - NO VARIABLE PRODUCT, handled separately
-  'r_industrial_firebox_07': 16000,
+  'r_industrial_firebox_05': 300000,
+  // Boron (900k energy)
+  'r_industrial_firebox_07': 900000,
 };
 
 // Recipes with additional wait time beyond energy calculation
 export const RECIPE_ADDITIONAL_WAIT = {
-  'r_industrial_firebox_07': 1
 };
 
 export const getFuelProduct = (fuelId) => FUEL_PRODUCTS.find(f => f.id === fuelId);
@@ -63,11 +60,6 @@ export const calculateFireboxMetrics = (recipeId, fuelId) => {
 };
 
 export const buildFireboxInputs = (originalInputs, fuelId, recipeId) => {
-  // Recipe 07 (Sodium Carbonate) has no variable product - return original inputs unchanged
-  if (recipeId === 'r_industrial_firebox_07') {
-    return originalInputs;
-  }
-  
   const metrics = calculateFireboxMetrics(recipeId, fuelId);
   if (!metrics) return originalInputs;
   

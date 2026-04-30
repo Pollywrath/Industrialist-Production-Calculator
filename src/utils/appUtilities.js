@@ -1,4 +1,5 @@
 import { recipes, getProduct } from '../data/dataLoader';
+import { getIndustrialFireboxRecipeIds } from '../data/industrialFirebox';
 import { DEPTH_OUTPUTS } from '../data/mineshaftDrill';
 import { MICROCHIP_STAGES } from '../data/logicAssembler';
 import { HEAT_SOURCES, calculateOutputTemperature, DEFAULT_BOILER_INPUT_TEMPERATURE, 
@@ -26,10 +27,7 @@ export const formatPowerDisplay = (power) => {
 
 export const getRecipesUsingProduct = (productId) => {
   const fuelProductIds = ['p_coal', 'p_coke_fuel', 'p_planks', 'p_oak_log'];
-  const fireboxRecipesWithFuel = [
-    'r_industrial_firebox_01', 'r_industrial_firebox_02', 'r_industrial_firebox_03',
-    'r_industrial_firebox_04', 'r_industrial_firebox_05', 'r_industrial_firebox_06'
-  ];
+  const fireboxRecipesWithFuel = getIndustrialFireboxRecipeIds();
   
   // Don't add special recipes here - they're handled in getAvailableRecipes
   const standardRecipes = recipes.filter(r => {

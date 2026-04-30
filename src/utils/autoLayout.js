@@ -103,7 +103,10 @@ const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}
       id: edge.id,
       sources: [`${edge.source}__${edge.sourceHandle || 'right-0'}`],
       targets: [`${edge.target}__${edge.targetHandle || 'left-0'}`],
-      properties: targetIdx <= sourceIdx ? { 'elk.layered.feedbackEdge': 'true' } : {},
+      properties: {
+        ...(targetIdx <= sourceIdx ? { 'elk.layered.feedbackEdge': 'true' } : {}),
+        'elk.layered.priority.straightness': '100'
+      },
     };
   });
 
@@ -114,7 +117,9 @@ const layoutComponent = async (componentNodes, componentEdges, edgeSettings = {}
       'elk.direction': 'RIGHT',
       'elk.edgeRouting': elkRouting,
       'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-      'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+      'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+      'elk.layered.nodePlacement.favorStraightEdges': 'true',
+      'elk.layered.nodePlacement.bk.edgeStraightening': 'IMPROVE_STRAIGHTNESS',
       'elk.layered.spacing.nodeNodeBetweenLayers': spacing,
       'elk.spacing.nodeNode': spacing,
       'elk.layered.spacing.edgeNodeBetweenLayers': '100',
@@ -249,7 +254,7 @@ export const autoLayout = async (nodes, edges, edgeSettings = {}) => {
 
         const sourceX = sourcePos.x + NODE_WIDTH;
         const targetX = targetPos.x;
-        const isBackwardEdge = targetX <= sourceX + 60;
+        const isBackwardEdge = targetX < sourceX;
 
         if (isBackwardEdge) {
           // Middle bend points give the Y of the horizontal bypass segment

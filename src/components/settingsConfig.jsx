@@ -18,12 +18,7 @@ import {
 import { 
   calculateWasteFacilityMetrics, buildWasteFacilityInputs 
 } from '../data/undergroundWasteFacility';
-import { 
-  calculateLiquidDumpPollution, buildLiquidDumpInputs 
-} from '../data/liquidDump';
-import { 
-  calculateLiquidBurnerPollution, buildLiquidBurnerInputs 
-} from '../data/liquidBurner';
+
 import { 
   HEAT_SOURCES, calculateOutputTemperature, getPowerConsumptionForTemperature, 
   formatTemperature 
@@ -58,10 +53,7 @@ export const getSettingsConfig = (recipeType, recipe, globalPollution) => {
       return getChemicalPlantConfig();
     case 'wasteFacility':
       return getWasteFacilityConfig();
-    case 'liquidDump':
-      return getLiquidDumpConfig();
-    case 'liquidBurner':
-      return getLiquidBurnerConfig();
+
     default:
       return null;
   }
@@ -193,8 +185,7 @@ const getAssemblerConfig = () => ({
       <div style={{ borderTop: '1px solid rgba(212, 166, 55, 0.3)', paddingTop: '10px', marginBottom: '10px' }}>
         <div style={{ color: '#f5d56a', fontWeight: 600, marginBottom: '6px' }}>Power Consumption:</div>
         <div style={{ color: '#999', lineHeight: '1.6', paddingLeft: '10px' }}>
-          <div>Max: {(metrics.maxPowerConsumption / 1000).toFixed(2)} kMF/s</div>
-          <div>Avg: {(metrics.avgPowerConsumption / 1000).toFixed(2)} kMF/s</div>
+          <div>{(metrics.avgPowerConsumption / 1000).toFixed(2)} kMF/s</div>
         </div>
       </div>
       <div style={{ borderTop: '1px solid rgba(212, 166, 55, 0.3)', paddingTop: '10px' }}>
@@ -575,161 +566,4 @@ const getWasteFacilityConfig = () => {
     }
   };
 };
-
-// Liquid Dump configuration
-const getLiquidDumpConfig = () => {
-  const fluidProducts = products
-    .filter(p => p.type === 'fluid')
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  return {
-    title: 'Liquid Dump Info',
-    defaultSettings: { 
-      fluidProductId0: 'p_any_fluid',
-      fluidProductId1: 'p_any_fluid',
-      searchTerm: ''
-    },
-    fields: [
-      {
-        type: 'text-input',
-        key: 'searchTerm',
-        label: 'Search Products:',
-        placeholder: 'Search fluids...',
-        noMargin: true
-      },
-      ...Array(2).fill(0).map((_, idx) => ({
-        type: 'select',
-        key: `fluidProductId${idx}`,
-        label: `Input ${idx + 1} Product:`,
-        options: [
-          { value: 'p_any_fluid', label: 'Any Fluid' },
-          ...fluidProducts.map(p => ({ value: p.id, label: p.name }))
-        ]
-      })),
-      {
-        type: 'info-box',
-        title: 'Pollution Calculation:',
-        render: (_, settings) => {
-          const fluidProductIds = [settings.fluidProductId0, settings.fluidProductId1];
-          const inputs = buildLiquidDumpInputs(fluidProductIds);
-          const pollution = calculateLiquidDumpPollution(inputs);
-          return (
-            <>
-              <div>• Water variants: 0%/hr</div>
-              <div>• Residue: 8.64%/hr per /s</div>
-              <div>• Other fluids: 0.0216%/hr per /s</div>
-              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(212, 166, 55, 0.3)' }}>
-                <strong>Current Pollution: {pollution.toFixed(4)}%/hr</strong>
-              </div>
-            </>
-          );
-        }
-      },
-      {
-        type: 'info-box',
-        title: '💡 How it works:',
-        background: 'rgba(59, 130, 246, 0.1)',
-        titleColor: '#60a5fa',
-        render: () => (
-          <>
-            <div>• Each input accepts up to 15/s of the selected fluid</div>
-            <div>• Connect fluids to dispose of them</div>
-            <div>• Water variants produce no pollution</div>
-          </>
-        )
-      }
-    ],
-    onApply: (settings) => {
-      const fluidProductIds = [settings.fluidProductId0, settings.fluidProductId1];
-      const inputs = buildLiquidDumpInputs(fluidProductIds);
-      return { 
-        settings: { fluidProductIds, searchTerm: settings.searchTerm }, 
-        inputs, 
-        outputs: [], 
-        metrics: null 
-      };
-    }
-  };
-};
-
-// Liquid Burner configuration
-const getLiquidBurnerConfig = () => {
-  const fluidProducts = products
-    .filter(p => p.type === 'fluid')
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  return {
-    title: 'Liquid Burner Info',
-    defaultSettings: { 
-      fluidProductId0: 'p_any_fluid',
-      fluidProductId1: 'p_any_fluid',
-      fluidProductId2: 'p_any_fluid',
-      fluidProductId3: 'p_any_fluid',
-      fluidProductId4: 'p_any_fluid',
-      fluidProductId5: 'p_any_fluid',
-      fluidProductId6: 'p_any_fluid',
-      fluidProductId7: 'p_any_fluid',
-      searchTerm: ''
-    },
-    fields: [
-      {
-        type: 'text-input',
-        key: 'searchTerm',
-        label: 'Search Products:',
-        placeholder: 'Search fluids...',
-        noMargin: true
-      },
-      ...Array(8).fill(0).map((_, idx) => ({
-        type: 'select',
-        key: `fluidProductId${idx}`,
-        label: `Input ${idx + 1} Product:`,
-        options: [
-          { value: 'p_any_fluid', label: 'Any Fluid' },
-          ...fluidProducts.map(p => ({ value: p.id, label: p.name }))
-        ]
-      })),
-      {
-        type: 'info-box',
-        title: 'Pollution Calculation:',
-        render: (_, settings) => {
-          const fluidProductIds = Array(8).fill(0).map((_, i) => settings[`fluidProductId${i}`]);
-          const inputs = buildLiquidBurnerInputs(fluidProductIds);
-          const pollution = calculateLiquidBurnerPollution(inputs);
-          return (
-            <>
-              <div>• Water variants: 0%/hr</div>
-              <div>• Residue: 8.64%/hr per /s</div>
-              <div>• Other fluids: 0.0216%/hr per /s</div>
-              <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(212, 166, 55, 0.3)' }}>
-                <strong>Current Pollution: {pollution.toFixed(4)}%/hr</strong>
-              </div>
-            </>
-          );
-        }
-      },
-      {
-        type: 'info-box',
-        title: '💡 How it works:',
-        background: 'rgba(59, 130, 246, 0.1)',
-        titleColor: '#60a5fa',
-        render: () => (
-          <>
-            <div>• Each input accepts up to 15/s of the selected fluid</div>
-            <div>• Connect fluids to burn them for energy disposal</div>
-            <div>• Water variants produce no pollution</div>
-          </>
-        )
-      }
-    ],
-    onApply: (settings) => {
-      const fluidProductIds = Array(8).fill(0).map((_, i) => settings[`fluidProductId${i}`]);
-      const inputs = buildLiquidBurnerInputs(fluidProductIds);
-      return { 
-        settings: { fluidProductIds, searchTerm: settings.searchTerm }, 
-        inputs, 
-        outputs: [], 
-        metrics: null 
-      };
-    }
-  };
-};
+

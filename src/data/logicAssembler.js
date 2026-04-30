@@ -1,7 +1,6 @@
 const STEPS_PER_STAGE = 4;
 const AVG_STEP_TIME = 20;
 const AVG_STEP_TIME_WITH_OIL = 4;
-const POWER_STORAGE_REQUIREMENT = 500000;
 const MACHINE_OIL_RATE = 0.3;
 const BASE_CYCLE_TIME = 10;
 
@@ -67,8 +66,8 @@ export const calculateLogicAssemblerMetrics = (productId, machineOilEnabled, tic
   }
   
   const outputs = [{ product_id: productId, quantity: 1 }];
-  const avgPowerConsumption = POWER_STORAGE_REQUIREMENT / avgStepTime;
-  const maxPowerConsumption = POWER_STORAGE_REQUIREMENT / (machineOilEnabled ? 0.8 : 4);
+  const avgPowerConsumption = 3000000;
+  const maxPowerConsumption = 3000000;
   
   return {
     outerStage: stage.outerStage, innerStage: stage.innerStage, totalStages, totalSteps,
@@ -101,7 +100,7 @@ export const DEFAULT_LOGIC_ASSEMBLER_RECIPE = {
   name: 'Logic Assembler',
   machine_id: 'm_logic_assembler',
   cycle_time: 'Variable',
-  power_consumption: 'Variable',
+  power_consumption: 3000000,
   power_type: 'MV',
   pollution: 0,
   inputs: [

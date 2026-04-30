@@ -41,7 +41,7 @@ export const buildLiquidDumpInputs = (fluidProductIds) => {
     const productId = fluidProductIds?.[i] || 'p_variableproduct';
     inputs.push({
       product_id: productId,
-      quantity: 15,
+      quantity: MAX_FLOW_PER_INPUT,
       isAnyProduct: productId === 'p_any_fluid' || productId === 'p_variableproduct',
       acceptedType: 'fluid',
       maxFlow: MAX_FLOW_PER_INPUT
@@ -60,8 +60,8 @@ export const DEFAULT_LIQUID_DUMP_RECIPE = {
   power_type: 'None',
   pollution: 0, // Calculated dynamically
   inputs: [
-    { product_id: 'p_variableproduct', quantity: 15, isAnyProduct: true, acceptedType: 'fluid', maxFlow: MAX_FLOW_PER_INPUT },
-    { product_id: 'p_variableproduct', quantity: 15, isAnyProduct: true, acceptedType: 'fluid', maxFlow: MAX_FLOW_PER_INPUT }
+    { product_id: 'p_variableproduct', quantity: MAX_FLOW_PER_INPUT, isAnyProduct: true, acceptedType: 'fluid', maxFlow: MAX_FLOW_PER_INPUT },
+    { product_id: 'p_variableproduct', quantity: MAX_FLOW_PER_INPUT, isAnyProduct: true, acceptedType: 'fluid', maxFlow: MAX_FLOW_PER_INPUT }
   ],
   outputs: [],
   isLiquidDump: true

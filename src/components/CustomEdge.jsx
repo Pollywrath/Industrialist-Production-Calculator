@@ -77,15 +77,16 @@ const CustomEdge = ({ id, sourceX, sourceY, targetX, targetY, data, selected }) 
   const isConnecting = useStore(s => s.connectionNodeId != null);
 
   const dx = targetX - sourceX;
-  const isBackward = edgePath === 'orthogonal' && dx < 60;
+  const isBackward = edgePath === 'orthogonal' && dx < 0;
   const BACKWARD_EXIT_GAP = 40;
 
   // For forward orthogonal: clamp midX so the vertical segment stays between source and target
   const computedMidX = useMemo(() => {
     if (isBackward) return null;
     if (orthoMidX !== null) {
-      const lo = Math.min(sourceX, targetX) + 20;
-      const hi = Math.max(sourceX, targetX) - 20;
+      const buffer = Math.min(20, Math.abs(dx) / 2);
+      const lo = Math.min(sourceX, targetX) + buffer;
+      const hi = Math.max(sourceX, targetX) - buffer;
       return Math.max(lo, Math.min(hi, orthoMidX));
     }
     return (sourceX + targetX) / 2;

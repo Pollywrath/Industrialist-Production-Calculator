@@ -1,6 +1,7 @@
 import React, { useState, memo, useCallback, useMemo, useEffect } from 'react';
 import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react';
 import { getProduct } from '../data/dataLoader';
+import { isIndustrialFireboxRecipe } from '../data/industrialFirebox';
 import { getProductName, formatPowerConsumption, formatPollution } from '../utils/variableHandler';
 import { isTemperatureProduct, formatTemperature, needsTemperatureConfig, needsBoilerConfig, HEAT_SOURCES, 
   DEFAULT_STEAM_TEMPERATURE, hasTempDependentCycle, getTempDependentCycleTime, TEMP_DEPENDENT_MACHINES, 
@@ -40,8 +41,7 @@ const CustomNode = memo(({ data, id }) => {
   const hasTemperatureConfig = needsTemperatureConfig(machine.id);
   const hasBoilerConfig = needsBoilerConfig(machine.id);
   const heatSource = HEAT_SOURCES[machine.id];
-  const isIndustrialFirebox = machine.id === 'm_industrial_firebox' && 
-  recipe.id !== 'r_industrial_firebox_07'
+  const isIndustrialFirebox = machine.id === 'm_industrial_firebox' && isIndustrialFireboxRecipe(recipe.id);
   const isChemicalPlant = machine.id === 'm_chemical_plant';
   
   // Check if this machine has temperature-dependent cycle time
@@ -73,8 +73,8 @@ const CustomNode = memo(({ data, id }) => {
     const outputsSteam = recipe.outputs?.some(o => ['p_steam', 'p_low_pressure_steam', 'p_high_pressure_steam'].includes(o.product_id));
     const inputsWater = recipe.inputs?.some(o => ['p_water', 'p_filtered_water', 'p_distilled_water'].includes(o.product_id));
     
-    // Special case: Industrial firebox sodium carbonate recipe (r_industrial_firebox_07) - no temperature indicator
-    const isSodiumCarbonateRecipe = recipe.id === 'r_industrial_firebox_07';
+    // Special case: Industrial firebox sodium carbonate recipe (r_industrial_firebox_06) - no temperature indicator
+    const isSodiumCarbonateRecipe = recipe.id === 'r_industrial_firebox_06';
     
     // Industrial firebox should only show temperature if water is in inputs or outputs
     const isIndustrialFirebox = machine.id === 'm_industrial_firebox';
@@ -109,10 +109,15 @@ const CustomNode = memo(({ data, id }) => {
     if (typeof quantity !== 'number') return String(quantity);
     if (cycleTime === 'Variable') return displayMode === 'perSecond' ? 'Variable' : String(smartFormat(quantity));
     
-    let baseQuantity = displayMode === 'perSecond' ? quantity / cycleTime : quantity;
-    if (machineDisplayMode === 'total') baseQuantity *= (machineCount || 0);
+    let baseQuantity;
+    if (recipe?.isLiquidDump || recipe?.id === 'r_liquid_dump' || recipe?.isLiquidBurner || recipe?.id === 'r_liquid_burner') {
+      baseQuantity = quantity; // Already dynamically calculated as total flow in App.jsx
+    } else {
+      baseQuantity = displayMode === 'perSecond' ? quantity / cycleTime : quantity;
+      if (machineDisplayMode === 'total') baseQuantity *= (machineCount || 0);
+    }
     return String(smartFormat(baseQuantity));
-  }, [cycleTime, displayMode, machineDisplayMode, machineCount]);
+  }, [cycleTime, displayMode, machineDisplayMode, machineCount, recipe]);
 
   const formatDisplayCycleTime = useCallback((ct) => {
     if (ct === 'Variable' || typeof ct !== 'number') return ct;
@@ -151,7 +156,11 @@ const CustomNode = memo(({ data, id }) => {
     
     // Scale pollution
     if (typeof recipe.pollution === 'number') {
-      displayPollution = recipe.pollution * machineCount;
+      if (recipe?.isLiquidDump || recipe?.id === 'r_liquid_dump' || recipe?.isLiquidBurner || recipe?.id === 'r_liquid_burner') {
+        displayPollution = recipe.pollution; // Already dynamically calculated as total pollution in App.jsx
+      } else {
+        displayPollution = recipe.pollution * machineCount;
+      }
     }
   }
   
@@ -260,16 +269,6 @@ const CustomNode = memo(({ data, id }) => {
           <button onClick={(e) => { e.stopPropagation(); setSettingsModal('wasteFacility'); }} 
             onDoubleClick={(e) => e.stopPropagation()}
             className="drill-settings-button" title="Configure Waste Facility">⚙️</button>
-        )}
-        {isLiquidDump && (
-          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('liquidDump'); }} 
-            onDoubleClick={(e) => e.stopPropagation()}
-            className="drill-settings-button" title="Liquid Dump Info">⚙️</button>
-        )}
-        {isLiquidBurner && (
-          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('liquidBurner'); }} 
-            onDoubleClick={(e) => e.stopPropagation()}
-            className="drill-settings-button" title="Liquid Burner Info">⚙️</button>
         )}
         {hasTemperatureConfig && (
           <button onClick={(e) => { e.stopPropagation(); setSettingsModal('temperature'); }} 
@@ -402,7 +401,7 @@ const CustomNode = memo(({ data, id }) => {
               <NodeHandle key={`handle-left-${id}-${i}`} side="left" index={i}
                 onClick={onInputClick} nodeId={id} productId={input.product_id} flows={data.flows} 
                 onHandleDoubleClick={data.onHandleDoubleClick} suggestions={data.suggestions} input={input} data={data}
-                leftCount={leftCount} rightCount={rightCount} />
+                leftCount={leftCount} rightCount={rightCount} isLiquidSink={isLiquidDump || isLiquidBurner} />
             ))}
             {recipe.outputs.map((output, i) => (
               <NodeHandle key={`handle-right-${id}-${i}`} side="right" index={i}
@@ -427,8 +426,6 @@ const CustomNode = memo(({ data, id }) => {
             settingsModal === 'boiler' ? recipe.temperatureSettings :
             settingsModal === 'chemicalPlant' ? recipe.chemicalPlantSettings :
             settingsModal === 'wasteFacility' ? recipe.wasteFacilitySettings :
-            settingsModal === 'liquidDump' ? recipe.liquidDumpSettings :
-            settingsModal === 'liquidBurner' ? recipe.liquidBurnerSettings :
             {}
           }
           recipe={recipe}
@@ -442,8 +439,6 @@ const CustomNode = memo(({ data, id }) => {
             settingsModal === 'boiler' ? onBoilerSettingsChange :
             settingsModal === 'chemicalPlant' ? onChemicalPlantSettingsChange :
             settingsModal === 'wasteFacility' ? data.onWasteFacilitySettingsChange :
-            settingsModal === 'liquidDump' ? data.onLiquidDumpSettingsChange :
-            settingsModal === 'liquidBurner' ? data.onLiquidBurnerSettingsChange :
             () => {}
           }
           onClose={() => setSettingsModal(null)}
@@ -500,7 +495,7 @@ const NodeRect = ({ side, index, width, input, onClick, nodeId, formatQuantity, 
   );
 };
 
-const NodeHandle = ({ side, index, onClick, nodeId, productId, flows, onHandleDoubleClick, suggestions, input, data, leftCount, rightCount }) => {
+const NodeHandle = ({ side, index, onClick, nodeId, productId, flows, onHandleDoubleClick, suggestions, input, data, leftCount, rightCount, isLiquidSink }) => {
   // Handle is coloured as deficient/excess only if the difference is >= 0.01% of the reference value.
   const RELATIVE_EPSILON = 0.0001; // 0.01% relative tolerance
   const ABSOLUTE_EPSILON = 1e-6;   // Minimum absolute tolerance for tiny values
@@ -523,10 +518,11 @@ const NodeHandle = ({ side, index, onClick, nodeId, productId, flows, onHandleDo
   
   if (flows) {
     const flowData = side === 'left' 
-      ? flows.inputFlows?.[index] 
-      : flows.outputFlows?.[index];
+      ? flows.inputFlows?.find(f => f.recipeIndex === index)
+      : flows.outputFlows?.find(f => f.recipeIndex === index);
     
-    if (flowData) {
+    // Liquid sinks (dump/burner) don't report deficiency even if they take less than their limit
+    if (flowData && !(side === 'left' && isLiquidSink)) {
       const difference = side === 'left'
         ? flowData.needed - flowData.connected
         : flowData.produced - flowData.connected;
@@ -543,7 +539,7 @@ const NodeHandle = ({ side, index, onClick, nodeId, productId, flows, onHandleDo
   
   // Determine shape based on product type
   const product = getProduct(productId);
-  const isFluid = product?.type === 'fluid' || productId === 'p_any_fluid';
+  const isFluid = product?.type === 'fluid' || productId === 'p_any_fluid' || input?.acceptedType === 'fluid';
   const borderRadius = isFluid ? '50%' : '2px'; // Circle for fluids, square for items
   
   // Calculate vertical position based on index

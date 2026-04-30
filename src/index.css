@@ -243,6 +243,20 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
+.confirmation-modal {
+  border-width: 2px !important;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+
 .modal-title {
   color: var(--color-primary);
   margin-bottom: var(--spacing-xl);

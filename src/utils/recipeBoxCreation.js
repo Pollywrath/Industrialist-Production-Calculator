@@ -1,14 +1,12 @@
 import { getMachine, getProduct } from '../data/dataLoader';
-import { calculateOutputTemperature, DEFAULT_BOILER_INPUT_TEMPERATURE, DEFAULT_WATER_TEMPERATURE, HEAT_SOURCES,
-  hasTempDependentCycle, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getTempDependentCycleTime, DEFAULT_STEAM_TEMPERATURE } from './temperatureUtils';
+import { hasTempDependentCycle, TEMP_DEPENDENT_MACHINES, recipeUsesSteam, getTempDependentCycleTime, DEFAULT_STEAM_TEMPERATURE } from './temperatureUtils';
 import { DEPTH_OUTPUTS, calculateDrillMetrics, buildDrillInputs, buildDrillOutputs } from '../data/mineshaftDrill';
 import { MICROCHIP_STAGES, calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from '../data/logicAssembler';
 import { calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs } from '../data/treeFarm';
-import { calculateFireboxMetrics, buildFireboxInputs, isIndustrialFireboxRecipe } from '../data/industrialFirebox';
+import { calculateFireboxMetrics, buildFireboxInputs, isIndustrialFireboxRecipe, getIndustrialFireboxRecipeIds } from '../data/industrialFirebox';
 import { calculateWasteFacilityMetrics, buildWasteFacilityInputs } from '../data/undergroundWasteFacility';
 import { calculateLiquidDumpPollution, buildLiquidDumpInputs } from '../data/liquidDump';
 import { calculateLiquidBurnerPollution, buildLiquidBurnerInputs } from '../data/liquidBurner';
-import { applyTemperatureToOutputs, initializeRecipeTemperatures } from './appUtilities';
 
 /**
  * Calculate machine count needed to fully supply or consume a connected recipe
@@ -227,7 +225,7 @@ export const configureSpecialRecipe = (recipe, autoConnect, selectedProduct, las
       outputs: assemblerOutputs.length > 0 ? assemblerOutputs : [{ product_id: 'p_variableproduct', quantity: 'Variable' }],
       assemblerSettings: { outerStage, innerStage, machineOil: defaultMachineOil, tickCircuitDelay: defaultTickCircuitDelay },
       cycle_time: metrics ? metrics.cycleTime : 'Variable',
-      power_consumption: metrics ? { max: metrics.maxPowerConsumption, average: metrics.avgPowerConsumption } : 'Variable'
+      power_consumption: 3000000,
     };
     
     return configuredRecipe;
@@ -309,14 +307,14 @@ export const configureSpecialRecipe = (recipe, autoConnect, selectedProduct, las
   
   // Handle liquid dump
   if (recipe.isLiquidDump || recipe.id === 'r_liquid_dump') {
-    let fluidProductIds = ['p_water', 'p_residue'];
+    let fluidProductIds = ['p_variableproduct', 'p_variableproduct'];
     
     const searchedProductId = autoConnect?.productId || selectedProduct?.id;
     if (searchedProductId) {
       const product = getProduct(searchedProductId);
       if (product?.type === 'fluid') {
         // Set all inputs to the selected fluid
-        fluidProductIds = [searchedProductId, searchedProductId];
+        fluidProductIds = [searchedProductId, 'p_variableproduct'];
       }
     }
     
@@ -340,14 +338,14 @@ export const configureSpecialRecipe = (recipe, autoConnect, selectedProduct, las
   
   // Handle liquid burner
   if (recipe.isLiquidBurner || recipe.id === 'r_liquid_burner') {
-    let fluidProductIds = ['p_water', 'p_filtered_water', 'p_distilled_water', 'p_steam', 'p_oxygen', 'p_hydrogen', 'p_residue', 'p_depleted_uf6_waste'];
+    let fluidProductIds = ['p_variableproduct'];
     
     const searchedProductId = autoConnect?.productId || selectedProduct?.id;
     if (searchedProductId) {
       const product = getProduct(searchedProductId);
       if (product?.type === 'fluid') {
         // Set all inputs to the selected fluid
-        fluidProductIds = Array(8).fill(searchedProductId);
+        fluidProductIds = [searchedProductId];
       }
     }
     
@@ -392,10 +390,7 @@ export const getSpecialRecipeInputs = (recipeId) => {
   }
   
   // Industrial firebox with variable fuel
-  const fireboxRecipesWithFuel = [
-    'r_industrial_firebox_01', 'r_industrial_firebox_02', 'r_industrial_firebox_03',
-    'r_industrial_firebox_04', 'r_industrial_firebox_05', 'r_industrial_firebox_06'
-  ];
+  const fireboxRecipesWithFuel = getIndustrialFireboxRecipeIds();
   if (fireboxRecipesWithFuel.includes(recipeId)) {
     return ['p_coal', 'p_coke_fuel', 'p_planks', 'p_oak_log'];
   }

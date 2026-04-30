@@ -41,6 +41,12 @@ export const determineExcessAndDeficiency = (graph, flows) => {
     }
 
     productData.consumers.forEach(consumer => {
+      const node = graph.nodes[consumer.nodeId];
+      const isLiquidSink = node?.recipe && (node.recipe.isLiquidDump || node.recipe.isLiquidBurner || 
+                                           node.recipe.id === 'r_liquid_dump' || node.recipe.id === 'r_liquid_burner');
+      
+      if (isLiquidSink) return;
+
       const inputFlow = flows.byNode[consumer.nodeId]?.inputFlows[consumer.inputIndex];
       if (inputFlow) {
         const shortage = inputFlow.needed - inputFlow.connected;

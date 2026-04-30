@@ -1,5 +1,5 @@
-const MAX_FLOW_PER_INPUT = 15; // 15/s per input
-const INPUT_COUNT = 8;
+const MAX_FLOW_PER_INPUT = 120; // 120/s per input
+const INPUT_COUNT = 1;
 
 const WATER_VARIANTS = [
   'p_water', 
@@ -41,7 +41,7 @@ export const buildLiquidBurnerInputs = (fluidProductIds) => {
     const productId = fluidProductIds?.[i] || 'p_variableproduct';
     inputs.push({
       product_id: productId,
-      quantity: 15,
+      quantity: MAX_FLOW_PER_INPUT,
       isAnyProduct: productId === 'p_any_fluid' || productId === 'p_variableproduct',
       acceptedType: 'fluid',
       maxFlow: MAX_FLOW_PER_INPUT
@@ -61,7 +61,7 @@ export const DEFAULT_LIQUID_BURNER_RECIPE = {
   pollution: 0, // Calculated dynamically
   inputs: Array(INPUT_COUNT).fill(null).map(() => ({
     product_id: 'p_variableproduct',
-    quantity: 15,
+    quantity: MAX_FLOW_PER_INPUT,
     isAnyProduct: true,
     acceptedType: 'fluid',
     maxFlow: MAX_FLOW_PER_INPUT

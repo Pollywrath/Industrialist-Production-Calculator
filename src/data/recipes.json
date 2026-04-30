@@ -657,310 +657,6 @@
     ]
   },
   {
-    "id": "r_advanced_diesel_refinery_01",
-    "name": "Advanced Diesel Refinery",
-    "machine_id": "m_advanced_diesel_refinery",
-    "cycle_time": 1,
-    "c_mode": "none",
-    "power_consumption": 1000000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_crude_diesel",
-        "quantity": 3.15,
-        "q_mode": "none"
-      },
-      {
-        "product_id": "p_machine_oil",
-        "quantity": 0.15,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_poor_quality_diesel",
-        "quantity": 2.87,
-        "q_mode": "none"
-      },
-      {
-        "product_id": "p_residue",
-        "quantity": 0.28,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_advanced_diesel_refinery_02",
-    "name": "Advanced Diesel Refinery",
-    "machine_id": "m_advanced_diesel_refinery",
-    "cycle_time": 1,
-    "c_mode": "none",
-    "power_consumption": 1000000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_diesel",
-        "quantity": 2.59,
-        "q_mode": "none"
-      },
-      {
-        "product_id": "p_machine_oil",
-        "quantity": 0.15,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_refined_diesel",
-        "quantity": 2.38,
-        "q_mode": "none"
-      },
-      {
-        "product_id": "p_residue",
-        "quantity": 0.21,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_advanced_diesel_refinery_03",
-    "name": "Advanced Diesel Refinery",
-    "machine_id": "m_advanced_diesel_refinery",
-    "cycle_time": 1,
-    "c_mode": "none",
-    "power_consumption": 1000000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_machine_oil",
-        "quantity": 0.15,
-        "q_mode": "none"
-      },
-      {
-        "product_id": "p_poor_quality_diesel",
-        "quantity": 2.87,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_diesel",
-        "quantity": 2.59,
-        "q_mode": "none"
-      },
-      {
-        "product_id": "p_residue",
-        "quantity": 0.28,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_advanced_diesel_refinery_04",
-    "name": "Advanced Diesel Refinery",
-    "machine_id": "m_advanced_diesel_refinery",
-    "cycle_time": 1,
-    "c_mode": "none",
-    "power_consumption": 1000000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_machine_oil",
-        "quantity": 0.15,
-        "q_mode": "none"
-      },
-      {
-        "product_id": "p_refined_diesel",
-        "quantity": 2.38,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_gasoline",
-        "quantity": 2.17,
-        "q_mode": "none"
-      },
-      {
-        "product_id": "p_residue",
-        "quantity": 0.21,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_advanced_electric_furnace_01",
-    "name": "Advanced Electric Furnace",
-    "machine_id": "m_advanced_electric_furnace",
-    "cycle_time": 10,
-    "c_mode": "none",
-    "power_consumption": 12000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_iron_ingot",
-        "quantity": 2,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_liquid_iron",
-        "quantity": 3.6,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_advanced_electric_furnace_02",
-    "name": "Advanced Electric Furnace",
-    "machine_id": "m_advanced_electric_furnace",
-    "cycle_time": 3,
-    "c_mode": "none",
-    "power_consumption": 40000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_copper_mix",
-        "quantity": 5.33,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_liquid_copper",
-        "quantity": 10.4,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_advanced_electric_furnace_03",
-    "name": "Advanced Electric Furnace",
-    "machine_id": "m_advanced_electric_furnace",
-    "cycle_time": 3,
-    "c_mode": "none",
-    "power_consumption": 40000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_raw_copper",
-        "quantity": 2,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_liquid_copper",
-        "quantity": 2,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_advanced_electric_furnace_04",
-    "name": "Advanced Electric Furnace",
-    "machine_id": "m_advanced_electric_furnace",
-    "cycle_time": 5,
-    "c_mode": "none",
-    "power_consumption": 24000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_iron_mix",
-        "quantity": 6.4,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_liquid_iron",
-        "quantity": 14,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_advanced_electric_furnace_05",
-    "name": "Advanced Electric Furnace",
-    "machine_id": "m_advanced_electric_furnace",
-    "cycle_time": 5,
-    "c_mode": "none",
-    "power_consumption": 24000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_raw_iron",
-        "quantity": 2,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_liquid_iron",
-        "quantity": 2,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_advanced_electric_furnace_06",
-    "name": "Advanced Electric Furnace",
-    "machine_id": "m_advanced_electric_furnace",
-    "cycle_time": 5,
-    "c_mode": "none",
-    "power_consumption": 24000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_sulfur",
-        "quantity": 10,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_liquid_sulfur",
-        "quantity": 20,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_advanced_electric_furnace_07",
-    "name": "Advanced Electric Furnace",
-    "machine_id": "m_advanced_electric_furnace",
-    "cycle_time": 6,
-    "c_mode": "none",
-    "power_consumption": 20000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_copper_ingot",
-        "quantity": 2,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_liquid_copper",
-        "quantity": 3.6,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
     "id": "r_advanced_oil_separator_01",
     "name": "Makes Residue, Coke Fuel, Light Oil, Hydrogen Sulfide",
     "machine_id": "m_advanced_oil_separator",
@@ -1476,24 +1172,6 @@
       {
         "product_id": "p_liquid_brass",
         "quantity": 9,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_american_oil_rig_01",
-    "name": "American Oil Rig",
-    "machine_id": "m_american_oil_rig",
-    "cycle_time": 1,
-    "c_mode": "none",
-    "power_consumption": 50000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [],
-    "outputs": [
-      {
-        "product_id": "p_crude_oil",
-        "quantity": 0.24,
         "q_mode": "none"
       }
     ]
@@ -2131,40 +1809,6 @@
     "outputs": [
       {
         "product_id": "p_oil_bottle",
-        "quantity": 1,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_cat_assembler_01",
-    "name": "Cat Assembler",
-    "machine_id": "m_cat_assembler",
-    "cycle_time": 92,
-    "c_mode": "none",
-    "power_consumption": 0,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_electric_motor",
-        "quantity": 4,
-        "q_mode": "none"
-      },
-      {
-        "product_id": "p_gasoline",
-        "quantity": 31,
-        "q_mode": "none"
-      },
-      {
-        "product_id": "p_sulfur",
-        "quantity": 15,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_cat",
         "quantity": 1,
         "q_mode": "none"
       }
@@ -3852,24 +3496,6 @@
       {
         "product_id": "p_sodium_hydroxide_solution",
         "quantity": 6,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_fancy_coal_drill_01",
-    "name": "Fancy Coal Drill",
-    "machine_id": "m_fancy_coal_drill",
-    "cycle_time": 4,
-    "c_mode": "none",
-    "power_consumption": 120,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [],
-    "outputs": [
-      {
-        "product_id": "p_coal",
-        "quantity": 1,
         "q_mode": "none"
       }
     ]
@@ -6099,126 +5725,6 @@
     ]
   },
   {
-    "id": "r_industrial_press_01",
-    "name": "Industrial Press",
-    "machine_id": "m_industrial_press",
-    "cycle_time": 3,
-    "c_mode": "none",
-    "power_consumption": 1340,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_copper_ingot",
-        "quantity": 1,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_copper_plate",
-        "quantity": 1,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_industrial_press_02",
-    "name": "Industrial Press",
-    "machine_id": "m_industrial_press",
-    "cycle_time": 3.5,
-    "c_mode": "none",
-    "power_consumption": 1140,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_planks",
-        "quantity": 1,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_plank^2",
-        "quantity": 0.25,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_industrial_press_03",
-    "name": "Industrial Press",
-    "machine_id": "m_industrial_press",
-    "cycle_time": 4,
-    "c_mode": "none",
-    "power_consumption": 12500,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_steel_ingot",
-        "quantity": 1,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_steel_plate",
-        "quantity": 1,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_industrial_press_04",
-    "name": "Industrial Press",
-    "machine_id": "m_industrial_press",
-    "cycle_time": 4,
-    "c_mode": "none",
-    "power_consumption": 1000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_iron_ingot",
-        "quantity": 1,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_iron_plate",
-        "quantity": 1,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_industrial_press_05",
-    "name": "Industrial Press",
-    "machine_id": "m_industrial_press",
-    "cycle_time": 4,
-    "c_mode": "none",
-    "power_consumption": 75,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_iron_plate",
-        "quantity": 1,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_iron_plate^2",
-        "quantity": 0.25,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
     "id": "r_industrial_roller_01",
     "name": "Makes Copper Wire",
     "machine_id": "m_industrial_roller",
@@ -6989,24 +6495,6 @@
       {
         "product_id": "p_raw_gas",
         "quantity": 30,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_og_oil_rig_01",
-    "name": "OG Oil Rig",
-    "machine_id": "m_og_oil_rig",
-    "cycle_time": 1,
-    "c_mode": "none",
-    "power_consumption": 3000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [],
-    "outputs": [
-      {
-        "product_id": "p_crude_oil",
-        "quantity": 0.12,
         "q_mode": "none"
       }
     ]
@@ -8846,40 +8334,6 @@
     ]
   },
   {
-    "id": "r_residue_refinery_01",
-    "name": "Residue Refinery",
-    "machine_id": "m_residue_refinery",
-    "cycle_time": 60,
-    "c_mode": "none",
-    "power_consumption": 3000000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_residue",
-        "quantity": 100,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_crude_diesel",
-        "quantity": 5,
-        "q_mode": "none"
-      },
-      {
-        "product_id": "p_crude_oil",
-        "quantity": 10,
-        "q_mode": "none"
-      },
-      {
-        "product_id": "p_heavy_oil",
-        "quantity": 15,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
     "id": "r_roller_01",
     "name": "Makes Copper Wire",
     "machine_id": "m_roller",
@@ -9043,24 +8497,6 @@
       {
         "product_id": "p_gold_wire",
         "quantity": 40,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_sand_excavator_01",
-    "name": "Extracts Sand",
-    "machine_id": "m_sand_excavator",
-    "cycle_time": 2,
-    "c_mode": "none",
-    "power_consumption": 300000,
-    "power_type": "MV",
-    "pollution": 0,
-    "inputs": [],
-    "outputs": [
-      {
-        "product_id": "p_sand",
-        "quantity": 4,
         "q_mode": "none"
       }
     ]
@@ -9253,30 +8689,6 @@
       {
         "product_id": "p_residue",
         "quantity": 4,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_soil_excavator_01",
-    "name": "Extracts Soil",
-    "machine_id": "m_soil_excavator",
-    "cycle_time": 1,
-    "c_mode": "none",
-    "power_consumption": 300000,
-    "power_type": "MV",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_water",
-        "quantity": 10,
-        "q_mode": "none"
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_soil",
-        "quantity": 1,
         "q_mode": "none"
       }
     ]
@@ -9681,24 +9093,6 @@
       {
         "product_id": "p_bauxite_residue",
         "quantity": 14,
-        "q_mode": "none"
-      }
-    ]
-  },
-  {
-    "id": "r_uranium_drill_01",
-    "name": "Uranium Drill",
-    "machine_id": "m_uranium_drill",
-    "cycle_time": 180,
-    "c_mode": "none",
-    "power_consumption": 1200000000,
-    "power_type": "none",
-    "pollution": 0,
-    "inputs": [],
-    "outputs": [
-      {
-        "product_id": "p_uranium",
-        "quantity": 0.1,
         "q_mode": "none"
       }
     ]

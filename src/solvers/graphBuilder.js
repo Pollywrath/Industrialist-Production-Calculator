@@ -67,7 +67,13 @@ export const buildProductionGraph = (nodes, edges) => {
       const quantity = typeof input.quantity === 'number' ? input.quantity : 0;
       if (input.quantity === 'Variable' && !isSpecialRecipe) return;
 
-      const rate = isMineshaftDrill ? quantity * machineCount : (quantity / cycleTime) * machineCount;
+      let rate = isMineshaftDrill ? quantity * machineCount : (quantity / cycleTime) * machineCount;
+      
+      // Liquid dumps and burners should always demand their full capacity
+      if (recipe.isLiquidDump || recipe.isLiquidBurner || recipe.id === 'r_liquid_dump' || recipe.id === 'r_liquid_burner') {
+        const capacityPerInput = input.maxFlow || 15;
+        rate = capacityPerInput * machineCount;
+      }
 
       const actualInputIndex = graphNode.inputs.length;
       graphNode.inputs.push({ 

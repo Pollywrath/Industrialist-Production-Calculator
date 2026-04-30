@@ -44,8 +44,6 @@ const UnifiedSettings = ({ recipeType, nodeId, currentSettings, recipe, globalPo
       case 'assembler':
       case 'treeFarm':
       case 'wasteFacility':
-      case 'liquidDump':
-      case 'liquidBurner':
         // (nodeId, settings, inputs, outputs)
         onSettingsChange(nodeId, result.settings, result.inputs, result.outputs);
         break;
