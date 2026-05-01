@@ -325,8 +325,28 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}, phaseBou
 
       const slackVar = registerVar(`excess_${nodeId}_${outputIndex}`);
 
+      let hasSinkConnection = false;
+      outgoingConnections.forEach(conn => {
+        const tNode = graph.nodes[conn.targetNodeId];
+        if (tNode) {
+          const tInput = tNode.inputs[conn.targetInputIndex];
+          const isLiquidSink = tNode.recipe?.isLiquidDump || tNode.recipe?.isLiquidBurner || tNode.recipe?.id === 'r_liquid_dump' || tNode.recipe?.id === 'r_liquid_burner';
+          const isWasteSink = tInput?.isSink && (tNode.recipe?.isWasteFacility || tNode.recipe?.id === 'r_underground_waste_facility');
+          if (isLiquidSink || isWasteSink) {
+            hasSinkConnection = true;
+          }
+        }
+      });
+
       if (isTargetNode) {
         addObjCoeff(slackVar, 1);
+      }
+      
+      // Massive penalty for bypassing a connected sink.
+      // 1e6 is large enough to force usage of the sink (whose cost is ~1)
+      // but small enough to not override deficiency penalties (1e12+)
+      if (hasSinkConnection) {
+        addObjCoeff(slackVar, 1e6);
       }
 
       let cycleTime = node.cycleTime;
@@ -349,6 +369,22 @@ const buildMPSString = (graph, targetNodeIds = new Set(), weights = {}, phaseBou
     node.inputs.forEach((input, inputIndex) => {
       const incomingConnections = incomingByInput.get(`${nodeId}:${inputIndex}`) || [];
       if (incomingConnections.length === 0) return;
+
+      // Waste facility sink inputs and liquid sinks: no deficiency objective, just a capacity cap
+      const isLiquidSink = node.recipe?.isLiquidDump || node.recipe?.isLiquidBurner ||
+        node.recipe?.id === 'r_liquid_dump' || node.recipe?.id === 'r_liquid_burner';
+      const isWasteSink  = input.isSink &&
+        (node.recipe?.isWasteFacility || node.recipe?.id === 'r_underground_waste_facility');
+
+      if (isLiquidSink || isWasteSink) {
+        // For sinks: flow <= capacity * machineCount.  No deficit variable, no deficiency penalty.
+        const capacityPerMachine = input.maxFlow || (isLiquidSink ? 15 : 240);
+        incomingConnections.forEach((conn, i) => {
+          const fVar = sanitizeVarName(`f_${conn.id}`);
+          addConstraint(`sink_cap_${nodeId}_${inputIndex}_${i}`, [[fVar, 1], [mVar, -capacityPerMachine]], 0, 'max');
+        });
+        return;
+      }
 
       const slackVar = registerVar(`deficit_${nodeId}_${inputIndex}`);
       const deficitIndicatorVar = isTargetNode

@@ -177,6 +177,11 @@ export const calculateSuggestions = (graph, flows) => {
       const inputFlow = nodeFlows.inputFlows[inputIndex];
       if (!inputFlow) return;
       
+      const isLiquidSink = node.recipe?.isLiquidDump || node.recipe?.id === 'r_liquid_dump' || 
+                           node.recipe?.isLiquidBurner || node.recipe?.id === 'r_liquid_burner';
+      const isSinkInput = input.isSink && (node.recipe?.isWasteFacility || node.recipe?.id === 'r_underground_waste_facility');
+      if (isLiquidSink || isSinkInput) return;
+      
       const shortage = inputFlow.needed - inputFlow.connected;
       if (!isSignificantFlow(shortage, inputFlow.needed) || shortage <= 0) return;
       
@@ -272,7 +277,8 @@ export const calculateSuggestions = (graph, flows) => {
       
       // Also suggest decreasing this input's consumer to match available supply
       const nodeMachineCountMode = node.machineCountMode || 'free';
-      if (nodeMachineCountMode !== 'locked') {
+      const isConsumerWasteFacility = node.recipe?.isWasteFacility || node.recipe?.id === 'r_underground_waste_facility';
+      if (nodeMachineCountMode !== 'locked' && !isConsumerWasteFacility) {
         const ratePerMachine = node.isMineshaftDrill ? input.quantity : input.quantity / (node.cycleTime || 1);
         if (typeof ratePerMachine === 'number' && ratePerMachine > EPSILON) {
           const reduction = shortage / ratePerMachine;

@@ -75,6 +75,13 @@ export const buildProductionGraph = (nodes, edges) => {
         const capacityPerInput = input.maxFlow || 15;
         rate = capacityPerInput * machineCount;
       }
+      
+      // Waste facility first two inputs (isSink) demand their full capacity per machine
+      // so flow is unconstrained up to max. concrete/lead (no isSink) use normal rate.
+      if ((recipe.isWasteFacility || recipe.id === 'r_underground_waste_facility') && input.isSink) {
+        // maxFlow already = 240 * machineCount (set by buildWasteFacilityInputs)
+        rate = input.maxFlow || (240 * machineCount);
+      }
 
       const actualInputIndex = graphNode.inputs.length;
       graphNode.inputs.push({ 

@@ -47,6 +47,12 @@ export const determineExcessAndDeficiency = (graph, flows) => {
       
       if (isLiquidSink) return;
 
+      // Waste facility first two inputs are sinks — no deficiency reported
+      const inputDef = node?.recipe?.inputs?.[consumer.inputIndex];
+      const isWasteSink = inputDef?.isSink &&
+        (node?.recipe?.isWasteFacility || node?.recipe?.id === 'r_underground_waste_facility');
+      if (isWasteSink) return;
+
       const inputFlow = flows.byNode[consumer.nodeId]?.inputFlows[consumer.inputIndex];
       if (inputFlow) {
         const shortage = inputFlow.needed - inputFlow.connected;

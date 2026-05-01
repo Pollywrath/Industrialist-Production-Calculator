@@ -617,28 +617,31 @@ function App() {
        JSON.stringify(node.data.suggestions) !== JSON.stringify(suggestions || []));
     
     if (recipe?.isWasteFacility) {
-      const itemFlowData = nodeFlows?.inputFlows?.find(f => f.recipeIndex === 0);
+      const machineCount = node.data?.machineCount || 1;
+      const maxFlowPerInput = 240 * machineCount;
+
+      const itemFlowData  = nodeFlows?.inputFlows?.find(f => f.recipeIndex === 0);
       const fluidFlowData = nodeFlows?.inputFlows?.find(f => f.recipeIndex === 1);
       
-      const itemFlow = Math.min(itemFlowData?.connected || 0, 240);
-      const fluidFlow = Math.min(fluidFlowData?.connected || 0, 240);
+      const itemFlow  = Math.min(itemFlowData?.connected  || 0, maxFlowPerInput);
+      const fluidFlow = Math.min(fluidFlowData?.connected || 0, maxFlowPerInput);
       
-      const itemProductId = itemFlowData?.productId || recipe.inputs[0].product_id;
+      const itemProductId  = itemFlowData?.productId  || recipe.inputs[0].product_id;
       const fluidProductId = fluidFlowData?.productId || recipe.inputs[1].product_id;
       
       const settings = recipe.wasteFacilitySettings || {};
       
       // Only update if flows or product IDs actually changed
       if (!flowsChanged && !suggestionsChanged && 
-          settings.itemFlowRate === itemFlow && 
+          settings.itemFlowRate  === itemFlow  && 
           settings.fluidFlowRate === fluidFlow &&
           recipe.inputs[0].product_id === itemProductId &&
           recipe.inputs[1].product_id === fluidProductId) {
         return node;
       }
       
-      const metrics = calculateWasteFacilityMetrics(itemFlow, fluidFlow);
-      const updatedInputs = buildWasteFacilityInputs(itemFlow, fluidFlow, itemProductId, fluidProductId);
+      // cycle_time is always 1 — all quantities are per-second rates
+      const updatedInputs = buildWasteFacilityInputs(itemFlow, fluidFlow, itemProductId, fluidProductId, machineCount);
       
       return {
         ...node,
@@ -647,7 +650,8 @@ function App() {
           recipe: {
             ...recipe,
             inputs: updatedInputs,
-            cycle_time: metrics.cycleTime,
+            cycle_time: 1,
+            pollution: 0,
             wasteFacilitySettings: { ...settings, itemFlowRate: itemFlow, fluidFlowRate: fluidFlow }
           },
           flows: nodeFlows || null,
@@ -656,6 +660,7 @@ function App() {
         }
       };
     }
+
     
     if (recipe?.isLiquidDump) {
       const machineCount = node.data?.machineCount || 1;
@@ -902,23 +907,26 @@ function App() {
         updatedInputs[inputIndex] = { ...updatedInputs[inputIndex], product_id: sourceOutput.product_id, isAnyProduct: false };
         
         if (n.data.recipe.isWasteFacility) {
+          const machineCount = n.data?.machineCount || 1;
+          const maxFlowPerInput = 240 * machineCount;
           const settings = n.data.recipe.wasteFacilitySettings || {};
           const flows = productionSolution?.flows?.byNode[params.source];
           const sourceOutputIndex = parseInt(params.sourceHandle.split('-')[1]);
           const availableFlow = flows?.outputFlows[sourceOutputIndex] 
             ? (flows.outputFlows[sourceOutputIndex].produced - flows.outputFlows[sourceOutputIndex].connected) 
             : 0;
-          const cappedFlow = Math.min(availableFlow, 240);
+          const cappedFlow = Math.min(availableFlow, maxFlowPerInput);
           
           if (inputIndex === 0) settings.itemFlowRate = cappedFlow;
           else if (inputIndex === 1) settings.fluidFlowRate = cappedFlow;
           
-          const metrics = calculateWasteFacilityMetrics(settings.itemFlowRate || 0, settings.fluidFlowRate || 0);
+          // cycle_time is always 1; buildWasteFacilityInputs computes concrete/lead per-second rates
           const allInputs = buildWasteFacilityInputs(
             settings.itemFlowRate || 0,
             settings.fluidFlowRate || 0,
             inputIndex === 0 ? sourceOutput.product_id : updatedInputs[0].product_id,
-            inputIndex === 1 ? sourceOutput.product_id : updatedInputs[1].product_id
+            inputIndex === 1 ? sourceOutput.product_id : updatedInputs[1].product_id,
+            machineCount
           );
           
           return {
@@ -928,7 +936,7 @@ function App() {
               recipe: {
                 ...n.data.recipe,
                 inputs: allInputs,
-                cycle_time: metrics.cycleTime,
+                cycle_time: 1,
                 wasteFacilitySettings: settings
               }
             }
@@ -994,7 +1002,9 @@ function App() {
               product_id: 'p_variableproduct',
               isAnyProduct: true,
               acceptedType: isWasteFacility ? (idx === 0 ? 'item' : 'fluid') : 'fluid',
-              quantity: isWasteFacility ? 7000 : (input.maxFlow || 15)
+              // Waste sink inputs reset to 0 flow when disconnected; liquid machines reset to maxFlow
+              quantity: isWasteFacility ? 0 : (input.maxFlow || 15),
+              ...(isWasteFacility ? { maxFlow: input.maxFlow || 240, isSink: true } : {})
             };
             updated = true;
           }
@@ -1002,9 +1012,13 @@ function App() {
         
         if (updated) {
           hasChanges = true;
-          const pollution = recipe.isLiquidDump 
-            ? calculateLiquidDumpPollution(updatedInputs)
-            : calculateLiquidBurnerPollution(updatedInputs);
+          
+          let pollution = recipe.pollution;
+          if (isLiquidMachine) {
+            pollution = recipe.isLiquidDump 
+              ? calculateLiquidDumpPollution(updatedInputs)
+              : calculateLiquidBurnerPollution(updatedInputs);
+          }
             
           return {
             ...n,
@@ -1312,20 +1326,25 @@ function App() {
     setNodes(nds => nds.map(n => {
       if (n.id !== nodeId) return n;
       const currentSettings = n.data.recipe.wasteFacilitySettings || {};
-      const itemFlowRate = currentSettings.itemFlowRate || 0;
+      const itemFlowRate  = currentSettings.itemFlowRate  || 0;
       const fluidFlowRate = currentSettings.fluidFlowRate || 0;
-      const metrics = calculateWasteFacilityMetrics(itemFlowRate, fluidFlowRate);
+      // cycle_time is always 1 — quantities are per-second rates
+      const machineCount = n.data?.machineCount || 1;
+      const updatedInputs = inputs.length > 0
+        ? inputs
+        : buildWasteFacilityInputs(itemFlowRate, fluidFlowRate,
+            settings.itemProductId, settings.fluidProductId, machineCount);
       return {
         ...n,
         data: {
           ...n.data,
           recipe: {
             ...n.data.recipe,
-            inputs: inputs.length > 0 ? inputs : n.data.recipe.inputs,
+            inputs: updatedInputs,
             wasteFacilitySettings: { ...settings, itemFlowRate, fluidFlowRate },
-            cycle_time: metrics.cycleTime
+            cycle_time: 1
           },
-          leftHandles: Math.max(inputs.length, 1)
+          leftHandles: Math.max(updatedInputs.length, 1)
         }
       };
     }));

@@ -4,7 +4,7 @@ import { DEPTH_OUTPUTS, calculateDrillMetrics, buildDrillInputs, buildDrillOutpu
 import { MICROCHIP_STAGES, calculateLogicAssemblerMetrics, buildLogicAssemblerInputs, buildLogicAssemblerOutputs } from '../data/logicAssembler';
 import { calculateTreeFarmMetrics, buildTreeFarmInputs, buildTreeFarmOutputs } from '../data/treeFarm';
 import { calculateFireboxMetrics, buildFireboxInputs, isIndustrialFireboxRecipe, getIndustrialFireboxRecipeIds } from '../data/industrialFirebox';
-import { calculateWasteFacilityMetrics, buildWasteFacilityInputs } from '../data/undergroundWasteFacility';
+import { buildWasteFacilityInputs } from '../data/undergroundWasteFacility';
 import { calculateLiquidDumpPollution, buildLiquidDumpInputs } from '../data/liquidDump';
 import { calculateLiquidBurnerPollution, buildLiquidBurnerInputs } from '../data/liquidBurner';
 
@@ -281,13 +281,12 @@ export const configureSpecialRecipe = (recipe, autoConnect, selectedProduct, las
     }
     
     const wasteFacilityInputs = buildWasteFacilityInputs(0, 0, defaultItemProductId, defaultFluidProductId);
-    const metrics = calculateWasteFacilityMetrics(0, 0);
     
     configuredRecipe = {
       ...configuredRecipe,
       inputs: wasteFacilityInputs,
       outputs: [],
-      cycle_time: metrics.cycleTime,
+      cycle_time: 1,
       power_consumption: 1000000,
       pollution: 0
     };

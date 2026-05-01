@@ -110,7 +110,10 @@ const CustomNode = memo(({ data, id }) => {
     if (cycleTime === 'Variable') return displayMode === 'perSecond' ? 'Variable' : String(smartFormat(quantity));
     
     let baseQuantity;
-    if (recipe?.isLiquidDump || recipe?.id === 'r_liquid_dump' || recipe?.isLiquidBurner || recipe?.id === 'r_liquid_burner') {
+    const isLiquidMachine = recipe?.isLiquidDump || recipe?.id === 'r_liquid_dump' || recipe?.isLiquidBurner || recipe?.id === 'r_liquid_burner';
+    const isWasteFacility = recipe?.isWasteFacility || recipe?.id === 'r_underground_waste_facility';
+    
+    if (isLiquidMachine || isWasteFacility) {
       baseQuantity = quantity; // Already dynamically calculated as total flow in App.jsx
     } else {
       baseQuantity = displayMode === 'perSecond' ? quantity / cycleTime : quantity;
@@ -265,11 +268,7 @@ const CustomNode = memo(({ data, id }) => {
             onDoubleClick={(e) => e.stopPropagation()}
             className="drill-settings-button" title="Configure Chemical Plant">⚙️</button>
         )}
-        {isWasteFacility && (
-          <button onClick={(e) => { e.stopPropagation(); setSettingsModal('wasteFacility'); }} 
-            onDoubleClick={(e) => e.stopPropagation()}
-            className="drill-settings-button" title="Configure Waste Facility">⚙️</button>
-        )}
+
         {hasTemperatureConfig && (
           <button onClick={(e) => { e.stopPropagation(); setSettingsModal('temperature'); }} 
             onDoubleClick={(e) => e.stopPropagation()}
@@ -521,8 +520,9 @@ const NodeHandle = ({ side, index, onClick, nodeId, productId, flows, onHandleDo
       ? flows.inputFlows?.find(f => f.recipeIndex === index)
       : flows.outputFlows?.find(f => f.recipeIndex === index);
     
-    // Liquid sinks (dump/burner) don't report deficiency even if they take less than their limit
-    if (flowData && !(side === 'left' && isLiquidSink)) {
+    // Liquid sinks (dump/burner) and waste facility sink inputs don't report deficiency even if they take less than their limit
+    const isSinkInput = isLiquidSink || input?.isSink;
+    if (flowData && !(side === 'left' && isSinkInput)) {
       const difference = side === 'left'
         ? flowData.needed - flowData.connected
         : flowData.produced - flowData.connected;
