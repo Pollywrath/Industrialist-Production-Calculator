@@ -14,8 +14,16 @@ interface ProductTabProps {
 function SortIndicator({ active, order }: { active: boolean; order: 'asc' | 'desc' }) {
   return (
     <span className={styles['sort-indicator']}>
-      <span className={`${styles['sort-arrow']} ${active && order === 'asc' ? styles['is-active'] : ''}`}>▲</span>
-      <span className={`${styles['sort-arrow']} ${active && order === 'desc' ? styles['is-active'] : ''}`}>▼</span>
+      <span
+        className={`${styles['sort-arrow']} ${active && order === 'asc' ? styles['is-active'] : ''}`}
+      >
+        ▲
+      </span>
+      <span
+        className={`${styles['sort-arrow']} ${active && order === 'desc' ? styles['is-active'] : ''}`}
+      >
+        ▼
+      </span>
     </span>
   );
 }
@@ -81,9 +89,7 @@ export default function ProductTab({
                       <span className={styles['cell-ellipsis-text']}>{p.name}</span>
                     </div>
                   </td>
-                  <td className={`${styles['text-center']} ${styles['col-25']}`}>
-                    {p.sell_price}
-                  </td>
+                  <td className={`${styles['text-center']} ${styles['col-25']}`}>{p.sell_price}</td>
                   <td className={`${styles['text-center']} ${styles['col-25']}`}>
                     {p.rp_multiplier}
                   </td>

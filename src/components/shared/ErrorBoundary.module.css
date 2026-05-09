@@ -5,7 +5,13 @@
   width: 100vw;
   height: 100dvh;
   background: #121214;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
   color: #ffffff;
 }
 

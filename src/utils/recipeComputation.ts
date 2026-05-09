@@ -1,7 +1,6 @@
 import type { RateMode } from '../stores/useControlStore';
 
 export {
-  snapToCleanFraction,
   cleanMachineCount,
   cleanFlow,
   toPlainString,

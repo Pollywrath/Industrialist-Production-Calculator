@@ -25,7 +25,7 @@ export default function RecipeEdge({
       id={id}
       path={edgePath}
       markerEnd={markerEnd}
-      style={{ ...style, stroke: '#3b3b4f', strokeWidth: 2 }}
+      style={{ ...style, stroke: 'var(--theme-color-edge-stroke)', strokeWidth: 2 }}
     />
   );
 }

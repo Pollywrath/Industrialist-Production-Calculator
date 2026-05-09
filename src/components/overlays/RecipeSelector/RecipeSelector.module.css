@@ -703,12 +703,15 @@
 .tier-1 {
   --tier-color: var(--theme-color-tier-1, #a0aec0);
 }
+
 .tier-2 {
   --tier-color: var(--theme-color-tier-2, #10b981);
 }
+
 .tier-3 {
   --tier-color: var(--theme-color-tier-3, #3b82f6);
 }
+
 .tier-4 {
   --tier-color: var(--theme-color-tier-4, #a855f7);
 }

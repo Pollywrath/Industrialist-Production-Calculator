@@ -1,4 +1,12 @@
-import type { Product, Machine, MachineSize, Recipe, RecipeInput, RecipeOutput, Research } from '../types/data';
+import type {
+  Product,
+  Machine,
+  MachineSize,
+  Recipe,
+  RecipeInput,
+  RecipeOutput,
+  Research,
+} from '../types/data';
 
 export interface ValidationError {
   field: string;
@@ -71,7 +79,10 @@ export function validateProduct(product: unknown): ValidationResult {
 
 // ── Machine Validation ───────────────────────────────────────────────────────
 
-export function validateMachine(machine: unknown, validResearchIds?: Set<string>): ValidationResult {
+export function validateMachine(
+  machine: unknown,
+  validResearchIds?: Set<string>,
+): ValidationResult {
   const errors: ValidationError[] = [];
 
   if (!machine || typeof machine !== 'object') {
@@ -118,21 +129,13 @@ export function validateMachine(machine: unknown, validResearchIds?: Set<string>
     });
   } else {
     const size = m.size as Partial<MachineSize> & Record<string, unknown>;
-    if (
-      typeof size.x !== 'number' ||
-      !Number.isInteger(size.x) ||
-      size.x < 1
-    ) {
+    if (typeof size.x !== 'number' || !Number.isInteger(size.x) || size.x < 1) {
       errors.push({
         field: 'size.x',
         message: 'Size x must be an integer greater than or equal to 1',
       });
     }
-    if (
-      typeof size.y !== 'number' ||
-      !Number.isInteger(size.y) ||
-      size.y < 1
-    ) {
+    if (typeof size.y !== 'number' || !Number.isInteger(size.y) || size.y < 1) {
       errors.push({
         field: 'size.y',
         message: 'Size y must be an integer greater than or equal to 1',
@@ -414,11 +417,7 @@ export function validateResearch(research: unknown): ValidationResult {
     errors.push({ field: 'rp_cost', message: 'RP cost cannot be less than 0' });
   }
 
-  if (
-    r.category !== 'Production' &&
-    r.category !== 'Energy' &&
-    r.category !== 'Utility'
-  ) {
+  if (r.category !== 'Production' && r.category !== 'Energy' && r.category !== 'Utility') {
     errors.push({
       field: 'category',
       message: `Category must be "Production", "Energy", or "Utility" (got "${r.category}")`,

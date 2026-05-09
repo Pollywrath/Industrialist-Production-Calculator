@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -27,6 +28,8 @@ const edgeTypes = {
 
 const SNAP_GRID: [number, number] = [19, 13];
 
+let isInitialFitViewDone = false;
+
 export default function FlowCanvas() {
   const nodes = useFlowStore((s) => s.nodes);
   const edges = useFlowStore((s) => s.edges);
@@ -34,7 +37,15 @@ export default function FlowCanvas() {
   const onEdgesChange = useFlowStore((s) => s.onEdgesChange);
   const onConnect = useFlowStore((s) => s.onConnect);
 
-  const isDeleteMode = useControlStore((s) => !!s.activeToggles['delete_mode']);
+  const [shouldFitView] = useState(() => {
+    if (!isInitialFitViewDone) {
+      isInitialFitViewDone = true;
+      return true;
+    }
+    return false;
+  });
+
+  const isDeleteMode = useControlStore((s) => s.activeToggles['delete_mode'] ?? false);
 
   useFlowSolver();
 
@@ -47,11 +58,7 @@ export default function FlowCanvas() {
 
   const onNodeClick = (_event: React.MouseEvent, node: Node) => {
     if (isDeleteMode) {
-      const flowStore = useFlowStore.getState();
-      flowStore.setNodes(flowStore.nodes.filter((n) => n.id !== node.id));
-      flowStore.setEdges(
-        flowStore.edges.filter((e) => e.source !== node.id && e.target !== node.id),
-      );
+      useFlowStore.getState().deleteNode(node.id);
     }
   };
 
@@ -74,9 +81,9 @@ export default function FlowCanvas() {
     const sourceIndex = sourceParsed.index;
     const targetIndex = targetParsed.index;
 
-    const storeNodes = useFlowStore.getState().nodes;
-    const sourceNode = storeNodes.find((n) => n.id === connection.source);
-    const targetNode = storeNodes.find((n) => n.id === connection.target);
+    const storeNodesMap = useFlowStore.getState().nodesMap;
+    const sourceNode = storeNodesMap.get(connection.source);
+    const targetNode = storeNodesMap.get(connection.target);
 
     if (!sourceNode || !targetNode) return false;
 
@@ -96,7 +103,7 @@ export default function FlowCanvas() {
 
   return (
     <div
-      style={{ width: '100vw', height: '100dvh', background: '#121214' }}
+      style={{ width: '100vw', height: '100dvh', background: 'var(--theme-color-canvas-bg)' }}
       className={isDeleteMode ? 'is-delete-mode' : ''}
     >
       <ReactFlow
@@ -113,9 +120,9 @@ export default function FlowCanvas() {
         snapToGrid={true}
         snapGrid={SNAP_GRID}
         elevateNodesOnSelect={true}
-        fitView
+        fitView={shouldFitView}
       >
-        <Background variant={BackgroundVariant.Dots} gap={SNAP_GRID} size={1.5} color="#26262b" />
+        <Background variant={BackgroundVariant.Dots} gap={SNAP_GRID} size={1.5} color="var(--theme-color-grid-dots)" />
       </ReactFlow>
       <ControlsTray />
       <RecipeSelector />

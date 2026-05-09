@@ -93,31 +93,28 @@ const BUTTONS: ButtonConfig[] = [
 export default function ControlsTray() {
   const isMinimized = useControlStore((s) => s.isMinimized);
   const activeToggles = useControlStore((s) => s.activeToggles);
-  const toggleMinimized = useControlStore((s) => s.toggleMinimized);
-  const toggleButton = useControlStore((s) => s.toggleButton);
-  const setRecipeSelectorOpen = useControlStore((s) => s.setRecipeSelectorOpen);
   const rateMode = useControlStore((s) => s.rateMode);
-  const cycleRateMode = useControlStore((s) => s.cycleRateMode);
 
   const handleButtonClick = (btn: ButtonConfig) => {
+    const controlStore = useControlStore.getState();
     if (btn.id === 'add_recipe') {
-      setRecipeSelectorOpen(true);
+      controlStore.setRecipeSelectorOpen(true);
     } else if (btn.id === 'delete_mode') {
-      toggleButton('delete_mode');
+      controlStore.toggleButton('delete_mode');
     } else if (btn.id === 'multi_select') {
-      toggleButton('multi_select');
+      controlStore.toggleButton('multi_select');
     } else if (btn.id === 'target') {
-      toggleButton('target');
+      controlStore.toggleButton('target');
     } else if (btn.id === 'coming_soon') {
-      toggleButton('coming_soon');
+      controlStore.toggleButton('coming_soon');
     } else if (btn.id === 'rate_mode') {
-      cycleRateMode();
+      controlStore.cycleRateMode();
     } else if (btn.id === 'clear_canvas') {
       const flowStore = useFlowStore.getState();
       flowStore.setNodes([]);
       flowStore.setEdges([]);
     } else if (btn.type === 'toggle') {
-      toggleButton(btn.id);
+      controlStore.toggleButton(btn.id);
     }
   };
 
@@ -136,7 +133,7 @@ export default function ControlsTray() {
 
   return (
     <div className={styles['controls-tray-container']}>
-      <div className={styles['controls-tray-bar']} onClick={toggleMinimized}>
+      <div className={styles['controls-tray-bar']} onClick={() => useControlStore.getState().toggleMinimized()}>
         <span className={styles['controls-tray-bar-text']}>
           {isMinimized ? '▲ SHOW CONTROLS' : '▼ HIDE CONTROLS'}
         </span>

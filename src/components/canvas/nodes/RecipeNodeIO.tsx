@@ -14,13 +14,7 @@ import { buildHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
 import styles from './RecipeNode.module.css';
 
-import {
-  RECT_HEIGHT,
-  RECT_GAP,
-  SIDE_PADDING,
-  COLUMN_GAP,
-  NODE_WIDTH,
-} from './layoutConstants';
+import { RECT_HEIGHT, RECT_GAP, SIDE_PADDING, COLUMN_GAP, NODE_WIDTH } from './layoutConstants';
 
 interface RecipeNodeIOProps {
   leftHandles: HandleRef[];
@@ -52,7 +46,7 @@ export default function RecipeNodeIO({
   machineCount,
 }: RecipeNodeIOProps) {
   const rateMode = useControlStore((s) => s.rateMode);
-  const isDeleteMode = useControlStore((s) => !!s.activeToggles['delete_mode']);
+  const isDeleteMode = useControlStore((s) => s.activeToggles['delete_mode'] ?? false);
   const multiplier = recipe ? getRateMultiplier(recipe.cycle_time, rateMode) : 1;
   const flowResult = useFlowResultStore((s) => s.results.get(nodeId));
 

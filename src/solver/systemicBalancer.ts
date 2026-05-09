@@ -23,6 +23,8 @@ export function calculateBalancedRate(
   // ── 1. Component Port Collection (BFS) ─────────────────────────────────────
 
   const visited = new Set<string>();
+  const componentNodeIds = new Set<string>();
+  const componentEdgeIds = new Set<string>();
   const componentPorts: Array<{
     nodeId: string;
     side: 'input' | 'output';
@@ -41,11 +43,13 @@ export function calculateBalancedRate(
     visited.add(key);
 
     componentPorts.push(current);
+    componentNodeIds.add(current.nodeId);
 
     const currentHandleId = buildHandleId(current.nodeId, current.side, current.index);
 
     for (const edge of edges) {
       if (edge.sourceHandle === currentHandleId) {
+        componentEdgeIds.add(edge.id);
         const targetParsed = parseHandleId(edge.targetHandle!);
         queue.push({
           nodeId: edge.target,
@@ -53,6 +57,7 @@ export function calculateBalancedRate(
           index: targetParsed.index,
         });
       } else if (edge.targetHandle === currentHandleId) {
+        componentEdgeIds.add(edge.id);
         const sourceParsed = parseHandleId(edge.sourceHandle!);
         queue.push({
           nodeId: edge.source,
@@ -91,12 +96,15 @@ export function calculateBalancedRate(
 
   // ── 3. Disequilibrium Optimization (Ternary Search) ────────────────────────
 
+  const localNodes = nodes.filter((n) => componentNodeIds.has(n.id));
+  const localEdges = edges.filter((e) => componentEdgeIds.has(e.id));
+
   const evaluateTrialMetric = (trialRate: number) => {
     const trialQ = resolveQuantity(ref, recipe);
     const trialCycleTime = recipe.cycle_time;
     const trialMachineCount = (trialRate * trialCycleTime) / trialQ;
 
-    const trialNodes = nodes.map((n) => {
+    const trialNodes = localNodes.map((n) => {
       if (n.id === nodeId) {
         return {
           ...n,
@@ -106,7 +114,7 @@ export function calculateBalancedRate(
       return n;
     });
 
-    const trialGraph = buildSolverGraph(trialNodes, edges);
+    const trialGraph = buildSolverGraph(trialNodes, localEdges);
     const trialResults = calculateFlows(trialGraph);
 
     let sumMetric = 0;
@@ -123,54 +131,20 @@ export function calculateBalancedRate(
   };
 
   let low = 0;
-  let high = flowStatus.rate + componentExcess + componentDeficiency;
+  // Pad the upper bound so the target balanced rate is strictly inside the interval (never trapped on the boundary)
+  let high = (flowStatus.rate + componentExcess + componentDeficiency) * 1.2 + 1.0;
 
-  for (let iter = 0; iter < 40; iter++) {
+  // Run 80 iterations to achieve absolute sub-picoflow precision down to JS floating-point limits
+  for (let iter = 0; iter < 80; iter++) {
     const m1 = low + (high - low) / 3;
     const m2 = high - (high - low) / 3;
-    if (evaluateTrialMetric(m1) < evaluateTrialMetric(m2)) {
+    if (evaluateTrialMetric(m1) <= evaluateTrialMetric(m2)) {
       high = m2;
     } else {
       low = m1;
     }
   }
-  let targetRate = low;
 
-  // ── 4. Candidate Sockets Snapping ──────────────────────────────────────────
-
-  const candidateRates: number[] = [0];
-  candidateRates.push(componentExcess);
-  candidateRates.push(componentDeficiency);
-
-  for (const port of componentPorts) {
-    const pNodeFlows = flowResults.get(port.nodeId);
-    const portListFlows = port.side === 'input' ? pNodeFlows?.inputFlows : pNodeFlows?.outputFlows;
-    const status = portListFlows?.[port.index];
-    if (status) {
-      candidateRates.push(status.rate);
-      candidateRates.push(status.connected);
-      candidateRates.push(Math.abs(status.rate - status.connected));
-    }
-  }
-
-  const q_target = resolveQuantity(ref, recipe);
-  if (q_target > 0) {
-    const baseRate = q_target / recipe.cycle_time;
-    for (const multiplier of [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12]) {
-      candidateRates.push(multiplier * baseRate);
-    }
-  }
-
-  let bestCandidate = targetRate;
-  let bestCandidateDiff = Infinity;
-  for (const cand of candidateRates) {
-    const diff = Math.abs(targetRate - cand);
-    if (diff < 1e-4 && diff < bestCandidateDiff) {
-      bestCandidateDiff = diff;
-      bestCandidate = cand;
-    }
-  }
-  targetRate = bestCandidate;
-
-  return targetRate;
+  // Return the midpoint of the converged interval for maximum accuracy
+  return (low + high) / 2;
 }

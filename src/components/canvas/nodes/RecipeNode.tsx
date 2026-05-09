@@ -27,17 +27,17 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeType>) {
 
   const leftHandles = data.inputOrder
     ? data.inputOrder.map((idx) => ({ side: 'input' as const, index: idx }))
-    : Array.from(
-        { length: recipe?.inputs.length || 0 },
-        (_, i) => ({ side: 'input' as const, index: i })
-      );
+    : Array.from({ length: recipe?.inputs.length || 0 }, (_, i) => ({
+        side: 'input' as const,
+        index: i,
+      }));
 
   const rightHandles = data.outputOrder
     ? data.outputOrder.map((idx) => ({ side: 'output' as const, index: idx }))
-    : Array.from(
-        { length: recipe?.outputs.length || 0 },
-        (_, i) => ({ side: 'output' as const, index: i })
-      );
+    : Array.from({ length: recipe?.outputs.length || 0 }, (_, i) => ({
+        side: 'output' as const,
+        index: i,
+      }));
 
   const leftCount = leftHandles.length;
   const rightCount = rightHandles.length;

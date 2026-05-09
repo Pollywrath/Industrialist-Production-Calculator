@@ -30,6 +30,7 @@ export function useFlowSolver(): void {
     }
 
     function areEdgesSemanticallyEqual(a: Edge[], b: Edge[]): boolean {
+      if (a === b) return true;
       if (a.length !== b.length) return false;
       const bMap = new Map(b.map((e) => [e.id, e]));
       for (const eA of a) {
@@ -51,6 +52,10 @@ export function useFlowSolver(): void {
     let prevEdges = useFlowStore.getState().edges;
 
     const unsubFlow = useFlowStore.subscribe((state) => {
+      if (state.nodes === prevNodes && state.edges === prevEdges) {
+        return;
+      }
+
       if (state.nodes.length !== prevNodes.length) {
         prevNodes = state.nodes;
         prevEdges = state.edges;
@@ -58,7 +63,7 @@ export function useFlowSolver(): void {
         return;
       }
 
-      if (!areEdgesSemanticallyEqual(state.edges, prevEdges)) {
+      if (state.edges !== prevEdges && !areEdgesSemanticallyEqual(state.edges, prevEdges)) {
         prevNodes = state.nodes;
         prevEdges = state.edges;
         scheduleRecompute();

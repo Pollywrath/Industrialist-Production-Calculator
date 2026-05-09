@@ -9,50 +9,39 @@ import type {
 } from './types';
 import { clampFlow, EPSILON } from '../utils/precision';
 
-// ── Generational Cache ──────────────────────────────────────
+// ── LRU Cache ───────────────────────────────────────────────
 
-class GenerationalCache<V> {
-  active = new Map<string, V>();
-  history = new Map<string, V>();
-  maxHistorySize: number;
+class LRUCache<V> {
+  cache = new Map<string, V>();
+  maxSize: number;
 
-  constructor(maxHistorySize = 100) {
-    this.maxHistorySize = maxHistorySize;
-  }
-
-  startGeneration(): void {
-    for (const [key, value] of this.active.entries()) {
-      this.history.delete(key);
-      this.history.set(key, value);
-    }
-    this.active.clear();
-    while (this.history.size > this.maxHistorySize) {
-      const oldestKey = this.history.keys().next().value!;
-      this.history.delete(oldestKey);
-    }
+  constructor(maxSize = 1000) {
+    this.maxSize = maxSize;
   }
 
   get(key: string): V | null {
-    if (this.active.has(key)) {
-      return this.active.get(key)!;
-    }
-    if (this.history.has(key)) {
-      const value = this.history.get(key)!;
-      this.history.delete(key);
-      this.active.set(key, value);
+    if (this.cache.has(key)) {
+      const value = this.cache.get(key)!;
+      this.cache.delete(key);
+      this.cache.set(key, value);
       return value;
     }
     return null;
   }
 
   set(key: string, value: V): void {
-    this.history.delete(key);
-    this.active.set(key, value);
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+    this.cache.set(key, value);
+    if (this.cache.size > this.maxSize) {
+      const oldestKey = this.cache.keys().next().value!;
+      this.cache.delete(oldestKey);
+    }
   }
 
   clear(): void {
-    this.active.clear();
-    this.history.clear();
+    this.cache.clear();
   }
 }
 
@@ -150,7 +139,6 @@ class CircularQueue {
 // ── Connected components ────────────────────────────────────
 
 interface Component {
-  id: number;
   ports: SolverPort[];
   connections: SolverConnection[];
 }
@@ -212,11 +200,8 @@ function findConnectedComponents(productData: SolverProductData) {
   }
 
   const componentsByRoot = new Map<number, Component>();
-  let componentId = 0;
-
   componentMap.forEach((portIndices, root) => {
     const component: Component = {
-      id: componentId++,
       ports: portIndices.map((idx) => ports[idx]),
       connections: [],
     };
@@ -261,7 +246,6 @@ function hashComponent(component: Component): string {
 
 function buildFlowNetwork(connections: SolverConnection[], totalProduction: number): FlowNetwork {
   const nodeToIndex = new Map<string, number>();
-  const indexToNode: string[] = [];
   let nodeCount = 0;
 
   const getNodeIndex = (nodeKey: string): number => {
@@ -269,7 +253,6 @@ function buildFlowNetwork(connections: SolverConnection[], totalProduction: numb
     if (idx === undefined) {
       idx = nodeCount++;
       nodeToIndex.set(nodeKey, idx);
-      indexToNode.push(nodeKey);
     }
     return idx;
   };
@@ -345,7 +328,7 @@ function dinic(network: FlowNetwork): {
       for (let i = 0; i < adjV.length; i++) {
         const edge = edges[adjV[i]];
         const residual = edge.cap - edge.flow;
-        if (level[edge.to] < 0 && residual > 1e-15) {
+        if (level[edge.to] < 0 && residual > EPSILON) {
           level[edge.to] = level[v] + 1;
           queue.push(edge.to);
         }
@@ -367,13 +350,13 @@ function dinic(network: FlowNetwork): {
       const to = edge.to;
       const cap = edge.cap - edge.flow;
 
-      if (level[u] + 1 === level[to] && cap > 1e-15) {
+      if (level[u] + 1 === level[to] && cap > EPSILON) {
         const tr = dfs(to, Math.min(pushed - totalPushed, cap));
         if (tr > 0) {
           edge.flow += tr;
           edges[edge.rev].flow -= tr;
           totalPushed += tr;
-          if (totalPushed >= pushed - 1e-15) {
+          if (totalPushed >= pushed - EPSILON) {
             break;
           }
         }
@@ -408,13 +391,11 @@ function dinic(network: FlowNetwork): {
 
 // ── Main solver entry point ─────────────────────────────────
 
-const flowCache = new GenerationalCache<{
-  hash: string;
+const flowCache = new LRUCache<{
   connectionFlows: Record<string, number>;
-}>(100);
+}>(1000);
 
 export function calculateFlows(graph: SolverGraph): FlowResults {
-  flowCache.startGeneration();
   const results: FlowResults = new Map();
 
   for (const [nodeId, node] of Object.entries(graph.nodes)) {
@@ -434,7 +415,7 @@ export function calculateFlows(graph: SolverGraph): FlowResults {
     });
   }
 
-  for (const [productId, productData] of Object.entries(graph.products)) {
+  for (const [, productData] of Object.entries(graph.products)) {
     if (productData.connections.length === 0) continue;
 
     const { components } = findConnectedComponents(productData);
@@ -443,12 +424,12 @@ export function calculateFlows(graph: SolverGraph): FlowResults {
       if (component.connections.length === 0) continue;
 
       const componentHash = hashComponent(component);
-      const cacheKey = `${productId}:comp${component.id}`;
+      const cacheKey = componentHash;
       const cached = flowCache.get(cacheKey);
 
       let connFlowMap: Record<string, number>;
 
-      if (cached && cached.hash === componentHash) {
+      if (cached) {
         connFlowMap = cached.connectionFlows;
       } else {
         const totalProduction = component.ports
@@ -456,7 +437,7 @@ export function calculateFlows(graph: SolverGraph): FlowResults {
           .reduce((sum, p) => sum + p.rate, 0);
 
         connFlowMap = {};
-        if (totalProduction < 1e-15) {
+        if (totalProduction < EPSILON) {
           component.connections.forEach((conn) => {
             connFlowMap[conn.id] = 0;
           });
@@ -465,18 +446,17 @@ export function calculateFlows(graph: SolverGraph): FlowResults {
           const { connectionFlows } = dinic(network);
 
           component.connections.forEach((conn, idx) => {
-            connFlowMap[conn.id] = connectionFlows[idx] || 0;
+            connFlowMap[conn.id] = connectionFlows[idx] ?? 0;
           });
         }
 
         flowCache.set(cacheKey, {
-          hash: componentHash,
           connectionFlows: connFlowMap,
         });
       }
 
       for (const conn of component.connections) {
-        const flowRate = connFlowMap[conn.id] || 0;
+        const flowRate = connFlowMap[conn.id] ?? 0;
 
         const sourceResult = results.get(conn.sourceNodeId);
         if (sourceResult && sourceResult.outputFlows[conn.sourceOutputIndex]) {

@@ -43,8 +43,16 @@ interface MachineTabProps {
 function SortIndicator({ active, order }: { active: boolean; order: 'asc' | 'desc' }) {
   return (
     <span className={styles['sort-indicator']}>
-      <span className={`${styles['sort-arrow']} ${active && order === 'asc' ? styles['is-active'] : ''}`}>▲</span>
-      <span className={`${styles['sort-arrow']} ${active && order === 'desc' ? styles['is-active'] : ''}`}>▼</span>
+      <span
+        className={`${styles['sort-arrow']} ${active && order === 'asc' ? styles['is-active'] : ''}`}
+      >
+        ▲
+      </span>
+      <span
+        className={`${styles['sort-arrow']} ${active && order === 'desc' ? styles['is-active'] : ''}`}
+      >
+        ▼
+      </span>
     </span>
   );
 }
@@ -52,28 +60,28 @@ function SortIndicator({ active, order }: { active: boolean; order: 'asc' | 'des
 const SUBCATEGORY_ICONS: Record<string, typeof HelpCircle> = {
   'fluid extractor': Droplet,
   'item extractor': Pickaxe,
-  'assembler': Component,
-  'furnace': Flame,
-  'molder': Layers,
-  'plant': Container,
-  'processor': Cpu,
-  'refinery': Filter,
-  'separator': GitFork,
+  assembler: Component,
+  furnace: Flame,
+  molder: Layers,
+  plant: Container,
+  processor: Cpu,
+  refinery: Filter,
+  separator: GitFork,
   'logic gate': Binary,
   'logic input': LogIn,
   'logic output': LogOut,
-  'decoration': Paintbrush,
-  'depot': Warehouse,
-  'other': HelpCircle,
-  'research': FlaskConical,
+  decoration: Paintbrush,
+  depot: Warehouse,
+  other: HelpCircle,
+  research: FlaskConical,
   'modular diesel engine': Gauge,
   'modular turbine': Fan,
   'tree farm': Trees,
-  'battery': Battery,
+  battery: Battery,
   'large power plant': Factory,
   'non-renewable': Fuel,
   'power rate calculator': Calculator,
-  'renewable': Leaf,
+  renewable: Leaf,
   'fluid silo': Droplet,
   'item silo': Package,
 };
@@ -150,18 +158,12 @@ export default function MachineTab({
                   <tr onClick={() => onSelectItem(m.id)} className={styles['clickable-row']}>
                     <td className={styles['col-70']}>
                       <div className={`${styles['cell-flex-container']} ${tierClass}`}>
-                        <span className={styles['tier-badge']}>
-                          T{m.tier}
-                        </span>
+                        <span className={styles['tier-badge']}>T{m.tier}</span>
                         <SubIcon size={14} className={styles['machine-subicon']} />
-                        <span className={styles['machine-name-text']}>
-                          {m.name}
-                        </span>
+                        <span className={styles['machine-name-text']}>{m.name}</span>
                       </div>
                     </td>
-                    <td className={`${styles['text-center']} ${styles['col-30']}`}>
-                      {m.cost}
-                    </td>
+                    <td className={`${styles['text-center']} ${styles['col-30']}`}>{m.cost}</td>
                   </tr>
                 </tbody>
               </table>

@@ -41,7 +41,8 @@ export default class ErrorBoundary extends Component<Props, State> {
           <div className={styles['error-boundary-modal']}>
             <h2 className={styles['error-boundary-title']}>Industrialist Calculator Crashed</h2>
             <p className={styles['error-boundary-text']}>
-              An unhandled runtime error occurred. This is usually caused by corrupted flowchart data.
+              An unhandled runtime error occurred. This is usually caused by corrupted flowchart
+              data.
             </p>
             {this.state.error && (
               <pre className={styles['error-boundary-details']}>

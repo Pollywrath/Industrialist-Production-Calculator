@@ -13,7 +13,6 @@ import type { Recipe } from '../../../types/data';
 import useControlStore from '../../../stores/useControlStore';
 import useFlowStore from '../../../stores/useFlowStore';
 import useFlowResultStore from '../../../stores/useFlowResultStore';
-import { useShallow } from 'zustand/shallow';
 import { nextNodeId, nextEdgeId } from '../../../utils/idGenerator';
 import VirtualList from '../../shared/VirtualList';
 import { cleanMachineCount } from '../../../utils/recipeComputation';
@@ -86,17 +85,15 @@ function RecipeSelectorModal() {
   const preselectedNodeId = useControlStore((s) => s.preselectedNodeId);
   const preselectedHandleIndex = useControlStore((s) => s.preselectedHandleIndex);
   const rateMode = useControlStore((s) => s.rateMode);
-  const preselectedNodeData = useFlowStore(
-    useShallow((s) => {
-      if (!preselectedNodeId) return null;
-      const node = s.nodes.find((n) => n.id === preselectedNodeId);
-      if (!node) return null;
-      return {
-        recipeId: node.data?.recipeId,
-        machineCount: node.data?.machineCount,
-      };
-    }),
-  );
+  const preselectedNode = preselectedNodeId
+    ? useFlowStore.getState().nodesMap.get(preselectedNodeId)
+    : null;
+  const preselectedNodeData = preselectedNode
+    ? {
+        recipeId: preselectedNode.data?.recipeId,
+        machineCount: preselectedNode.data?.machineCount,
+      }
+    : null;
   const { screenToFlowPosition } = useReactFlow();
   const [stage, setStage] = useState<'select' | 'recipes'>(() => {
     return preselectedProductId ? 'recipes' : 'select';
@@ -104,9 +101,7 @@ function RecipeSelectorModal() {
   const [selectedId, setSelectedId] = useState<string | null>(() => {
     return preselectedProductId || null;
   });
-  const [activeTab, setActiveTab] = useState<'product' | 'machine'>(() => {
-    return preselectedProductId ? 'product' : 'product';
-  });
+  const [activeTab, setActiveTab] = useState<'product' | 'machine'>('product');
   const [search, setSearch] = useState('');
   const [productSortField, setProductSortField] = useState<'name' | 'sell_price' | 'rp_multiplier'>(
     'name',
@@ -301,7 +296,7 @@ function RecipeSelectorModal() {
     let calculatedMachineCount = 1;
 
     if (preselectedNodeId) {
-      const existingNode = flowStore.nodes.find((n) => n.id === preselectedNodeId);
+      const existingNode = flowStore.nodesMap.get(preselectedNodeId);
       if (existingNode) {
         const existingRecipe = existingNode.data?.recipeId
           ? getRecipe(existingNode.data.recipeId)

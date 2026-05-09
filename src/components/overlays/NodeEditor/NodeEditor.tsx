@@ -74,18 +74,18 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
 
   useEffect(() => {
     const count = parseInt(document.body.dataset.scrollLockCount || '0', 10);
-    
+
     if (count === 0) {
       document.body.dataset.originalOverflow = document.body.style.overflow || '';
       document.body.style.overflow = 'hidden';
     }
-    
+
     document.body.dataset.scrollLockCount = String(count + 1);
 
     return () => {
       const currentCount = parseInt(document.body.dataset.scrollLockCount || '1', 10) - 1;
       document.body.dataset.scrollLockCount = String(currentCount);
-      
+
       if (currentCount <= 0) {
         document.body.style.overflow = document.body.dataset.originalOverflow || '';
         delete document.body.dataset.originalOverflow;
@@ -189,12 +189,12 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
         <>
           <div
             className={styles['node-editor-handle-label']}
-            style={{ color: '#ff6c6c', fontStyle: 'italic' }}
+            style={{ color: 'var(--theme-color-text-error)', fontStyle: 'italic' }}
           >
             Stale / Invalid Handle
           </div>
           <div className={styles['node-editor-quantity-section']}>
-            <span style={{ color: '#888', fontSize: '13px' }}>N/A</span>
+            <span style={{ color: 'var(--theme-color-text-neutral)', fontSize: '13px' }}>N/A</span>
           </div>
         </>
       );
@@ -211,66 +211,54 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
       if (!/^\d*(\.\d{0,10})?$/.test(rawVal)) return;
 
       setQtyStrMap((prev) => ({ ...prev, [key]: rawVal }));
-
-      const parsed = parseFloat(rawVal);
-      if (!isNaN(parsed) && parsed >= 0) {
-        if (normalizedBaseQuantity > 0) {
-          const newMachineCount = cleanMachineCount(parsed / normalizedBaseQuantity);
-          setMachineCount(newMachineCount);
-          setMachineCountStr(toPlainString(newMachineCount, 12));
-
-          setQtyStrMap((prev) => {
-            const updated = { ...prev };
-            inputs.forEach((inpIdx) => {
-              const hKey = `input-${inpIdx}`;
-              if (hKey !== key) {
-                const baseQty = getHandleBaseQuantity({
-                  side: 'input',
-                  index: inpIdx,
-                });
-                updated[hKey] = toPlainString(cleanFlow(baseQty * newMachineCount), 10);
-              }
-            });
-            outputs.forEach((outIdx) => {
-              const hKey = `output-${outIdx}`;
-              if (hKey !== key) {
-                const baseQty = getHandleBaseQuantity({
-                  side: 'output',
-                  index: outIdx,
-                });
-                updated[hKey] = toPlainString(cleanFlow(baseQty * newMachineCount), 10);
-              }
-            });
-            return updated;
-          });
-        }
-      } else if (rawVal === '') {
-        setMachineCount(0);
-        setMachineCountStr('');
-        setQtyStrMap((prev) => {
-          const updated = { ...prev };
-          inputs.forEach((inpIdx) => {
-            updated[`input-${inpIdx}`] = '';
-          });
-          outputs.forEach((outIdx) => {
-            updated[`output-${outIdx}`] = '';
-          });
-          return updated;
-        });
-      }
     };
 
     const handleQtyBlur = () => {
       const currentVal = qtyStrMap[key] || '';
       const parsed = parseFloat(currentVal);
+
       if (!isNaN(parsed) && parsed >= 0) {
         const cleaned = cleanFlow(parsed);
-        setQtyStrMap((prev) => ({
-          ...prev,
-          [key]: toPlainString(cleaned, 10),
-        }));
+        const nextQtyStrMap: Record<string, string> = { ...qtyStrMap, [key]: toPlainString(cleaned, 10) };
+
+        if (normalizedBaseQuantity > 0) {
+          const newMachineCount = cleanMachineCount(cleaned / normalizedBaseQuantity);
+          setMachineCount(newMachineCount);
+          setMachineCountStr(toPlainString(newMachineCount, 12));
+
+          inputs.forEach((inpIdx) => {
+            const hKey = `input-${inpIdx}`;
+            if (hKey !== key) {
+              const baseQty = getHandleBaseQuantity({
+                side: 'input',
+                index: inpIdx,
+              });
+              nextQtyStrMap[hKey] = toPlainString(cleanFlow(baseQty * newMachineCount), 10);
+            }
+          });
+          outputs.forEach((outIdx) => {
+            const hKey = `output-${outIdx}`;
+            if (hKey !== key) {
+              const baseQty = getHandleBaseQuantity({
+                side: 'output',
+                index: outIdx,
+              });
+              nextQtyStrMap[hKey] = toPlainString(cleanFlow(baseQty * newMachineCount), 10);
+            }
+          });
+        }
+        setQtyStrMap(nextQtyStrMap);
       } else {
-        setQtyStrMap((prev) => ({ ...prev, [key]: '' }));
+        setMachineCount(0);
+        setMachineCountStr('');
+        const resetQtyStrMap: Record<string, string> = {};
+        inputs.forEach((inpIdx) => {
+          resetQtyStrMap[`input-${inpIdx}`] = '';
+        });
+        outputs.forEach((outIdx) => {
+          resetQtyStrMap[`output-${outIdx}`] = '';
+        });
+        setQtyStrMap(resetQtyStrMap);
       }
     };
 
@@ -317,24 +305,28 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
     if (!/^\d*(\.\d{0,12})?$/.test(rawVal)) return;
 
     setMachineCountStr(rawVal);
+  };
 
-    const parsed = parseFloat(rawVal);
+  const handleMachineCountBlur = () => {
+    const parsed = parseFloat(machineCountStr);
     if (!isNaN(parsed) && parsed >= 0) {
-      const newMachineCount = cleanMachineCount(parsed);
-      setMachineCount(newMachineCount);
+      const cleaned = cleanMachineCount(parsed);
+      setMachineCount(cleaned);
+      setMachineCountStr(toPlainString(cleaned, 12));
 
       const newQtyStrMap: Record<string, string> = {};
       inputs.forEach((idx) => {
         const baseQty = getHandleBaseQuantity({ side: 'input', index: idx });
-        newQtyStrMap[`input-${idx}`] = toPlainString(cleanFlow(baseQty * newMachineCount), 10);
+        newQtyStrMap[`input-${idx}`] = toPlainString(cleanFlow(baseQty * cleaned), 10);
       });
       outputs.forEach((idx) => {
         const baseQty = getHandleBaseQuantity({ side: 'output', index: idx });
-        newQtyStrMap[`output-${idx}`] = toPlainString(cleanFlow(baseQty * newMachineCount), 10);
+        newQtyStrMap[`output-${idx}`] = toPlainString(cleanFlow(baseQty * cleaned), 10);
       });
       setQtyStrMap(newQtyStrMap);
-    } else if (rawVal === '') {
+    } else {
       setMachineCount(0);
+      setMachineCountStr('');
       const newQtyStrMap: Record<string, string> = {};
       inputs.forEach((idx) => {
         newQtyStrMap[`input-${idx}`] = '';
@@ -343,18 +335,6 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
         newQtyStrMap[`output-${idx}`] = '';
       });
       setQtyStrMap(newQtyStrMap);
-    }
-  };
-
-  const handleMachineCountBlur = () => {
-    const parsed = parseFloat(machineCountStr);
-    if (!isNaN(parsed) && parsed >= 0) {
-      const cleaned = cleanMachineCount(parsed);
-      setMachineCount(cleaned);
-      setMachineCountStr(String(cleaned));
-    } else {
-      setMachineCount(0);
-      setMachineCountStr('');
     }
   };
 

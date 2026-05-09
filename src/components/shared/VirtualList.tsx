@@ -26,7 +26,8 @@ export default function VirtualList<T>({
 
   const [range, setRange] = useState(() => {
     const start = 0;
-    const end = items.length > 0 ? Math.min(items.length - 1, Math.ceil(height / itemHeight) + overscan) : -1;
+    const end =
+      items.length > 0 ? Math.min(items.length - 1, Math.ceil(height / itemHeight) + overscan) : -1;
     return { start, end };
   });
 
@@ -39,7 +40,10 @@ export default function VirtualList<T>({
       rafIdRef.current = null;
       const top = scrollTopRef.current;
       const start = Math.max(0, Math.floor(top / itemHeight) - overscan);
-      const end = items.length > 0 ? Math.min(items.length - 1, Math.ceil((top + height) / itemHeight) + overscan) : -1;
+      const end =
+        items.length > 0
+          ? Math.min(items.length - 1, Math.ceil((top + height) / itemHeight) + overscan)
+          : -1;
       setRange({ start, end });
     });
   };
@@ -49,10 +53,13 @@ export default function VirtualList<T>({
     if (el) {
       const top = el.scrollTop;
       const start = Math.max(0, Math.floor(top / itemHeight) - overscan);
-      const end = items.length > 0 ? Math.min(items.length - 1, Math.ceil((top + height) / itemHeight) + overscan) : -1;
+      const end =
+        items.length > 0
+          ? Math.min(items.length - 1, Math.ceil((top + height) / itemHeight) + overscan)
+          : -1;
       setRange({ start, end });
     }
-  }, [items, height, itemHeight, overscan]);
+  }, [items.length, height, itemHeight, overscan]);
 
   useEffect(() => {
     return () => {
@@ -70,10 +77,11 @@ export default function VirtualList<T>({
     if (item !== undefined) {
       const itemStyle: React.CSSProperties = {
         position: 'absolute',
-        top: i * itemHeight,
+        top: 0,
         left: 0,
         right: 0,
         height: itemHeight,
+        transform: `translateY(${i * itemHeight}px)`,
         boxSizing: 'border-box',
       };
 
