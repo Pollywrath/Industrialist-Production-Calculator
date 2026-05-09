@@ -1,0 +1,1065 @@
+[
+  {
+    "name": "Production",
+    "rp_cost": 0,
+    "category": "Production",
+    "prerequisites": [],
+    "id": "s_production_production"
+  },
+  {
+    "name": "Coal Extracting",
+    "rp_cost": 10,
+    "category": "Production",
+    "prerequisites": ["s_production_production"],
+    "id": "s_production_coal_extracting"
+  },
+  {
+    "name": "Water Pump",
+    "rp_cost": 25,
+    "category": "Production",
+    "prerequisites": ["s_production_production"],
+    "id": "s_production_water_pump"
+  },
+  {
+    "name": "Copper Extracting",
+    "rp_cost": 50,
+    "category": "Production",
+    "prerequisites": ["s_production_coal_extracting"],
+    "id": "s_production_copper_extracting"
+  },
+  {
+    "name": "Oil Extraction",
+    "rp_cost": 1500,
+    "category": "Production",
+    "prerequisites": ["s_production_coal_extracting", "s_production_water_pump"],
+    "id": "s_production_oil_extraction"
+  },
+  {
+    "name": "Modular Tree Farm",
+    "rp_cost": 1000,
+    "category": "Production",
+    "prerequisites": ["s_production_water_pump"],
+    "id": "s_production_modular_tree_farm"
+  },
+  {
+    "name": "Water Pump 2",
+    "rp_cost": 5000,
+    "category": "Production",
+    "prerequisites": ["s_production_water_pump"],
+    "id": "s_production_water_pump_2"
+  },
+  {
+    "name": "Electric Furnace & Molding",
+    "rp_cost": 50,
+    "category": "Production",
+    "prerequisites": ["s_production_copper_extracting"],
+    "id": "s_production_electric_furnace_and_molding"
+  },
+  {
+    "name": "Oil Refining",
+    "rp_cost": 1000,
+    "category": "Production",
+    "prerequisites": ["s_production_oil_extraction"],
+    "id": "s_production_oil_refining"
+  },
+  {
+    "name": "Sawmill",
+    "rp_cost": 800,
+    "category": "Production",
+    "prerequisites": ["s_production_modular_tree_farm"],
+    "id": "s_production_sawmill"
+  },
+  {
+    "name": "Water Filtering",
+    "rp_cost": 2500,
+    "category": "Production",
+    "prerequisites": ["s_production_water_pump_2"],
+    "id": "s_production_water_filtering"
+  },
+  {
+    "name": "Iron Extracting",
+    "rp_cost": 250,
+    "category": "Production",
+    "prerequisites": ["s_production_electric_furnace_and_molding"],
+    "id": "s_production_iron_extracting"
+  },
+  {
+    "name": "Press",
+    "rp_cost": 150,
+    "category": "Production",
+    "prerequisites": ["s_production_electric_furnace_and_molding"],
+    "id": "s_production_press"
+  },
+  {
+    "name": "Diesel Refining",
+    "rp_cost": 750,
+    "category": "Production",
+    "prerequisites": ["s_production_oil_refining"],
+    "id": "s_production_diesel_refining"
+  },
+  {
+    "name": "Craft Assembler",
+    "rp_cost": 3000,
+    "category": "Production",
+    "prerequisites": ["s_production_sawmill"],
+    "id": "s_production_craft_assembler"
+  },
+  {
+    "name": "Paper Mill",
+    "rp_cost": 2000,
+    "category": "Production",
+    "prerequisites": ["s_production_sawmill"],
+    "id": "s_production_paper_mill"
+  },
+  {
+    "name": "Industrial Sawmill",
+    "rp_cost": 12000,
+    "category": "Production",
+    "prerequisites": ["s_production_sawmill"],
+    "id": "s_production_industrial_sawmill"
+  },
+  {
+    "name": "Grinder",
+    "rp_cost": 1000,
+    "category": "Production",
+    "prerequisites": ["s_production_sawmill"],
+    "id": "s_production_grinder"
+  },
+  {
+    "name": "Research Station 1",
+    "rp_cost": 10,
+    "category": "Production",
+    "prerequisites": ["s_production_production"],
+    "id": "s_production_research_station_1"
+  },
+  {
+    "name": "Research Station 2",
+    "rp_cost": 750,
+    "category": "Production",
+    "prerequisites": ["s_production_iron_extracting"],
+    "id": "s_production_research_station_2"
+  },
+  {
+    "name": "Roller",
+    "rp_cost": 150,
+    "category": "Production",
+    "prerequisites": ["s_production_press"],
+    "id": "s_production_roller"
+  },
+  {
+    "name": "Quarry",
+    "rp_cost": 350,
+    "category": "Production",
+    "prerequisites": ["s_production_diesel_refining"],
+    "id": "s_production_quarry"
+  },
+  {
+    "name": "Industrial Diesel Refining",
+    "rp_cost": 40000,
+    "category": "Production",
+    "prerequisites": ["s_production_diesel_refining"],
+    "id": "s_production_industrial_diesel_refining"
+  },
+  {
+    "name": "Advanced Oil Refining",
+    "rp_cost": 25000,
+    "category": "Production",
+    "prerequisites": ["s_production_diesel_refining"],
+    "id": "s_production_advanced_oil_refining"
+  },
+  {
+    "name": "Natural Gas Well",
+    "rp_cost": 15000,
+    "category": "Production",
+    "prerequisites": ["s_production_diesel_refining"],
+    "id": "s_production_natural_gas_well"
+  },
+  {
+    "name": "Research Station 3",
+    "rp_cost": 15000,
+    "category": "Production",
+    "prerequisites": ["s_production_diesel_refining"],
+    "id": "s_production_research_station_3"
+  },
+  {
+    "name": "Advanced Copper Extraction",
+    "rp_cost": 350,
+    "category": "Production",
+    "prerequisites": ["s_production_research_station_2"],
+    "id": "s_production_advanced_copper_extraction"
+  },
+  {
+    "name": "Advanced Coal Extraction",
+    "rp_cost": 1000,
+    "category": "Production",
+    "prerequisites": ["s_production_research_station_2"],
+    "id": "s_production_advanced_coal_extraction"
+  },
+  {
+    "name": "Steel",
+    "rp_cost": 3500,
+    "category": "Production",
+    "prerequisites": ["s_production_research_station_2"],
+    "id": "s_production_steel"
+  },
+  {
+    "name": "Brick Production",
+    "rp_cost": 1500,
+    "category": "Production",
+    "prerequisites": ["s_production_quarry"],
+    "id": "s_production_brick_production"
+  },
+  {
+    "name": "Chemical Reactor",
+    "rp_cost": 80000,
+    "category": "Production",
+    "prerequisites": [
+      "s_production_industrial_diesel_refining",
+      "s_production_advanced_oil_refining"
+    ],
+    "id": "s_production_chemical_reactor"
+  },
+  {
+    "name": "Industrial Firebox",
+    "rp_cost": 10000,
+    "category": "Production",
+    "prerequisites": ["s_production_quarry"],
+    "id": "s_production_industrial_firebox"
+  },
+  {
+    "name": "Oil Fracking",
+    "rp_cost": 60000,
+    "category": "Production",
+    "prerequisites": ["s_production_quarry", "s_production_industrial_diesel_refining"],
+    "id": "s_production_oil_fracking"
+  },
+  {
+    "name": "Gas Refining",
+    "rp_cost": 8000,
+    "category": "Production",
+    "prerequisites": ["s_production_natural_gas_well"],
+    "id": "s_production_gas_refining"
+  },
+  {
+    "name": "Plastics",
+    "rp_cost": 25000,
+    "category": "Production",
+    "prerequisites": ["s_production_research_station_3"],
+    "id": "s_production_plastics"
+  },
+  {
+    "name": "Satellite Dishes",
+    "rp_cost": 40000,
+    "category": "Production",
+    "prerequisites": ["s_production_research_station_3"],
+    "id": "s_production_satellite_dishes"
+  },
+  {
+    "name": "Mineshaft Drill",
+    "rp_cost": 175000,
+    "category": "Production",
+    "prerequisites": [
+      "s_production_advanced_copper_extraction",
+      "s_production_advanced_coal_extraction",
+      "s_production_steel"
+    ],
+    "id": "s_production_mineshaft_drill"
+  },
+  {
+    "name": "Concrete Production",
+    "rp_cost": 1500,
+    "category": "Production",
+    "prerequisites": ["s_production_brick_production"],
+    "id": "s_production_concrete_production"
+  },
+  {
+    "name": "Advanced Processing",
+    "rp_cost": 5000,
+    "category": "Production",
+    "prerequisites": ["s_production_industrial_firebox"],
+    "id": "s_production_advanced_processing"
+  },
+  {
+    "name": "Large Oil Rig",
+    "rp_cost": 20000,
+    "category": "Production",
+    "prerequisites": ["s_production_oil_fracking", "s_production_gas_refining"],
+    "id": "s_production_large_oil_rig"
+  },
+  {
+    "name": "LNG Plant",
+    "rp_cost": 15000,
+    "category": "Production",
+    "prerequisites": ["s_production_gas_refining"],
+    "id": "s_production_lng_plant"
+  },
+  {
+    "name": "Plastic Molding",
+    "rp_cost": 7500,
+    "category": "Production",
+    "prerequisites": ["s_production_plastics"],
+    "id": "s_production_plastic_molding"
+  },
+  {
+    "name": "Electrolysis Plant",
+    "rp_cost": 290000,
+    "category": "Production",
+    "prerequisites": ["s_production_mineshaft_drill"],
+    "id": "s_production_electrolysis_plant"
+  },
+  {
+    "name": "Foundry",
+    "rp_cost": 100000,
+    "category": "Production",
+    "prerequisites": ["s_production_mineshaft_drill"],
+    "id": "s_production_foundry"
+  },
+  {
+    "name": "Press MK2",
+    "rp_cost": 40000,
+    "category": "Production",
+    "prerequisites": ["s_production_mineshaft_drill"],
+    "id": "s_production_press_mk2"
+  },
+  {
+    "name": "Roller MK2",
+    "rp_cost": 40000,
+    "category": "Production",
+    "prerequisites": ["s_production_mineshaft_drill"],
+    "id": "s_production_roller_mk2"
+  },
+  {
+    "name": "Radioactive Waste Storage",
+    "rp_cost": 250000,
+    "category": "Production",
+    "prerequisites": ["s_production_mineshaft_drill", "s_production_concrete_production"],
+    "id": "s_production_radioactive_waste_storage"
+  },
+  {
+    "name": "Industrial Electric Furnace",
+    "rp_cost": 20000,
+    "category": "Production",
+    "prerequisites": ["s_production_advanced_processing"],
+    "id": "s_production_industrial_electric_furnace"
+  },
+  {
+    "name": "Industrial Roller",
+    "rp_cost": 10000,
+    "category": "Production",
+    "prerequisites": ["s_production_advanced_processing"],
+    "id": "s_production_industrial_roller"
+  },
+  {
+    "name": "Alloyer",
+    "rp_cost": 32000,
+    "category": "Production",
+    "prerequisites": ["s_production_advanced_processing"],
+    "id": "s_production_alloyer"
+  },
+  {
+    "name": "Pressurized Water Filter",
+    "rp_cost": 20000,
+    "category": "Production",
+    "prerequisites": ["s_production_advanced_processing"],
+    "id": "s_production_pressurized_water_filter"
+  },
+  {
+    "name": "Air Separation Unit",
+    "rp_cost": 125000,
+    "category": "Production",
+    "prerequisites": ["s_production_plastic_molding", "s_production_lng_plant"],
+    "id": "s_production_air_separation_unit"
+  },
+  {
+    "name": "Industrial Plastic Molding",
+    "rp_cost": 50000,
+    "category": "Production",
+    "prerequisites": ["s_production_plastic_molding"],
+    "id": "s_production_industrial_plastic_molding"
+  },
+  {
+    "name": "Water Bottling",
+    "rp_cost": 5000,
+    "category": "Production",
+    "prerequisites": ["s_production_plastic_molding"],
+    "id": "s_production_water_bottling"
+  },
+  {
+    "name": "Ore Enrichment Facility",
+    "rp_cost": 750000,
+    "category": "Production",
+    "prerequisites": ["s_production_electrolysis_plant", "s_production_foundry"],
+    "id": "s_production_ore_enrichment_facility"
+  },
+  {
+    "name": "Grinder MK2",
+    "rp_cost": 40000,
+    "category": "Production",
+    "prerequisites": ["s_production_press_mk2", "s_production_roller_mk2"],
+    "id": "s_production_grinder_mk2"
+  },
+  {
+    "name": "Blast Furnace MK2",
+    "rp_cost": 50000,
+    "category": "Production",
+    "prerequisites": ["s_production_press_mk2", "s_production_roller_mk2"],
+    "id": "s_production_blast_furnace_mk2"
+  },
+  {
+    "name": "Gold Refining",
+    "rp_cost": 20000,
+    "category": "Production",
+    "prerequisites": ["s_production_industrial_electric_furnace", "s_production_industrial_roller"],
+    "id": "s_production_gold_refining"
+  },
+  {
+    "name": "Gold Acid Refinery",
+    "rp_cost": 15000,
+    "category": "Production",
+    "prerequisites": ["s_production_alloyer", "s_production_pressurized_water_filter"],
+    "id": "s_production_gold_acid_refinery"
+  },
+  {
+    "name": "Advanced Oxidation Plant",
+    "rp_cost": 1500000,
+    "category": "Production",
+    "prerequisites": ["s_production_air_separation_unit"],
+    "id": "s_production_advanced_oxidation_plant"
+  },
+  {
+    "name": "Centrifuge",
+    "rp_cost": 4000000,
+    "category": "Production",
+    "prerequisites": ["s_production_ore_enrichment_facility"],
+    "id": "s_production_centrifuge"
+  },
+  {
+    "name": "Lithium",
+    "rp_cost": 100000,
+    "category": "Production",
+    "prerequisites": ["s_production_gold_refining", "s_production_gold_acid_refinery"],
+    "id": "s_production_lithium"
+  },
+  {
+    "name": "Research Station 4",
+    "rp_cost": 250000,
+    "category": "Production",
+    "prerequisites": ["s_production_gold_refining", "s_production_gold_acid_refinery"],
+    "id": "s_production_research_station_4"
+  },
+  {
+    "name": "Charger",
+    "rp_cost": 100002,
+    "category": "Production",
+    "prerequisites": ["s_production_lithium"],
+    "id": "s_production_charger"
+  },
+  {
+    "name": "Advanced Chemical Plant",
+    "rp_cost": 2000000,
+    "category": "Production",
+    "prerequisites": ["s_production_research_station_4"],
+    "id": "s_production_advanced_chemical_plant"
+  },
+  {
+    "name": "Precision Assembler",
+    "rp_cost": 500000,
+    "category": "Production",
+    "prerequisites": ["Sell 40 Purple Gold Ingots", "s_production_research_station_4"],
+    "id": "s_production_precision_assembler"
+  },
+  {
+    "name": "Advanced Assembler",
+    "rp_cost": 100000,
+    "category": "Production",
+    "prerequisites": ["Sell 20 Crankshafts", "s_production_industrial_plastic_molding"],
+    "id": "s_production_advanced_assembler"
+  },
+  {
+    "name": "Logic Assembler",
+    "rp_cost": 3000000,
+    "category": "Production",
+    "prerequisites": [
+      "Sell 10 Lithium Battery Packs",
+      "s_production_charger",
+      "s_production_precision_assembler",
+      "s_production_advanced_assembler"
+    ],
+    "id": "s_production_logic_assembler"
+  },
+  {
+    "name": "Energy",
+    "rp_cost": 0,
+    "category": "Energy",
+    "prerequisites": [],
+    "id": "s_energy_energy"
+  },
+  {
+    "name": "Renewables",
+    "rp_cost": 0,
+    "category": "Energy",
+    "prerequisites": ["s_energy_energy"],
+    "id": "s_energy_renewables"
+  },
+  {
+    "name": "Hand Crank",
+    "rp_cost": 10,
+    "category": "Energy",
+    "prerequisites": ["s_energy_renewables"],
+    "id": "s_energy_hand_crank"
+  },
+  {
+    "name": "Solar Panel 1",
+    "rp_cost": 30,
+    "category": "Energy",
+    "prerequisites": ["s_energy_renewables"],
+    "id": "s_energy_solar_panel_1"
+  },
+  {
+    "name": "Coal Generator",
+    "rp_cost": 100,
+    "category": "Energy",
+    "prerequisites": ["s_energy_energy"],
+    "id": "s_energy_coal_generator"
+  },
+  {
+    "name": "Low Capacity Infrastructure",
+    "rp_cost": 5,
+    "category": "Energy",
+    "prerequisites": ["s_energy_energy"],
+    "id": "s_energy_low_capacity_infrastructure"
+  },
+  {
+    "name": "Wind Turbine 1",
+    "rp_cost": 25,
+    "category": "Energy",
+    "prerequisites": ["s_energy_renewables"],
+    "id": "s_energy_wind_turbine_1"
+  },
+  {
+    "name": "Compact Coal Generator",
+    "rp_cost": 350,
+    "category": "Energy",
+    "prerequisites": ["s_energy_coal_generator"],
+    "id": "s_energy_compact_coal_generator"
+  },
+  {
+    "name": "Boiler",
+    "rp_cost": 1000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_coal_generator"],
+    "id": "s_energy_boiler"
+  },
+  {
+    "name": "Turbines",
+    "rp_cost": 100,
+    "category": "Energy",
+    "prerequisites": ["s_energy_coal_generator"],
+    "id": "s_energy_turbines"
+  },
+  {
+    "name": "LV Pole",
+    "rp_cost": 10,
+    "category": "Energy",
+    "prerequisites": ["s_energy_low_capacity_infrastructure"],
+    "id": "s_energy_lv_pole"
+  },
+  {
+    "name": "Energy Storage",
+    "rp_cost": 10,
+    "category": "Energy",
+    "prerequisites": ["s_energy_low_capacity_infrastructure"],
+    "id": "s_energy_energy_storage"
+  },
+  {
+    "name": "Solar Panel 2",
+    "rp_cost": 250,
+    "category": "Energy",
+    "prerequisites": ["s_energy_solar_panel_1"],
+    "id": "s_energy_solar_panel_2"
+  },
+  {
+    "name": "Wind Turbine 2",
+    "rp_cost": 500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_wind_turbine_1"],
+    "id": "s_energy_wind_turbine_2"
+  },
+  {
+    "name": "Geothermal Plant",
+    "rp_cost": 1500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_boiler"],
+    "id": "s_energy_geothermal_plant"
+  },
+  {
+    "name": "Electric Water Heater",
+    "rp_cost": 8000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_boiler"],
+    "id": "s_energy_electric_water_heater"
+  },
+  {
+    "name": "Gasoline Generator",
+    "rp_cost": 500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_boiler"],
+    "id": "s_energy_gasoline_generator"
+  },
+  {
+    "name": "Large Turbines",
+    "rp_cost": 1500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_boiler", "s_energy_turbines"],
+    "id": "s_energy_large_turbines"
+  },
+  {
+    "name": "Firebox",
+    "rp_cost": 500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_boiler", "s_energy_turbines"],
+    "id": "s_energy_firebox"
+  },
+  {
+    "name": "Diesel Generator",
+    "rp_cost": 2500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_boiler"],
+    "id": "s_energy_diesel_generator"
+  },
+  {
+    "name": "Medium Capacity Infrastructure",
+    "rp_cost": 1000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_lv_pole"],
+    "id": "s_energy_medium_capacity_infrastructure"
+  },
+  {
+    "name": "Rusty Battery",
+    "rp_cost": 25,
+    "category": "Energy",
+    "prerequisites": ["s_energy_energy_storage"],
+    "id": "s_energy_rusty_battery"
+  },
+  {
+    "name": "Solar Panel 3",
+    "rp_cost": 7500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_solar_panel_2"],
+    "id": "s_energy_solar_panel_3"
+  },
+  {
+    "name": "Wind Turbine 3",
+    "rp_cost": 15000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_wind_turbine_2"],
+    "id": "s_energy_wind_turbine_3"
+  },
+  {
+    "name": "Large Diesel Engine",
+    "rp_cost": 13500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_diesel_generator"],
+    "id": "s_energy_large_diesel_engine"
+  },
+  {
+    "name": "Modular Diesel Engines",
+    "rp_cost": 30000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_diesel_generator"],
+    "id": "s_energy_modular_diesel_engines"
+  },
+  {
+    "name": "Gas Burner",
+    "rp_cost": 20000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_large_turbines"],
+    "id": "s_energy_gas_burner"
+  },
+  {
+    "name": "Power Rate Calculator",
+    "rp_cost": 2500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_medium_capacity_infrastructure"],
+    "id": "s_energy_power_rate_calculator"
+  },
+  {
+    "name": "MV Poles",
+    "rp_cost": 1000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_medium_capacity_infrastructure"],
+    "id": "s_energy_mv_poles"
+  },
+  {
+    "name": "Breaker",
+    "rp_cost": 2500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_medium_capacity_infrastructure"],
+    "id": "s_energy_breaker"
+  },
+  {
+    "name": "MV Battery",
+    "rp_cost": 1500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_medium_capacity_infrastructure", "s_energy_rusty_battery"],
+    "id": "s_energy_mv_battery"
+  },
+  {
+    "name": "Solar Farm 1",
+    "rp_cost": 50000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_solar_panel_3"],
+    "id": "s_energy_solar_farm_1"
+  },
+  {
+    "name": "Large Scale Power Production",
+    "rp_cost": 500000,
+    "category": "Energy",
+    "prerequisites": [
+      "s_energy_large_diesel_engine",
+      "s_energy_modular_diesel_engines",
+      "s_energy_gas_burner"
+    ],
+    "id": "s_energy_large_scale_power_production"
+  },
+  {
+    "name": "Advanced MV Pole",
+    "rp_cost": 2500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_mv_poles"],
+    "id": "s_energy_advanced_mv_pole"
+  },
+  {
+    "name": "Double MV Battery",
+    "rp_cost": 3000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_mv_battery"],
+    "id": "s_energy_double_mv_battery"
+  },
+  {
+    "name": "Coal Power Plant",
+    "rp_cost": 1000000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_large_scale_power_production"],
+    "id": "s_energy_coal_power_plant"
+  },
+  {
+    "name": "Modular Turbines",
+    "rp_cost": 1000000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_large_scale_power_production"],
+    "id": "s_energy_modular_turbines"
+  },
+  {
+    "name": "High Capacity Infrastructure",
+    "rp_cost": 10000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_advanced_mv_pole"],
+    "id": "s_energy_high_capacity_infrastructure"
+  },
+  {
+    "name": "Nuclear Power Plant",
+    "rp_cost": 5001984,
+    "category": "Energy",
+    "prerequisites": ["s_energy_coal_power_plant", "s_energy_modular_turbines"],
+    "id": "s_energy_nuclear_power_plant"
+  },
+  {
+    "name": "Power Rate Calculator 2",
+    "rp_cost": 45000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_high_capacity_infrastructure"],
+    "id": "s_energy_power_rate_calculator_2"
+  },
+  {
+    "name": "HMV Tower",
+    "rp_cost": 13500,
+    "category": "Energy",
+    "prerequisites": ["s_energy_high_capacity_infrastructure"],
+    "id": "s_energy_hmv_tower"
+  },
+  {
+    "name": "Breaker Box",
+    "rp_cost": 35000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_high_capacity_infrastructure"],
+    "id": "s_energy_breaker_box"
+  },
+  {
+    "name": "HV Battery",
+    "rp_cost": 30000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_high_capacity_infrastructure", "s_energy_double_mv_battery"],
+    "id": "s_energy_hv_battery"
+  },
+  {
+    "name": "Extreme Capacity Infrastructure",
+    "rp_cost": 100000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_hmv_tower"],
+    "id": "s_energy_extreme_capacity_infrastructure"
+  },
+  {
+    "name": "Advanced Power Controls",
+    "rp_cost": 35000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_breaker_box"],
+    "id": "s_energy_advanced_power_controls"
+  },
+  {
+    "name": "Power Rate Calculator 3",
+    "rp_cost": 400000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_extreme_capacity_infrastructure"],
+    "id": "s_energy_power_rate_calculator_3"
+  },
+  {
+    "name": "HV Pole",
+    "rp_cost": 150000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_extreme_capacity_infrastructure"],
+    "id": "s_energy_hv_pole"
+  },
+  {
+    "name": "HV Battery MK2",
+    "rp_cost": 200001,
+    "category": "Energy",
+    "prerequisites": ["s_energy_extreme_capacity_infrastructure", "s_energy_hv_battery"],
+    "id": "s_energy_hv_battery_mk2"
+  },
+  {
+    "name": "Advanced HV Power Controls",
+    "rp_cost": 400000,
+    "category": "Energy",
+    "prerequisites": ["s_energy_hv_pole"],
+    "id": "s_energy_advanced_hv_power_controls"
+  },
+  {
+    "name": "Utility",
+    "rp_cost": 0,
+    "category": "Utility",
+    "prerequisites": [],
+    "id": "s_utility_utility"
+  },
+  {
+    "name": "Pollution",
+    "rp_cost": 25,
+    "category": "Utility",
+    "prerequisites": ["s_utility_utility"],
+    "id": "s_utility_pollution"
+  },
+  {
+    "name": "Logic",
+    "rp_cost": 2500,
+    "category": "Utility",
+    "prerequisites": ["s_utility_utility"],
+    "id": "s_utility_logic"
+  },
+  {
+    "name": "Transportation",
+    "rp_cost": 20,
+    "category": "Utility",
+    "prerequisites": ["s_utility_utility"],
+    "id": "s_utility_transportation"
+  },
+  {
+    "name": "Silos & Tanks",
+    "rp_cost": 5,
+    "category": "Utility",
+    "prerequisites": ["s_utility_utility"],
+    "id": "s_utility_silos_and_tanks"
+  },
+  {
+    "name": "Pipes",
+    "rp_cost": 50,
+    "category": "Utility",
+    "prerequisites": ["s_utility_utility"],
+    "id": "s_utility_pipes"
+  },
+  {
+    "name": "Liquid Burner (Dump)",
+    "rp_cost": 1200,
+    "category": "Utility",
+    "prerequisites": ["s_utility_pollution"],
+    "id": "s_utility_liquid_burner_dump"
+  },
+  {
+    "name": "Scrubber",
+    "rp_cost": 9000,
+    "category": "Utility",
+    "prerequisites": ["s_utility_pollution"],
+    "id": "s_utility_scrubber"
+  },
+  {
+    "name": "Advanced Logic",
+    "rp_cost": 15000,
+    "category": "Utility",
+    "prerequisites": ["Sell 1 8x Microchip", "s_utility_logic"],
+    "id": "s_utility_advanced_logic"
+  },
+  {
+    "name": "Liquid Truck Depot",
+    "rp_cost": 500,
+    "category": "Utility",
+    "prerequisites": ["s_utility_transportation"],
+    "id": "s_utility_liquid_truck_depot"
+  },
+  {
+    "name": "Truck Depot",
+    "rp_cost": 10,
+    "category": "Utility",
+    "prerequisites": ["s_utility_transportation"],
+    "id": "s_utility_truck_depot"
+  },
+  {
+    "name": "Small Item Storage Silo",
+    "rp_cost": 10,
+    "category": "Utility",
+    "prerequisites": ["s_utility_silos_and_tanks"],
+    "id": "s_utility_small_item_storage_silo"
+  },
+  {
+    "name": "Small Fluid Storage Silo",
+    "rp_cost": 25,
+    "category": "Utility",
+    "prerequisites": ["s_utility_silos_and_tanks"],
+    "id": "s_utility_small_fluid_storage_silo"
+  },
+  {
+    "name": "Better Item Pipes",
+    "rp_cost": 1500,
+    "category": "Utility",
+    "prerequisites": ["s_utility_pipes"],
+    "id": "s_utility_better_item_pipes"
+  },
+  {
+    "name": "Intersection Pipes",
+    "rp_cost": 250,
+    "category": "Utility",
+    "prerequisites": ["s_utility_pipes"],
+    "id": "s_utility_intersection_pipes"
+  },
+  {
+    "name": "Better Fluid Pipes",
+    "rp_cost": 1500,
+    "category": "Utility",
+    "prerequisites": ["s_utility_pipes"],
+    "id": "s_utility_better_fluid_pipes"
+  },
+  {
+    "name": "Large Liquid Truck Depot",
+    "rp_cost": 15000,
+    "category": "Utility",
+    "prerequisites": ["s_utility_liquid_truck_depot"],
+    "id": "s_utility_large_liquid_truck_depot"
+  },
+  {
+    "name": "Van Depot",
+    "rp_cost": 250,
+    "category": "Utility",
+    "prerequisites": ["s_utility_truck_depot"],
+    "id": "s_utility_van_depot"
+  },
+  {
+    "name": "Medium Item Storage Silo",
+    "rp_cost": 1500,
+    "category": "Utility",
+    "prerequisites": ["s_utility_small_item_storage_silo"],
+    "id": "s_utility_medium_item_storage_silo"
+  },
+  {
+    "name": "Medium Fluid Storage Silo",
+    "rp_cost": 1500,
+    "category": "Utility",
+    "prerequisites": ["s_utility_small_fluid_storage_silo"],
+    "id": "s_utility_medium_fluid_storage_silo"
+  },
+  {
+    "name": "Long Pipes",
+    "rp_cost": 3000,
+    "category": "Utility",
+    "prerequisites": ["s_utility_better_item_pipes"],
+    "id": "s_utility_long_pipes"
+  },
+  {
+    "name": "Better Intersection Pipes",
+    "rp_cost": 2500,
+    "category": "Utility",
+    "prerequisites": [
+      "s_utility_better_item_pipes",
+      "s_utility_intersection_pipes",
+      "s_utility_better_fluid_pipes"
+    ],
+    "id": "s_utility_better_intersection_pipes"
+  },
+  {
+    "name": "Long Fluid Pipes",
+    "rp_cost": 3000,
+    "category": "Utility",
+    "prerequisites": ["s_utility_better_fluid_pipes"],
+    "id": "s_utility_long_fluid_pipes"
+  },
+  {
+    "name": "Large Liquid Pipes",
+    "rp_cost": 50000,
+    "category": "Utility",
+    "prerequisites": ["s_utility_better_fluid_pipes"],
+    "id": "s_utility_large_liquid_pipes"
+  },
+  {
+    "name": "Huge Truck Depot",
+    "rp_cost": 5500,
+    "category": "Utility",
+    "prerequisites": ["s_utility_van_depot"],
+    "id": "s_utility_huge_truck_depot"
+  },
+  {
+    "name": "Gold Item Storage Silo",
+    "rp_cost": 25000,
+    "category": "Utility",
+    "prerequisites": ["s_utility_medium_item_storage_silo"],
+    "id": "s_utility_gold_item_storage_silo"
+  },
+  {
+    "name": "Gold Fluid Storage Silo",
+    "rp_cost": 25000,
+    "category": "Utility",
+    "prerequisites": ["s_utility_medium_fluid_storage_silo"],
+    "id": "s_utility_gold_fluid_storage_silo"
+  },
+  {
+    "name": "Item Overflow Gate",
+    "rp_cost": 1000,
+    "category": "Utility",
+    "prerequisites": ["s_utility_long_pipes"],
+    "id": "s_utility_item_overflow_gate"
+  },
+  {
+    "name": "Valve Control",
+    "rp_cost": 500,
+    "category": "Utility",
+    "prerequisites": ["s_utility_better_intersection_pipes"],
+    "id": "s_utility_valve_control"
+  },
+  {
+    "name": "Liquid Overflow Gate",
+    "rp_cost": 1000,
+    "category": "Utility",
+    "prerequisites": ["s_utility_long_fluid_pipes"],
+    "id": "s_utility_liquid_overflow_gate"
+  },
+  {
+    "name": "Large Liquid Valve Control",
+    "rp_cost": 50000,
+    "category": "Utility",
+    "prerequisites": ["s_utility_large_liquid_pipes"],
+    "id": "s_utility_large_liquid_valve_control"
+  },
+  {
+    "name": "Cold Bypass Pipe",
+    "rp_cost": 2000,
+    "category": "Utility",
+    "prerequisites": ["s_utility_liquid_overflow_gate"],
+    "id": "s_utility_cold_bypass_pipe"
+  }
+]

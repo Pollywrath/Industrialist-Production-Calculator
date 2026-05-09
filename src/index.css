@@ -1,0 +1,110 @@
+:root {
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Open Sans',
+    'Helvetica Neue',
+    sans-serif;
+  font-weight: 400;
+
+  font-synthesis: none;
+  line-height: 1.5;
+  color: #ffffff;
+
+  color-scheme: light dark;
+  background-color: #121214;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Theme variables for the Theme Editor */
+  --theme-color-primary: #6366f1;
+  --theme-color-secondary: #475569;
+  --theme-color-fluid: #38bdf8;
+  --theme-color-item: #94a3b8;
+  --theme-color-text-dim: #8a99ad;
+
+  /* Tier color variables for the Theme Editor */
+  --theme-color-tier-1: #a0aec0;
+  --theme-color-tier-2: #10b981;
+  --theme-color-tier-3: #3b82f6;
+  --theme-color-tier-4: #a855f7;
+  --theme-color-tier-default: #cbd5e1;
+}
+
+body {
+  width: 100vw;
+  height: 100dvh;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+}
+
+#root {
+  width: 100vw;
+  height: 100dvh;
+  padding: 0;
+  margin: 0;
+}
+
+.react-flow__node {
+  box-shadow: none !important;
+  transition: none !important;
+}
+
+.react-flow__node.selected {
+  outline: none !important;
+  border-color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.react-flow__handle {
+  border: 1px solid #121214 !important;
+  box-shadow: none !important;
+}
+
+.react-flow__edge-path {
+  box-shadow: none !important;
+  transition: none !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #ffffff !important;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #1a1a1a;
+    background-color: #f4f4f5;
+  }
+
+  .react-flow__node.selected {
+    border-color: #1a1a1a !important;
+  }
+
+  .react-flow__edge.selected .react-flow__edge-path {
+    stroke: #1a1a1a !important;
+  }
+}
+
+.is-delete-mode .react-flow__node {
+  cursor: pointer;
+}
+
+.is-delete-mode .recipe-node-io__rect {
+  cursor: pointer;
+}
+
+.is-delete-mode .recipe-node-io__handle {
+  cursor: pointer !important;
+}
+
+.is-delete-mode .react-flow__edge {
+  cursor: pointer;
+}
