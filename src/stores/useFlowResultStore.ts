@@ -43,6 +43,7 @@ const useFlowResultStore = create<FlowResultState>((set, get) => ({
   results: new Map(),
   setResults: (newResults) => {
     const oldResults = get().results;
+    let hasChanged = oldResults.size !== newResults.size;
     const updatedResults = new Map<string, NodeFlowResult>();
 
     newResults.forEach((newVal, nodeId) => {
@@ -51,10 +52,13 @@ const useFlowResultStore = create<FlowResultState>((set, get) => ({
         updatedResults.set(nodeId, oldVal);
       } else {
         updatedResults.set(nodeId, newVal);
+        hasChanged = true;
       }
     });
 
-    set({ results: updatedResults });
+    if (hasChanged) {
+      set({ results: updatedResults });
+    }
   },
 }));
 

@@ -72,24 +72,27 @@ export default function RecipeCard({
       >
         {recipe.inputs.length > 0 && (
           <div className={`${styles['recipe-card-col']} ${styles['recipe-card-col-inputs']}`}>
-            {recipe.inputs.map((inp, i) => (
-              <div key={i} className={styles['recipe-card-io-item']}>
-                <div className={styles['recipe-card-io-square-wrapper']}>
-                  <div className={styles['recipe-card-io-square']}>
-                    {getProductName(inp.product_id).charAt(0).toUpperCase()}
+            {recipe.inputs.map((inp) => {
+              const productName = getProductName(inp.product_id);
+              return (
+                <div key={inp.product_id} className={styles['recipe-card-io-item']}>
+                  <div className={styles['recipe-card-io-square-wrapper']}>
+                    <div className={styles['recipe-card-io-square']}>
+                      {productName.charAt(0).toUpperCase()}
+                    </div>
+                    <span className={styles['recipe-card-io-quantity']}>
+                      {showQuantity(inp.quantity * multiplier * neededMachineCount)}
+                    </span>
                   </div>
-                  <span className={styles['recipe-card-io-quantity']}>
-                    {showQuantity(inp.quantity * multiplier * neededMachineCount)}
+                  <span
+                    className={styles['recipe-card-io-name']}
+                    title={productName}
+                  >
+                    {productName}
                   </span>
                 </div>
-                <span
-                  className={styles['recipe-card-io-name']}
-                  title={getProductName(inp.product_id)}
-                >
-                  {getProductName(inp.product_id)}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
@@ -110,24 +113,27 @@ export default function RecipeCard({
 
         {recipe.outputs.length > 0 && (
           <div className={`${styles['recipe-card-col']} ${styles['recipe-card-col-outputs']}`}>
-            {recipe.outputs.map((out, i) => (
-              <div key={i} className={styles['recipe-card-io-item']}>
-                <div className={styles['recipe-card-io-square-wrapper']}>
-                  <div className={styles['recipe-card-io-square']}>
-                    {getProductName(out.product_id).charAt(0).toUpperCase()}
+            {recipe.outputs.map((out) => {
+              const productName = getProductName(out.product_id);
+              return (
+                <div key={out.product_id} className={styles['recipe-card-io-item']}>
+                  <div className={styles['recipe-card-io-square-wrapper']}>
+                    <div className={styles['recipe-card-io-square']}>
+                      {productName.charAt(0).toUpperCase()}
+                    </div>
+                    <span className={styles['recipe-card-io-quantity']}>
+                      {showQuantity(out.quantity * multiplier * neededMachineCount)}
+                    </span>
                   </div>
-                  <span className={styles['recipe-card-io-quantity']}>
-                    {showQuantity(out.quantity * multiplier * neededMachineCount)}
+                  <span
+                    className={styles['recipe-card-io-name']}
+                    title={productName}
+                  >
+                    {productName}
                   </span>
                 </div>
-                <span
-                  className={styles['recipe-card-io-name']}
-                  title={getProductName(out.product_id)}
-                >
-                  {getProductName(out.product_id)}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

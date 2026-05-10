@@ -71,6 +71,7 @@ export function buildSolverGraph(nodes: ReactFlowNode[], edges: ReactFlowEdge[])
 
     const sourceParsed = parseHandleId(edge.sourceHandle);
     const targetParsed = parseHandleId(edge.targetHandle);
+    if (!sourceParsed || !targetParsed) continue;
 
     const sourceOutputIndex = sourceParsed.index;
     const targetInputIndex = targetParsed.index;

@@ -9,22 +9,24 @@ const recipes = recipesJson as Recipe[];
 const machines = machinesJson as Machine[];
 const products = productsJson as Product[];
 
-const checksums = getDatabaseChecksums(products, machines, recipes, researchesJson);
-const validation = validateFullDatabase(products, machines, recipes, researchesJson);
-if (!validation.valid) {
-  console.error(
-    `[Data Validator] Active database contains structural or format schema violations! [Combined Checksum: ${checksums.combined}]`,
-    validation,
-  );
-} else {
-  console.log(
-    `%c[Data Validator] Static JSON database validated successfully [Combined Checksum: ${checksums.combined}]`,
-    'color: #00bb66; font-weight: bold;',
-  );
-  console.log(
-    `%cDatabase Checksums:\n- Products:   ${checksums.products}\n- Machines:   ${checksums.machines}\n- Recipes:    ${checksums.recipes}\n- Researches: ${checksums.researches}`,
-    'color: #9e9e9e; font-family: monospace; font-size: 11px;',
-  );
+if (import.meta.env.DEV) {
+  const checksums = getDatabaseChecksums(products, machines, recipes, researchesJson);
+  const validation = validateFullDatabase(products, machines, recipes, researchesJson);
+  if (!validation.valid) {
+    console.error(
+      `[Data Validator] Active database contains structural or format schema violations! [Combined Checksum: ${checksums.combined}]`,
+      validation,
+    );
+  } else {
+    console.log(
+      `%c[Data Validator] Static JSON database validated successfully [Combined Checksum: ${checksums.combined}]`,
+      'color: #00bb66; font-weight: bold;',
+    );
+    console.log(
+      `%cDatabase Checksums:\n- Products:   ${checksums.products}\n- Machines:   ${checksums.machines}\n- Recipes:    ${checksums.recipes}\n- Researches: ${checksums.researches}`,
+      'color: #9e9e9e; font-family: monospace; font-size: 11px;',
+    );
+  }
 }
 
 const recipeMap = new Map<string, Recipe>();

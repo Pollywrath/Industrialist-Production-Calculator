@@ -6,6 +6,7 @@ import RecipeNodeIO from './RecipeNodeIO';
 import styles from './RecipeNode.module.css';
 import { useState, useEffect } from 'react';
 import NodeEditor from '../../overlays/NodeEditor';
+import useControlStore from '../../../stores/useControlStore';
 
 import {
   RECT_HEIGHT,
@@ -13,7 +14,7 @@ import {
   BASE_INFO_HEIGHT,
   BOTTOM_PADDING,
   IO_COLUMN_PADDING,
-} from './layoutConstants';
+} from '../../shared/layoutConstants';
 
 export default function RecipeNode({ id, data }: NodeProps<RecipeNodeType>) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -53,8 +54,10 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeType>) {
           recipe={recipe}
           machineName={recipe ? getMachineName(recipe.machine_id) : '—'}
           machineCount={data.machineCount}
-          customName={data.customName}
-          onOpenEditor={() => setIsEditorOpen(true)}
+          onOpenEditor={() => {
+            useControlStore.setState({ activeToggleId: null });
+            setIsEditorOpen(true);
+          }}
         />
         <RecipeNodeIO
           leftHandles={leftHandles}

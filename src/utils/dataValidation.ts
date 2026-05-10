@@ -7,6 +7,7 @@ import type {
   RecipeOutput,
   Research,
 } from '../types/data';
+import { CANONICAL_CATEGORY_MAP, isValidTaxonomy } from './machineTaxonomy';
 
 export interface ValidationError {
   field: string;
@@ -166,47 +167,19 @@ export function validateMachine(
       message: 'Category must be a non-empty string',
     });
   } else if (m.category !== 'Removed') {
-    const allowedMap: Record<string, string[]> = {
-      Extractor: ['Fluid Extractor', 'Item Extractor'],
-      Factory: [
-        'Assembler',
-        'Furnace',
-        'Misc',
-        'Molder',
-        'Plant',
-        'Processor',
-        'Refinery',
-        'Separator',
-      ],
-      Logic: ['Logic Gate', 'Logic Input', 'Logic Output', 'Miscellaneous'],
-      Miscellaneous: ['Decoration', 'Depot', 'Other', 'Research'],
-      Modular: ['Modular Diesel Engine', 'Modular Turbine', 'Tree Farm'],
-      Power: [
-        'Battery',
-        'Large Power Plant',
-        'Misc',
-        'Non-Renewable',
-        'Power Rate Calculator',
-        'Renewable',
-        'Transfer Pole',
-        'TransferPole',
-      ],
-      'Storage Silo': ['Fluid SIlo', 'Fluid Silo', 'Item Silo'],
-    };
-
-    if (!Object.prototype.hasOwnProperty.call(allowedMap, m.category)) {
+    if (!Object.prototype.hasOwnProperty.call(CANONICAL_CATEGORY_MAP, m.category)) {
       errors.push({
         field: 'category',
-        message: `Category "${m.category}" is invalid. Must be one of: ${Object.keys(allowedMap).join(', ')}`,
+        message: `Category "${m.category}" is invalid. Must be one of: ${Object.keys(CANONICAL_CATEGORY_MAP).join(', ')}`,
       });
     } else {
-      const allowedSubs = allowedMap[m.category];
       if (typeof m.subcategory !== 'string' || !m.subcategory.trim()) {
         errors.push({
           field: 'subcategory',
           message: 'Subcategory must be a non-empty string',
         });
-      } else if (!allowedSubs.includes(m.subcategory)) {
+      } else if (!isValidTaxonomy(m.category, m.subcategory)) {
+        const allowedSubs = CANONICAL_CATEGORY_MAP[m.category];
         errors.push({
           field: 'subcategory',
           message: `Subcategory "${m.subcategory}" is invalid for category "${m.category}". Must be one of: ${allowedSubs.join(', ')}`,

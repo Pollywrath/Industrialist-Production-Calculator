@@ -32,6 +32,9 @@
   font-weight: bold;
   color: #94a3b8;
   letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .controls-tray-grid {
@@ -89,4 +92,10 @@
 
 .controls-tray-button.has-divider-bottom {
   border-bottom: 1px solid #2a2a35;
+}
+
+.controls-tray-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
 }

@@ -19,14 +19,22 @@ export function buildHandleId(nodeId: string, side: 'input' | 'output', index: n
   return `${nodeId}-${side}-${index}`;
 }
 
-export function parseHandleId(handleId: string): ParsedHandle {
+export function parseHandleId(handleId: string): ParsedHandle | null {
   const parts = handleId.split('-');
   if (parts.length < 3) {
-    throw new Error(`Invalid handle ID format: ${handleId}`);
+    return null;
   }
 
   const index = parseInt(parts[parts.length - 1], 10);
-  const side = parts[parts.length - 2] as 'input' | 'output';
+  if (isNaN(index)) {
+    return null;
+  }
+
+  const side = parts[parts.length - 2];
+  if (side !== 'input' && side !== 'output') {
+    return null;
+  }
+
   const nodeId = parts.slice(0, -2).join('-');
 
   return { nodeId, side, index };

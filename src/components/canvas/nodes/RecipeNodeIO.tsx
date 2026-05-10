@@ -2,7 +2,7 @@ import { Handle, Position } from '@xyflow/react';
 import type { HandleRef } from '../../../types/nodes';
 import type { Recipe } from '../../../types/data';
 import { getProductName } from '../../../data/lookup';
-import useControlStore from '../../../stores/useControlStore';
+import useControlStore, { getEffectiveToggleId } from '../../../stores/useControlStore';
 import useFlowStore from '../../../stores/useFlowStore';
 import useFlowResultStore from '../../../stores/useFlowResultStore';
 import {
@@ -14,7 +14,7 @@ import { buildHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
 import styles from './RecipeNode.module.css';
 
-import { RECT_HEIGHT, RECT_GAP, SIDE_PADDING, COLUMN_GAP, NODE_WIDTH } from './layoutConstants';
+import { RECT_HEIGHT, RECT_GAP, SIDE_PADDING, COLUMN_GAP, NODE_WIDTH } from '../../shared/layoutConstants';
 
 interface RecipeNodeIOProps {
   leftHandles: HandleRef[];
@@ -38,6 +38,92 @@ function resolveQuantity(ref: HandleRef, recipe: Recipe | undefined): number {
   return entry ? entry.quantity : 0;
 }
 
+interface RecipeNodeIORectProps {
+  refVal: HandleRef;
+  width: number;
+  recipe: Recipe | undefined;
+  machineCount: number;
+  multiplier: number;
+  isDeleteMode: boolean;
+  onClick: (ref: HandleRef) => void;
+}
+
+function RecipeNodeIORect({
+  refVal,
+  width,
+  recipe,
+  machineCount,
+  multiplier,
+  isDeleteMode,
+  onClick,
+}: RecipeNodeIORectProps) {
+  const qty = resolveQuantity(refVal, recipe);
+  const totalQty = qty * machineCount * multiplier;
+  const label = resolveLabel(refVal, recipe);
+
+  return (
+    <div className={styles['recipe-node-io__rect-wrapper']}>
+      <div
+        className={`${styles['recipe-node-io__rect']} ${styles[`recipe-node-io__rect--${refVal.side}`]}`}
+        style={{
+          width,
+          height: RECT_HEIGHT,
+          minWidth: width,
+          cursor: 'pointer',
+        }}
+        onClick={(e) => {
+          if (isDeleteMode) return;
+          e.stopPropagation();
+          onClick(refVal);
+        }}
+      >
+        <span className={styles['recipe-node-io__rect-text']}>
+          {showQuantity(totalQty)}x {label}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+interface RecipeNodeIOHandleProps {
+  refVal: HandleRef;
+  nodeId: string;
+  isFlipped: boolean;
+  top: number;
+  position: Position;
+  onSquareClick: (e: React.MouseEvent, handleId: string) => void;
+  onDoubleClick: (ref: HandleRef) => void;
+}
+
+function RecipeNodeIOHandle({
+  refVal,
+  nodeId,
+  isFlipped,
+  top,
+  position,
+  onSquareClick,
+  onDoubleClick,
+}: RecipeNodeIOHandleProps) {
+  const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
+
+  return (
+    <Handle
+      type={refVal.side === 'input' ? 'target' : 'source'}
+      position={position}
+      id={handleId}
+      className={`${styles['recipe-node-io__handle']} ${styles[`recipe-node-io__handle--${refVal.side}`]}${
+        isFlipped ? ` ${styles['recipe-node-io__handle--flipped']}` : ''
+      }`}
+      style={{ top }}
+      onClick={(e) => onSquareClick(e, handleId)}
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        onDoubleClick(refVal);
+      }}
+    />
+  );
+}
+
 export default function RecipeNodeIO({
   leftHandles,
   rightHandles,
@@ -46,7 +132,7 @@ export default function RecipeNodeIO({
   machineCount,
 }: RecipeNodeIOProps) {
   const rateMode = useControlStore((s) => s.rateMode);
-  const isDeleteMode = useControlStore((s) => s.activeToggles['delete_mode'] ?? false);
+  const isDeleteMode = useControlStore((s) => getEffectiveToggleId(s) === 'delete_mode');
   const multiplier = recipe ? getRateMultiplier(recipe.cycle_time, rateMode) : 1;
   const flowResult = useFlowResultStore((s) => s.results.get(nodeId));
 
@@ -148,28 +234,17 @@ export default function RecipeNodeIO({
           <div
             className={`${styles['recipe-node-io__column']} ${styles['recipe-node-io__column--left']}`}
           >
-            {leftHandles.map((ref, i) => (
-              <div key={`left-${i}`} className={styles['recipe-node-io__rect-wrapper']}>
-                <div
-                  className={`${styles['recipe-node-io__rect']} ${styles[`recipe-node-io__rect--${ref.side}`]}`}
-                  style={{
-                    width: leftWidth,
-                    height: RECT_HEIGHT,
-                    minWidth: leftWidth,
-                    cursor: 'pointer',
-                  }}
-                  onClick={(e) => {
-                    if (isDeleteMode) return;
-                    e.stopPropagation();
-                    handleRectClick(ref);
-                  }}
-                >
-                  <span className={styles['recipe-node-io__rect-text']}>
-                    {showQuantity(resolveQuantity(ref, recipe) * machineCount * multiplier)}x{' '}
-                    {resolveLabel(ref, recipe)}
-                  </span>
-                </div>
-              </div>
+            {leftHandles.map((refVal) => (
+              <RecipeNodeIORect
+                key={`left-${refVal.index}`}
+                refVal={refVal}
+                width={leftWidth}
+                recipe={recipe}
+                machineCount={machineCount}
+                multiplier={multiplier}
+                isDeleteMode={isDeleteMode}
+                onClick={handleRectClick}
+              />
             ))}
           </div>
         )}
@@ -180,74 +255,55 @@ export default function RecipeNodeIO({
           <div
             className={`${styles['recipe-node-io__column']} ${styles['recipe-node-io__column--right']}`}
           >
-            {rightHandles.map((ref, i) => (
-              <div key={`right-${i}`} className={styles['recipe-node-io__rect-wrapper']}>
-                <div
-                  className={`${styles['recipe-node-io__rect']} ${styles[`recipe-node-io__rect--${ref.side}`]}`}
-                  style={{
-                    width: rightWidth,
-                    height: RECT_HEIGHT,
-                    minWidth: rightWidth,
-                    cursor: 'pointer',
-                  }}
-                  onClick={(e) => {
-                    if (isDeleteMode) return;
-                    e.stopPropagation();
-                    handleRectClick(ref);
-                  }}
-                >
-                  <span className={styles['recipe-node-io__rect-text']}>
-                    {showQuantity(resolveQuantity(ref, recipe) * machineCount * multiplier)}x{' '}
-                    {resolveLabel(ref, recipe)}
-                  </span>
-                </div>
-              </div>
+            {rightHandles.map((refVal) => (
+              <RecipeNodeIORect
+                key={`right-${refVal.index}`}
+                refVal={refVal}
+                width={rightWidth}
+                recipe={recipe}
+                machineCount={machineCount}
+                multiplier={multiplier}
+                isDeleteMode={isDeleteMode}
+                onClick={handleRectClick}
+              />
             ))}
           </div>
         )}
       </div>
 
       <div className={styles['recipe-node-io__handles']}>
-        {leftHandles.map((ref, i) => {
+        {leftHandles.map((refVal, i) => {
           const verticalOffset = ((maxCount - leftCount) * (RECT_HEIGHT + RECT_GAP)) / 2;
           const top = 17 + verticalOffset + i * (RECT_HEIGHT + RECT_GAP) + RECT_HEIGHT / 2;
-          const handleId = buildHandleId(nodeId, ref.side, ref.index);
 
           return (
-            <Handle
-              key={`L-${i}`}
-              type={ref.side === 'input' ? 'target' : 'source'}
+            <RecipeNodeIOHandle
+              key={`L-${refVal.index}`}
+              refVal={refVal}
+              nodeId={nodeId}
+              isFlipped={isFlipped(refVal)}
+              top={top}
               position={Position.Left}
-              id={handleId}
-              className={`${styles['recipe-node-io__handle']} ${styles[`recipe-node-io__handle--${ref.side}`]}${isFlipped(ref) ? ` ${styles['recipe-node-io__handle--flipped']}` : ''}`}
-              style={{ top }}
-              onClick={(e) => handleSquareClick(e, handleId)}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                handleDoubleClick(ref);
-              }}
+              onSquareClick={handleSquareClick}
+              onDoubleClick={handleDoubleClick}
             />
           );
         })}
 
-        {rightHandles.map((ref, i) => {
+        {rightHandles.map((refVal, i) => {
           const verticalOffset = ((maxCount - rightCount) * (RECT_HEIGHT + RECT_GAP)) / 2;
           const top = 17 + verticalOffset + i * (RECT_HEIGHT + RECT_GAP) + RECT_HEIGHT / 2;
-          const handleId = buildHandleId(nodeId, ref.side, ref.index);
 
           return (
-            <Handle
-              key={`R-${i}`}
-              type={ref.side === 'input' ? 'target' : 'source'}
+            <RecipeNodeIOHandle
+              key={`R-${refVal.index}`}
+              refVal={refVal}
+              nodeId={nodeId}
+              isFlipped={isFlipped(refVal)}
+              top={top}
               position={Position.Right}
-              id={handleId}
-              className={`${styles['recipe-node-io__handle']} ${styles[`recipe-node-io__handle--${ref.side}`]}${isFlipped(ref) ? ` ${styles['recipe-node-io__handle--flipped']}` : ''}`}
-              style={{ top }}
-              onClick={(e) => handleSquareClick(e, handleId)}
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                handleDoubleClick(ref);
-              }}
+              onSquareClick={handleSquareClick}
+              onDoubleClick={handleDoubleClick}
             />
           );
         })}

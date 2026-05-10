@@ -11,8 +11,10 @@ import {
   Eraser,
   Undo,
   Redo,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
-import useControlStore from '../../stores/useControlStore';
+import useControlStore, { getEffectiveToggleId } from '../../stores/useControlStore';
 import useFlowStore from '../../stores/useFlowStore';
 import styles from './ControlsTray.module.css';
 
@@ -90,9 +92,20 @@ const BUTTONS: ButtonConfig[] = [
   { id: 'redo', label: 'Redo', type: 'action', Icon: Redo },
 ];
 
+const UNWIRED_IDS = new Set([
+  'multi_select',
+  'target',
+  'layout',
+  'compute',
+  'coming_soon',
+  'machine_toggle',
+  'undo',
+  'redo',
+]);
+
 export default function ControlsTray() {
   const isMinimized = useControlStore((s) => s.isMinimized);
-  const activeToggles = useControlStore((s) => s.activeToggles);
+  const activeToggleId = useControlStore(getEffectiveToggleId);
   const rateMode = useControlStore((s) => s.rateMode);
 
   const handleButtonClick = (btn: ButtonConfig) => {
@@ -101,20 +114,11 @@ export default function ControlsTray() {
       controlStore.setRecipeSelectorOpen(true);
     } else if (btn.id === 'delete_mode') {
       controlStore.toggleButton('delete_mode');
-    } else if (btn.id === 'multi_select') {
-      controlStore.toggleButton('multi_select');
-    } else if (btn.id === 'target') {
-      controlStore.toggleButton('target');
-    } else if (btn.id === 'coming_soon') {
-      controlStore.toggleButton('coming_soon');
     } else if (btn.id === 'rate_mode') {
       controlStore.cycleRateMode();
     } else if (btn.id === 'clear_canvas') {
       const flowStore = useFlowStore.getState();
-      flowStore.setNodes([]);
-      flowStore.setEdges([]);
-    } else if (btn.type === 'toggle') {
-      controlStore.toggleButton(btn.id);
+      flowStore.setNodesAndEdges([], []);
     }
   };
 
@@ -135,14 +139,25 @@ export default function ControlsTray() {
     <div className={styles['controls-tray-container']}>
       <div className={styles['controls-tray-bar']} onClick={() => useControlStore.getState().toggleMinimized()}>
         <span className={styles['controls-tray-bar-text']}>
-          {isMinimized ? '▲ SHOW CONTROLS' : '▼ HIDE CONTROLS'}
+          {isMinimized ? (
+            <>
+              <ChevronUp size={10} style={{ display: 'inline-block' }} />
+              <span>SHOW CONTROLS</span>
+            </>
+          ) : (
+            <>
+              <ChevronDown size={10} style={{ display: 'inline-block' }} />
+              <span>HIDE CONTROLS</span>
+            </>
+          )}
         </span>
       </div>
 
       {!isMinimized && (
         <div className={styles['controls-tray-grid']}>
           {BUTTONS.map((btn) => {
-            const isToggled = !!activeToggles[btn.id];
+            const isDisabled = UNWIRED_IDS.has(btn.id);
+            const isToggled = !isDisabled && btn.id === activeToggleId;
             const label = btn.id === 'rate_mode' ? getRateButtonLabel() : btn.label;
             const Icon = btn.Icon;
 
@@ -151,7 +166,8 @@ export default function ControlsTray() {
                 key={btn.id}
                 className={`${styles['controls-tray-button']} type-${btn.type} ${isToggled ? styles['is-active'] : ''} ${btn.dividerRight ? styles['has-divider-right'] : ''} ${btn.dividerBottom ? styles['has-divider-bottom'] : ''}`}
                 onClick={() => handleButtonClick(btn)}
-                title={`${btn.label} (${btn.type})`}
+                disabled={isDisabled}
+                title={isDisabled ? `${btn.label} (Coming Soon)` : `${btn.label} (${btn.type})`}
               >
                 <Icon size={16} className={styles['controls-tray-button-icon']} />
                 <span className={styles['controls-tray-button-label']}>{label}</span>

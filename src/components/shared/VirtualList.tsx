@@ -6,7 +6,7 @@ interface VirtualListProps<T> {
   height: number;
   overscan?: number;
   className?: string;
-  getKey?: (item: T, index: number) => string | number;
+  getKey: (item: T, index: number) => string | number;
   children: (item: T, index: number) => React.ReactNode;
 }
 
@@ -34,7 +34,7 @@ export default function VirtualList<T>({
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     scrollTopRef.current = e.currentTarget.scrollTop;
 
-    if (rafIdRef.current !== null) return; // already scheduled for this frame
+    if (rafIdRef.current !== null) return;
 
     rafIdRef.current = requestAnimationFrame(() => {
       rafIdRef.current = null;
@@ -85,19 +85,7 @@ export default function VirtualList<T>({
         boxSizing: 'border-box',
       };
 
-      let stableKey: string | number = `vl-item-${i}`;
-      if (getKey) {
-        stableKey = getKey(item, i);
-      } else if (item && typeof item === 'object') {
-        const obj = item as Record<string, unknown>;
-        if ('id' in obj && obj.id !== null && obj.id !== undefined) {
-          stableKey = String(obj.id);
-        } else if ('key' in obj && obj.key !== null && obj.key !== undefined) {
-          stableKey = String(obj.key);
-        } else if ('name' in obj && obj.name !== null && obj.name !== undefined) {
-          stableKey = `${String(obj.name)}-${i}`;
-        }
-      }
+      const stableKey = getKey(item, i);
 
       visibleItems.push(
         <div key={stableKey} style={itemStyle}>

@@ -1,5 +1,5 @@
 import type { Recipe } from '../../../types/data';
-import useControlStore from '../../../stores/useControlStore';
+import useControlStore, { getEffectiveToggleId } from '../../../stores/useControlStore';
 import {
   getNormalizedCycleTime,
   showCycleTime,
@@ -11,7 +11,6 @@ interface RecipeNodeInfoProps {
   recipe: Recipe | undefined;
   machineName: string;
   machineCount: number;
-  customName?: string;
   onOpenEditor: () => void;
 }
 
@@ -19,14 +18,13 @@ export default function RecipeNodeInfo({
   recipe,
   machineName,
   machineCount,
-  customName,
   onOpenEditor,
 }: RecipeNodeInfoProps) {
   const rateMode = useControlStore((s) => s.rateMode);
   const displayCycleTime = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 0;
 
   const handleBtnClick = (e: React.MouseEvent) => {
-    const isDeleteMode = useControlStore.getState().activeToggles['delete_mode'];
+    const isDeleteMode = getEffectiveToggleId(useControlStore.getState()) === 'delete_mode';
     if (isDeleteMode) {
       return;
     }
@@ -34,7 +32,7 @@ export default function RecipeNodeInfo({
     onOpenEditor();
   };
 
-  const displayName = customName || recipe?.name || 'Unknown Recipe';
+  const displayName = recipe?.name || 'Unknown Recipe';
 
   return (
     <div className={styles['recipe-node-info']}>

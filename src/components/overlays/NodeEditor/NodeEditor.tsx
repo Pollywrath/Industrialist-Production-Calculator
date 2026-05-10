@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { RotateCcw, X } from 'lucide-react';
-import type { RecipeNodeData, HandleRef } from '../../../types/nodes';
+import type { RecipeNodeData } from '../../../types/nodes';
 import type { Recipe } from '../../../types/data';
-import { getProductName } from '../../../data/lookup';
 import useControlStore from '../../../stores/useControlStore';
 import useFlowStore from '../../../stores/useFlowStore';
 import { getConnectedNodes } from '../../../utils/graphTraversal';
 import {
   getRateMultiplier,
   cleanMachineCount,
-  cleanFlow,
   toPlainString,
+  computeQuantityMap,
 } from '../../../utils/recipeComputation';
+import { HandleEditorColumns } from './HandleEditorColumns';
 import styles from './NodeEditor.module.css';
 
 interface NodeEditorProps {
@@ -26,7 +26,6 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
   const rateMode = useControlStore((s) => s.rateMode);
   const multiplier = getRateMultiplier(recipe.cycle_time, rateMode);
 
-  const [customName, setCustomName] = useState(initialData.customName || '');
   const [machineCount, setMachineCount] = useState(initialData.machineCount);
   const [inputs, setInputs] = useState<number[]>(() => {
     if (initialData.inputOrder) return initialData.inputOrder;
@@ -37,40 +36,12 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
     return recipe.outputs.map((_, i) => i);
   });
 
-  const getHandleBaseQuantity = (ref: HandleRef) => {
-    const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
-    const entry = list[ref.index];
-    if (!entry) return 0;
-    return entry.quantity * multiplier;
-  };
-
   const [machineCountStr, setMachineCountStr] = useState(
     toPlainString(initialData.machineCount, 12),
   );
-  const [qtyStrMap, setQtyStrMap] = useState<Record<string, string>>(() => {
-    const initialQtyMap: Record<string, string> = {};
-    inputs.forEach((idx) => {
-      const entry = recipe.inputs[idx];
-      if (entry) {
-        const baseQuantity = entry.quantity * multiplier;
-        initialQtyMap[`input-${idx}`] = toPlainString(
-          cleanFlow(baseQuantity * initialData.machineCount),
-          10,
-        );
-      }
-    });
-    outputs.forEach((idx) => {
-      const entry = recipe.outputs[idx];
-      if (entry) {
-        const baseQuantity = entry.quantity * multiplier;
-        initialQtyMap[`output-${idx}`] = toPlainString(
-          cleanFlow(baseQuantity * initialData.machineCount),
-          10,
-        );
-      }
-    });
-    return initialQtyMap;
-  });
+  const [qtyStrMap, setQtyStrMap] = useState<Record<string, string>>(() =>
+    computeQuantityMap(recipe, inputs, outputs, initialData.machineCount, multiplier)
+  );
 
   useEffect(() => {
     const count = parseInt(document.body.dataset.scrollLockCount || '0', 10);
@@ -104,7 +75,6 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
       machineCount: cleanMachineCount(machineCount),
       inputOrder: inputs,
       outputOrder: outputs,
-      customName: customName.trim() || undefined,
     });
     handleClose();
   };
@@ -136,7 +106,6 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
               machineCount: cleanMachineCount(machineCount),
               inputOrder: inputs,
               outputOrder: outputs,
-              customName: customName.trim() || undefined,
             },
           };
         } else {
@@ -158,146 +127,13 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
     handleClose();
   };
 
-  const moveItem = <T,>(list: T[], setList: (v: T[]) => void, index: number, direction: -1 | 1) => {
-    if (index + direction < 0 || index + direction >= list.length) return;
-    const newList = [...list];
-    const temp = newList[index];
-    newList[index] = newList[index + direction];
-    newList[index + direction] = temp;
-    setList(newList);
-  };
-
-  const getRateSuffix = () => {
-    switch (rateMode) {
-      case 'second':
-        return '/s';
-      case 'minute':
-        return '/m';
-      case 'hour':
-        return '/h';
-      case 'raw':
-      default:
-        return '';
-    }
-  };
-
-  const renderHandleInfo = (ref: HandleRef) => {
-    const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
-    const entry = list[ref.index];
-    if (!entry) {
-      return (
-        <>
-          <div
-            className={styles['node-editor-handle-label']}
-            style={{ color: 'var(--theme-color-text-error)', fontStyle: 'italic' }}
-          >
-            Stale / Invalid Handle
-          </div>
-          <div className={styles['node-editor-quantity-section']}>
-            <span style={{ color: 'var(--theme-color-text-neutral)', fontSize: '13px' }}>N/A</span>
-          </div>
-        </>
-      );
-    }
-
-    const name = getProductName(entry.product_id);
-    const baseQuantity = entry.quantity;
-    const normalizedBaseQuantity = baseQuantity * multiplier;
-    const key = `${ref.side}-${ref.index}`;
-    const currentQuantityStr = qtyStrMap[key] !== undefined ? qtyStrMap[key] : '';
-
-    const handleQtyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const rawVal = e.target.value;
-      if (!/^\d*(\.\d{0,10})?$/.test(rawVal)) return;
-
-      setQtyStrMap((prev) => ({ ...prev, [key]: rawVal }));
-    };
-
-    const handleQtyBlur = () => {
-      const currentVal = qtyStrMap[key] || '';
-      const parsed = parseFloat(currentVal);
-
-      if (!isNaN(parsed) && parsed >= 0) {
-        const cleaned = cleanFlow(parsed);
-        const nextQtyStrMap: Record<string, string> = { ...qtyStrMap, [key]: toPlainString(cleaned, 10) };
-
-        if (normalizedBaseQuantity > 0) {
-          const newMachineCount = cleanMachineCount(cleaned / normalizedBaseQuantity);
-          setMachineCount(newMachineCount);
-          setMachineCountStr(toPlainString(newMachineCount, 12));
-
-          inputs.forEach((inpIdx) => {
-            const hKey = `input-${inpIdx}`;
-            if (hKey !== key) {
-              const baseQty = getHandleBaseQuantity({
-                side: 'input',
-                index: inpIdx,
-              });
-              nextQtyStrMap[hKey] = toPlainString(cleanFlow(baseQty * newMachineCount), 10);
-            }
-          });
-          outputs.forEach((outIdx) => {
-            const hKey = `output-${outIdx}`;
-            if (hKey !== key) {
-              const baseQty = getHandleBaseQuantity({
-                side: 'output',
-                index: outIdx,
-              });
-              nextQtyStrMap[hKey] = toPlainString(cleanFlow(baseQty * newMachineCount), 10);
-            }
-          });
-        }
-        setQtyStrMap(nextQtyStrMap);
-      } else {
-        setMachineCount(0);
-        setMachineCountStr('');
-        const resetQtyStrMap: Record<string, string> = {};
-        inputs.forEach((inpIdx) => {
-          resetQtyStrMap[`input-${inpIdx}`] = '';
-        });
-        outputs.forEach((outIdx) => {
-          resetQtyStrMap[`output-${outIdx}`] = '';
-        });
-        setQtyStrMap(resetQtyStrMap);
-      }
-    };
-
-    return (
-      <>
-        <div className={styles['node-editor-handle-label']} title={name}>
-          {name}
-        </div>
-        <div className={styles['node-editor-quantity-section']}>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={currentQuantityStr}
-            onChange={handleQtyChange}
-            onBlur={handleQtyBlur}
-            className={styles['node-editor-quantity-input']}
-          />
-          <span className={styles['node-editor-quantity-unit']}>{getRateSuffix()}</span>
-        </div>
-      </>
-    );
-  };
-
   const handleResetHandles = () => {
     const defaultInputs = recipe.inputs.map((_, i) => i);
     const defaultOutputs = recipe.outputs.map((_, i) => i);
     setInputs(defaultInputs);
     setOutputs(defaultOutputs);
 
-    const newQtyStrMap: Record<string, string> = {};
-    defaultInputs.forEach((idx) => {
-      const baseQty = getHandleBaseQuantity({ side: 'input', index: idx });
-      newQtyStrMap[`input-${idx}`] = toPlainString(cleanFlow(baseQty * machineCount), 10);
-    });
-    defaultOutputs.forEach((idx) => {
-      const baseQty = getHandleBaseQuantity({ side: 'output', index: idx });
-      newQtyStrMap[`output-${idx}`] = toPlainString(cleanFlow(baseQty * machineCount), 10);
-    });
-    setQtyStrMap(newQtyStrMap);
+    setQtyStrMap(computeQuantityMap(recipe, defaultInputs, defaultOutputs, machineCount, multiplier));
   };
 
   const handleMachineCountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -305,6 +141,16 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
     if (!/^\d*(\.\d{0,12})?$/.test(rawVal)) return;
 
     setMachineCountStr(rawVal);
+
+    const parsed = parseFloat(rawVal);
+    if (!isNaN(parsed) && parsed >= 0) {
+      const cleaned = cleanMachineCount(parsed);
+      setMachineCount(cleaned);
+      setQtyStrMap(computeQuantityMap(recipe, inputs, outputs, cleaned, multiplier));
+    } else {
+      setMachineCount(0);
+      setQtyStrMap(computeQuantityMap(recipe, inputs, outputs, 0, multiplier));
+    }
   };
 
   const handleMachineCountBlur = () => {
@@ -313,28 +159,11 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
       const cleaned = cleanMachineCount(parsed);
       setMachineCount(cleaned);
       setMachineCountStr(toPlainString(cleaned, 12));
-
-      const newQtyStrMap: Record<string, string> = {};
-      inputs.forEach((idx) => {
-        const baseQty = getHandleBaseQuantity({ side: 'input', index: idx });
-        newQtyStrMap[`input-${idx}`] = toPlainString(cleanFlow(baseQty * cleaned), 10);
-      });
-      outputs.forEach((idx) => {
-        const baseQty = getHandleBaseQuantity({ side: 'output', index: idx });
-        newQtyStrMap[`output-${idx}`] = toPlainString(cleanFlow(baseQty * cleaned), 10);
-      });
-      setQtyStrMap(newQtyStrMap);
+      setQtyStrMap(computeQuantityMap(recipe, inputs, outputs, cleaned, multiplier));
     } else {
       setMachineCount(0);
-      setMachineCountStr('');
-      const newQtyStrMap: Record<string, string> = {};
-      inputs.forEach((idx) => {
-        newQtyStrMap[`input-${idx}`] = '';
-      });
-      outputs.forEach((idx) => {
-        newQtyStrMap[`output-${idx}`] = '';
-      });
-      setQtyStrMap(newQtyStrMap);
+      setMachineCountStr('0');
+      setQtyStrMap(computeQuantityMap(recipe, inputs, outputs, 0, multiplier));
     }
   };
 
@@ -363,17 +192,6 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
 
         <div className={styles['node-editor-content']}>
           <div className={styles['node-editor-group']}>
-            <label>Name</label>
-            <input
-              type="text"
-              value={customName}
-              onChange={(e) => setCustomName(e.target.value)}
-              placeholder={recipe.name}
-              className={styles['node-editor-input']}
-            />
-          </div>
-
-          <div className={styles['node-editor-group']}>
             <label>Machine Count</label>
             <input
               type="text"
@@ -385,69 +203,19 @@ export default function NodeEditor({ recipe, initialData, nodeId, onClose }: Nod
             />
           </div>
 
-          <div className={styles['node-editor-columns']}>
-            <div className={styles['node-editor-column']}>
-              <h3>Input Handles</h3>
-              <div className={styles['node-editor-list']}>
-                {inputs.map((idx, listIdx) => (
-                  <div
-                    key={`input-${idx}`}
-                    className={`${styles['node-editor-item']} ${styles['node-editor-item--input']}`}
-                  >
-                    <div className={styles['node-editor-actions']}>
-                      <div className={styles['node-editor-actions-stack']}>
-                        <button
-                          disabled={listIdx === 0}
-                          onClick={() => moveItem(inputs, setInputs, listIdx, -1)}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          disabled={listIdx === inputs.length - 1}
-                          onClick={() => moveItem(inputs, setInputs, listIdx, 1)}
-                        >
-                          ↓
-                        </button>
-                      </div>
-                    </div>
-                    {renderHandleInfo({ side: 'input', index: idx })}
-                  </div>
-                ))}
-                {inputs.length === 0 && <div className={styles['node-editor-empty']}>None</div>}
-              </div>
-            </div>
-
-            <div className={styles['node-editor-column']}>
-              <h3>Output Handles</h3>
-              <div className={styles['node-editor-list']}>
-                {outputs.map((idx, listIdx) => (
-                  <div
-                    key={`output-${idx}`}
-                    className={`${styles['node-editor-item']} ${styles['node-editor-item--output']}`}
-                  >
-                    <div className={styles['node-editor-actions']}>
-                      <div className={styles['node-editor-actions-stack']}>
-                        <button
-                          disabled={listIdx === 0}
-                          onClick={() => moveItem(outputs, setOutputs, listIdx, -1)}
-                        >
-                          ↑
-                        </button>
-                        <button
-                          disabled={listIdx === outputs.length - 1}
-                          onClick={() => moveItem(outputs, setOutputs, listIdx, 1)}
-                        >
-                          ↓
-                        </button>
-                      </div>
-                    </div>
-                    {renderHandleInfo({ side: 'output', index: idx })}
-                  </div>
-                ))}
-                {outputs.length === 0 && <div className={styles['node-editor-empty']}>None</div>}
-              </div>
-            </div>
-          </div>
+          <HandleEditorColumns
+            recipe={recipe}
+            multiplier={multiplier}
+            rateMode={rateMode}
+            inputs={inputs}
+            setInputs={setInputs}
+            outputs={outputs}
+            setOutputs={setOutputs}
+            qtyStrMap={qtyStrMap}
+            setQtyStrMap={setQtyStrMap}
+            setMachineCount={setMachineCount}
+            setMachineCountStr={setMachineCountStr}
+          />
         </div>
 
         <div className={styles['node-editor-footer']}>

@@ -222,7 +222,7 @@ function findConnectedComponents(productData: SolverProductData) {
 
   const components = Array.from(componentsByRoot.values());
 
-  return { components, portToIndex };
+  return components;
 }
 
 // ── Hash a component for caching ────────────────────────────
@@ -418,7 +418,7 @@ export function calculateFlows(graph: SolverGraph): FlowResults {
   for (const [, productData] of Object.entries(graph.products)) {
     if (productData.connections.length === 0) continue;
 
-    const { components } = findConnectedComponents(productData);
+    const components = findConnectedComponents(productData);
 
     for (const component of components) {
       if (component.connections.length === 0) continue;
@@ -476,14 +476,14 @@ export function calculateFlows(graph: SolverGraph): FlowResults {
       inputFlow.rate = clampFlow(inputFlow.rate);
       inputFlow.connected = clampFlow(inputFlow.connected);
       inputFlow.hasDeficiency =
-        inputFlow.rate > 0 && inputFlow.connected < inputFlow.rate - EPSILON;
+        inputFlow.rate > 0 && inputFlow.connected < inputFlow.rate - 1e-8;
       inputFlow.hasExcess = false;
     }
     for (const outputFlow of nodeResult.outputFlows) {
       outputFlow.rate = clampFlow(outputFlow.rate);
       outputFlow.connected = clampFlow(outputFlow.connected);
       outputFlow.hasExcess =
-        outputFlow.rate > 0 && outputFlow.connected < outputFlow.rate - EPSILON;
+        outputFlow.rate > 0 && outputFlow.connected < outputFlow.rate - 1e-8;
       outputFlow.hasDeficiency = false;
     }
   }

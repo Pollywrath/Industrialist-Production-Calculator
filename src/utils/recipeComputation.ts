@@ -1,4 +1,5 @@
 import type { RateMode } from '../stores/useControlStore';
+import { cleanFlow, toPlainString } from './precision';
 
 export {
   cleanMachineCount,
@@ -36,4 +37,46 @@ export function getNormalizedCycleTime(cycleTime: number, mode: RateMode): numbe
     default:
       return cycleTime;
   }
+}
+
+import type { Recipe } from '../types/data';
+
+export function computeQuantityMap(
+  recipe: Recipe,
+  inputs: number[],
+  outputs: number[],
+  machineCount: number,
+  multiplier: number,
+  excludeKey?: string,
+  excludeValue?: string
+): Record<string, string> {
+  const map: Record<string, string> = {};
+
+  inputs.forEach((idx) => {
+    const key = `input-${idx}`;
+    if (key === excludeKey && excludeValue !== undefined) {
+      map[key] = excludeValue;
+    } else {
+      const entry = recipe.inputs[idx];
+      if (entry) {
+        const baseQty = entry.quantity * multiplier;
+        map[key] = machineCount > 0 ? toPlainString(cleanFlow(baseQty * machineCount), 8) : '';
+      }
+    }
+  });
+
+  outputs.forEach((idx) => {
+    const key = `output-${idx}`;
+    if (key === excludeKey && excludeValue !== undefined) {
+      map[key] = excludeValue;
+    } else {
+      const entry = recipe.outputs[idx];
+      if (entry) {
+        const baseQty = entry.quantity * multiplier;
+        map[key] = machineCount > 0 ? toPlainString(cleanFlow(baseQty * machineCount), 8) : '';
+      }
+    }
+  });
+
+  return map;
 }

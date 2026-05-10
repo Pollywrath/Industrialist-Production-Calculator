@@ -3,6 +3,7 @@ import type { Edge } from '@xyflow/react';
 export function getConnectedNodes(startNodeId: string, edges: Edge[]): Set<string> {
   const connected = new Set<string>([startNodeId]);
   const queue = [startNodeId];
+  let head = 0;
 
   const adjList = new Map<string, string[]>();
   for (let i = 0; i < edges.length; i++) {
@@ -13,8 +14,8 @@ export function getConnectedNodes(startNodeId: string, edges: Edge[]): Set<strin
     adjList.get(edge.target)!.push(edge.source);
   }
 
-  while (queue.length > 0) {
-    const current = queue.shift()!;
+  while (head < queue.length) {
+    const current = queue[head++];
     const neighbors = adjList.get(current);
     if (neighbors) {
       for (let i = 0; i < neighbors.length; i++) {
