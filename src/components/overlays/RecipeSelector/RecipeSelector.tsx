@@ -1,16 +1,17 @@
 import { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useReactFlow } from '@xyflow/react';
-import { getAllRecipes, getRecipe } from '../../../data/lookup';
-import useControlStore from '../../../stores/useControlStore';
-import useFlowStore from '../../../stores/useFlowStore';
-import useFlowResultStore from '../../../stores/useFlowResultStore';
-import { useRecipeSelectorFilters } from './useRecipeSelectorFilters';
+import { getRecipe } from '../../../data/lookup';
+import { useUIStore } from '../../../stores/useUIStore';
+import { useFlowStore } from '../../../stores/useFlowStore';
+import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { computeRecipeInsertion } from './graphInsertion';
-import SelectionStage from './SelectionStage';
-import RecipeStage from './RecipeStage';
+import { SelectionStage } from './SelectionStage';
+import { RecipeStage } from './RecipeStage';
 import styles from './RecipeSelector.module.css';
-import type { NodeFlowResult } from '../../../solver/types';
+import type { NodeFlowResult } from '../../../types/solver';
+import { RecipeSelectorProvider } from './RecipeSelectorProvider';
+import { useRecipeSelectorStore } from './RecipeSelectorContext';
 
 function getClickedPerSecondRate(
   nodeId: string | null,
@@ -18,7 +19,7 @@ function getClickedPerSecondRate(
   productId: string | null,
   handleIndex: number | null,
   nodeData: { recipeId: string; machineCount: number } | null,
-  nodeFlows: NodeFlowResult | undefined | null
+  nodeFlows: NodeFlowResult | undefined | null,
 ): number | null {
   if (!nodeId || !sourceSide || !productId || handleIndex === null || !nodeData) {
     return null;
@@ -40,31 +41,37 @@ function getClickedPerSecondRate(
     : (clickedBaseQty / existingRecipe.cycle_time) * existingMachineCount;
 }
 
-export default function RecipeSelector() {
-  const isRecipeSelectorOpen = useControlStore((s) => s.isRecipeSelectorOpen);
+export function RecipeSelector() {
+  const isRecipeSelectorOpen = useUIStore((s) => s.isRecipeSelectorOpen);
+  const preselectedProductId = useUIStore((s) => s.preselectedProductId);
+  const preselectedSourceSide = useUIStore((s) => s.preselectedSourceSide);
+
   if (!isRecipeSelectorOpen) return null;
-  return <RecipeSelectorModal />;
+
+  return (
+    <RecipeSelectorProvider
+      preselectedProductId={preselectedProductId}
+      preselectedSourceSide={preselectedSourceSide}
+    >
+      <RecipeSelectorModal />
+    </RecipeSelectorProvider>
+  );
 }
 
 function RecipeSelectorModal() {
-  const setRecipeSelectorOpen = useControlStore((s) => s.setRecipeSelectorOpen);
-  const preselectedProductId = useControlStore((s) => s.preselectedProductId);
-  const preselectedSourceSide = useControlStore((s) => s.preselectedSourceSide);
-  const preselectedNodeId = useControlStore((s) => s.preselectedNodeId);
-  const preselectedHandleIndex = useControlStore((s) => s.preselectedHandleIndex);
-  const rateMode = useControlStore((s) => s.rateMode);
+  const setRecipeSelectorOpen = useUIStore((s) => s.setRecipeSelectorOpen);
+  const preselectedProductId = useUIStore((s) => s.preselectedProductId);
+  const preselectedSourceSide = useUIStore((s) => s.preselectedSourceSide);
+  const preselectedNodeId = useUIStore((s) => s.preselectedNodeId);
+  const preselectedHandleIndex = useUIStore((s) => s.preselectedHandleIndex);
+  const setNodesAndEdges = useFlowStore((s) => s.setNodesAndEdges);
 
   const preselectedNode = useFlowStore((s) => {
     if (!preselectedNodeId) return null;
     return s.nodesMap.get(preselectedNodeId) || null;
   });
 
-  const preselectedNodeData = preselectedNode
-    ? {
-      recipeId: preselectedNode.data?.recipeId,
-      machineCount: preselectedNode.data?.machineCount,
-    }
-    : null;
+  const preselectedNodeData = preselectedNode?.data || null;
 
   const preselectedNodeFlows = useFlowResultStore((s) => {
     if (!preselectedNodeId) return undefined;
@@ -74,19 +81,15 @@ function RecipeSelectorModal() {
   const { screenToFlowPosition } = useReactFlow();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const staticRecipes = getAllRecipes();
+  const stage = useRecipeSelectorStore((s) => s.stage);
+  const activeTab = useRecipeSelectorStore((s) => s.activeTab);
 
-  const filters = useRecipeSelectorFilters({
-    recipes: staticRecipes,
-    preselectedProductId,
-    preselectedSourceSide,
-  });
 
   useEffect(() => {
-    if (inputRef.current && filters.stage === 'select') {
+    if (inputRef.current && stage === 'select') {
       inputRef.current.focus();
     }
-  }, [filters.activeTab, filters.stage]);
+  }, [activeTab, stage]);
 
   const derivedRate = getClickedPerSecondRate(
     preselectedNodeId,
@@ -103,7 +106,7 @@ function RecipeSelectorModal() {
     const recipe = getRecipe(recipeId);
     if (!recipe) return;
 
-    const flowStore = useFlowStore.getState();
+    const { nodes, edges } = useFlowStore.getState();
 
     const { newNode, nextEdges } = computeRecipeInsertion({
       recipe,
@@ -112,12 +115,12 @@ function RecipeSelectorModal() {
       preselectedProductId,
       preselectedHandleIndex,
       derivedRate,
-      nodes: flowStore.nodes,
-      edges: flowStore.edges,
+      nodes,
+      edges,
       screenToFlowPosition,
     });
 
-    const cleanNodes = flowStore.nodes.map((n) => ({
+    const cleanNodes = nodes.map((n) => ({
       ...n,
       selected: false,
     }));
@@ -125,30 +128,26 @@ function RecipeSelectorModal() {
     const maxZ = cleanNodes.reduce((max, node) => Math.max(max, node.zIndex ?? 0), 0);
     newNode.zIndex = maxZ + 1;
 
-    flowStore.setNodesAndEdges([...cleanNodes, newNode], nextEdges);
+    setNodesAndEdges([...cleanNodes, newNode], nextEdges);
     setRecipeSelectorOpen(false);
   };
 
   return createPortal(
-    <div className={styles['recipe-selector-overlay']} onClick={() => setRecipeSelectorOpen(false)}>
-      <div className={styles['recipe-selector-modal']} onClick={(e) => e.stopPropagation()}>
-        {filters.stage === 'select' ? (
+    <div 
+      className={styles['recipe-selector-overlay']} 
+      onClick={() => setRecipeSelectorOpen(false)}
+    >
+      <div 
+        className={styles['recipe-selector-modal']} 
+        onClick={(e) => e.stopPropagation()}
+      >
+        {stage === 'select' ? (
           <SelectionStage inputRef={inputRef} />
         ) : (
           <RecipeStage
-            activeTab={filters.activeTab}
-            selectedId={filters.selectedId}
-            filterProducers={filters.filterProducers}
-            setFilterProducers={filters.setFilterProducers}
-            filterConsumers={filters.filterConsumers}
-            setFilterConsumers={filters.setFilterConsumers}
-            matchingRecipes={filters.matchingRecipes}
-            rateMode={rateMode}
             clickedRateInfo={clickedRateInfo}
             preselectedSourceSide={preselectedSourceSide}
             preselectedProductId={preselectedProductId}
-            onBack={filters.handleBack}
-            onClose={() => setRecipeSelectorOpen(false)}
             onAddRecipe={handleAddRecipe}
           />
         )}

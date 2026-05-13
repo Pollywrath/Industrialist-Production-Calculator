@@ -1,7 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { RecipeNodeData } from '../types/nodes';
-
-// ── Per-handle flow status ──────────────────────────────────
+import type { RecipeNodeData } from './nodes';
 
 export interface HandleFlowStatus {
   rate: number;
@@ -10,15 +8,11 @@ export interface HandleFlowStatus {
   hasExcess: boolean;
 }
 
-// ── Per-node aggregation ────────────────────────────────────
-
 export interface NodeFlowResult {
   inputFlows: HandleFlowStatus[];
   outputFlows: HandleFlowStatus[];
 }
 export type FlowResults = Map<string, NodeFlowResult>;
-
-// ── Internal solver graph ───────────────────────────────────
 
 export interface SolverPort {
   type: 'output' | 'input';
@@ -53,8 +47,6 @@ export interface SolverGraph {
   >;
   products: Record<string, SolverProductData>;
 }
-
-// ── Flow network (for Dinic) ────────────────────────────────
 
 export interface FlowEdge {
   to: number;

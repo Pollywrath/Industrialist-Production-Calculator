@@ -102,5 +102,4 @@ const recipes: Recipe[] = [
   },
 ];
 
-export { totalCost, airInputs, exhausts, fuelInputCount, crankshafts, sidewaysCrankshafts };
-export default recipes;
+export { totalCost, airInputs, exhausts, fuelInputCount, crankshafts, sidewaysCrankshafts , recipes };

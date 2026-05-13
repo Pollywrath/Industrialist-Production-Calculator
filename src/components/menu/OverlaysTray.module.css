@@ -1,0 +1,100 @@
+.overlays-tray-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1000;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 72px;
+  overflow: hidden;
+  background: var(--theme-color-bg-secondary);
+  border: 1px solid var(--theme-color-border-light);
+  border-top: none;
+  border-right: none;
+  border-radius: 0 0 0 8px;
+}
+
+.overlays-tray-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(4, 48px);
+  gap: 0;
+  padding: 4px;
+  background: var(--theme-color-bg-secondary);
+}
+
+.overlays-tray-button {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  color: var(--theme-color-text-dim);
+  cursor: pointer;
+  user-select: none;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  transition: none;
+}
+
+.overlays-tray-button-icon {
+  opacity: 0.8;
+}
+
+.overlays-tray-button-label {
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  opacity: 0.8;
+}
+
+.overlays-tray-button.is-active {
+  color: var(--theme-color-text-primary);
+  background: var(--theme-color-node-target-bg);
+}
+
+.overlays-tray-button.is-active .overlays-tray-button-icon {
+  color: var(--theme-color-text-primary);
+  opacity: 1;
+}
+
+.overlays-tray-button.has-divider-bottom {
+  border-bottom: 1px solid var(--theme-color-border-light);
+}
+
+.overlays-tray-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.overlays-tray-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 6px 0;
+  cursor: pointer;
+  user-select: none;
+  background: var(--theme-color-secondary);
+  border: none;
+  border-top: 1px solid var(--theme-color-border-light);
+  font-family: inherit;
+}
+
+.overlays-tray-bar-text {
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--theme-color-text-dim);
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

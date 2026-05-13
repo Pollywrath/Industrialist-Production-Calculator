@@ -91,4 +91,4 @@ export {
   maxHarvestRate,
   actualHarvestRate,
 };
-export default recipes;
+export { recipes };

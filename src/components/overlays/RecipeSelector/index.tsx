@@ -1,1 +1,1 @@
-export { default } from './RecipeSelector';
+export { RecipeSelector } from './RecipeSelector';

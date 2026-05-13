@@ -2,19 +2,22 @@ import { Handle, Position } from '@xyflow/react';
 import type { HandleRef } from '../../../types/nodes';
 import type { Recipe } from '../../../types/data';
 import { getProductName } from '../../../data/lookup';
-import useControlStore, { getEffectiveToggleId } from '../../../stores/useControlStore';
-import useFlowStore from '../../../stores/useFlowStore';
-import useFlowResultStore from '../../../stores/useFlowResultStore';
-import {
-  getRateMultiplier,
-  showQuantity,
-  cleanMachineCount,
-} from '../../../utils/recipeComputation';
+import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
+import { useFlowStore } from '../../../stores/useFlowStore';
+import { useFlowResultStore } from '../../../stores/useFlowResultStore';
+import { getRateMultiplier, calculateMachineCountFromRate } from '../../../utils/recipeComputation';
+import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
 import styles from './RecipeNode.module.css';
 
-import { RECT_HEIGHT, RECT_GAP, SIDE_PADDING, COLUMN_GAP, NODE_WIDTH } from '../../shared/layoutConstants';
+import {
+  RECT_HEIGHT,
+  RECT_GAP,
+  SIDE_PADDING,
+  COLUMN_GAP,
+  NODE_WIDTH,
+} from '../../shared/layoutConstants';
 
 interface RecipeNodeIOProps {
   leftHandles: HandleRef[];
@@ -44,7 +47,6 @@ interface RecipeNodeIORectProps {
   recipe: Recipe | undefined;
   machineCount: number;
   multiplier: number;
-  isDeleteMode: boolean;
   onClick: (ref: HandleRef) => void;
 }
 
@@ -54,7 +56,6 @@ function RecipeNodeIORect({
   recipe,
   machineCount,
   multiplier,
-  isDeleteMode,
   onClick,
 }: RecipeNodeIORectProps) {
   const qty = resolveQuantity(refVal, recipe);
@@ -72,13 +73,13 @@ function RecipeNodeIORect({
           cursor: 'pointer',
         }}
         onClick={(e) => {
-          if (isDeleteMode) return;
+          if (getEffectiveToggleId(useUIStore.getState()) === 'delete_mode') return;
           e.stopPropagation();
           onClick(refVal);
         }}
       >
         <span className={styles['recipe-node-io__rect-text']}>
-          {showQuantity(totalQty)}x {label}
+          {formatQuantity(totalQty)}x {label}
         </span>
       </div>
     </div>
@@ -124,15 +125,14 @@ function RecipeNodeIOHandle({
   );
 }
 
-export default function RecipeNodeIO({
+export function RecipeNodeIO({
   leftHandles,
   rightHandles,
   recipe,
   nodeId,
   machineCount,
 }: RecipeNodeIOProps) {
-  const rateMode = useControlStore((s) => s.rateMode);
-  const isDeleteMode = useControlStore((s) => getEffectiveToggleId(s) === 'delete_mode');
+  const rateMode = useUIStore((s) => s.rateMode);
   const multiplier = recipe ? getRateMultiplier(recipe.cycle_time, rateMode) : 1;
   const flowResult = useFlowResultStore((s) => s.results.get(nodeId));
 
@@ -176,20 +176,15 @@ export default function RecipeNodeIO({
     const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
     const entry = list[ref.index];
     if (entry) {
-      useControlStore
-        .getState()
-        .setRecipeSelectorOpen(true, entry.product_id, ref.side, nodeId, ref.index);
+      useUIStore.getState().setRecipeSelectorOpen(true, entry.product_id, ref.side, nodeId, ref.index);
     }
   };
 
   const handleSquareClick = (e: React.MouseEvent, handleId: string) => {
+    const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
     if (isDeleteMode) {
       e.stopPropagation();
-      const flowStore = useFlowStore.getState();
-      const remainingEdges = flowStore.edges.filter(
-        (edge) => edge.sourceHandle !== handleId && edge.targetHandle !== handleId,
-      );
-      flowStore.setEdges(remainingEdges);
+      useFlowStore.getState().deleteEdgesConnectedToHandle(handleId);
     }
   };
 
@@ -199,26 +194,19 @@ export default function RecipeNodeIO({
     const entry = list[ref.index];
     if (!entry) return;
     const handleId = buildHandleId(nodeId, ref.side, ref.index);
-    const flowStore = useFlowStore.getState();
-    const hasEdges = flowStore.edges.some(
+    const { nodes, edges } = useFlowStore.getState();
+    const hasEdges = edges.some(
       (edge) => edge.sourceHandle === handleId || edge.targetHandle === handleId,
     );
     if (!hasEdges) return;
 
     const flowResults = useFlowResultStore.getState().results;
 
-    const targetRate = calculateBalancedRate(
-      nodeId,
-      ref,
-      recipe,
-      flowStore.nodes,
-      flowStore.edges,
-      flowResults,
-    );
+    const targetRate = calculateBalancedRate(nodeId, ref, recipe, nodes, edges, flowResults);
     const q = resolveQuantity(ref, recipe);
     if (q <= 0) return;
-    const newMachineCount = cleanMachineCount((targetRate * recipe.cycle_time) / q);
-    flowStore.updateNodeData(nodeId, { machineCount: newMachineCount });
+    const newMachineCount = calculateMachineCountFromRate(targetRate, recipe.cycle_time, q);
+    useFlowStore.getState().updateNodeData(nodeId, { machineCount: newMachineCount });
   };
 
   return (
@@ -242,7 +230,6 @@ export default function RecipeNodeIO({
                 recipe={recipe}
                 machineCount={machineCount}
                 multiplier={multiplier}
-                isDeleteMode={isDeleteMode}
                 onClick={handleRectClick}
               />
             ))}
@@ -263,7 +250,6 @@ export default function RecipeNodeIO({
                 recipe={recipe}
                 machineCount={machineCount}
                 multiplier={multiplier}
-                isDeleteMode={isDeleteMode}
                 onClick={handleRectClick}
               />
             ))}

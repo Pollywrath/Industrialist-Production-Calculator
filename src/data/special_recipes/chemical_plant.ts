@@ -419,4 +419,4 @@ const recipes: Recipe[] = [
   },
 ];
 
-export default recipes;
+export { recipes };

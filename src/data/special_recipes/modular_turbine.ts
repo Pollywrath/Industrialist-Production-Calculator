@@ -335,5 +335,4 @@ const recipes: Recipe[] = [
   },
 ];
 
-export { totalCost, inputCount, iptCount, lptCount, generatorCount, outputCount, hptCount };
-export default recipes;
+export { totalCost, inputCount, iptCount, lptCount, generatorCount, outputCount, hptCount , recipes };

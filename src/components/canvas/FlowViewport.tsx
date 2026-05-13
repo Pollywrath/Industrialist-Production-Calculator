@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { useShallow } from 'zustand/react/shallow';
 import {
   ReactFlow,
   Background,
@@ -9,12 +8,11 @@ import {
   type Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import RecipeNode from './nodes/RecipeNode';
-import RecipeEdge from './edges/RecipeEdge';
+import { RecipeNode } from './nodes/RecipeNode';
+import { RecipeEdge } from './edges/RecipeEdge';
 import { getRecipe } from '../../data/lookup';
-import type { RecipeNodeData } from '../../types/nodes';
-import useFlowStore from '../../stores/useFlowStore';
-import useControlStore, { getEffectiveToggleId } from '../../stores/useControlStore';
+import { useFlowStore } from '../../stores/useFlowStore';
+import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { useFlowSolver } from '../../hooks/useFlowSolver';
 import { parseHandleId } from '../../utils/idGenerator';
 import { SNAP_GRID, GRID_DOT_SIZE } from '../shared/layoutConstants';
@@ -26,10 +24,8 @@ const edgeTypes = {
   recipe: RecipeEdge,
 };
 
-// ── Static Module-Level Event Callbacks ──────────────────────────────────────
-
 const onEdgeClick = (_event: React.MouseEvent, edge: Edge) => {
-  const isDeleteMode = getEffectiveToggleId(useControlStore.getState()) === 'delete_mode';
+  const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
   if (isDeleteMode) {
     const flowStore = useFlowStore.getState();
     flowStore.setEdges(flowStore.edges.filter((e) => e.id !== edge.id));
@@ -37,7 +33,7 @@ const onEdgeClick = (_event: React.MouseEvent, edge: Edge) => {
 };
 
 const onNodeClick = (_event: React.MouseEvent, node: Node) => {
-  const isDeleteMode = getEffectiveToggleId(useControlStore.getState()) === 'delete_mode';
+  const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
   if (isDeleteMode) {
     useFlowStore.getState().deleteNode(node.id);
   }
@@ -72,80 +68,69 @@ const isValidConnection = (connection: Connection | Edge) => {
 
   if (!sourceNode || !targetNode) return false;
 
-  const sourceData = sourceNode.data as RecipeNodeData;
-  const targetData = targetNode.data as RecipeNodeData;
-
-  const sourceRecipe = getRecipe(sourceData.recipeId);
-  const targetRecipe = getRecipe(targetData.recipeId);
+  const sourceRecipe = getRecipe(sourceNode.data.recipeId);
+  const targetRecipe = getRecipe(targetNode.data.recipeId);
 
   if (!sourceRecipe || !targetRecipe) return false;
 
-  const sourceProduct = sourceRecipe.outputs[sourceIndex]?.product_id;
-  const targetProduct = targetRecipe.inputs[targetIndex]?.product_id;
+  const sourceProduct = sourceRecipe.outputs[sourceIndex];
+  const targetProduct = targetRecipe.inputs[targetIndex];
 
-  return sourceProduct !== undefined && sourceProduct === targetProduct;
+  if (!sourceProduct || !targetProduct) return false;
+
+  return sourceProduct.product_id === targetProduct.product_id;
 };
 
-// ── FlowViewport Component ───────────────────────────────────────────────────
-
-export default function FlowViewport() {
-  const { nodes, edges, onNodesChange, onEdgesChange, onConnect } = useFlowStore(
-    useShallow((s) => ({
-      nodes: s.nodes,
-      edges: s.edges,
-      onNodesChange: s.onNodesChange,
-      onEdgesChange: s.onEdgesChange,
-      onConnect: s.onConnect,
-    }))
-  );
+export function FlowViewport() {
+  const nodes = useFlowStore((s) => s.nodes);
+  const edges = useFlowStore((s) => s.edges);
+  const onNodesChange = useFlowStore((s) => s.onNodesChange);
+  const onEdgesChange = useFlowStore((s) => s.onEdgesChange);
+  const onConnect = useFlowStore((s) => s.onConnect);
 
   useFlowSolver();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const controlStore = useControlStore.getState();
-      if (controlStore.isRecipeSelectorOpen) return;
+      const uiStore = useUIStore.getState();
+      if (uiStore.isRecipeSelectorOpen) return;
 
       const target = e.target as HTMLElement;
-      if (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.isContentEditable
-      ) {
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
         return;
       }
 
       const isDragging = document.querySelector(
-        '.react-flow__nodesselection-rect, .react-flow__connection-path, .react-flow__node.dragging'
+        '.react-flow__nodesselection-rect, .react-flow__connection-path, .react-flow__node.dragging',
       );
       if (isDragging) return;
 
       if (e.key === 'Alt') {
         e.preventDefault();
-        controlStore.pushOverride('delete_mode');
+        uiStore.pushOverride('delete_mode');
       } else if (e.key === 'Control' || e.key === 'Meta') {
         e.preventDefault();
-        controlStore.pushOverride('multi_select');
+        uiStore.pushOverride('multi_select');
       } else if (e.key === 'Shift') {
-        controlStore.pushOverride('target');
+        uiStore.pushOverride('target');
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      const controlStore = useControlStore.getState();
-      if (controlStore.isRecipeSelectorOpen) return;
+      const uiStore = useUIStore.getState();
+      if (uiStore.isRecipeSelectorOpen) return;
 
       if (e.key === 'Alt') {
-        controlStore.popOverride('delete_mode');
+        uiStore.popOverride('delete_mode');
       } else if (e.key === 'Control' || e.key === 'Meta') {
-        controlStore.popOverride('multi_select');
+        uiStore.popOverride('multi_select');
       } else if (e.key === 'Shift') {
-        controlStore.popOverride('target');
+        uiStore.popOverride('target');
       }
     };
 
     const handleBlur = () => {
-      useControlStore.setState({ temporaryOverrides: [] });
+      useUIStore.setState({ temporaryOverrides: [] });
     };
 
     window.addEventListener('keydown', handleKeyDown);
@@ -176,8 +161,14 @@ export default function FlowViewport() {
       elevateNodesOnSelect={true}
       fitView={true}
       minZoom={0.15}
+      onlyRenderVisibleElements={false}
     >
-      <Background variant={BackgroundVariant.Dots} gap={SNAP_GRID} size={GRID_DOT_SIZE} color="var(--theme-color-grid-dots)" />
+      <Background
+        variant={BackgroundVariant.Dots}
+        gap={SNAP_GRID}
+        size={GRID_DOT_SIZE}
+        color="var(--theme-color-grid-dots)"
+      />
     </ReactFlow>
   );
 }

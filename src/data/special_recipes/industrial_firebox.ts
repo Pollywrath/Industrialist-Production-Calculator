@@ -137,5 +137,4 @@ const recipes: Recipe[] = [
   },
 ];
 
-export { FUEL_TYPE, fuel };
-export default recipes;
+export { FUEL_TYPE, fuel , recipes };

@@ -1,4 +1,4 @@
-import type { ReactFlowNode, ReactFlowEdge, NodeFlowResult } from './types';
+import type { ReactFlowNode, ReactFlowEdge, NodeFlowResult } from '../types/solver';
 import type { Recipe } from '../types/data';
 import type { HandleRef } from '../types/nodes';
 import { buildSolverGraph } from './graphBuilder';
@@ -14,8 +14,6 @@ function resolveQuantity(ref: HandleRef, recipe: Recipe | undefined): number {
 
 const PHI = (Math.sqrt(5) - 1) / 2;
 
-// ── Main Entry Point ─────────────────────────────────────────────────────────
-
 export function calculateBalancedRate(
   nodeId: string,
   ref: HandleRef,
@@ -24,12 +22,13 @@ export function calculateBalancedRate(
   edges: ReactFlowEdge[],
   flowResults: Map<string, NodeFlowResult>,
 ): number {
-  // ── 1. Component Port Collection (BFS with pointer index) ──────────────────
-
-  const adjacencyList = new Map<string, Array<{
-    neighbor: { nodeId: string; side: 'input' | 'output'; index: number };
-    edgeId: string;
-  }>>();
+  const adjacencyList = new Map<
+    string,
+    Array<{
+      neighbor: { nodeId: string; side: 'input' | 'output'; index: number };
+      edgeId: string;
+    }>
+  >();
 
   for (let i = 0; i < edges.length; i++) {
     const edge = edges[i];
@@ -86,8 +85,6 @@ export function calculateBalancedRate(
     }
   }
 
-  // ── 2. Topology Detection ──────────────────────────────────────────────────
-
   let isSimpleTopology = true;
   for (let i = 0; i < edges.length; i++) {
     const edge = edges[i];
@@ -98,19 +95,22 @@ export function calculateBalancedRate(
     }
   }
 
-  // ── 3. Solve ──────────────────────────────────────────────────────────────
-
   if (isSimpleTopology) {
     return solveAnalytically(nodeId, ref, recipe, edges, componentEdgeIds, flowResults);
   }
 
   return solveGoldenSection(
-    nodeId, ref, recipe, nodes, edges, flowResults,
-    componentNodeIds, componentEdgeIds, componentPorts,
+    nodeId,
+    ref,
+    recipe,
+    nodes,
+    edges,
+    flowResults,
+    componentNodeIds,
+    componentEdgeIds,
+    componentPorts,
   );
 }
-
-// ── Analytical Solver (simple topologies: single-edge, fan-in, fan-out) ──────
 
 function solveAnalytically(
   nodeId: string,
@@ -201,8 +201,6 @@ function solveAnalytically(
   if (q <= 0) return 0;
   return Number(((bestMachineCount * q) / cycleTime).toFixed(8));
 }
-
-// ── Golden Section Search Solver (complex multi-path topologies) ─────────────
 
 function solveGoldenSection(
   nodeId: string,

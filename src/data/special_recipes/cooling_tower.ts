@@ -49,5 +49,4 @@ const recipes: Recipe[] = [
   },
 ];
 
-export { outputTemperature };
-export default recipes;
+export { outputTemperature , recipes };

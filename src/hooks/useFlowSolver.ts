@@ -1,10 +1,9 @@
 import { useEffect, useRef } from 'react';
-import useFlowStore from '../stores/useFlowStore';
-import useFlowResultStore from '../stores/useFlowResultStore';
+import { useFlowStore } from '../stores/useFlowStore';
+import { useFlowResultStore } from '../stores/useFlowResultStore';
 import { buildSolverGraph } from '../solver/graphBuilder';
 import { calculateFlows } from '../solver/flowSolver';
 import { SOLVER_DEBOUNCE_MS } from '../components/shared/layoutConstants';
-
 
 export function useFlowSolver(): void {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -32,7 +31,7 @@ export function useFlowSolver(): void {
       (state) => state.solverVersion,
       () => {
         scheduleRecompute();
-      }
+      },
     );
 
     recompute();

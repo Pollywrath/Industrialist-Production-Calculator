@@ -1,13 +1,37 @@
+import { useEffect, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
-import FlowCanvas from './components/canvas/FlowCanvas';
-import ErrorBoundary from './components/shared/ErrorBoundary';
+import { FlowCanvas } from './components/canvas/FlowCanvas';
+import { initializeDatabase } from './data/lookup';
+import { LoadingScreen } from './components/shared/LoadingScreen';
+import { ConfirmDialog } from './components/shared/ConfirmDialog';
 
-export default function App() {
+export function App() {
+  const [isDatabaseLoaded, setIsDatabaseLoaded] = useState(false);
+  const [, setThrowError] = useState<unknown>();
+
+  useEffect(() => {
+    initializeDatabase()
+      .then(() => {
+        setIsDatabaseLoaded(true);
+      })
+      .catch((err) => {
+        console.error('Failed to initialize database:', err);
+        setThrowError(() => {
+          throw err;
+        });
+      });
+  }, []);
+
+  if (!isDatabaseLoaded) {
+    return (
+      <LoadingScreen title="SYSTEM INITIALIZATION" subtitle="Initializing system database..." />
+    );
+  }
+
   return (
-    <ErrorBoundary>
-      <ReactFlowProvider>
-        <FlowCanvas />
-      </ReactFlowProvider>
-    </ErrorBoundary>
+    <ReactFlowProvider>
+      <FlowCanvas />
+      <ConfirmDialog />
+    </ReactFlowProvider>
   );
 }

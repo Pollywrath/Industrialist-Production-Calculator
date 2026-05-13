@@ -1,14 +1,7 @@
-import type { RateMode } from '../stores/useControlStore';
-import { cleanFlow, toPlainString } from './precision';
+import type { RateMode } from '../stores/useUIStore';
+import { cleanFlow, toPlainString, cleanMachineCount } from './precision';
 
-export {
-  cleanMachineCount,
-  cleanFlow,
-  toPlainString,
-  showQuantity,
-  showCycleTime,
-  showMachineCount,
-} from './precision';
+export { cleanMachineCount, cleanFlow, toPlainString } from './precision';
 
 export function getRateMultiplier(cycleTime: number, mode: RateMode): number {
   let multiplier = 1;
@@ -48,7 +41,7 @@ export function computeQuantityMap(
   machineCount: number,
   multiplier: number,
   excludeKey?: string,
-  excludeValue?: string
+  excludeValue?: string,
 ): Record<string, string> {
   const map: Record<string, string> = {};
 
@@ -79,4 +72,13 @@ export function computeQuantityMap(
   });
 
   return map;
+}
+
+export function calculateMachineCountFromRate(
+  targetRate: number,
+  cycleTime: number,
+  baseQuantity: number,
+): number {
+  if (baseQuantity <= 0) return 1;
+  return cleanMachineCount((targetRate * cycleTime) / baseQuantity);
 }

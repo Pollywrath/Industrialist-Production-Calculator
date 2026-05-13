@@ -1,6 +1,8 @@
 import { type EdgeProps, getBezierPath, BaseEdge } from '@xyflow/react';
 
-export default function RecipeEdge({
+const EDGE_STYLE = { stroke: 'var(--theme-color-edge-stroke)', strokeWidth: 2 };
+
+export function RecipeEdge({
   id,
   sourceX,
   sourceY,
@@ -8,7 +10,6 @@ export default function RecipeEdge({
   targetY,
   sourcePosition,
   targetPosition,
-  style = {},
   markerEnd,
 }: EdgeProps) {
   const [edgePath] = getBezierPath({
@@ -25,7 +26,7 @@ export default function RecipeEdge({
       id={id}
       path={edgePath}
       markerEnd={markerEnd}
-      style={{ ...style, stroke: 'var(--theme-color-edge-stroke)', strokeWidth: 2 }}
+      style={EDGE_STYLE}
     />
   );
 }

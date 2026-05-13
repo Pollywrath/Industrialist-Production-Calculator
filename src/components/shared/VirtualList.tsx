@@ -10,7 +10,7 @@ interface VirtualListProps<T> {
   children: (item: T, index: number) => React.ReactNode;
 }
 
-export default function VirtualList<T>({
+export function VirtualList<T>({
   items,
   itemHeight,
   height,

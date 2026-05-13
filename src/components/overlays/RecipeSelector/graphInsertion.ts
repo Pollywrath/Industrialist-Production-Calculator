@@ -2,7 +2,7 @@ import type { Node, Edge } from '@xyflow/react';
 import type { Recipe } from '../../../types/data';
 import type { RecipeNodeData } from '../../../types/nodes';
 import { SNAP_GRID, NODE_WIDTH } from '../../shared/layoutConstants';
-import { cleanMachineCount } from '../../../utils/recipeComputation';
+import { calculateMachineCountFromRate } from '../../../utils/recipeComputation';
 import { nextNodeId, nextEdgeId, buildHandleId } from '../../../utils/idGenerator';
 
 interface InsertionParams {
@@ -61,8 +61,10 @@ export function computeRecipeInsertion({
           const targetEntry = targetList[targetIndex];
           const candidateBaseQty = targetEntry.quantity;
           if (candidateBaseQty > 0) {
-            calculatedMachineCount = cleanMachineCount(
-              (derivedRate * recipe.cycle_time) / candidateBaseQty,
+            calculatedMachineCount = calculateMachineCountFromRate(
+              derivedRate,
+              recipe.cycle_time,
+              candidateBaseQty,
             );
           }
         }

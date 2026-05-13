@@ -1,5 +1,4 @@
-import type { ReactFlowNode, ReactFlowEdge, SolverGraph, SolverConnection } from './types';
-import type { RecipeNodeData } from '../types/nodes';
+import type { ReactFlowNode, ReactFlowEdge, SolverGraph, SolverConnection } from '../types/solver';
 import { getRecipe } from '../data/lookup';
 import { getRateMultiplier } from '../utils/recipeComputation';
 import { parseHandleId } from '../utils/idGenerator';
@@ -7,10 +6,8 @@ import { parseHandleId } from '../utils/idGenerator';
 export function buildSolverGraph(nodes: ReactFlowNode[], edges: ReactFlowEdge[]): SolverGraph {
   const graph: SolverGraph = { nodes: {}, products: {} };
 
-  // ── 1. Build per-node data with computed rates ────────────
-
   for (const node of nodes) {
-    const data = node.data as RecipeNodeData;
+    const data = node.data;
     const recipe = getRecipe(data.recipeId);
     if (!recipe) continue;
 
@@ -63,8 +60,6 @@ export function buildSolverGraph(nodes: ReactFlowNode[], edges: ReactFlowEdge[])
       });
     }
   }
-
-  // ── 2. Parse edges into solver connections ────────────────
 
   for (const edge of edges) {
     if (!edge.sourceHandle || !edge.targetHandle) continue;

@@ -3,11 +3,16 @@ import { getMachineName, getProductName } from '../../../data/lookup';
 import {
   getRateMultiplier,
   getNormalizedCycleTime,
-  showQuantity,
-  showCycleTime,
-  cleanMachineCount,
-  showMachineCount,
+  calculateMachineCountFromRate,
 } from '../../../utils/recipeComputation';
+import {
+  formatPollution,
+  formatPower,
+  formatTime,
+  formatQuantity,
+  formatMachineCount,
+} from '../../../utils/unitFormatting';
+import { Star } from 'lucide-react';
 import styles from './RecipeSelector.module.css';
 
 interface RecipeCardProps {
@@ -19,7 +24,7 @@ interface RecipeCardProps {
   onAddRecipe: (recipeId: string) => void;
 }
 
-export default function RecipeCard({
+export function RecipeCard({
   recipe,
   rateMode,
   clickedRateInfo,
@@ -38,8 +43,10 @@ export default function RecipeCard({
     if (targetEntry) {
       const candidateBaseQty = targetEntry.quantity;
       if (candidateBaseQty > 0) {
-        neededMachineCount = cleanMachineCount(
-          (clickedPerSecondRate * recipe.cycle_time) / candidateBaseQty,
+        neededMachineCount = calculateMachineCountFromRate(
+          clickedPerSecondRate,
+          recipe.cycle_time,
+          candidateBaseQty,
         );
       }
     }
@@ -50,7 +57,7 @@ export default function RecipeCard({
       <div className={styles['recipe-card-top']}>
         <div className={styles['recipe-card-top-left']}>
           <button className={styles['recipe-card-fav-btn']} onClick={(e) => e.stopPropagation()}>
-            ☆
+            <Star size={14} />
           </button>
           <span className={styles['recipe-card-title']}>{recipe.name}</span>
         </div>
@@ -59,10 +66,10 @@ export default function RecipeCard({
             {getMachineName(recipe.machine_id)}
           </span>
           <span className={styles['recipe-card-pollution']}>
-            {Number((recipe.pollution * neededMachineCount).toFixed(2))}
+            {formatPollution(recipe.pollution * neededMachineCount)}
           </span>
           <span className={styles['recipe-card-machine-count']}>
-            {showMachineCount(neededMachineCount)}
+            {formatMachineCount(neededMachineCount)}
           </span>
         </div>
       </div>
@@ -81,13 +88,10 @@ export default function RecipeCard({
                       {productName.charAt(0).toUpperCase()}
                     </div>
                     <span className={styles['recipe-card-io-quantity']}>
-                      {showQuantity(inp.quantity * multiplier * neededMachineCount)}
+                      {formatQuantity(inp.quantity * multiplier * neededMachineCount)}
                     </span>
                   </div>
-                  <span
-                    className={styles['recipe-card-io-name']}
-                    title={productName}
-                  >
+                  <span className={styles['recipe-card-io-name']}>
                     {productName}
                   </span>
                 </div>
@@ -99,14 +103,14 @@ export default function RecipeCard({
         <div className={`${styles['recipe-card-col']} ${styles['recipe-card-col-arrow']}`}>
           <div className={styles['recipe-card-arrow-container']}>
             <div className={`${styles['recipe-card-arrow-info']} ${styles['above']}`}>
-              {showCycleTime(displayCycleTime)}
+              {formatTime(displayCycleTime)}
             </div>
             <div className={styles['recipe-card-arrow']}>
               <div className={styles['recipe-card-arrow-line']} />
               <div className={styles['recipe-card-arrow-head']} />
             </div>
             <div className={`${styles['recipe-card-arrow-info']} ${styles['below']}`}>
-              {Number((recipe.power_consumption * neededMachineCount).toFixed(2))}
+              {formatPower(recipe.power_consumption * neededMachineCount)}
             </div>
           </div>
         </div>
@@ -122,13 +126,10 @@ export default function RecipeCard({
                       {productName.charAt(0).toUpperCase()}
                     </div>
                     <span className={styles['recipe-card-io-quantity']}>
-                      {showQuantity(out.quantity * multiplier * neededMachineCount)}
+                      {formatQuantity(out.quantity * multiplier * neededMachineCount)}
                     </span>
                   </div>
-                  <span
-                    className={styles['recipe-card-io-name']}
-                    title={productName}
-                  >
+                  <span className={styles['recipe-card-io-name']}>
                     {productName}
                   </span>
                 </div>

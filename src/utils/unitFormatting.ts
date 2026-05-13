@@ -1,0 +1,131 @@
+import { toPlainString } from './precision';
+
+function formatWithPrefix(
+  value: number,
+  conversionLimit: number,
+  prefixes: string[],
+  suffix: string,
+  prefixUnit = '',
+): string {
+  const isNegative = value < 0;
+  const absValue = Math.abs(value);
+
+  if (absValue < conversionLimit) {
+    if (absValue >= 1000) {
+      const parts = absValue.toFixed(2).split('.');
+      const integerPart = parseInt(parts[0], 10).toLocaleString('en-US');
+      const decimalValue = parseFloat('0.' + parts[1]);
+      const decimalPart = decimalValue > 0 ? '.' + parts[1].replace(/0+$/, '') : '';
+      const cleanDecimalPart = decimalPart === '.' ? '' : decimalPart;
+      const formatted = `${prefixUnit}${integerPart}${cleanDecimalPart}${suffix}`;
+      return isNegative ? `-${formatted}` : formatted;
+    } else {
+      const formatted = `${prefixUnit}${Number(absValue.toFixed(2))}${suffix}`;
+      return isNegative ? `-${formatted}` : formatted;
+    }
+  }
+
+  let scaled = absValue;
+  let tier = 0;
+
+  while (scaled >= 1000 && tier < prefixes.length - 1) {
+    scaled /= 1000;
+    tier++;
+  }
+
+  const formattedNum = Number(scaled.toFixed(2));
+  const formatted = `${prefixUnit}${formattedNum}${prefixes[tier]}${suffix}`;
+  return isNegative ? `-${formatted}` : formatted;
+}
+
+export function formatPollution(value: number): string {
+  return formatWithPrefix(value, 1000, ['', 'k', 'M', 'G', 'T'], '%/hr');
+}
+
+export function formatPower(value: number, isCapacity = false): string {
+  const suffix = isCapacity ? 'MF' : 'MF/s';
+  return formatWithPrefix(value, 1000, ['', 'k', 'M', 'G', 'T'], suffix);
+}
+
+export function formatTemperature(value: number): string {
+  return formatWithPrefix(value, 10000, ['', 'k', 'M', 'B', 'T'], ' C');
+}
+
+export function formatCurrency(value: number): string {
+  return formatWithPrefix(value, 10000, ['', 'k', 'M', 'B', 'T'], '', '$');
+}
+
+export function formatRpMultiplier(value: number): string {
+  return formatWithPrefix(value, 10000, ['', 'k', 'M', 'B', 'T'], 'x');
+}
+
+export function formatTime(seconds: number): string {
+  const isNegative = seconds < 0;
+  const absSeconds = Math.abs(seconds);
+
+  if (absSeconds < 60) {
+    const formattedNum = Number(absSeconds.toFixed(2));
+    const result = `${formattedNum}s`;
+    return isNegative ? `-${result}` : result;
+  }
+
+  if (absSeconds < 3600) {
+    const m = Math.floor(absSeconds / 60);
+    const s = Number((absSeconds % 60).toFixed(2));
+    const sStr = s > 0 ? ` ${s}s` : '';
+    const result = `${m}m${sStr}`;
+    return isNegative ? `-${result}` : result;
+  }
+
+  const h = Math.floor(absSeconds / 3600);
+  const rem = absSeconds % 3600;
+  const m = Math.floor(rem / 60);
+  const s = Number((rem % 60).toFixed(2));
+
+  const mStr = m > 0 ? ` ${m}m` : '';
+  const sStr = s > 0 ? ` ${s}s` : '';
+  const result = `${h}h${mStr}${sStr}`;
+  return isNegative ? `-${result}` : result;
+}
+
+function formatWithCommasAndCounting(
+  value: number,
+  rawFormatter: (val: number) => string,
+  conversionLimit = 100000,
+): string {
+  const isNegative = value < 0;
+  const absValue = Math.abs(value);
+
+  if (absValue < conversionLimit) {
+    const rawFormatted = rawFormatter(absValue);
+    const [integerPart, decimalPart] = rawFormatted.split('.');
+    if (absValue >= 1000) {
+      const formattedInteger = parseInt(integerPart, 10).toLocaleString('en-US');
+      const formatted = decimalPart ? `${formattedInteger}.${decimalPart}` : formattedInteger;
+      return isNegative ? `-${formatted}` : formatted;
+    } else {
+      return isNegative ? `-${rawFormatted}` : rawFormatted;
+    }
+  }
+
+  const prefixes = ['', 'k', 'M', 'B', 'T'];
+  let scaled = absValue;
+  let tier = 0;
+
+  while (scaled >= 1000 && tier < prefixes.length - 1) {
+    scaled /= 1000;
+    tier++;
+  }
+
+  const formattedNum = Number(scaled.toFixed(2));
+  const formatted = `${formattedNum}${prefixes[tier]}`;
+  return isNegative ? `-${formatted}` : formatted;
+}
+
+export function formatQuantity(value: number): string {
+  return formatWithCommasAndCounting(value, (val) => toPlainString(val, 4), 100000);
+}
+
+export function formatMachineCount(value: number): string {
+  return formatWithCommasAndCounting(value, (val) => toPlainString(val, 2), 100000);
+}

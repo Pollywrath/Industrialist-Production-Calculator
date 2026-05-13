@@ -1,12 +1,20 @@
 let _nodeSeq = 0;
 let _edgeSeq = 0;
+let _saveSeq = 0;
 
 export function nextNodeId(): string {
-  return `n-${Date.now().toString(36)}-${(_nodeSeq++).toString(36)}`;
+  const seq = _nodeSeq++;
+  return `n-${Date.now().toString(36)}-${seq.toString(36)}`;
 }
 
 export function nextEdgeId(): string {
-  return `e-${Date.now().toString(36)}-${(_edgeSeq++).toString(36)}`;
+  const seq = _edgeSeq++;
+  return `e-${Date.now().toString(36)}-${seq.toString(36)}`;
+}
+
+export function nextSaveId(): string {
+  const seq = _saveSeq++;
+  return `save-${Date.now().toString(36)}-${seq.toString(36)}`;
 }
 
 export interface ParsedHandle {

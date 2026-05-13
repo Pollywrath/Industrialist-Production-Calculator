@@ -8,29 +8,40 @@
   flex-direction: column;
   width: max-content;
   overflow: hidden;
-  background: #111115;
-  border: 1px solid #2a2a35;
+  background: var(--theme-color-bg-secondary);
+  border: 1px solid var(--theme-color-border-light);
   border-bottom: none;
   border-radius: 8px 8px 0 0;
   transform: translateX(-50%);
+  max-width: 100vw;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; 
+}
+
+.controls-tray-container::-webkit-scrollbar {
+  display: none; 
 }
 
 .controls-tray-bar {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   padding: 6px 16px;
   cursor: pointer;
   user-select: none;
-  background: #17171d;
-  border-bottom: 1px solid #2a2a35;
+  background: var(--theme-color-secondary);
+  border: none;
+  border-bottom: 1px solid var(--theme-color-border-light);
+  font-family: inherit;
 }
 
 .controls-tray-bar-text {
   font-family: inherit;
   font-size: 10px;
   font-weight: bold;
-  color: #94a3b8;
+  color: var(--theme-color-text-dim);
   letter-spacing: 1px;
   display: inline-flex;
   align-items: center;
@@ -43,7 +54,8 @@
   grid-template-columns: repeat(6, 72px);
   gap: 0;
   padding: 4px;
-  background: #111115;
+  background: var(--theme-color-bg-secondary);
+  min-width: 440px; 
 }
 
 .controls-tray-button {
@@ -54,7 +66,7 @@
   align-items: center;
   justify-content: center;
   font-family: inherit;
-  color: #94a3b8;
+  color: var(--theme-color-text-dim);
   cursor: pointer;
   user-select: none;
   background: transparent;
@@ -77,21 +89,21 @@
 }
 
 .controls-tray-button.is-active {
-  color: #818cf8;
-  background: #1e1b4b;
+  color: var(--theme-color-text-primary);
+  background: var(--theme-color-node-target-bg);
 }
 
 .controls-tray-button.is-active .controls-tray-button-icon {
-  color: #818cf8;
+  color: var(--theme-color-text-primary);
   opacity: 1;
 }
 
 .controls-tray-button.has-divider-right {
-  border-right: 1px solid #2a2a35;
+  border-right: 1px solid var(--theme-color-border-light);
 }
 
 .controls-tray-button.has-divider-bottom {
-  border-bottom: 1px solid #2a2a35;
+  border-bottom: 1px solid var(--theme-color-border-light);
 }
 
 .controls-tray-button:disabled {

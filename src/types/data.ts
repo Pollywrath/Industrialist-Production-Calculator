@@ -1,5 +1,3 @@
-// ── Machine ──────────────────────────────────────────────────
-
 export interface MachineSize {
   x: number;
   y: number;
@@ -18,8 +16,6 @@ export interface Machine {
   subcategory: string;
 }
 
-// ── Product ──────────────────────────────────────────────────
-
 export type ProductType = 'Item' | 'Fluid';
 
 export interface Product {
@@ -29,8 +25,6 @@ export interface Product {
   rp_multiplier: number;
   type: ProductType;
 }
-
-// ── Recipe ───────────────────────────────────────────────────
 
 export type PowerType = 'MV' | 'HV';
 
@@ -56,8 +50,6 @@ export interface Recipe {
   inputs: RecipeInput[];
   outputs: RecipeOutput[];
 }
-
-// ── Research ─────────────────────────────────────────────────
 
 export interface Research {
   id: string;

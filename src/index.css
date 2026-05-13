@@ -15,31 +15,71 @@
 
   font-synthesis: none;
   line-height: 1.5;
-  color: #ffffff;
+  color: var(--theme-color-text-secondary, #999999);
 
-  color-scheme: light dark;
-  background-color: var(--theme-color-canvas-bg, #121214);
-  text-rendering: optimizeLegibility;
+  color-scheme: dark;
+  background-color: var(--theme-color-canvas-bg, #0a0a0a);
+  text-rendering: auto;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --theme-color-primary: #6366f1;
-  --theme-color-secondary: #475569;
-  --theme-color-fluid: #38bdf8;
-  --theme-color-item: #94a3b8;
-  --theme-color-text-dim: #8a99ad;
+  --theme-color-canvas-bg: #0a0a0a;
+  --theme-color-bg-secondary: #1a1a1a;
+  --theme-color-overlay-backdrop: rgba(10, 10, 10, 0.85);
 
-  --theme-color-canvas-bg: #121214;
-  --theme-color-grid-dots: #26262b;
-  --theme-color-edge-stroke: #3b3b4f;
-  --theme-color-text-error: #ff6c6c;
+  --theme-color-primary: #d4a637;
+  --theme-color-primary-hover: #f5d56a;
+  --theme-color-primary-dark: #0a0a0a;
+  --theme-color-secondary: #1a1a1a;
+
+  --theme-color-text-primary: #f5d56a;
+  --theme-color-text-secondary: #999999;
+  --theme-color-text-dim: #aaaaaa;
+  --theme-color-stat-value: #e0e0e0;
+  --theme-color-tier-default: #f5d56a;
+
+  --theme-color-border-primary: #d4a637;
+  --theme-color-border-light: #333333;
+  --theme-color-border-divider: rgba(212, 166, 55, 0.33);
+  --theme-color-grid-dots: #333333;
+  --theme-color-edge-stroke: #333333;
+
+  --theme-color-input-bg: #1a3a2a;
+  --theme-color-input-border: #22c55e;
+  --theme-color-input-text: #86efac;
+  --theme-color-success: #22c55e;
+
+  --theme-color-output-bg: #3a1a1a;
+  --theme-color-output-border: #ef4444;
+  --theme-color-output-text: #fca5a5;
+  --theme-color-text-error: #ef4444;
   --theme-color-text-neutral: #888888;
 
-  --theme-color-tier-1: #a0aec0;
-  --theme-color-tier-2: #10b981;
-  --theme-color-tier-3: #3b82f6;
-  --theme-color-tier-4: #a855f7;
-  --theme-color-tier-default: #cbd5e1;
+  --theme-color-confirm-success: #22c55e;
+  --theme-color-confirm-info: #d4a637;
+  --theme-color-confirm-error: #ef4444;
+
+  --theme-color-node-bg: #1a1a1a;
+  --theme-color-node-border: #d4a637;
+  --theme-color-node-target-bg: #2d2416;
+  --theme-color-node-target-border: #f5d56a;
+
+  --theme-color-handle-input-supplied: #22c55e;
+  --theme-color-handle-input-deficient: #ef4444;
+  --theme-color-handle-output-connected: #ef4444;
+  --theme-color-handle-output-excess: #22c55e;
+
+  --theme-color-tier-1: #888888;
+  --theme-color-tier-2: #4ade80;
+  --theme-color-tier-3: #60a5fa;
+  --theme-color-tier-4: #c084fc;
+  --theme-color-tier-5: #fbbf24;
+
+  --theme-color-btn-hover-overlay: rgba(255, 255, 255, 0.08);
+  --theme-color-translucent-dark: rgba(0, 0, 0, 0.4);
+  --theme-color-border-light-translucent: rgba(255, 255, 255, 0.1);
+  --theme-color-btn-bg-translucent: rgba(0, 0, 0, 0.3);
+  --theme-color-panel-empty-bg: rgba(42, 42, 53, 0.5);
 }
 
 body {
@@ -82,23 +122,7 @@ body {
   stroke: #ffffff;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #1a1a1a;
-    background-color: #f4f4f5;
-    --theme-color-canvas-bg: #f4f4f5;
-    --theme-color-grid-dots: #cbd5e1;
-    --theme-color-edge-stroke: #cbd5e1;
-  }
 
-  .react-flow .react-flow__node.selected {
-    border-color: #1a1a1a;
-  }
-
-  .react-flow .react-flow__edge.selected .react-flow__edge-path {
-    stroke: #1a1a1a;
-  }
-}
 
 .is-delete-mode .react-flow__node {
   cursor: pointer;
@@ -114,4 +138,20 @@ body {
 
 .is-delete-mode .react-flow__edge {
   cursor: pointer;
+}
+
+.react-flow__pane.dragging~.react-flow__viewport .react-flow__node,
+.react-flow__pane.dragging~.react-flow__viewport .react-flow__edge,
+.react-flow__pane.dragging~.react-flow__viewport .react-flow__handle,
+.react-flow__pane.dragging~.react-flow__viewport .recipe-node-io__rect {
+  pointer-events: none !important;
+}
+
+.react-flow__pane.dragging~.react-flow__viewport {
+  pointer-events: none !important;
+  will-change: transform;
+}
+
+.react-flow__background {
+  will-change: transform;
 }

@@ -10,6 +10,7 @@ export type RecipeNodeData = {
   machineCount: number;
   inputOrder?: number[];
   outputOrder?: number[];
+  settings?: Record<string, unknown>;
 };
 
 export type RecipeNodeType = Node<RecipeNodeData, 'recipe'>;

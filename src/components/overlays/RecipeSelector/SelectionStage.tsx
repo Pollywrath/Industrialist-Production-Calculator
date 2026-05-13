@@ -1,48 +1,119 @@
 import type { RefObject } from 'react';
-import { X } from 'lucide-react';
-import { getAllMachines } from '../../../data/lookup';
+import { X, Package, Droplet } from 'lucide-react';
+import type { Product, Machine } from '../../../types/data';
+import { SortableSelectorTable, type ColumnConfig } from '../../shared/SortableSelectorTable';
+import { PRODUCT_TABLE_VIEW_HEIGHT, MACHINE_TABLE_VIEW_HEIGHT } from '../../shared/layoutConstants';
+import { getAllMachines, getAllProducts } from '../../../data/lookup';
+import { sortItems } from '../../../utils/sorting';
 import {
   CANONICAL_CATEGORY_MAP,
   UNIQUE_CATEGORIES,
   UNIQUE_SUBCATEGORIES,
+  getTaxonomyIcon,
 } from '../../../utils/machineTaxonomy';
-import ProductTab from './ProductTab';
-import MachineTab from './MachineTab';
 import styles from './RecipeSelector.module.css';
-import useControlStore from '../../../stores/useControlStore';
+import { formatCurrency, formatRpMultiplier } from '../../../utils/unitFormatting';
+import { useUIStore } from '../../../stores/useUIStore';
+import { useRecipeSelectorStore } from './RecipeSelectorContext';
 
 const staticMachines = getAllMachines();
 const uniqueTiers = Array.from(new Set(staticMachines.map((m) => m.tier))).sort((a, b) => a - b);
+
+const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multiplier'>[] = [
+  {
+    field: 'name',
+    label: 'Name',
+    widthClass: 'col-50',
+    renderCell: (p) => (
+      <div className={styles['cell-flex-container']}>
+        {p.type === 'Fluid' ? (
+          <Droplet size={14} className={styles['fluid-icon']} />
+        ) : (
+          <Package size={14} className={styles['item-icon']} />
+        )}
+        <span className={styles['cell-ellipsis-text']}>{p.name}</span>
+      </div>
+    ),
+  },
+  {
+    field: 'sell_price',
+    label: 'Sell Price',
+    widthClass: 'col-25',
+    renderCell: (p) => formatCurrency(p.sell_price),
+  },
+  {
+    field: 'rp_multiplier',
+    label: 'RP Multiplier',
+    widthClass: 'col-25',
+    renderCell: (p) => formatRpMultiplier(p.rp_multiplier),
+  },
+];
+
+const MACHINE_COLUMNS: ColumnConfig<Machine, 'name' | 'cost'>[] = [
+  {
+    field: 'name',
+    label: 'Name',
+    widthClass: 'col-70',
+    renderCell: (m) => {
+      const SubIcon = getTaxonomyIcon(m.category, m.subcategory);
+      const tierClass = styles[`tier-${m.tier}`] || '';
+      return (
+        <div className={`${styles['cell-flex-container']} ${tierClass}`}>
+          <span className={styles['tier-badge']}>T{m.tier}</span>
+          <SubIcon size={14} className={styles['machine-subicon']} />
+          <span className={styles['machine-name-text']}>{m.name}</span>
+        </div>
+      );
+    },
+  },
+  {
+    field: 'cost',
+    label: 'Machine Cost',
+    widthClass: 'col-30',
+    renderCell: (m) => formatCurrency(m.cost),
+  },
+];
+
+import { useShallow } from 'zustand/react/shallow';
 
 interface SelectionStageProps {
   inputRef: RefObject<HTMLInputElement | null>;
 }
 
-export default function SelectionStage({ inputRef }: SelectionStageProps) {
-  const activeTab = useControlStore((s) => s.selectorActiveTab);
-  const setActiveTab = useControlStore((s) => s.setSelectorActiveTab);
+export function SelectionStage({ inputRef }: SelectionStageProps) {
+  const {
+    activeTab,
+    setActiveTab,
+    searchQuery,
+    setSearchQuery,
+    clearSearch,
+    productTypeFilter,
+    setProductTypeFilter,
+    machineTierFilter,
+    setMachineTierFilter,
+    machineCategoryFilter,
+    setMachineCategoryFilter,
+    machineSubcategoryFilter,
+    setMachineSubcategoryFilter,
+  } = useRecipeSelectorStore(
+    useShallow((s) => ({
+      activeTab: s.activeTab,
+      setActiveTab: s.setActiveTab,
+      searchQuery: s.searchQuery,
+      setSearchQuery: s.setSearchQuery,
+      clearSearch: s.clearSearch,
+      productTypeFilter: s.productTypeFilter,
+      setProductTypeFilter: s.setProductTypeFilter,
+      machineTierFilter: s.machineTierFilter,
+      setMachineTierFilter: s.setMachineTierFilter,
+      machineCategoryFilter: s.machineCategoryFilter,
+      setMachineCategoryFilter: s.setMachineCategoryFilter,
+      machineSubcategoryFilter: s.machineSubcategoryFilter,
+      setMachineSubcategoryFilter: s.setMachineSubcategoryFilter,
+    })),
+  );
 
-  const searchQuery = useControlStore((s) => s.selectorSearchQuery);
-  const setSearchQuery = useControlStore((s) => s.setSelectorSearchQuery);
-
-  const productTypeFilter = useControlStore((s) => s.selectorProductTypeFilter);
-  const setProductTypeFilter = useControlStore((s) => s.setSelectorProductTypeFilter);
-
-  const machineTierFilter = useControlStore((s) => s.selectorMachineTierFilter);
-  const setMachineTierFilter = useControlStore((s) => s.setSelectorMachineTierFilter);
-
-  const machineCategoryFilter = useControlStore((s) => s.selectorMachineCategoryFilter);
-  const setMachineCategoryFilter = useControlStore((s) => s.setSelectorMachineCategoryFilter);
-
-  const machineSubcategoryFilter = useControlStore((s) => s.selectorMachineSubcategoryFilter);
-  const setMachineSubcategoryFilter = useControlStore((s) => s.setSelectorMachineSubcategoryFilter);
-
-  const setRecipeSelectorOpen = useControlStore((s) => s.setRecipeSelectorOpen);
-
-  const clearSearch = () => {
-    setSearchQuery('');
-    useControlStore.getState().setSelectorDebouncedSearch('');
-  };
+  const setRecipeSelectorOpen = useUIStore((s) => s.setRecipeSelectorOpen);
 
   const availableSubcategories =
     machineCategoryFilter === 'All'
@@ -75,7 +146,6 @@ export default function SelectionStage({ inputRef }: SelectionStageProps) {
         <button
           className={styles['recipe-selector-close']}
           onClick={() => setRecipeSelectorOpen(false)}
-          title="Close selector"
         >
           <X size={16} />
         </button>
@@ -96,7 +166,6 @@ export default function SelectionStage({ inputRef }: SelectionStageProps) {
               <button
                 className={styles['recipe-selector-search-clear']}
                 onClick={clearSearch}
-                title="Clear search"
               >
                 <X size={12} />
               </button>
@@ -108,9 +177,7 @@ export default function SelectionStage({ inputRef }: SelectionStageProps) {
             <select
               className={styles['recipe-selector-select']}
               value={productTypeFilter}
-              onChange={(e) =>
-                setProductTypeFilter(e.target.value as 'All' | 'Item' | 'Fluid')
-              }
+              onChange={(e) => setProductTypeFilter(e.target.value as 'All' | 'Item' | 'Fluid')}
             >
               <option value="All">All Types</option>
               <option value="Item">Item</option>
@@ -134,7 +201,6 @@ export default function SelectionStage({ inputRef }: SelectionStageProps) {
                 <button
                   className={styles['recipe-selector-search-clear']}
                   onClick={clearSearch}
-                  title="Clear search"
                 >
                   <X size={12} />
                 </button>
@@ -187,14 +253,7 @@ export default function SelectionStage({ inputRef }: SelectionStageProps) {
               </select>
             </div>
 
-            <div
-              className={styles['recipe-selector-select-wrapper']}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
+            <div className={styles['recipe-selector-select-wrapper']}>
               <label className={styles['recipe-selector-filter-label']}>Subcategory:</label>
               <select
                 className={styles['recipe-selector-select']}
@@ -214,12 +273,113 @@ export default function SelectionStage({ inputRef }: SelectionStageProps) {
       )}
 
       <div className={styles['recipe-selector-table-container']}>
-        {activeTab === 'product' ? (
-          <ProductTab />
-        ) : (
-          <MachineTab />
-        )}
+        {activeTab === 'product' ? <ProductList /> : <MachineList />}
       </div>
     </>
+  );
+}
+
+function ProductList() {
+  const {
+    debouncedSearch,
+    productTypeFilter,
+    productSortField,
+    productSortOrder,
+    handleProductSort,
+    handleSelectItem,
+  } = useRecipeSelectorStore(
+    useShallow((s) => ({
+      debouncedSearch: s.debouncedSearch,
+      productTypeFilter: s.productTypeFilter,
+      productSortField: s.productSortField,
+      productSortOrder: s.productSortOrder,
+      handleProductSort: s.handleProductSort,
+      handleSelectItem: s.handleSelectItem,
+    })),
+  );
+
+  let list = getAllProducts();
+
+  if (debouncedSearch.trim()) {
+    const q = debouncedSearch.toLowerCase().trim();
+    list = list.filter((p) => p.name.toLowerCase().includes(q));
+  }
+
+  if (productTypeFilter !== 'All') {
+    list = list.filter((p) => p.type === productTypeFilter);
+  }
+
+  const filteredProducts = sortItems(list, productSortField, productSortOrder);
+
+  return (
+    <SortableSelectorTable
+      items={filteredProducts}
+      columns={PRODUCT_COLUMNS}
+      sortField={productSortField}
+      sortOrder={productSortOrder}
+      onSort={handleProductSort}
+      onSelectItem={handleSelectItem}
+      emptyMessage="No products match your criteria."
+      height={PRODUCT_TABLE_VIEW_HEIGHT}
+    />
+  );
+}
+
+function MachineList() {
+  const {
+    debouncedSearch,
+    machineTierFilter,
+    machineCategoryFilter,
+    machineSubcategoryFilter,
+    machineSortField,
+    machineSortOrder,
+    handleMachineSort,
+    handleSelectItem,
+  } = useRecipeSelectorStore(
+    useShallow((s) => ({
+      debouncedSearch: s.debouncedSearch,
+      machineTierFilter: s.machineTierFilter,
+      machineCategoryFilter: s.machineCategoryFilter,
+      machineSubcategoryFilter: s.machineSubcategoryFilter,
+      machineSortField: s.machineSortField,
+      machineSortOrder: s.machineSortOrder,
+      handleMachineSort: s.handleMachineSort,
+      handleSelectItem: s.handleSelectItem,
+    })),
+  );
+
+  let list = getAllMachines();
+
+  if (debouncedSearch.trim()) {
+    const q = debouncedSearch.toLowerCase().trim();
+    list = list.filter((m) => m.name.toLowerCase().includes(q));
+  }
+
+  if (machineTierFilter !== 'All') {
+    const tNum = parseInt(machineTierFilter, 10);
+    list = list.filter((m) => m.tier === tNum);
+  }
+
+  if (machineCategoryFilter !== 'All') {
+    list = list.filter((m) => m.category === machineCategoryFilter);
+  }
+
+  if (machineSubcategoryFilter !== 'All') {
+    list = list.filter((m) => m.subcategory === machineSubcategoryFilter);
+  }
+
+  const filteredMachines = sortItems(list, machineSortField, machineSortOrder);
+
+  return (
+    <SortableSelectorTable
+      items={filteredMachines}
+      columns={MACHINE_COLUMNS}
+      sortField={machineSortField}
+      sortOrder={machineSortOrder}
+      onSort={handleMachineSort}
+      onSelectItem={handleSelectItem}
+      emptyMessage="No machines match your criteria."
+      height={MACHINE_TABLE_VIEW_HEIGHT}
+    />
   );
 }

@@ -66,5 +66,4 @@ const recipes: Recipe[] = [
   },
 ];
 
-export { actualPowerProduction, waterOutputTemp };
-export default recipes;
+export { actualPowerProduction, waterOutputTemp , recipes };

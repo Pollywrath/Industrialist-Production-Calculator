@@ -1,19 +1,140 @@
-import useControlStore, { getEffectiveToggleId } from '../../stores/useControlStore';
-import ControlsTray from '../menu/ControlsTray';
-import RecipeSelector from '../overlays/RecipeSelector';
-import FlowViewport from './FlowViewport';
+import React, { Suspense, useEffect } from 'react';
+import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
+import { ControlsTray } from '../menu/ControlsTray';
+import { OverlaysTray } from '../menu/OverlaysTray';
+import { FlowViewport } from './FlowViewport';
+import { LoadingScreen } from '../shared/LoadingScreen';
+import { useAutosave } from '../../persistence/useAutosave';
+import { prefetchCache } from '../../utils/prefetchCache';
 
-export default function FlowCanvas() {
-  const isDeleteMode = useControlStore((s) => getEffectiveToggleId(s) === 'delete_mode');
+import styles from './FlowCanvas.module.css';
+
+const FallbackRecipeSelector: React.ComponentType<Record<string, never>> = () => null;
+const FallbackSavesOverlay: React.ComponentType<Record<string, never>> = () => null;
+
+const LazyRecipeSelector = React.lazy(
+  () =>
+    import('../overlays/RecipeSelector')
+      .then((m) => {
+        prefetchCache.RecipeSelector = m.RecipeSelector;
+        return { default: m.RecipeSelector };
+      })
+      .catch((err) => {
+        console.warn(
+          'RecipeSelector chunk load failed. Auto-refreshing application assets...',
+          err,
+        );
+        window.location.reload();
+        return { default: FallbackRecipeSelector };
+      }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
+);
+
+const LazySavesOverlay = React.lazy(
+  () =>
+    import('../overlays/SavesOverlay/SavesOverlay')
+      .then((m) => {
+        prefetchCache.SavesOverlay = m.SavesOverlay;
+        return { default: m.SavesOverlay };
+      })
+      .catch((err) => {
+        console.warn('SavesOverlay chunk load failed.', err);
+        return { default: FallbackSavesOverlay };
+      }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
+);
+
+export function FlowCanvas() {
+  const isDeleteMode = useUIStore((s) => getEffectiveToggleId(s) === 'delete_mode');
+  const isRecipeSelectorOpen = useUIStore((s) => s.isRecipeSelectorOpen);
+  const isSavesOverlayOpen = useUIStore((s) => s.isSavesOverlayOpen);
+  const isAutosaveLoaded = useUIStore((s) => s.isAutosaveLoaded);
+
+  useAutosave();
+
+  useEffect(() => {
+    const hasIdle = typeof window.requestIdleCallback === 'function';
+    let handle: number;
+
+    const prefetch = () => {
+      Promise.all([
+        import('../overlays/RecipeSelector')
+          .then((m) => {
+            prefetchCache.RecipeSelector = m.RecipeSelector;
+          })
+          .catch((err) => {
+            console.warn('Failed to prefetch RecipeSelector chunk on idle:', err);
+          }),
+        import('../overlays/NodeEditor')
+          .then((m) => {
+            prefetchCache.NodeEditor = m.NodeEditor;
+          })
+          .catch((err) => {
+            console.warn('Failed to prefetch NodeEditor chunk on idle:', err);
+          }),
+        import('../overlays/SavesOverlay/SavesOverlay')
+          .then((m) => {
+            prefetchCache.SavesOverlay = m.SavesOverlay;
+          })
+          .catch((err) => {
+            console.warn('Failed to prefetch SavesOverlay chunk on idle:', err);
+          }),
+      ]);
+    };
+
+    if (hasIdle) {
+      handle = window.requestIdleCallback(prefetch);
+    } else {
+      handle = window.setTimeout(prefetch, 1000);
+    }
+
+    return () => {
+      if (hasIdle) {
+        window.cancelIdleCallback(handle);
+      } else {
+        window.clearTimeout(handle);
+      }
+    };
+  }, []);
+
+  const RecipeSelector = prefetchCache.RecipeSelector;
+  const SavesOverlay = prefetchCache.SavesOverlay;
+
+  if (!isAutosaveLoaded) {
+    return (
+      <div className={styles['canvas-container']}>
+        <LoadingScreen title="INDUSTRIALIST CALCULATOR" subtitle="Restoring previous session layout..." />
+      </div>
+    );
+  }
 
   return (
-    <div
-      style={{ width: '100vw', height: '100dvh', background: 'var(--theme-color-canvas-bg)' }}
-      className={isDeleteMode ? 'is-delete-mode' : ''}
-    >
+    <div className={`${styles['canvas-container']} ${isDeleteMode ? 'is-delete-mode' : ''}`.trim()}>
       <FlowViewport />
       <ControlsTray />
-      <RecipeSelector />
+      <OverlaysTray />
+      {isRecipeSelectorOpen &&
+        (RecipeSelector ? (
+          React.createElement(RecipeSelector)
+        ) : (
+          <Suspense
+            fallback={
+              <LoadingScreen title="RECIPE SELECTOR" subtitle="Loading recipe database..." />
+            }
+          >
+            <LazyRecipeSelector />
+          </Suspense>
+        ))}
+      {isSavesOverlayOpen &&
+        (SavesOverlay ? (
+          React.createElement(SavesOverlay)
+        ) : (
+          <Suspense
+            fallback={
+              <LoadingScreen title="SAVE MANAGER" subtitle="Loading storage database..." />
+            }
+          >
+            <LazySavesOverlay />
+          </Suspense>
+        ))}
     </div>
   );
 }

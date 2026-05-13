@@ -69,4 +69,4 @@ const recipes: Recipe[] = isValid
     ]
   : [];
 
-export default recipes;
+export { recipes };

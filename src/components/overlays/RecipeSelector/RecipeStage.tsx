@@ -1,54 +1,49 @@
 import { ArrowLeft, X } from 'lucide-react';
-import type { Recipe } from '../../../types/data';
-import type { RateMode } from '../../../stores/useControlStore';
-import { getProductName, getMachineName } from '../../../data/lookup';
-import VirtualList from '../../shared/VirtualList';
-import RecipeCard from './RecipeCard';
+import { getProductName, getMachineName, getAllRecipes } from '../../../data/lookup';
+import { VirtualList } from '../../shared/VirtualList';
+import { RecipeCard } from './RecipeCard';
 import styles from './RecipeSelector.module.css';
+import { useUIStore } from '../../../stores/useUIStore';
+import { useRecipeSelectorFilters } from './RecipeSelectorContext';
+
+const allRecipes = getAllRecipes();
 
 interface RecipeStageProps {
-  activeTab: 'product' | 'machine';
-  selectedId: string | null;
-  filterProducers: boolean;
-  setFilterProducers: (val: boolean) => void;
-  filterConsumers: boolean;
-  setFilterConsumers: (val: boolean) => void;
-  matchingRecipes: Recipe[];
-  rateMode: RateMode;
   clickedRateInfo: { clickedPerSecondRate: number } | null;
   preselectedSourceSide: 'input' | 'output' | null;
   preselectedProductId: string | null;
-  onBack: () => void;
-  onClose: () => void;
   onAddRecipe: (recipeId: string) => void;
 }
 
-export default function RecipeStage({
-  activeTab,
-  selectedId,
-  filterProducers,
-  setFilterProducers,
-  filterConsumers,
-  setFilterConsumers,
-  matchingRecipes,
-  rateMode,
+export function RecipeStage({
   clickedRateInfo,
   preselectedSourceSide,
   preselectedProductId,
-  onBack,
-  onClose,
   onAddRecipe,
 }: RecipeStageProps) {
+  const {
+    activeTab,
+    selectedId,
+    filterProducers,
+    setFilterProducers,
+    filterConsumers,
+    setFilterConsumers,
+    handleBack,
+    matchingRecipes,
+  } = useRecipeSelectorFilters({ recipes: allRecipes });
+
+  const rateMode = useUIStore((s) => s.rateMode);
+  const setRecipeSelectorOpen = useUIStore((s) => s.setRecipeSelectorOpen);
   return (
     <>
       <div className={styles['recipe-selector-header']}>
         <div className={styles['recipe-selector-back-nav']}>
-          <button className={styles['recipe-selector-back-btn']} onClick={onBack}>
-            <ArrowLeft
-              size={14}
-              style={{ marginRight: '6px', display: 'inline-block', verticalAlign: 'middle' }}
-            />
-            <span style={{ verticalAlign: 'middle' }}>
+          <button 
+            className={styles['recipe-selector-back-btn']} 
+            onClick={handleBack}
+          >
+            <ArrowLeft size={14} className={styles['back-btn-icon']} />
+            <span className={styles['back-btn-text']}>
               Back to {activeTab === 'product' ? 'Products' : 'Machines'}
             </span>
           </button>
@@ -63,8 +58,7 @@ export default function RecipeStage({
         </div>
         <button
           className={styles['recipe-selector-close']}
-          onClick={onClose}
-          title="Close selector"
+          onClick={() => setRecipeSelectorOpen(false)}
         >
           <X size={16} />
         </button>
@@ -89,7 +83,6 @@ export default function RecipeStage({
           <button
             className={styles['recipe-selector-filter-btn']}
             disabled={true}
-            title="Filter by Sell/Trash recipes (Coming Soon)"
           >
             <span className={`${styles['filter-btn-dot']} ${styles['sell']}`} />
             Sell/Trash (Soon)
@@ -97,7 +90,6 @@ export default function RecipeStage({
           <button
             className={styles['recipe-selector-filter-btn']}
             disabled={true}
-            title="Filter by Heat/Power recipes (Coming Soon)"
           >
             <span className={`${styles['filter-btn-dot']} ${styles['heat']}`} />
             Heat/Power (Soon)
@@ -105,16 +97,13 @@ export default function RecipeStage({
         </div>
       )}
 
-      <div
-        className={styles['recipe-selector-content']}
-        style={{ padding: '20px 20px 0 20px', overflow: 'hidden' }}
-      >
+      <div className={styles['recipe-selector-content-stage2']}>
         {matchingRecipes.length === 0 ? (
           <div className={styles['recipe-selector-empty']}>No recipes found.</div>
         ) : (
           <VirtualList
             items={matchingRecipes}
-            itemHeight={130}
+            itemHeight={136}
             height={activeTab === 'product' ? 488 : 540}
             overscan={5}
             getKey={(recipe) => recipe.id}

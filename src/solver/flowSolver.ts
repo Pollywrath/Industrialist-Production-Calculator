@@ -6,10 +6,8 @@ import type {
   FlowEdge,
   FlowNetwork,
   FlowResults,
-} from './types';
+} from '../types/solver';
 import { clampFlow, EPSILON } from '../utils/precision';
-
-// ── LRU Cache ───────────────────────────────────────────────
 
 class LRUCache<V> {
   cache = new Map<string, V>();
@@ -45,8 +43,6 @@ class LRUCache<V> {
   }
 }
 
-// ── Union-Find ──────────────────────────────────────────────
-
 class UnionFind {
   parent: Int32Array;
   rank: Int32Array;
@@ -80,8 +76,6 @@ class UnionFind {
     }
   }
 }
-
-// ── Circular Queue ──────────────────────────────────────────
 
 class CircularQueue {
   buffer: number[];
@@ -136,14 +130,10 @@ class CircularQueue {
   }
 }
 
-// ── Connected components ────────────────────────────────────
-
 interface Component {
   ports: SolverPort[];
   connections: SolverConnection[];
 }
-
-// ── Port Key Generation Utilities ───────────────────────────
 
 function getPortKey(port: SolverPort): string {
   const prefix = port.type === 'input' ? 'in' : 'out';
@@ -157,8 +147,6 @@ function getSourceKey(conn: SolverConnection): string {
 function getTargetKey(conn: SolverConnection): string {
   return `in:${conn.targetNodeId}:${conn.targetInputIndex}`;
 }
-
-// ── Connected components ────────────────────────────────────
 
 function findConnectedComponents(productData: SolverProductData) {
   const ports: SolverPort[] = [];
@@ -225,8 +213,6 @@ function findConnectedComponents(productData: SolverProductData) {
   return components;
 }
 
-// ── Hash a component for caching ────────────────────────────
-
 function hashComponent(component: Component): string {
   const portHashes = component.ports
     .map((p) => `${p.type}:${p.nodeId}:${p.index}:${p.rate}`)
@@ -241,8 +227,6 @@ function hashComponent(component: Component): string {
     .join('|');
   return `${portHashes}##${connHashes}`;
 }
-
-// ── Build flow network ──────────────────────────────────────
 
 function buildFlowNetwork(connections: SolverConnection[], totalProduction: number): FlowNetwork {
   const nodeToIndex = new Map<string, number>();
@@ -389,8 +373,6 @@ function dinic(network: FlowNetwork): {
   return { totalFlow, connectionFlows };
 }
 
-// ── Main solver entry point ─────────────────────────────────
-
 const flowCache = new LRUCache<{
   connectionFlows: Record<string, number>;
 }>(1000);
@@ -475,15 +457,13 @@ export function calculateFlows(graph: SolverGraph): FlowResults {
     for (const inputFlow of nodeResult.inputFlows) {
       inputFlow.rate = clampFlow(inputFlow.rate);
       inputFlow.connected = clampFlow(inputFlow.connected);
-      inputFlow.hasDeficiency =
-        inputFlow.rate > 0 && inputFlow.connected < inputFlow.rate - 1e-8;
+      inputFlow.hasDeficiency = inputFlow.rate > 0 && inputFlow.connected < inputFlow.rate - 1e-8;
       inputFlow.hasExcess = false;
     }
     for (const outputFlow of nodeResult.outputFlows) {
       outputFlow.rate = clampFlow(outputFlow.rate);
       outputFlow.connected = clampFlow(outputFlow.connected);
-      outputFlow.hasExcess =
-        outputFlow.rate > 0 && outputFlow.connected < outputFlow.rate - 1e-8;
+      outputFlow.hasExcess = outputFlow.rate > 0 && outputFlow.connected < outputFlow.rate - 1e-8;
       outputFlow.hasDeficiency = false;
     }
   }

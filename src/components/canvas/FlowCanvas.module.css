@@ -1,0 +1,5 @@
+.canvas-container {
+  width: 100vw;
+  height: 100dvh;
+  background: var(--theme-color-canvas-bg);
+}

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { FlowResults, NodeFlowResult } from '../solver/types';
+import type { FlowResults, NodeFlowResult } from '../types/solver';
 
 interface FlowResultState {
   results: FlowResults;
@@ -62,4 +62,4 @@ const useFlowResultStore = create<FlowResultState>((set, get) => ({
   },
 }));
 
-export default useFlowResultStore;
+export { useFlowResultStore };

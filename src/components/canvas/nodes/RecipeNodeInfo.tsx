@@ -1,10 +1,12 @@
 import type { Recipe } from '../../../types/data';
-import useControlStore, { getEffectiveToggleId } from '../../../stores/useControlStore';
+import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
+import { getNormalizedCycleTime } from '../../../utils/recipeComputation';
 import {
-  getNormalizedCycleTime,
-  showCycleTime,
-  showMachineCount,
-} from '../../../utils/recipeComputation';
+  formatPollution,
+  formatPower,
+  formatTime,
+  formatMachineCount,
+} from '../../../utils/unitFormatting';
 import styles from './RecipeNode.module.css';
 
 interface RecipeNodeInfoProps {
@@ -14,17 +16,17 @@ interface RecipeNodeInfoProps {
   onOpenEditor: () => void;
 }
 
-export default function RecipeNodeInfo({
+export function RecipeNodeInfo({
   recipe,
   machineName,
   machineCount,
   onOpenEditor,
 }: RecipeNodeInfoProps) {
-  const rateMode = useControlStore((s) => s.rateMode);
+  const rateMode = useUIStore((s) => s.rateMode);
   const displayCycleTime = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 0;
 
   const handleBtnClick = (e: React.MouseEvent) => {
-    const isDeleteMode = getEffectiveToggleId(useControlStore.getState()) === 'delete_mode';
+    const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
     if (isDeleteMode) {
       return;
     }
@@ -38,7 +40,6 @@ export default function RecipeNodeInfo({
     <div className={styles['recipe-node-info']}>
       <button
         className={styles['recipe-node-info__top-right-btn']}
-        aria-label="Node options"
         onClick={handleBtnClick}
       >
         <svg
@@ -54,7 +55,7 @@ export default function RecipeNodeInfo({
           <circle cx="5" cy="12" r="1"></circle>
         </svg>
       </button>
-      <div className={styles['recipe-node-info__title']} title={displayName}>
+      <div className={styles['recipe-node-info__title']}>
         {displayName}
       </div>
 
@@ -63,29 +64,29 @@ export default function RecipeNodeInfo({
           <div className={styles['recipe-node-info__stat']}>
             <span className={styles['recipe-node-info__stat-label']}>Cycle: </span>
             <span className={styles['recipe-node-info__stat-value']}>
-              {showCycleTime(displayCycleTime)}
+              {formatTime(displayCycleTime)}
             </span>
           </div>
           <div className={styles['recipe-node-info__stat']}>
             <span className={styles['recipe-node-info__stat-label']}>Power: </span>
             <span className={styles['recipe-node-info__stat-value']}>
-              {Number(((recipe?.power_consumption ?? 0) * machineCount).toFixed(2))}
+              {formatPower((recipe?.power_consumption ?? 0) * machineCount)}
             </span>
           </div>
           <div className={styles['recipe-node-info__stat']}>
             <span className={styles['recipe-node-info__stat-label']}>Pollution: </span>
             <span className={styles['recipe-node-info__stat-value']}>
-              {Number(((recipe?.pollution ?? 0) * machineCount).toFixed(2))}
+              {formatPollution((recipe?.pollution ?? 0) * machineCount)}
             </span>
           </div>
         </div>
 
         <div className={styles['recipe-node-info__col--right']}>
-          <div className={styles['recipe-node-info__machine-name']} title={machineName}>
+          <div className={styles['recipe-node-info__machine-name']}>
             {machineName}
           </div>
           <div className={styles['recipe-node-info__machine-count']}>
-            {showMachineCount(machineCount)}
+            {formatMachineCount(machineCount)}
           </div>
         </div>
       </div>

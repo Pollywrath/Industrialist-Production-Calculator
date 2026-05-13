@@ -11,7 +11,16 @@ import {
   type Connection,
 } from '@xyflow/react';
 import type { RecipeNodeData } from '../types/nodes';
-import { nextEdgeId } from '../utils/idGenerator';
+import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/idGenerator';
+import { getRecipe } from '../data/lookup';
+import {
+  RECT_HEIGHT,
+  RECT_GAP,
+  BASE_INFO_HEIGHT,
+  BOTTOM_PADDING,
+  IO_COLUMN_PADDING,
+  NODE_CSS_WIDTH,
+} from '../components/shared/layoutConstants';
 
 interface FlowState {
   nodes: Node<RecipeNodeData>[];
@@ -29,7 +38,30 @@ interface FlowState {
 
   updateNodeData: (nodeId: string, data: Partial<RecipeNodeData>) => void;
   deleteNode: (nodeId: string) => void;
+  deleteEdgesConnectedToHandle: (handleId: string) => void;
 }
+
+const enrichNodeDimensions = (node: Node<RecipeNodeData>): Node<RecipeNodeData> => {
+  const recipe = getRecipe(node.data.recipeId);
+  const leftCount = node.data.inputOrder ? node.data.inputOrder.length : recipe?.inputs.length || 0;
+  const rightCount = node.data.outputOrder
+    ? node.data.outputOrder.length
+    : recipe?.outputs.length || 0;
+  const maxCount = Math.max(leftCount, rightCount, 1);
+
+  const ioAreaHeight = maxCount * RECT_HEIGHT + (maxCount - 1) * RECT_GAP + IO_COLUMN_PADDING;
+  const height = BASE_INFO_HEIGHT + ioAreaHeight + BOTTOM_PADDING;
+
+  if (node.width === NODE_CSS_WIDTH && node.height === height) {
+    return node;
+  }
+
+  return {
+    ...node,
+    width: NODE_CSS_WIDTH,
+    height,
+  };
+};
 
 const createNodesMap = (nodes: Node<RecipeNodeData>[]): Map<string, Node<RecipeNodeData>> => {
   const map = new Map<string, Node<RecipeNodeData>>();
@@ -38,6 +70,72 @@ const createNodesMap = (nodes: Node<RecipeNodeData>[]): Map<string, Node<RecipeN
     map.set(node.id, node);
   }
   return map;
+};
+
+const ensureGraphIntegrity = (
+  nodes: Node<RecipeNodeData>[],
+  edges: Edge[],
+): { nodes: Node<RecipeNodeData>[]; edges: Edge[] } => {
+  const seenNodeIds = new Set<string>();
+  const nodeIdMap = new Map<string, string>();
+  const sanitizedNodes: Node<RecipeNodeData>[] = [];
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (seenNodeIds.has(node.id) || !node.id) {
+      const newId = nextNodeId();
+      nodeIdMap.set(node.id, newId);
+      sanitizedNodes.push({ ...node, id: newId });
+      seenNodeIds.add(newId);
+    } else {
+      sanitizedNodes.push(node);
+      seenNodeIds.add(node.id);
+    }
+  }
+
+  const seenEdgeIds = new Set<string>();
+  const sanitizedEdges: Edge[] = [];
+
+  for (let i = 0; i < edges.length; i++) {
+    const edge = edges[i];
+
+    let finalEdgeId = edge.id;
+    if (seenEdgeIds.has(finalEdgeId) || !finalEdgeId) {
+      finalEdgeId = nextEdgeId();
+    }
+    seenEdgeIds.add(finalEdgeId);
+
+    const newSource = nodeIdMap.get(edge.source);
+    const newTarget = nodeIdMap.get(edge.target);
+
+    if (!newSource && !newTarget && finalEdgeId === edge.id) {
+      sanitizedEdges.push(edge);
+      continue;
+    }
+
+    const sourceId = newSource ?? edge.source;
+    const targetId = newTarget ?? edge.target;
+
+    const sourceParsed = edge.sourceHandle ? parseHandleId(edge.sourceHandle) : null;
+    const targetParsed = edge.targetHandle ? parseHandleId(edge.targetHandle) : null;
+
+    sanitizedEdges.push({
+      ...edge,
+      id: finalEdgeId,
+      source: sourceId,
+      target: targetId,
+      sourceHandle:
+        sourceParsed && newSource
+          ? buildHandleId(sourceId, sourceParsed.side, sourceParsed.index)
+          : edge.sourceHandle,
+      targetHandle:
+        targetParsed && newTarget
+          ? buildHandleId(targetId, targetParsed.side, targetParsed.index)
+          : edge.targetHandle,
+    });
+  }
+
+  return { nodes: sanitizedNodes, edges: sanitizedEdges };
 };
 
 const useFlowStore = create(
@@ -49,18 +147,24 @@ const useFlowStore = create(
 
     onNodesChange: (changes) => {
       const nextNodes = applyNodeChanges(changes, get().nodes);
+      let needsEnrichment = false;
       let hasStructuralChange = false;
+
       for (let i = 0; i < changes.length; i++) {
         const type = changes[i].type;
-        if (type !== 'position' && type !== 'select' && type !== 'dimensions') {
-          hasStructuralChange = true;
-          break;
+        if (type !== 'position' && type !== 'select') {
+          needsEnrichment = true;
+          if (type !== 'dimensions') {
+            hasStructuralChange = true;
+          }
         }
       }
 
+      const finalNodes = needsEnrichment ? nextNodes.map(enrichNodeDimensions) : nextNodes;
+
       set({
-        nodes: nextNodes,
-        nodesMap: hasStructuralChange ? createNodesMap(nextNodes) : get().nodesMap,
+        nodes: finalNodes,
+        nodesMap: hasStructuralChange ? createNodesMap(finalNodes) : get().nodesMap,
         solverVersion: hasStructuralChange ? get().solverVersion + 1 : get().solverVersion,
       });
     },
@@ -89,31 +193,58 @@ const useFlowStore = create(
     },
 
     onConnect: (connection) => {
+      if (!connection.sourceHandle || !connection.targetHandle) return;
+      if (!parseHandleId(connection.sourceHandle) || !parseHandleId(connection.targetHandle))
+        return;
+
+      const currentEdges = get().edges;
+      for (let i = 0; i < currentEdges.length; i++) {
+        const e = currentEdges[i];
+        if (
+          e.sourceHandle === connection.sourceHandle &&
+          e.targetHandle === connection.targetHandle
+        ) {
+          return;
+        }
+      }
+
       const newEdge = { ...connection, id: nextEdgeId() } as Edge;
       set({
-        edges: addEdge(newEdge, get().edges),
+        edges: addEdge(newEdge, currentEdges),
         solverVersion: get().solverVersion + 1,
       });
     },
 
     setNodes: (nodes) => {
+      const { nodes: sanitizedNodes } = ensureGraphIntegrity(nodes, get().edges);
+      const enriched = sanitizedNodes.map(enrichNodeDimensions);
       set({
-        nodes,
-        nodesMap: createNodesMap(nodes),
+        nodes: enriched,
+        nodesMap: createNodesMap(enriched),
         solverVersion: get().solverVersion + 1,
       });
     },
     setEdges: (edges) => {
+      const { edges: sanitizedEdges } = ensureGraphIntegrity(get().nodes, edges);
       set({
-        edges,
+        edges: sanitizedEdges,
         solverVersion: get().solverVersion + 1,
       });
     },
     setNodesAndEdges: (nodes, edges) => {
+      const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(nodes, edges);
+      const len = sanitizedNodes.length;
+      const enriched = new Array<Node<RecipeNodeData>>(len);
+      const map = new Map<string, Node<RecipeNodeData>>();
+      for (let i = 0; i < len; i++) {
+        const node = enrichNodeDimensions(sanitizedNodes[i]);
+        enriched[i] = node;
+        map.set(node.id, node);
+      }
       set({
-        nodes,
-        nodesMap: createNodesMap(nodes),
-        edges,
+        nodes: enriched,
+        nodesMap: map,
+        edges: sanitizedEdges,
         solverVersion: get().solverVersion + 1,
       });
     },
@@ -126,7 +257,7 @@ const useFlowStore = create(
       for (let i = 0; i < oldNodes.length; i++) {
         const node = oldNodes[i];
         if (node.id === nodeId) {
-          updatedNode = { ...node, data: { ...node.data, ...data } };
+          updatedNode = enrichNodeDimensions({ ...node, data: { ...node.data, ...data } });
           nextNodes[i] = updatedNode;
         } else {
           nextNodes[i] = node;
@@ -168,7 +299,20 @@ const useFlowStore = create(
         solverVersion: get().solverVersion + 1,
       });
     },
-  }))
+
+    deleteEdgesConnectedToHandle: (handleId) => {
+      const oldEdges = get().edges;
+      const nextEdges = oldEdges.filter(
+        (edge) => edge.sourceHandle !== handleId && edge.targetHandle !== handleId,
+      );
+      if (nextEdges.length !== oldEdges.length) {
+        set({
+          edges: nextEdges,
+          solverVersion: get().solverVersion + 1,
+        });
+      }
+    },
+  })),
 );
 
-export default useFlowStore;
+export { useFlowStore };

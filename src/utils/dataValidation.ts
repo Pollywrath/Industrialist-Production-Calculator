@@ -19,8 +19,6 @@ export interface ValidationResult {
   errors: ValidationError[];
 }
 
-// ── Product Validation ───────────────────────────────────────────────────────
-
 export function validateProduct(product: unknown): ValidationResult {
   const errors: ValidationError[] = [];
 
@@ -77,8 +75,6 @@ export function validateProduct(product: unknown): ValidationResult {
     errors,
   };
 }
-
-// ── Machine Validation ───────────────────────────────────────────────────────
 
 export function validateMachine(
   machine: unknown,
@@ -200,8 +196,6 @@ export function validateMachine(
     errors,
   };
 }
-
-// ── Recipe Validation ────────────────────────────────────────────────────────
 
 export function validateRecipe(
   recipe: unknown,
@@ -354,8 +348,6 @@ export function validateRecipe(
   };
 }
 
-// ── Research Validation ──────────────────────────────────────────────────────
-
 export function validateResearch(research: unknown): ValidationResult {
   const errors: ValidationError[] = [];
 
@@ -418,8 +410,6 @@ export function validateResearch(research: unknown): ValidationResult {
     errors,
   };
 }
-
-// ── Full Database Validation ─────────────────────────────────────────────────
 
 export interface DbValidationResults {
   valid: boolean;
@@ -508,8 +498,6 @@ export function validateFullDatabase(
     researchErrors,
   };
 }
-
-// ── Checksum Generation ──────────────────────────────────────────────────────
 
 export function computeChecksum(data: unknown): string {
   const str = JSON.stringify(data);

@@ -1,34 +1,18 @@
 import type { Recipe } from '../../../types/data';
 import { HandleRow } from './HandleRow';
 import styles from './NodeEditor.module.css';
+import { useNodeEditorStore } from './NodeEditorContext';
 
 interface HandleEditorColumnsProps {
   recipe: Recipe;
   multiplier: number;
   rateMode: 'second' | 'minute' | 'hour' | 'raw';
-  inputs: number[];
-  setInputs: (v: number[]) => void;
-  outputs: number[];
-  setOutputs: (v: number[]) => void;
-  qtyStrMap: Record<string, string>;
-  setQtyStrMap: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  setMachineCount: (v: number) => void;
-  setMachineCountStr: (v: string) => void;
 }
 
-export function HandleEditorColumns({
-  recipe,
-  multiplier,
-  rateMode,
-  inputs,
-  setInputs,
-  outputs,
-  setOutputs,
-  qtyStrMap,
-  setQtyStrMap,
-  setMachineCount,
-  setMachineCountStr,
-}: HandleEditorColumnsProps) {
+export function HandleEditorColumns({ recipe, multiplier, rateMode }: HandleEditorColumnsProps) {
+  const inputs = useNodeEditorStore((s) => s.inputs);
+  const outputs = useNodeEditorStore((s) => s.outputs);
+
   return (
     <div className={styles['node-editor-columns']}>
       <div className={styles['node-editor-column']}>
@@ -44,14 +28,6 @@ export function HandleEditorColumns({
               totalLength={inputs.length}
               multiplier={multiplier}
               rateMode={rateMode}
-              qtyStrMap={qtyStrMap}
-              setQtyStrMap={setQtyStrMap}
-              setMachineCount={setMachineCount}
-              setMachineCountStr={setMachineCountStr}
-              inputs={inputs}
-              setInputs={setInputs}
-              outputs={outputs}
-              setOutputs={setOutputs}
             />
           ))}
           {inputs.length === 0 && <div className={styles['node-editor-empty']}>None</div>}
@@ -71,14 +47,6 @@ export function HandleEditorColumns({
               totalLength={outputs.length}
               multiplier={multiplier}
               rateMode={rateMode}
-              qtyStrMap={qtyStrMap}
-              setQtyStrMap={setQtyStrMap}
-              setMachineCount={setMachineCount}
-              setMachineCountStr={setMachineCountStr}
-              inputs={inputs}
-              setInputs={setInputs}
-              outputs={outputs}
-              setOutputs={setOutputs}
             />
           ))}
           {outputs.length === 0 && <div className={styles['node-editor-empty']}>None</div>}

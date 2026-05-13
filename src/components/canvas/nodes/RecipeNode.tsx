@@ -1,12 +1,29 @@
+import React, { useState, useEffect, Suspense } from 'react';
 import { useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import type { RecipeNodeType } from '../../../types/nodes';
 import { getRecipe, getMachineName } from '../../../data/lookup';
-import RecipeNodeInfo from './RecipeNodeInfo';
-import RecipeNodeIO from './RecipeNodeIO';
+import { RecipeNodeInfo } from './RecipeNodeInfo';
+import { RecipeNodeIO } from './RecipeNodeIO';
 import styles from './RecipeNode.module.css';
-import { useState, useEffect } from 'react';
-import NodeEditor from '../../overlays/NodeEditor';
-import useControlStore from '../../../stores/useControlStore';
+import { useUIStore } from '../../../stores/useUIStore';
+import { LoadingScreen } from '../../shared/LoadingScreen';
+import { prefetchCache, type NodeEditorProps } from '../../../utils/prefetchCache';
+
+const FallbackNodeEditor: React.ComponentType<NodeEditorProps> = () => null;
+
+const LazyNodeEditor = React.lazy(
+  () =>
+    import('../../overlays/NodeEditor')
+      .then((m) => {
+        prefetchCache.NodeEditor = m.NodeEditor;
+        return { default: m.NodeEditor };
+      })
+      .catch((err) => {
+        console.warn('NodeEditor chunk load failed. Auto-refreshing application assets...', err);
+        window.location.reload();
+        return { default: FallbackNodeEditor };
+      }) as Promise<{ default: React.ComponentType<NodeEditorProps> }>,
+);
 
 import {
   RECT_HEIGHT,
@@ -16,9 +33,10 @@ import {
   IO_COLUMN_PADDING,
 } from '../../shared/layoutConstants';
 
-export default function RecipeNode({ id, data }: NodeProps<RecipeNodeType>) {
+export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const updateNodeInternals = useUpdateNodeInternals();
+  const NodeEditor = prefetchCache.NodeEditor;
 
   useEffect(() => {
     updateNodeInternals(id);
@@ -45,17 +63,18 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeType>) {
   const maxCount = Math.max(leftCount, rightCount, 1);
 
   const ioAreaHeight = maxCount * RECT_HEIGHT + (maxCount - 1) * RECT_GAP + IO_COLUMN_PADDING;
-  const height = BASE_INFO_HEIGHT + ioAreaHeight + BOTTOM_PADDING;
+  const computedHeight = BASE_INFO_HEIGHT + ioAreaHeight + BOTTOM_PADDING;
+  const displayHeight = height ?? computedHeight;
 
   return (
     <>
-      <div className={styles['recipe-node']} style={{ height }}>
+      <div className={styles['recipe-node']} style={{ height: displayHeight }}>
         <RecipeNodeInfo
           recipe={recipe}
-          machineName={recipe ? getMachineName(recipe.machine_id) : '—'}
+          machineName={recipe ? getMachineName(recipe.machine_id) : '\u2014'}
           machineCount={data.machineCount}
           onOpenEditor={() => {
-            useControlStore.setState({ activeToggleId: null });
+            useUIStore.setState({ activeToggleId: null });
             setIsEditorOpen(true);
           }}
         />
@@ -68,14 +87,27 @@ export default function RecipeNode({ id, data }: NodeProps<RecipeNodeType>) {
         />
       </div>
 
-      {isEditorOpen && recipe && (
-        <NodeEditor
-          recipe={recipe}
-          initialData={data}
-          nodeId={id}
-          onClose={() => setIsEditorOpen(false)}
-        />
-      )}
+      {isEditorOpen &&
+        recipe &&
+        (NodeEditor ? (
+          React.createElement(NodeEditor, {
+            recipe: recipe,
+            initialData: data,
+            nodeId: id,
+            onClose: () => setIsEditorOpen(false),
+          })
+        ) : (
+          <Suspense
+            fallback={<LoadingScreen title="NODE PARAMETERS" subtitle="Loading node editor..." />}
+          >
+            <LazyNodeEditor
+              recipe={recipe}
+              initialData={data}
+              nodeId={id}
+              onClose={() => setIsEditorOpen(false)}
+            />
+          </Suspense>
+        ))}
     </>
   );
 }
