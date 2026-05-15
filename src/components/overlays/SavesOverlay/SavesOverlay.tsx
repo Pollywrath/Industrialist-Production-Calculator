@@ -199,11 +199,7 @@ function SavesOverlayModal() {
                         <button
                           className={styles['action-btn']}
                           onMouseDown={(e) => {
-<<<<<<< HEAD
-                            
-=======
                             // Prevent blur from firing before click
->>>>>>> 6f57471 (saves manager, need to do some cleaning)
                             e.preventDefault();
                             commitRename(record.id);
                           }}

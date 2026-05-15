@@ -16,13 +16,16 @@
   background: var(--theme-color-node-bg);
   border: 2px solid var(--theme-color-node-border);
   border-radius: 12px;
-<<<<<<< HEAD
-  contain: layout style size;
-=======
-  contain: layout style paint;
-  will-change: transform;
->>>>>>> 6f57471 (saves manager, need to do some cleaning)
+  contain: layout style;
+  transform: perspective(1px) translateZ(0);
+  backface-visibility: hidden;
 }
+
+:global(.is-transforming) .recipe-node,
+:global(.is-zoomed-out) .recipe-node {
+  will-change: transform;
+}
+
 
 .recipe-node-info {
   display: flex;
@@ -128,6 +131,12 @@
   color: var(--theme-color-text-primary);
 }
 
+:global(.is-zoomed-out) .recipe-node-info__stats,
+:global(.is-zoomed-out) .recipe-node-info__machine-name,
+:global(.is-zoomed-out) .recipe-node-info__top-right-btn {
+  display: none;
+}
+
 .recipe-node-io {
   position: relative;
   display: flex;
@@ -214,6 +223,16 @@
   line-height: 1.2;
   word-break: break-word;
   -webkit-box-orient: vertical;
+}
+
+:global(.is-zoomed-out) .recipe-node-io__rect-text {
+  display: none;
+}
+
+:global(.is-zoomed-out) .recipe-node-io__rect {
+  height: 12px;
+  min-height: 12px;
+  padding: 0;
 }
 
 .recipe-node-io__handles {

@@ -46,7 +46,13 @@ export function FlowCanvas() {
   const isDeleteMode = useUIStore((s) => getEffectiveToggleId(s) === 'delete_mode');
   const isRecipeSelectorOpen = useUIStore((s) => s.isRecipeSelectorOpen);
   const isSavesOverlayOpen = useUIStore((s) => s.isSavesOverlayOpen);
+  const isTransformingStore = useUIStore((s) => s.isTransforming);
+  const zoomLevel = useUIStore((s) => s.zoomLevel);
+  const isExporting = useUIStore((s) => s.isExporting);
   const isAutosaveLoaded = useUIStore((s) => s.isAutosaveLoaded);
+
+  const isZoomedOut = !isExporting && zoomLevel < 0.35;
+  const isTransforming = !isExporting && isTransformingStore;
 
   useAutosave();
 
@@ -106,8 +112,17 @@ export function FlowCanvas() {
     );
   }
 
+  const containerClassName = [
+    styles['canvas-container'],
+    isDeleteMode ? 'is-delete-mode' : '',
+    isTransforming ? 'is-transforming' : '',
+    isZoomedOut ? 'is-zoomed-out' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className={`${styles['canvas-container']} ${isDeleteMode ? 'is-delete-mode' : ''}`.trim()}>
+    <div className={containerClassName}>
       <FlowViewport />
       <ControlsTray />
       <OverlaysTray />

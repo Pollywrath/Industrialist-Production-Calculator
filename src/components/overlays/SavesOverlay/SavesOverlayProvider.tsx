@@ -194,11 +194,7 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
               setStatusWithTimeout({ type: 'pending', message: 'Renaming save...' });
               const success = await renameSave(id, newName);
               if (success) {
-<<<<<<< HEAD
-                
-=======
                 // Optimistic update to prevent stale data flashing
->>>>>>> 6f57471 (saves manager, need to do some cleaning)
                 set((s) => ({
                   editingId: null,
                   saves: s.saves.map((save) =>

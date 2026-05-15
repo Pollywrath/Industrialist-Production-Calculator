@@ -87,6 +87,7 @@ export function FlowViewport() {
   const onNodesChange = useFlowStore((s) => s.onNodesChange);
   const onEdgesChange = useFlowStore((s) => s.onEdgesChange);
   const onConnect = useFlowStore((s) => s.onConnect);
+  const zoomLevel = useUIStore((s) => s.zoomLevel);
 
   useFlowSolver();
 
@@ -161,11 +162,10 @@ export function FlowViewport() {
       elevateNodesOnSelect={true}
       fitView={true}
       minZoom={0.15}
-<<<<<<< HEAD
-      onlyRenderVisibleElements={false}
-=======
-      onlyRenderVisibleElements={nodes.length >= 250}
->>>>>>> 6f57471 (saves manager, need to do some cleaning)
+      onMove={(_e, viewport) => useUIStore.getState().setZoomLevel(viewport.zoom)}
+      onMoveStart={() => useUIStore.getState().setIsTransforming(true)}
+      onMoveEnd={() => useUIStore.getState().setIsTransforming(false)}
+      onlyRenderVisibleElements={nodes.length > 250 && zoomLevel > 0.8}
     >
       <Background
         variant={BackgroundVariant.Dots}

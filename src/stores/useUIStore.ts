@@ -41,6 +41,12 @@ interface UIState {
   setSavesOverlayOpen: (isOpen: boolean) => void;
   isAutosaveLoaded: boolean;
   setAutosaveLoaded: () => void;
+  isTransforming: boolean;
+  setIsTransforming: (isTransforming: boolean) => void;
+  zoomLevel: number;
+  setZoomLevel: (zoom: number) => void;
+  isExporting: boolean;
+  setIsExporting: (isExporting: boolean) => void;
   confirmDialog: {
     options: ConfirmOptions;
     resolve: (confirmed: boolean) => void;
@@ -108,6 +114,12 @@ const useUIStore = create<UIState>((set) => ({
     })),
   isAutosaveLoaded: false,
   setAutosaveLoaded: () => set({ isAutosaveLoaded: true }),
+  isTransforming: false,
+  setIsTransforming: (isTransforming) => set({ isTransforming }),
+  zoomLevel: 1,
+  setZoomLevel: (zoomLevel) => set({ zoomLevel }),
+  isExporting: false,
+  setIsExporting: (isExporting) => set({ isExporting }),
   confirmDialog: null,
   confirm: (options) => {
     return new Promise((resolve) => {
