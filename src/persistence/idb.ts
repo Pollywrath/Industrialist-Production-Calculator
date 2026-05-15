@@ -119,7 +119,15 @@ export async function saveAutosave(data: SaveData): Promise<void> {
   });
 }
 
+<<<<<<< HEAD
 
+=======
+/**
+ * Clears the active session (autosave) and data overrides.
+ * Preserves the manual saves library.
+ * Used by the ErrorBoundary to recover from crash loops.
+ */
+>>>>>>> 6f57471 (saves manager, need to do some cleaning)
 export async function clearAllData(): Promise<void> {
   const db = await getDB();
   if (!db) return;

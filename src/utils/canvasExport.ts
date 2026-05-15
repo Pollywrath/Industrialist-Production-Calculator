@@ -2,7 +2,16 @@ import { toPng } from 'html-to-image';
 import { getNodesBounds, type Node } from '@xyflow/react';
 import type { SaveRecord } from '../types/saves';
 
+<<<<<<< HEAD
 
+=======
+/**
+ * Conservative maximum canvas dimension in pixels.
+ * Chrome/Firefox support up to 32,767px per axis but Safari/iOS are
+ * limited to ~16,384px. Using 16,384 keeps exports safe across all
+ * mainstream browsers without requiring runtime feature detection.
+ */
+>>>>>>> 6f57471 (saves manager, need to do some cleaning)
 const MAX_CANVAS_DIMENSION = 16384;
 
 export function exportRecordAsJson(record: SaveRecord): void {
@@ -29,15 +38,26 @@ export async function exportCanvasAsPng(nodes: Node[]): Promise<void> {
   const naturalWidth = bounds.width + padding * 2;
   const naturalHeight = bounds.height + padding * 2;
 
+<<<<<<< HEAD
   
   
   
+=======
+  // Clamp to browser canvas limits — scale down proportionally if either
+  // dimension exceeds the safe maximum so the export never produces a
+  // blank or corrupted image.
+>>>>>>> 6f57471 (saves manager, need to do some cleaning)
   const scale = Math.min(1, MAX_CANVAS_DIMENSION / naturalWidth, MAX_CANVAS_DIMENSION / naturalHeight);
   const exportWidth = Math.round(naturalWidth * scale);
   const exportHeight = Math.round(naturalHeight * scale);
 
+<<<<<<< HEAD
   
   
+=======
+  // Yield to let the browser paint the "Rendering PNG..." status message
+  // before html-to-image blocks the main thread with DOM cloning.
+>>>>>>> 6f57471 (saves manager, need to do some cleaning)
   await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
   const dataUrl = await toPng(viewportElement, {

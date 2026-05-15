@@ -138,6 +138,7 @@ body {
 
 .is-delete-mode .react-flow__edge {
   cursor: pointer;
+<<<<<<< HEAD
 }
 
 .react-flow__pane.dragging~.react-flow__viewport .react-flow__node,
@@ -154,4 +155,6 @@ body {
 
 .react-flow__background {
   will-change: transform;
+=======
+>>>>>>> 6f57471 (saves manager, need to do some cleaning)
 }

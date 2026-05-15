@@ -161,7 +161,11 @@ export function FlowViewport() {
       elevateNodesOnSelect={true}
       fitView={true}
       minZoom={0.15}
+<<<<<<< HEAD
       onlyRenderVisibleElements={false}
+=======
+      onlyRenderVisibleElements={nodes.length >= 250}
+>>>>>>> 6f57471 (saves manager, need to do some cleaning)
     >
       <Background
         variant={BackgroundVariant.Dots}

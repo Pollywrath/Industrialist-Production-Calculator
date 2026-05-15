@@ -15,8 +15,13 @@ export function mergeSaveIntoCanvas(
     const n = loadedNodes[i];
     const newId = nextNodeId();
     
+<<<<<<< HEAD
     
     
+=======
+    // Only map the ID if it's the first time we see it to prevent ambiguous edge routing
+    // in malformed source data.
+>>>>>>> 6f57471 (saves manager, need to do some cleaning)
     if (!idMap.has(n.id)) {
       idMap.set(n.id, newId);
     }
@@ -37,7 +42,11 @@ export function mergeSaveIntoCanvas(
     const sourceParsed = e.sourceHandle ? parseHandleId(e.sourceHandle) : null;
     const targetParsed = e.targetHandle ? parseHandleId(e.targetHandle) : null;
 
+<<<<<<< HEAD
     
+=======
+    // Reject edges with malformed handle IDs during merge to prevent incorrect topology
+>>>>>>> 6f57471 (saves manager, need to do some cleaning)
     if (!sourceParsed || !targetParsed) {
       console.warn(`Skipping malformed edge during merge: ${e.id}`);
       continue;

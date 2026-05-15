@@ -16,7 +16,12 @@
   background: var(--theme-color-node-bg);
   border: 2px solid var(--theme-color-node-border);
   border-radius: 12px;
+<<<<<<< HEAD
   contain: layout style size;
+=======
+  contain: layout style paint;
+  will-change: transform;
+>>>>>>> 6f57471 (saves manager, need to do some cleaning)
 }
 
 .recipe-node-info {
