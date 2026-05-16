@@ -42,6 +42,8 @@ function SavesOverlayModal() {
   const editingId = useSavesOverlayStore((s) => s.editingId);
   const editName = useSavesOverlayStore((s) => s.editName);
   const status = useSavesOverlayStore((s) => s.status);
+  const pendingId = useSavesOverlayStore((s) => s.pendingId);
+  const pendingAction = useSavesOverlayStore((s) => s.pendingAction);
 
   const setNewSaveName = useSavesOverlayStore((s) => s.setNewSaveName);
   const setEditName = useSavesOverlayStore((s) => s.setEditName);
@@ -83,8 +85,13 @@ function SavesOverlayModal() {
             <button
               className={styles['saves-import-icon']}
               onClick={() => fileInputRef.current?.click()}
+              disabled={status.type === 'pending'}
             >
-              <Upload size={18} />
+              {status.type === 'pending' && pendingAction === 'import' ? (
+                <RefreshCw size={18} className={styles['spin']} />
+              ) : (
+                <Upload size={18} />
+              )}
             </button>
             <button
               className={styles['saves-close']}
@@ -111,7 +118,7 @@ function SavesOverlayModal() {
             onClick={handleCreateSave}
             disabled={!newSaveName.trim() || status.type === 'pending'}
           >
-            {status.type === 'pending' ? (
+            {status.type === 'pending' && pendingAction === 'create' ? (
               <>
                 <RefreshCw size={14} className={styles['spin']} />
                 <span>SAVING...</span>
@@ -131,9 +138,19 @@ function SavesOverlayModal() {
           <button
             className={styles['saves-btn']}
             onClick={handleExportPng}
+            disabled={status.type === 'pending'}
           >
-            <ImageIcon size={14} />
-            <span>EXPORT PNG</span>
+            {status.type === 'pending' && pendingAction === 'export_png' ? (
+              <>
+                <RefreshCw size={14} className={styles['spin']} />
+                <span>EXPORTING...</span>
+              </>
+            ) : (
+              <>
+                <ImageIcon size={14} />
+                <span>EXPORT PNG</span>
+              </>
+            )}
           </button>
         </div>
 
@@ -180,20 +197,35 @@ function SavesOverlayModal() {
                       <button
                         className={styles['action-btn']}
                         onClick={() => handleOverwriteLoad(record)}
+                        disabled={pendingId === record.id}
                       >
-                        <FolderOpen size={14} />
+                        {pendingId === record.id && pendingAction === 'load' ? (
+                          <RefreshCw size={14} className={styles['spin']} />
+                        ) : (
+                          <FolderOpen size={14} />
+                        )}
                       </button>
                       <button
                         className={styles['action-btn']}
                         onClick={() => handleMergeLoad(record)}
+                        disabled={pendingId === record.id}
                       >
-                        <GitMerge size={14} />
+                        {pendingId === record.id && pendingAction === 'merge' ? (
+                          <RefreshCw size={14} className={styles['spin']} />
+                        ) : (
+                          <GitMerge size={14} />
+                        )}
                       </button>
                       <button
                         className={styles['action-btn']}
                         onClick={() => handleOverwriteSave(record)}
+                        disabled={pendingId === record.id}
                       >
-                        <RefreshCw size={14} />
+                        {pendingId === record.id && pendingAction === 'save' ? (
+                          <RefreshCw size={14} className={styles['spin']} />
+                        ) : (
+                          <RefreshCw size={14} />
+                        )}
                       </button>
                       {editingId === record.id ? (
                         <button
@@ -203,13 +235,19 @@ function SavesOverlayModal() {
                             e.preventDefault();
                             commitRename(record.id);
                           }}
+                          disabled={pendingId === record.id}
                         >
-                          <Check size={14} />
+                          {pendingId === record.id && pendingAction === 'rename' ? (
+                            <RefreshCw size={14} className={styles['spin']} />
+                          ) : (
+                            <Check size={14} />
+                          )}
                         </button>
                       ) : (
                         <button
                           className={styles['action-btn']}
                           onClick={() => startRename(record)}
+                          disabled={pendingId === record.id}
                         >
                           <Edit2 size={14} />
                         </button>
@@ -217,14 +255,20 @@ function SavesOverlayModal() {
                       <button
                         className={styles['action-btn']}
                         onClick={() => handleExportJson(record)}
+                        disabled={pendingId === record.id}
                       >
                         <Download size={14} />
                       </button>
                       <button
                         className={styles['action-btn']}
                         onClick={() => handleDeleteSave(record.id)}
+                        disabled={pendingId === record.id}
                       >
-                        <Trash2 size={14} />
+                        {pendingId === record.id && pendingAction === 'delete' ? (
+                          <RefreshCw size={14} className={styles['spin']} />
+                        ) : (
+                          <Trash2 size={14} />
+                        )}
                       </button>
                     </div>
                   </div>

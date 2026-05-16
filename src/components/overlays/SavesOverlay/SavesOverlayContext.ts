@@ -14,6 +14,8 @@ export interface SavesOverlayState {
   editingId: string | null;
   editName: string;
   status: SaveStatus;
+  pendingId: string | null;
+  pendingAction: 'load' | 'merge' | 'save' | 'delete' | 'rename' | 'create' | 'import' | 'export_png' | null;
 
   setNewSaveName: (name: string) => void;
   setEditName: (name: string) => void;

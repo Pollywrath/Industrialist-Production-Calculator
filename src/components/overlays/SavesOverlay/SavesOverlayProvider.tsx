@@ -11,6 +11,8 @@ import { mergeSaveIntoCanvas } from '../../../utils/graphMerge';
 import { exportCanvasAsPng, exportRecordAsJson } from '../../../utils/canvasExport';
 import { SavesOverlayContext, type SavesOverlayState, type SaveStatus } from './SavesOverlayContext';
 
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 interface SavesOverlayProviderProps {
   children: React.ReactNode;
 }
@@ -21,9 +23,13 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
       subscribeWithSelector<SavesOverlayState>((set, get) => {
         let statusTimer: ReturnType<typeof setTimeout>;
 
-        const setStatusWithTimeout = (status: SaveStatus) => {
+        const setStatusWithTimeout = (status: SaveStatus, pendingId: string | null = null, pendingAction: SavesOverlayState['pendingAction'] = null) => {
           clearTimeout(statusTimer);
-          set({ status });
+          set({ 
+            status, 
+            pendingId: status.type === 'pending' ? pendingId : null,
+            pendingAction: status.type === 'pending' ? pendingAction : null
+          });
           if (status.type === 'success') {
             statusTimer = setTimeout(() => {
               if (get().status.type === 'success') {
@@ -39,13 +45,15 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
           editingId: null,
           editName: '',
           status: { type: 'idle', message: '' },
+          pendingId: null,
+          pendingAction: null,
 
           setNewSaveName: (newSaveName) => set({ newSaveName }),
           setEditName: (editName) => set({ editName }),
           setStatus: setStatusWithTimeout,
           clearStatus: () => {
             clearTimeout(statusTimer);
-            set({ status: { type: 'idle', message: '' } });
+            set({ status: { type: 'idle', message: '' }, pendingId: null, pendingAction: null });
           },
 
           refreshSaves: async () => {
@@ -64,7 +72,8 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
             const state = get();
             if (!state.newSaveName.trim()) return;
 
-            setStatusWithTimeout({ type: 'pending', message: 'Writing save file...' });
+            setStatusWithTimeout({ type: 'pending', message: 'Writing save file...' }, null, 'create');
+            await delay(200);
             const { nodes, edges } = useFlowStore.getState();
             const data = serializeCanvas(nodes, edges);
 
@@ -90,7 +99,8 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
 
           handleOverwriteLoad: async (record) => {
             try {
-              setStatusWithTimeout({ type: 'pending', message: 'Loading save...' });
+              setStatusWithTimeout({ type: 'pending', message: 'Loading save...' }, record.id, 'load');
+              await delay(200);
               const { nodes, edges } = deserializeCanvas(record.data);
               await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
               useFlowStore.getState().setNodesAndEdges(nodes, edges);
@@ -105,7 +115,8 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
 
           handleMergeLoad: async (record) => {
             try {
-              setStatusWithTimeout({ type: 'pending', message: 'Merging save...' });
+              setStatusWithTimeout({ type: 'pending', message: 'Merging save...' }, record.id, 'merge');
+              await delay(200);
               const { nodes: loadedNodes, edges: loadedEdges } = deserializeCanvas(record.data);
               const { nodes: currentNodes, edges: currentEdges, setNodesAndEdges } = useFlowStore.getState();
 
@@ -136,7 +147,8 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
             });
             if (!confirmed) return;
 
-            setStatusWithTimeout({ type: 'pending', message: 'Overwriting save file...' });
+            setStatusWithTimeout({ type: 'pending', message: 'Overwriting save file...' }, record.id, 'save');
+            await delay(200);
             const { nodes, edges } = useFlowStore.getState();
             const data = serializeCanvas(nodes, edges);
 
@@ -170,7 +182,8 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
             });
             if (!confirmed) return;
 
-            setStatusWithTimeout({ type: 'pending', message: 'Deleting save...' });
+            setStatusWithTimeout({ type: 'pending', message: 'Deleting save...' }, id, 'delete');
+            await delay(200);
             const success = await deleteSave(id);
             if (success) {
               setStatusWithTimeout({ type: 'success', message: 'Save deleted successfully!' });
@@ -191,7 +204,8 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
             const state = get();
             const newName = state.editName.trim();
             if (newName) {
-              setStatusWithTimeout({ type: 'pending', message: 'Renaming save...' });
+              setStatusWithTimeout({ type: 'pending', message: 'Renaming save...' }, id, 'rename');
+              await delay(200);
               const success = await renameSave(id, newName);
               if (success) {
                 // Optimistic update to prevent stale data flashing
@@ -222,7 +236,8 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
             const file = e.target.files?.[0];
             if (!file) return;
 
-            setStatusWithTimeout({ type: 'pending', message: 'Importing JSON save file...' });
+            setStatusWithTimeout({ type: 'pending', message: 'Importing JSON save file...' }, null, 'import');
+            await delay(200);
 
             const reader = new FileReader();
             reader.onload = async (event) => {
@@ -291,7 +306,8 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
               return;
             }
 
-            setStatusWithTimeout({ type: 'pending', message: 'Rendering PNG snapshot...' });
+            setStatusWithTimeout({ type: 'pending', message: 'Rendering PNG snapshot...' }, null, 'export_png');
+            await delay(200);
             try {
               await exportCanvasAsPng(nodes);
               setStatusWithTimeout({ type: 'success', message: 'PNG exported successfully!' });

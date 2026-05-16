@@ -9,12 +9,27 @@ export function useAutosave(): void {
     let isMounted = true;
 
     getAutosave()
-      .then((record) => {
+      .then(async (record) => {
         if (!isMounted) return;
         if (record && record.data) {
           const currentStore = useFlowStore.getState();
           if (currentStore.nodes.length === 0 && currentStore.edges.length === 0) {
             const { nodes, edges } = deserializeCanvas(record.data);
+
+            if (nodes.length >= 250) {
+              const confirmed = await useUIStore.getState().confirm({
+                title: 'PERFORMANCE WARNING',
+                message: `This autosave contains ${nodes.length} nodes. Loading this graph will degrade graph performance and take a while to load. Continue?`,
+                confirmLabel: 'LOAD AUTOSAVE',
+                cancelLabel: 'START FRESH',
+                intent: 'info',
+              });
+
+              if (!confirmed) {
+                return;
+              }
+            }
+
             currentStore.setNodesAndEdges(nodes, edges);
           }
         }
@@ -29,7 +44,7 @@ export function useAutosave(): void {
       });
 
     const intervalId = setInterval(() => {
-      if (document.hidden) return; 
+      if (document.hidden) return;
       const { nodes, edges } = useFlowStore.getState();
       const data = serializeCanvas(nodes, edges);
       saveAutosave(data).catch((err) => {
