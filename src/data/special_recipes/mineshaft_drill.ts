@@ -313,6 +313,7 @@ const baseYields = DEPTH_YIELDS[DEPTH] ?? [];
 const outputs = baseYields.map((o) => ({
   product_id: o.product_id,
   quantity: o.amount * oilMultiplier * drillingEfficiency,
+  voidable: true,
 }));
 
 // ─── 3. EXPORT ───────────────────────────────────────────────────────
@@ -325,7 +326,7 @@ export interface Recipe {
   power_type: 'MV' | 'HV';
   pollution: number;
   inputs: { product_id: string; quantity: number }[];
-  outputs: { product_id: string; quantity: number; temperature?: number }[];
+  outputs: { product_id: string; quantity: number; temperature?: number; voidable?: boolean }[];
 }
 
 const averagePower = (3.0 * activeRatio + 0.1) * 1000000;

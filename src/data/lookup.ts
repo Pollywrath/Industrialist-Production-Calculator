@@ -1,4 +1,6 @@
 import type { Recipe, Machine, Product, Research } from '../types/data';
+import { getAllSpecialRecipes } from './registry';
+
 
 let recipes: Recipe[] = [];
 let machines: Machine[] = [];
@@ -27,6 +29,22 @@ export function initializeDatabase(): Promise<void> {
     machines = machinesJson.default as Machine[];
     products = productsJson.default as Product[];
     researches = researchesJson.default as Research[];
+
+    // Integrate Special Recipes
+    const specialRecipes = getAllSpecialRecipes().map((sr) => {
+      const defaults = Object.entries(sr.settings).reduce(
+        (acc, [key, def]) => {
+          acc[key] = def.default;
+          return acc;
+        },
+        {} as Record<string, unknown>,
+      );
+
+      return sr.compute(defaults);
+    });
+
+    recipes = [...recipes, ...specialRecipes];
+
 
     for (let i = 0; i < recipes.length; i++) {
       recipeMap.set(recipes[i].id, recipes[i]);

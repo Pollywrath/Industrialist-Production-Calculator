@@ -365,6 +365,10 @@
   border: none;
 }
 
+.recipe-card-fav-btn.is-favorite {
+  color: var(--theme-color-primary);
+}
+
 .recipe-card-title {
   display: block;
   min-width: 0;

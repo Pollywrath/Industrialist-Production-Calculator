@@ -74,6 +74,39 @@
   overflow: hidden;
 }
 
+.node-editor-tabs {
+  display: flex;
+  background: var(--theme-color-bg-secondary);
+  border-bottom: 1px solid var(--theme-color-border-light);
+  margin: -16px -16px 0 -16px;
+  padding: 0 16px;
+}
+
+.node-editor-tab {
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--theme-color-text-dim);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+}
+
+.node-editor-tab.is-active {
+  color: var(--theme-color-text-primary);
+  border-bottom-color: var(--theme-color-border-primary);
+}
+
+.settings-editor {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px 0;
+  overflow-y: auto;
+}
+
 .node-editor-group {
   display: flex;
   flex-direction: column;

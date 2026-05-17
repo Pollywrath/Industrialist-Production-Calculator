@@ -11,6 +11,9 @@ import { HandleEditorColumns } from './HandleEditorColumns';
 import styles from './NodeEditor.module.css';
 import { NodeEditorProvider } from './NodeEditorProvider';
 import { useNodeEditorStore, NodeEditorContext } from './NodeEditorContext';
+import { SettingsEditor } from './SettingsEditor';
+import { getSpecialRecipe } from '../../../data/registry';
+
 
 interface NodeEditorProps {
   recipe: Recipe;
@@ -63,32 +66,46 @@ function NodeEditorModal({
   const {
     machineCount,
     machineCountStr,
+    activeTab,
     handleMachineCountChange,
+
     handleMachineCountBlur,
     handleResetHandles,
+    setActiveTab,
+    getCurrentRecipe,
   } = useNodeEditorStore(
     useShallow((s) => ({
       machineCount: s.machineCount,
       machineCountStr: s.machineCountStr,
+      activeTab: s.activeTab,
+      settings: s.settings,
       handleMachineCountChange: s.handleMachineCountChange,
       handleMachineCountBlur: s.handleMachineCountBlur,
       handleResetHandles: s.handleResetHandles,
+      setActiveTab: s.setActiveTab,
+      getCurrentRecipe: s.getCurrentRecipe,
     })),
   );
+
+  const currentRecipe = getCurrentRecipe();
+  const hasSettings = !!getSpecialRecipe(recipe.id);
+
 
 
 
 
 
   const handleSaveLocal = () => {
-    const { inputs, outputs } = store!.getState();
+    const { inputs, outputs, settings } = store!.getState();
     updateNodeData(nodeId, {
       machineCount: cleanMachineCount(machineCount),
       inputOrder: inputs,
       outputOrder: outputs,
+      settings: settings,
     });
     onClose();
   };
+
 
   const initialMachineCount = initialData.machineCount;
   const isPropagationDisabled =
@@ -97,7 +114,7 @@ function NodeEditorModal({
   const handleSavePropagated = () => {
     if (isPropagationDisabled) return;
 
-    const { inputs, outputs } = store!.getState();
+    const { inputs, outputs, settings } = store!.getState();
     const factor = machineCount / initialMachineCount;
     const { nodes, edges } = useFlowStore.getState();
     const connectedIds = getConnectedNodes(nodeId, edges);
@@ -112,6 +129,7 @@ function NodeEditorModal({
               machineCount: cleanMachineCount(machineCount),
               inputOrder: inputs,
               outputOrder: outputs,
+              settings: settings,
             },
           };
         } else {
@@ -133,13 +151,14 @@ function NodeEditorModal({
     onClose();
   };
 
+
   return createPortal(
-    <div 
-      className={styles['node-editor-overlay']} 
+    <div
+      className={styles['node-editor-overlay']}
       onClick={onClose}
     >
-      <div 
-        className={styles['node-editor-modal']} 
+      <div
+        className={styles['node-editor-modal']}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles['node-editor-header']}>
@@ -161,20 +180,44 @@ function NodeEditorModal({
         </div>
 
         <div className={styles['node-editor-content']}>
-          <div className={styles['node-editor-group']}>
-            <label>Machine Count</label>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={machineCountStr}
-              onChange={(e) => handleMachineCountChange(e.target.value)}
-              onBlur={handleMachineCountBlur}
-              className={styles['node-editor-input']}
-            />
+          <div className={styles['node-editor-tabs']}>
+            <button
+              className={`${styles['node-editor-tab']} ${activeTab === 'count' ? styles['is-active'] : ''}`}
+              onClick={() => setActiveTab('count')}
+            >
+              Count & Handles
+            </button>
+            {hasSettings && (
+              <button
+                className={`${styles['node-editor-tab']} ${activeTab === 'settings' ? styles['is-active'] : ''}`}
+                onClick={() => setActiveTab('settings')}
+              >
+                Settings
+              </button>
+            )}
           </div>
 
-          <HandleEditorColumns recipe={recipe} multiplier={multiplier} rateMode={rateMode} />
+          {activeTab === 'count' ? (
+            <>
+              <div className={styles['node-editor-group']}>
+                <label>Machine Count</label>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  value={machineCountStr}
+                  onChange={(e) => handleMachineCountChange(e.target.value)}
+                  onBlur={handleMachineCountBlur}
+                  className={styles['node-editor-input']}
+                />
+              </div>
+
+              <HandleEditorColumns recipe={currentRecipe} multiplier={multiplier} rateMode={rateMode} />
+            </>
+          ) : (
+            <SettingsEditor recipe={recipe} />
+          )}
         </div>
+
 
         <div className={styles['node-editor-footer']}>
           <button className={styles['node-editor-btn-secondary']} onClick={onClose}>

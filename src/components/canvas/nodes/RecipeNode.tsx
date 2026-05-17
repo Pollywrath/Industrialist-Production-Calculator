@@ -2,6 +2,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import type { RecipeNodeType } from '../../../types/nodes';
 import { getRecipe, getMachineName } from '../../../data/lookup';
+import { getSpecialRecipe } from '../../../data/registry';
 import { RecipeNodeInfo } from './RecipeNodeInfo';
 import { RecipeNodeIO } from './RecipeNodeIO';
 import styles from './RecipeNode.module.css';
@@ -33,6 +34,8 @@ import {
   IO_COLUMN_PADDING,
 } from '../../shared/layoutConstants';
 
+import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
+
 export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -42,21 +45,28 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
     updateNodeInternals(id);
   }, [id, data.inputOrder, data.outputOrder, updateNodeInternals]);
 
-  const recipe = getRecipe(data.recipeId);
+  let recipe = getRecipe(data.recipeId);
+  if (recipe) {
+    const sr = getSpecialRecipe(recipe.id);
+    if (sr && data.settings) {
+      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+      recipe = sr.compute(data.settings, globalSettings);
+    }
+  }
 
   const leftHandles = data.inputOrder
     ? data.inputOrder.map((idx) => ({ side: 'input' as const, index: idx }))
     : Array.from({ length: recipe?.inputs.length || 0 }, (_, i) => ({
-        side: 'input' as const,
-        index: i,
-      }));
+      side: 'input' as const,
+      index: i,
+    }));
 
   const rightHandles = data.outputOrder
     ? data.outputOrder.map((idx) => ({ side: 'output' as const, index: idx }))
     : Array.from({ length: recipe?.outputs.length || 0 }, (_, i) => ({
-        side: 'output' as const,
-        index: i,
-      }));
+      side: 'output' as const,
+      index: i,
+    }));
 
   const leftCount = leftHandles.length;
   const rightCount = rightHandles.length;

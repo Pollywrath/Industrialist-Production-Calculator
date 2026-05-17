@@ -2,6 +2,7 @@ import React, { Suspense, useEffect } from 'react';
 import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { ControlsTray } from '../menu/ControlsTray';
 import { OverlaysTray } from '../menu/OverlaysTray';
+import { DashboardPanels } from '../menu/DashboardPanels';
 import { FlowViewport } from './FlowViewport';
 import { LoadingScreen } from '../shared/LoadingScreen';
 import { useAutosave } from '../../persistence/useAutosave';
@@ -126,6 +127,7 @@ export function FlowCanvas() {
       <FlowViewport />
       <ControlsTray />
       <OverlaysTray />
+      <DashboardPanels />
       {isRecipeSelectorOpen &&
         (RecipeSelector ? (
           React.createElement(RecipeSelector)

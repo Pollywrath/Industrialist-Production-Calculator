@@ -1,6 +1,8 @@
 import { createContext, useContext } from 'react';
 import { useStore } from 'zustand';
 import type { StoreApi } from 'zustand';
+import type { Recipe } from '../../../types/data';
+
 
 export interface NodeEditorState {
   inputs: number[];
@@ -8,6 +10,8 @@ export interface NodeEditorState {
   machineCount: number;
   machineCountStr: string;
   qtyStrMap: Record<string, string>;
+  activeTab: 'count' | 'settings';
+  settings: Record<string, unknown>;
 
   setInputs: (inputs: number[]) => void;
   setOutputs: (outputs: number[]) => void;
@@ -16,6 +20,11 @@ export interface NodeEditorState {
   setQtyStrMap: (
     updater: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>),
   ) => void;
+  setActiveTab: (tab: 'count' | 'settings') => void;
+  updateSetting: (key: string, value: unknown) => void;
+  getCurrentRecipe: () => Recipe;
+
+
 
   handleMove: (side: 'input' | 'output', listIdx: number, direction: -1 | 1) => void;
   handleQtyChange: (
@@ -29,6 +38,7 @@ export interface NodeEditorState {
   handleMachineCountBlur: () => void;
   handleResetHandles: () => void;
 }
+
 
 export const NodeEditorContext = createContext<StoreApi<NodeEditorState> | undefined>(undefined);
 

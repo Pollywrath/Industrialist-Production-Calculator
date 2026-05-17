@@ -15,6 +15,8 @@ export interface ConfirmOptions {
 interface UIState {
   isControlsMinimized: boolean;
   isOverlaysMinimized: boolean;
+  isStatsMinimized: boolean;
+  isExtendedMinimized: boolean;
   activeToggleId: CanvasToggleId | null;
   temporaryOverrides: CanvasToggleId[];
   isRecipeSelectorOpen: boolean;
@@ -27,6 +29,8 @@ interface UIState {
 
   toggleControlsMinimized: () => void;
   toggleOverlaysMinimized: () => void;
+  toggleStatsMinimized: () => void;
+  toggleExtendedMinimized: () => void;
   toggleButton: (id: CanvasToggleId) => void;
   pushOverride: (id: CanvasToggleId) => void;
   popOverride: (id: CanvasToggleId) => void;
@@ -58,6 +62,8 @@ interface UIState {
 const useUIStore = create<UIState>((set) => ({
   isControlsMinimized: false,
   isOverlaysMinimized: false,
+  isStatsMinimized: false,
+  isExtendedMinimized: false,
   activeToggleId: null,
   temporaryOverrides: [],
   isRecipeSelectorOpen: false,
@@ -70,6 +76,8 @@ const useUIStore = create<UIState>((set) => ({
 
   toggleControlsMinimized: () => set((state) => ({ isControlsMinimized: !state.isControlsMinimized })),
   toggleOverlaysMinimized: () => set((state) => ({ isOverlaysMinimized: !state.isOverlaysMinimized })),
+  toggleStatsMinimized: () => set((state) => ({ isStatsMinimized: !state.isStatsMinimized })),
+  toggleExtendedMinimized: () => set((state) => ({ isExtendedMinimized: !state.isExtendedMinimized })),
   toggleButton: (id) =>
     set((state) => ({
       activeToggleId: state.activeToggleId === id ? null : id,

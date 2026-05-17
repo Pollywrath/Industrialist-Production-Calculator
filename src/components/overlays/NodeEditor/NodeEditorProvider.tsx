@@ -9,6 +9,9 @@ import {
   toPlainString,
   computeQuantityMap,
 } from '../../../utils/recipeComputation';
+import { getSpecialRecipe } from '../../../data/registry';
+import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
+
 
 interface NodeEditorProviderProps {
   children: React.ReactNode;
@@ -36,6 +39,29 @@ export function NodeEditorProvider({
         initialData.machineCount,
         multiplier,
       ),
+      activeTab: 'count',
+      settings:
+        initialData.settings ??
+        (() => {
+          const sr = getSpecialRecipe(recipe.id);
+          if (!sr) return {};
+          return Object.entries(sr.settings).reduce(
+            (acc, [key, def]) => {
+              acc[key] = def.default;
+              return acc;
+            },
+            {} as Record<string, unknown>,
+          );
+
+        })(),
+
+      getCurrentRecipe: () => {
+        const { settings } = get();
+        const sr = getSpecialRecipe(recipe.id);
+        const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+        return sr ? sr.compute(settings, globalSettings) : recipe;
+      },
+
 
       setInputs: (inputs) => set({ inputs }),
       setOutputs: (outputs) => set({ outputs }),
@@ -45,6 +71,20 @@ export function NodeEditorProvider({
         set((state) => ({
           qtyStrMap: typeof updater === 'function' ? updater(state.qtyStrMap) : updater,
         })),
+      setActiveTab: (activeTab) => set({ activeTab }),
+      updateSetting: (key, value) => {
+        const { settings, inputs, outputs, machineCount } = get();
+        const newSettings = { ...settings, [key]: value };
+        const sr = getSpecialRecipe(recipe.id);
+        const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+        const currentRecipe = sr ? sr.compute(newSettings, globalSettings) : recipe;
+
+        set({
+          settings: newSettings,
+          qtyStrMap: computeQuantityMap(currentRecipe, inputs, outputs, machineCount, multiplier),
+        });
+      },
+
 
       handleMove: (side, listIdx, direction) => {
         const { inputs, outputs } = get();
@@ -77,7 +117,7 @@ export function NodeEditorProvider({
               machineCount: newMachineCount,
               machineCountStr: toPlainString(newMachineCount, 12),
               qtyStrMap: computeQuantityMap(
-                recipe,
+                get().getCurrentRecipe(),
                 inputs,
                 outputs,
                 newMachineCount,
@@ -85,6 +125,7 @@ export function NodeEditorProvider({
                 key,
                 rawVal,
               ),
+
             });
           } else {
             set((state) => ({
@@ -95,7 +136,8 @@ export function NodeEditorProvider({
           set({
             machineCount: 0,
             machineCountStr: '',
-            qtyStrMap: computeQuantityMap(recipe, inputs, outputs, 0, multiplier, key, rawVal),
+            qtyStrMap: computeQuantityMap(get().getCurrentRecipe(), inputs, outputs, 0, multiplier, key, rawVal),
+
           });
         }
       },
@@ -111,7 +153,7 @@ export function NodeEditorProvider({
           const newMachineCount = cleanMachineCount(cleaned / normalizedBaseQuantity);
           set({
             qtyStrMap: computeQuantityMap(
-              recipe,
+              get().getCurrentRecipe(),
               inputs,
               outputs,
               newMachineCount,
@@ -119,12 +161,14 @@ export function NodeEditorProvider({
               key,
               toPlainString(cleaned, 8),
             ),
+
           });
         } else {
           set({
             machineCount: 0,
             machineCountStr: '0',
-            qtyStrMap: computeQuantityMap(recipe, inputs, outputs, 0, multiplier),
+            qtyStrMap: computeQuantityMap(get().getCurrentRecipe(), inputs, outputs, 0, multiplier),
+
           });
         }
       },
@@ -140,12 +184,14 @@ export function NodeEditorProvider({
           const cleaned = cleanMachineCount(parsed);
           set({
             machineCount: cleaned,
-            qtyStrMap: computeQuantityMap(recipe, inputs, outputs, cleaned, multiplier),
+            qtyStrMap: computeQuantityMap(get().getCurrentRecipe(), inputs, outputs, cleaned, multiplier),
+
           });
         } else {
           set({
             machineCount: 0,
-            qtyStrMap: computeQuantityMap(recipe, inputs, outputs, 0, multiplier),
+            qtyStrMap: computeQuantityMap(get().getCurrentRecipe(), inputs, outputs, 0, multiplier),
+
           });
         }
       },
@@ -158,14 +204,15 @@ export function NodeEditorProvider({
           set({
             machineCount: cleaned,
             machineCountStr: toPlainString(cleaned, 12),
-            qtyStrMap: computeQuantityMap(recipe, inputs, outputs, cleaned, multiplier),
+            qtyStrMap: computeQuantityMap(get().getCurrentRecipe(), inputs, outputs, cleaned, multiplier),
           });
         } else {
           set({
             machineCount: 0,
             machineCountStr: '0',
-            qtyStrMap: computeQuantityMap(recipe, inputs, outputs, 0, multiplier),
+            qtyStrMap: computeQuantityMap(get().getCurrentRecipe(), inputs, outputs, 0, multiplier),
           });
+
         }
       },
 
@@ -177,12 +224,13 @@ export function NodeEditorProvider({
           inputs: defaultInputs,
           outputs: defaultOutputs,
           qtyStrMap: computeQuantityMap(
-            recipe,
+            get().getCurrentRecipe(),
             defaultInputs,
             defaultOutputs,
             machineCount,
             multiplier,
           ),
+
         });
       },
     })),

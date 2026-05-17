@@ -37,6 +37,7 @@ export interface RecipeOutput {
   product_id: string;
   quantity: number;
   temperature: number;
+  voidable?: boolean;
 }
 
 export interface Recipe {

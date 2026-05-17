@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import { getProductName, getMachineName, getAllRecipes } from '../../../data/lookup';
 import { VirtualList } from '../../shared/VirtualList';
@@ -34,6 +35,47 @@ export function RecipeStage({
 
   const rateMode = useUIStore((s) => s.rateMode);
   const setRecipeSelectorOpen = useUIStore((s) => s.setRecipeSelectorOpen);
+
+  const [favorites, setFavorites] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('favorite_recipes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return new Set(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Error loading favorite_recipes:', e);
+    }
+    return new Set();
+  });
+
+  const handleToggleFavorite = (recipeId: string) => {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      if (next.has(recipeId)) {
+        next.delete(recipeId);
+      } else {
+        next.add(recipeId);
+      }
+      try {
+        localStorage.setItem('favorite_recipes', JSON.stringify(Array.from(next)));
+      } catch (e) {
+        console.error('Error saving favorite_recipes:', e);
+      }
+      return next;
+    });
+  };
+
+  const sortedRecipes = [...matchingRecipes].map((r, index) => ({ r, index })).sort((a, b) => {
+    const aFav = favorites.has(a.r.id) ? 1 : 0;
+    const bFav = favorites.has(b.r.id) ? 1 : 0;
+    if (aFav !== bFav) {
+      return bFav - aFav;
+    }
+    return a.index - b.index;
+  }).map(x => x.r);
   return (
     <>
       <div className={styles['recipe-selector-header']}>
@@ -98,11 +140,11 @@ export function RecipeStage({
       )}
 
       <div className={styles['recipe-selector-content-stage2']}>
-        {matchingRecipes.length === 0 ? (
+        {sortedRecipes.length === 0 ? (
           <div className={styles['recipe-selector-empty']}>No recipes found.</div>
         ) : (
           <VirtualList
-            items={matchingRecipes}
+            items={sortedRecipes}
             itemHeight={136}
             height={activeTab === 'product' ? 488 : 540}
             overscan={5}
@@ -116,6 +158,8 @@ export function RecipeStage({
                 preselectedSourceSide={preselectedSourceSide}
                 preselectedProductId={preselectedProductId}
                 onAddRecipe={onAddRecipe}
+                isFavorite={favorites.has(recipe.id)}
+                onToggleFavorite={handleToggleFavorite}
               />
             )}
           </VirtualList>

@@ -22,6 +22,8 @@ interface RecipeCardProps {
   preselectedSourceSide: 'input' | 'output' | null;
   preselectedProductId: string | null;
   onAddRecipe: (recipeId: string) => void;
+  isFavorite: boolean;
+  onToggleFavorite: (recipeId: string) => void;
 }
 
 export function RecipeCard({
@@ -31,6 +33,8 @@ export function RecipeCard({
   preselectedSourceSide,
   preselectedProductId,
   onAddRecipe,
+  isFavorite,
+  onToggleFavorite,
 }: RecipeCardProps) {
   const multiplier = getRateMultiplier(recipe.cycle_time, rateMode);
   const displayCycleTime = getNormalizedCycleTime(recipe.cycle_time, rateMode);
@@ -56,8 +60,18 @@ export function RecipeCard({
     <div className={styles['recipe-selector-card']} onClick={() => onAddRecipe(recipe.id)}>
       <div className={styles['recipe-card-top']}>
         <div className={styles['recipe-card-top-left']}>
-          <button className={styles['recipe-card-fav-btn']} onClick={(e) => e.stopPropagation()}>
-            <Star size={14} />
+          <button 
+            className={`${styles['recipe-card-fav-btn']}${isFavorite ? ` ${styles['is-favorite']}` : ''}`} 
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite(recipe.id);
+            }}
+          >
+            <Star 
+              size={14} 
+              fill={isFavorite ? 'var(--theme-color-primary)' : 'none'} 
+              color={isFavorite ? 'var(--theme-color-primary)' : 'currentColor'}
+            />
           </button>
           <span className={styles['recipe-card-title']}>{recipe.name}</span>
         </div>

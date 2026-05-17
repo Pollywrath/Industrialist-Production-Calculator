@@ -1,0 +1,321 @@
+.dashboard-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  width: 240px;
+  pointer-events: none; /* Let clicks pass through container gaps to canvas */
+  max-height: 100vh;
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: transparent;
+}
+
+.dashboard-container::-webkit-scrollbar {
+  display: none;
+}
+
+.panel {
+  pointer-events: auto; /* Re-enable click capture on panels */
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  background: var(--theme-color-bg-secondary);
+  border-right: 1px solid var(--theme-color-border-light);
+  border-bottom: 1px solid var(--theme-color-border-light);
+  border-left: none;
+  border-top: none;
+  overflow: hidden;
+}
+
+.panel-header {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--theme-color-secondary);
+  border: none;
+  border-bottom: 1px solid var(--theme-color-border-light);
+  color: var(--theme-color-text-primary);
+  font-weight: bold;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.panel-header-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel-header-icon {
+  color: var(--theme-color-primary);
+}
+
+.panel-body {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  gap: 8px;
+  background: var(--theme-color-translucent-dark);
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  line-height: 1.4;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+  padding-bottom: 4px;
+}
+
+.stat-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.stat-label {
+  color: var(--theme-color-text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-value {
+  color: var(--theme-color-stat-value);
+  font-weight: bold;
+  text-align: right;
+}
+
+.stat-value.success {
+  color: var(--theme-color-success);
+}
+
+.stat-value.error {
+  color: var(--theme-color-text-error);
+}
+
+.stat-value.neutral {
+  color: var(--theme-color-text-neutral);
+}
+
+/* Extended Panel Input Styles */
+.global-var-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-bottom: 1px solid var(--theme-color-border-light);
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.global-var-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--theme-color-text-dim);
+  font-weight: bold;
+}
+
+.global-var-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.global-var-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 4px 8px;
+  background: var(--theme-color-primary-dark);
+  border: 1px solid var(--theme-color-border-light);
+  border-radius: 0; /* Strict CAD aesthetics */
+  color: var(--theme-color-stat-value);
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.global-var-input:focus {
+  outline: none;
+  border-color: var(--theme-color-primary);
+}
+
+/* Diagnostic List Styles */
+.diagnostic-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.diagnostic-container > div {
+  scrollbar-width: thin;
+  scrollbar-color: var(--theme-color-border-light) transparent;
+  scrollbar-gutter: stable;
+}
+
+.diagnostic-container > div::-webkit-scrollbar {
+  display: block;
+  width: 4px;
+}
+
+.diagnostic-container > div::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.diagnostic-container > div::-webkit-scrollbar-thumb {
+  background: var(--theme-color-border-light);
+  border-radius: 0;
+}
+
+.diagnostic-section-title {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--theme-color-text-dim);
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Grouped Dropdown Row Styles */
+.diagnostic-row-header {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  height: 28px;
+  padding: 0 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--theme-color-border-light);
+  border-bottom: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.diagnostic-row-header:last-child {
+  border-bottom: 1px solid var(--theme-color-border-light);
+}
+
+.diagnostic-header-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 60%;
+  overflow: hidden;
+}
+
+.diagnostic-product-name {
+  color: var(--theme-color-stat-value);
+  font-weight: bold;
+  font-size: 9px;
+  line-height: 1.1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+.diagnostic-header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.diagnostic-row-node {
+  box-sizing: border-box;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 9px;
+  height: 28px;
+  padding: 0 6px 0 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-right: 1px solid var(--theme-color-border-light);
+  border-left: 1px solid var(--theme-color-border-light);
+  cursor: pointer;
+}
+
+.diagnostic-node-indent {
+  color: var(--theme-color-text-secondary);
+  font-size: 8.5px;
+  line-height: 1.1;
+  max-width: 65%;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+.diagnostic-node-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.diagnostic-rate {
+  font-weight: bold;
+}
+
+.diagnostic-rate.excess {
+  color: var(--theme-color-success);
+}
+
+.diagnostic-rate.deficiency {
+  color: var(--theme-color-text-error);
+}
+
+.diagnostic-rate-sub {
+  color: var(--theme-color-text-dim);
+}
+
+.badge {
+  font-size: 8px;
+  font-weight: bold;
+  padding: 1px 3px;
+  border-radius: 0; /* CAD style is square and flat */
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.badge.clogged {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--theme-color-text-error);
+  color: var(--theme-color-text-error);
+}
+
+.badge.voided {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid var(--theme-color-success);
+  color: var(--theme-color-success);
+}
+
+.badge.deficient {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--theme-color-text-error);
+  color: var(--theme-color-text-error);
+}
+
+.empty-message {
+  font-size: 10px;
+  color: var(--theme-color-text-neutral);
+  text-align: center;
+  padding: 6px;
+  border: 1px dashed var(--theme-color-border-light);
+}

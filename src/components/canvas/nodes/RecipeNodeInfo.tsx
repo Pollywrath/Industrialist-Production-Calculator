@@ -71,6 +71,7 @@ export function RecipeNodeInfo({
             <span className={styles['recipe-node-info__stat-label']}>Power: </span>
             <span className={styles['recipe-node-info__stat-value']}>
               {formatPower((recipe?.power_consumption ?? 0) * machineCount)}
+              {recipe?.power_type === 'HV' && ' HV'}
             </span>
           </div>
           <div className={styles['recipe-node-info__stat']}>
