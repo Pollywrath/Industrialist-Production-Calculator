@@ -35,21 +35,31 @@ import {
 } from '../../shared/layoutConstants';
 
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
+import { useDataStore } from '../../../stores/useDataStore';
 
 export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const updateNodeInternals = useUpdateNodeInternals();
   const NodeEditor = prefetchCache.NodeEditor;
 
+  // Reactively subscribe to dbVersion changes (database compile reloads)
+  const dbVersion = useDataStore((s) => s.dbVersion);
+
+  // Reactively subscribe to global settings changes (e.g. global pollution edits)
+  const globalSettings = useGlobalSettingsStore((s) => s.settings) as unknown as Record<
+    string,
+    unknown
+  >;
+
   useEffect(() => {
     updateNodeInternals(id);
   }, [id, data.inputOrder, data.outputOrder, updateNodeInternals]);
 
-  let recipe = getRecipe(data.recipeId);
+  // Bust React Compiler memoization by including dbVersion in the baseline lookup
+  let recipe = dbVersion !== -1 ? getRecipe(data.recipeId) : undefined;
   if (recipe) {
     const sr = getSpecialRecipe(recipe.id);
     if (sr && data.settings) {
-      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
       recipe = sr.compute(data.settings, globalSettings);
     }
   }
@@ -57,16 +67,16 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   const leftHandles = data.inputOrder
     ? data.inputOrder.map((idx) => ({ side: 'input' as const, index: idx }))
     : Array.from({ length: recipe?.inputs.length || 0 }, (_, i) => ({
-      side: 'input' as const,
-      index: i,
-    }));
+        side: 'input' as const,
+        index: i,
+      }));
 
   const rightHandles = data.outputOrder
     ? data.outputOrder.map((idx) => ({ side: 'output' as const, index: idx }))
     : Array.from({ length: recipe?.outputs.length || 0 }, (_, i) => ({
-      side: 'output' as const,
-      index: i,
-    }));
+        side: 'output' as const,
+        index: i,
+      }));
 
   const leftCount = leftHandles.length;
   const rightCount = rightHandles.length;

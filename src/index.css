@@ -122,8 +122,6 @@ body {
   stroke: #ffffff;
 }
 
-
-
 .is-delete-mode .react-flow__node {
   cursor: pointer;
 }

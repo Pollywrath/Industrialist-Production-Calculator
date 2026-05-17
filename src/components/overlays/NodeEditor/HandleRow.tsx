@@ -69,10 +69,7 @@ export function HandleRow({
     <div className={`${styles['node-editor-item']} ${styles[`node-editor-item--${side}`]}`}>
       <div className={styles['node-editor-actions']}>
         <div className={styles['node-editor-actions-stack']}>
-          <button
-            disabled={listIdx === 0}
-            onClick={() => handleMove(side, listIdx, -1)}
-          >
+          <button disabled={listIdx === 0} onClick={() => handleMove(side, listIdx, -1)}>
             <ChevronUp size={12} />
           </button>
           <button
@@ -83,9 +80,7 @@ export function HandleRow({
           </button>
         </div>
       </div>
-      <div className={styles['node-editor-handle-label']}>
-        {name}
-      </div>
+      <div className={styles['node-editor-handle-label']}>{name}</div>
       <div className={styles['node-editor-quantity-section']}>
         <input
           type="text"
@@ -100,4 +95,3 @@ export function HandleRow({
     </div>
   );
 }
-

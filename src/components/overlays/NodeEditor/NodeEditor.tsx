@@ -14,7 +14,6 @@ import { useNodeEditorStore, NodeEditorContext } from './NodeEditorContext';
 import { SettingsEditor } from './SettingsEditor';
 import { getSpecialRecipe } from '../../../data/registry';
 
-
 interface NodeEditorProps {
   recipe: Recipe;
   initialData: RecipeNodeData;
@@ -90,11 +89,6 @@ function NodeEditorModal({
   const currentRecipe = getCurrentRecipe();
   const hasSettings = !!getSpecialRecipe(recipe.id);
 
-
-
-
-
-
   const handleSaveLocal = () => {
     const { inputs, outputs, settings } = store!.getState();
     updateNodeData(nodeId, {
@@ -105,7 +99,6 @@ function NodeEditorModal({
     });
     onClose();
   };
-
 
   const initialMachineCount = initialData.machineCount;
   const isPropagationDisabled =
@@ -151,29 +144,16 @@ function NodeEditorModal({
     onClose();
   };
 
-
   return createPortal(
-    <div
-      className={styles['node-editor-overlay']}
-      onClick={onClose}
-    >
-      <div
-        className={styles['node-editor-modal']}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className={styles['node-editor-overlay']} onClick={onClose}>
+      <div className={styles['node-editor-modal']} onClick={(e) => e.stopPropagation()}>
         <div className={styles['node-editor-header']}>
           <h2 id="node-editor-dialog-title">Node Editor</h2>
           <div className={styles['node-editor-header-actions']}>
-            <button
-              className={styles['node-editor-btn-icon']}
-              onClick={handleResetHandles}
-            >
+            <button className={styles['node-editor-btn-icon']} onClick={handleResetHandles}>
               <RotateCcw size={18} />
             </button>
-            <button
-              className={styles['node-editor-btn-icon']}
-              onClick={onClose}
-            >
+            <button className={styles['node-editor-btn-icon']} onClick={onClose}>
               <X size={18} />
             </button>
           </div>
@@ -211,13 +191,16 @@ function NodeEditorModal({
                 />
               </div>
 
-              <HandleEditorColumns recipe={currentRecipe} multiplier={multiplier} rateMode={rateMode} />
+              <HandleEditorColumns
+                recipe={currentRecipe}
+                multiplier={multiplier}
+                rateMode={rateMode}
+              />
             </>
           ) : (
             <SettingsEditor recipe={recipe} />
           )}
         </div>
-
 
         <div className={styles['node-editor-footer']}>
           <button className={styles['node-editor-btn-secondary']} onClick={onClose}>

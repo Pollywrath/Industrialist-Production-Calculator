@@ -36,7 +36,10 @@ function getDB(): Promise<IDBPDatabase<SavesDB> | null> {
         }
       },
     }).catch((err) => {
-      console.warn('IndexedDB failed to open (Incognito mode or quota limit), resetting promise cache:', err);
+      console.warn(
+        'IndexedDB failed to open (Incognito mode or quota limit), resetting promise cache:',
+        err,
+      );
       dbPromise = null;
       return null;
     });
@@ -128,8 +131,52 @@ export async function clearAllData(): Promise<void> {
   const db = await getDB();
   if (!db) return;
 
-  await Promise.all([
-    db.clear('autosave'),
-    db.clear('data_overrides'),
-  ]);
+  await Promise.all([db.clear('autosave'), db.clear('data_overrides')]);
+}
+
+export async function getDataOverrides(): Promise<{ id: string; data: Record<string, unknown> }[]> {
+  try {
+    const db = await getDB();
+    if (!db) return [];
+    return await db.getAll('data_overrides');
+  } catch (err) {
+    console.warn('Failed to get data overrides from IndexedDB:', err);
+    return [];
+  }
+}
+
+export async function saveDataOverride(id: string, data: Record<string, unknown>): Promise<boolean> {
+  try {
+    const db = await getDB();
+    if (!db) return false;
+    await db.put('data_overrides', { id, data });
+    return true;
+  } catch (err) {
+    console.warn('Failed to save data override in IndexedDB:', err);
+    return false;
+  }
+}
+
+export async function deleteDataOverride(id: string): Promise<boolean> {
+  try {
+    const db = await getDB();
+    if (!db) return false;
+    await db.delete('data_overrides', id);
+    return true;
+  } catch (err) {
+    console.warn('Failed to delete data override in IndexedDB:', err);
+    return false;
+  }
+}
+
+export async function clearDataOverrides(): Promise<boolean> {
+  try {
+    const db = await getDB();
+    if (!db) return false;
+    await db.clear('data_overrides');
+    return true;
+  } catch (err) {
+    console.warn('Failed to clear data overrides in IndexedDB:', err);
+    return false;
+  }
 }

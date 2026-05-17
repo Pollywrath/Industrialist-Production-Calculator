@@ -72,4 +72,4 @@ const recipes: Recipe[] = [
   },
 ];
 
-export { TARGET_TEMPERATURE, mode , recipes };
+export { TARGET_TEMPERATURE, mode, recipes };

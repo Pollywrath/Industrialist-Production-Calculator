@@ -3,7 +3,6 @@ import { useStore } from 'zustand';
 import type { StoreApi } from 'zustand';
 import type { Recipe } from '../../../types/data';
 
-
 export interface NodeEditorState {
   inputs: number[];
   outputs: number[];
@@ -24,8 +23,6 @@ export interface NodeEditorState {
   updateSetting: (key: string, value: unknown) => void;
   getCurrentRecipe: () => Recipe;
 
-
-
   handleMove: (side: 'input' | 'output', listIdx: number, direction: -1 | 1) => void;
   handleQtyChange: (
     side: 'input' | 'output',
@@ -38,7 +35,6 @@ export interface NodeEditorState {
   handleMachineCountBlur: () => void;
   handleResetHandles: () => void;
 }
-
 
 export const NodeEditorContext = createContext<StoreApi<NodeEditorState> | undefined>(undefined);
 

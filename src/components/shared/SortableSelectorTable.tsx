@@ -80,6 +80,7 @@ export function SortableSelectorTable<T extends { id: string }, K extends string
           height={height}
           overscan={5}
           getKey={(item) => item.id}
+          className={styles['recipe-selector-table-viewport']}
         >
           {(item) => (
             <div

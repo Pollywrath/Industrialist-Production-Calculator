@@ -31,19 +31,16 @@ export function ConfirmDialog() {
             <X size={18} />
           </button>
         </div>
-        
+
         <div className={styles['confirm-content']}>
           <p>{options.message}</p>
         </div>
 
         <div className={styles['confirm-footer']}>
-          <button 
-            className={styles['confirm-btn']} 
-            onClick={() => closeConfirm(false)}
-          >
+          <button className={styles['confirm-btn']} onClick={() => closeConfirm(false)}>
             {options.cancelLabel || 'CANCEL'}
           </button>
-          <button 
+          <button
             className={`${styles['confirm-btn']} ${styles[options.intent || 'info']}`}
             onClick={() => closeConfirm(true)}
           >
@@ -52,6 +49,6 @@ export function ConfirmDialog() {
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

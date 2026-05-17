@@ -163,9 +163,10 @@ export function serializeCanvas(nodes: Node<RecipeNodeData>[], edges: Edge[]): S
   };
 }
 
-export function deserializeCanvas(
-  saveData: SaveData,
-): { nodes: Node<RecipeNodeData>[]; edges: Edge[] } {
+export function deserializeCanvas(saveData: SaveData): {
+  nodes: Node<RecipeNodeData>[];
+  edges: Edge[];
+} {
   const migrated = migrateSaveData(saveData);
 
   const idMap = new Map<string, string>();
@@ -209,7 +210,7 @@ export function deserializeCanvas(
 
   for (let i = 0; i < migrated.edges.length; i++) {
     const se = migrated.edges[i];
-    
+
     const sourceId = idMap.get(se.source) ?? se.source;
     const targetId = idMap.get(se.target) ?? se.target;
 

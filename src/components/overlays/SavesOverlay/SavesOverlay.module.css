@@ -76,8 +76,6 @@
   justify-content: center;
 }
 
-
-
 .spin {
   animation: spin 1s linear infinite;
 }
@@ -260,7 +258,7 @@
   border-right: none;
 }
 
-.action-btn:nth-child(n+4) {
+.action-btn:nth-child(n + 4) {
   border-bottom: none;
 }
 

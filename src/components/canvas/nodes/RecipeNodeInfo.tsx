@@ -38,10 +38,7 @@ export function RecipeNodeInfo({
 
   return (
     <div className={styles['recipe-node-info']}>
-      <button
-        className={styles['recipe-node-info__top-right-btn']}
-        onClick={handleBtnClick}
-      >
+      <button className={styles['recipe-node-info__top-right-btn']} onClick={handleBtnClick}>
         <svg
           viewBox="0 0 24 24"
           fill="none"
@@ -55,9 +52,7 @@ export function RecipeNodeInfo({
           <circle cx="5" cy="12" r="1"></circle>
         </svg>
       </button>
-      <div className={styles['recipe-node-info__title']}>
-        {displayName}
-      </div>
+      <div className={styles['recipe-node-info__title']}>{displayName}</div>
 
       <div className={styles['recipe-node-info__stats']}>
         <div className={styles['recipe-node-info__col--left']}>
@@ -83,9 +78,7 @@ export function RecipeNodeInfo({
         </div>
 
         <div className={styles['recipe-node-info__col--right']}>
-          <div className={styles['recipe-node-info__machine-name']}>
-            {machineName}
-          </div>
+          <div className={styles['recipe-node-info__machine-name']}>{machineName}</div>
           <div className={styles['recipe-node-info__machine-count']}>
             {formatMachineCount(machineCount)}
           </div>

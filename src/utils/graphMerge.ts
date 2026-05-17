@@ -14,13 +14,13 @@ export function mergeSaveIntoCanvas(
   for (let i = 0; i < loadedNodes.length; i++) {
     const n = loadedNodes[i];
     const newId = nextNodeId();
-    
+
     // Only map the ID if it's the first time we see it to prevent ambiguous edge routing
     // in malformed source data.
     if (!idMap.has(n.id)) {
       idMap.set(n.id, newId);
     }
-    
+
     mergedNodes.push({
       ...n,
       id: newId,

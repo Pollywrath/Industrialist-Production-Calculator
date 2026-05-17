@@ -68,22 +68,22 @@ export function RecipeStage({
     });
   };
 
-  const sortedRecipes = [...matchingRecipes].map((r, index) => ({ r, index })).sort((a, b) => {
-    const aFav = favorites.has(a.r.id) ? 1 : 0;
-    const bFav = favorites.has(b.r.id) ? 1 : 0;
-    if (aFav !== bFav) {
-      return bFav - aFav;
-    }
-    return a.index - b.index;
-  }).map(x => x.r);
+  const sortedRecipes = [...matchingRecipes]
+    .map((r, index) => ({ r, index }))
+    .sort((a, b) => {
+      const aFav = favorites.has(a.r.id) ? 1 : 0;
+      const bFav = favorites.has(b.r.id) ? 1 : 0;
+      if (aFav !== bFav) {
+        return bFav - aFav;
+      }
+      return a.index - b.index;
+    })
+    .map((x) => x.r);
   return (
     <>
       <div className={styles['recipe-selector-header']}>
         <div className={styles['recipe-selector-back-nav']}>
-          <button 
-            className={styles['recipe-selector-back-btn']} 
-            onClick={handleBack}
-          >
+          <button className={styles['recipe-selector-back-btn']} onClick={handleBack}>
             <ArrowLeft size={14} className={styles['back-btn-icon']} />
             <span className={styles['back-btn-text']}>
               Back to {activeTab === 'product' ? 'Products' : 'Machines'}
@@ -122,17 +122,11 @@ export function RecipeStage({
             <span className={`${styles['filter-btn-dot']} ${styles['consumer']}`} />
             Consumer
           </button>
-          <button
-            className={styles['recipe-selector-filter-btn']}
-            disabled={true}
-          >
+          <button className={styles['recipe-selector-filter-btn']} disabled={true}>
             <span className={`${styles['filter-btn-dot']} ${styles['sell']}`} />
             Sell/Trash (Soon)
           </button>
-          <button
-            className={styles['recipe-selector-filter-btn']}
-            disabled={true}
-          >
+          <button className={styles['recipe-selector-filter-btn']} disabled={true}>
             <span className={`${styles['filter-btn-dot']} ${styles['heat']}`} />
             Heat/Power (Soon)
           </button>

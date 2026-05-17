@@ -12,7 +12,8 @@ import { useUIStore } from '../stores/useUIStore';
 const MAX_CANVAS_DIMENSION = 16384;
 
 export function exportRecordAsJson(record: SaveRecord): void {
-  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(record, null, 2));
+  const dataStr =
+    'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(record, null, 2));
   const link = document.createElement('a');
   link.download = `${record.name.replace(/\s+/g, '_')}_save.json`;
   link.href = dataStr;
@@ -38,7 +39,11 @@ export async function exportCanvasAsPng(nodes: Node[]): Promise<void> {
   // Clamp to browser canvas limits — scale down proportionally if either
   // dimension exceeds the safe maximum so the export never produces a
   // blank or corrupted image.
-  const scale = Math.min(1, MAX_CANVAS_DIMENSION / naturalWidth, MAX_CANVAS_DIMENSION / naturalHeight);
+  const scale = Math.min(
+    1,
+    MAX_CANVAS_DIMENSION / naturalWidth,
+    MAX_CANVAS_DIMENSION / naturalHeight,
+  );
   const exportWidth = Math.round(naturalWidth * scale);
   const exportHeight = Math.round(naturalHeight * scale);
 
@@ -72,4 +77,3 @@ export async function exportCanvasAsPng(nodes: Node[]): Promise<void> {
     uiStore.setIsExporting(false);
   }
 }
-

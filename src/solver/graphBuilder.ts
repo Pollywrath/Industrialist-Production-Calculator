@@ -4,7 +4,6 @@ import { getSpecialRecipe } from '../data/registry';
 import { getRateMultiplier } from '../utils/recipeComputation';
 import { parseHandleId } from '../utils/idGenerator';
 
-
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 
 export function buildSolverGraph(nodes: ReactFlowNode[], edges: ReactFlowEdge[]): SolverGraph {
@@ -17,10 +16,12 @@ export function buildSolverGraph(nodes: ReactFlowNode[], edges: ReactFlowEdge[])
 
     const sr = getSpecialRecipe(data.recipeId);
     if (sr && data.settings) {
-      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
+        string,
+        unknown
+      >;
       recipe = sr.compute(data.settings, globalSettings);
     }
-
 
     const multiplier = getRateMultiplier(recipe.cycle_time, 'second');
     const machineCount = data.machineCount ?? 1;

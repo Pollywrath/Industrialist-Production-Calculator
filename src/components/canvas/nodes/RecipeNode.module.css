@@ -26,7 +26,6 @@
   will-change: transform;
 }
 
-
 .recipe-node-info {
   display: flex;
   flex-direction: column;

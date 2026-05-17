@@ -38,4 +38,3 @@ export interface SpecialRecipe {
   settings: Record<string, SettingDefinition>;
   compute: (settings: Record<string, unknown>, globalSettings?: Record<string, unknown>) => Recipe;
 }
-

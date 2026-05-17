@@ -82,4 +82,4 @@ const recipes: Recipe[] = [
   },
 ];
 
-export { INPUT_TEMP, OUTPUT_TEMP , recipes };
+export { INPUT_TEMP, OUTPUT_TEMP, recipes };

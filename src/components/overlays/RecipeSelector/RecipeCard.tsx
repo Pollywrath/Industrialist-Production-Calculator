@@ -60,16 +60,16 @@ export function RecipeCard({
     <div className={styles['recipe-selector-card']} onClick={() => onAddRecipe(recipe.id)}>
       <div className={styles['recipe-card-top']}>
         <div className={styles['recipe-card-top-left']}>
-          <button 
-            className={`${styles['recipe-card-fav-btn']}${isFavorite ? ` ${styles['is-favorite']}` : ''}`} 
+          <button
+            className={`${styles['recipe-card-fav-btn']}${isFavorite ? ` ${styles['is-favorite']}` : ''}`}
             onClick={(e) => {
               e.stopPropagation();
               onToggleFavorite(recipe.id);
             }}
           >
-            <Star 
-              size={14} 
-              fill={isFavorite ? 'var(--theme-color-primary)' : 'none'} 
+            <Star
+              size={14}
+              fill={isFavorite ? 'var(--theme-color-primary)' : 'none'}
               color={isFavorite ? 'var(--theme-color-primary)' : 'currentColor'}
             />
           </button>
@@ -105,9 +105,7 @@ export function RecipeCard({
                       {formatQuantity(inp.quantity * multiplier * neededMachineCount)}
                     </span>
                   </div>
-                  <span className={styles['recipe-card-io-name']}>
-                    {productName}
-                  </span>
+                  <span className={styles['recipe-card-io-name']}>{productName}</span>
                 </div>
               );
             })}
@@ -143,9 +141,7 @@ export function RecipeCard({
                       {formatQuantity(out.quantity * multiplier * neededMachineCount)}
                     </span>
                   </div>
-                  <span className={styles['recipe-card-io-name']}>
-                    {productName}
-                  </span>
+                  <span className={styles['recipe-card-io-name']}>{productName}</span>
                 </div>
               );
             })}

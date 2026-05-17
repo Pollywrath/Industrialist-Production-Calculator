@@ -13,4 +13,5 @@ export const prefetchCache = {
   RecipeSelector: null as React.ComponentType<Record<string, never>> | null,
   NodeEditor: null as React.ComponentType<NodeEditorProps> | null,
   SavesOverlay: null as React.ComponentType<Record<string, never>> | null,
+  DataOverlay: null as React.ComponentType<Record<string, never>> | null,
 };

@@ -1,0 +1,226 @@
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
+import {
+  Database,
+  X,
+  Edit3,
+  GitCompare,
+  Package,
+  Cpu,
+  ClipboardList,
+  FlaskConical,
+  RotateCcw,
+} from 'lucide-react';
+import { useUIStore } from '../../../stores/useUIStore';
+import { useDataStore } from '../../../stores/useDataStore';
+import { ProductsTab } from './ProductsTab';
+import { MachinesTab } from './MachinesTab';
+import styles from './DataOverlay.module.css';
+
+export function DataOverlay() {
+  const isDataOverlayOpen = useUIStore((s) => s.isDataOverlayOpen);
+
+  if (!isDataOverlayOpen) return null;
+
+  return <DataOverlayModal />;
+}
+
+function DataOverlayModal() {
+  const setDataOverlayOpen = useUIStore((s) => s.setDataOverlayOpen);
+  const [activeMainTab, setActiveMainTab] = useState<'editing' | 'comparing'>('editing');
+  const [activeEditTab, setActiveEditTab] = useState<
+    'products' | 'machines' | 'recipes' | 'researches'
+  >('products');
+
+  // Zustand Store integrations
+  const pendingEdits = useDataStore((s) => s.pendingEdits);
+  const discardEdits = useDataStore((s) => s.discardEdits);
+  const saveEdits = useDataStore((s) => s.saveEdits);
+  const restoreDefaults = useDataStore((s) => s.restoreDefaults);
+
+  // Check for unsaved changes across all categories
+  const hasUnsavedEdits =
+    Object.keys(pendingEdits.products).length > 0 ||
+    Object.keys(pendingEdits.machines).length > 0 ||
+    Object.keys(pendingEdits.recipes).length > 0 ||
+    Object.keys(pendingEdits.researches).length > 0;
+
+  const handleRestoreDefaults = async () => {
+    const confirmed = await useUIStore.getState().confirm({
+      title: 'Restore Database Defaults',
+      message:
+        'Are you sure you want to revert all custom database overrides back to baseline defaults? This will erase all added, edited, or deleted entries permanently.',
+      confirmLabel: 'Restore Baseline',
+      cancelLabel: 'Keep Custom Edits',
+      intent: 'error',
+    });
+    if (confirmed) {
+      await restoreDefaults();
+    }
+  };
+
+  return createPortal(
+    <div className={styles['data-overlay']} onClick={() => setDataOverlayOpen(false)}>
+      <div className={styles['data-modal']} onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className={styles['data-header']}>
+          <div className={styles['data-title']}>
+            <Database size={18} />
+            <span>Data Manager</span>
+          </div>
+          <button className={styles['data-close']} onClick={() => setDataOverlayOpen(false)}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Main Tabs */}
+        <div className={styles['data-tabs-main']}>
+          <button
+            className={`${styles['tab-btn-main']} ${
+              activeMainTab === 'editing' ? styles['is-active'] : ''
+            }`}
+            onClick={() => setActiveMainTab('editing')}
+          >
+            <Edit3 size={14} />
+            <span>EDITING</span>
+          </button>
+          <button
+            className={`${styles['tab-btn-main']} ${
+              activeMainTab === 'comparing' ? styles['is-active'] : ''
+            }`}
+            onClick={() => setActiveMainTab('comparing')}
+          >
+            <GitCompare size={14} />
+            <span>COMPARING</span>
+          </button>
+        </div>
+
+        {/* Content Area */}
+        <div className={styles['data-content']}>
+          {activeMainTab === 'comparing' ? (
+            <div className={styles['empty-state']}>
+              <GitCompare size={36} className={styles['empty-icon']} />
+              <div className={styles['empty-title']}>Comparison Module</div>
+              <div className={styles['empty-desc']}>
+                Compare system state and custom dataset. Features coming soon.
+              </div>
+            </div>
+          ) : (
+            <div className={styles['edit-container']}>
+              {/* Sub-tabs for Editing */}
+              <div className={styles['data-tabs-sub']}>
+                <button
+                  className={`${styles['tab-btn-sub']} ${
+                    activeEditTab === 'products' ? styles['is-active'] : ''
+                  }`}
+                  onClick={() => setActiveEditTab('products')}
+                >
+                  <Package size={13} />
+                  <span>PRODUCTS</span>
+                </button>
+                <button
+                  className={`${styles['tab-btn-sub']} ${
+                    activeEditTab === 'machines' ? styles['is-active'] : ''
+                  }`}
+                  onClick={() => setActiveEditTab('machines')}
+                >
+                  <Cpu size={13} />
+                  <span>MACHINES</span>
+                </button>
+                <button
+                  className={`${styles['tab-btn-sub']} ${
+                    activeEditTab === 'recipes' ? styles['is-active'] : ''
+                  }`}
+                  onClick={() => setActiveEditTab('recipes')}
+                >
+                  <ClipboardList size={13} />
+                  <span>RECIPES</span>
+                </button>
+                <button
+                  className={`${styles['tab-btn-sub']} ${
+                    activeEditTab === 'researches' ? styles['is-active'] : ''
+                  }`}
+                  onClick={() => setActiveEditTab('researches')}
+                >
+                  <FlaskConical size={13} />
+                  <span>RESEARCHES</span>
+                </button>
+              </div>
+
+              {/* Sub-tab Content Area */}
+              <div className={styles['sub-tab-content']}>
+                {activeEditTab === 'products' && <ProductsTab />}
+
+                {activeEditTab === 'machines' && <MachinesTab />}
+                {activeEditTab === 'recipes' && (
+                  <div className={styles['empty-state']}>
+                    <ClipboardList size={32} className={styles['empty-icon']} />
+                    <div className={styles['empty-title']}>Edit Recipes</div>
+                    <div className={styles['empty-desc']}>
+                      Custom recipe definitions and manufacturing processes. Editor interface coming
+                      soon.
+                    </div>
+                  </div>
+                )}
+                {activeEditTab === 'researches' && (
+                  <div className={styles['empty-state']}>
+                    <FlaskConical size={32} className={styles['empty-icon']} />
+                    <div className={styles['empty-title']}>Edit Researches</div>
+                    <div className={styles['empty-desc']}>
+                      Custom research tree and progression configuration. Editor interface coming
+                      soon.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className={styles['data-footer']}>
+          <div className={styles['footer-left']}>
+            <button
+              className={styles['btn-restore']}
+              onClick={handleRestoreDefaults}
+              title="Reset all database overrides to static baseline defaults"
+            >
+              <RotateCcw size={14} />
+              <span>Restore Defaults</span>
+            </button>
+          </div>
+          <div className={styles['footer-right']}>
+            {hasUnsavedEdits && (
+              <span className={styles['unsaved-label']}>[ UNSAVED DATA EDITS ]</span>
+            )}
+            <button
+              className={`${styles['btn-discard']} ${
+                !hasUnsavedEdits ? styles['is-disabled'] : ''
+              }`}
+              onClick={() => {
+                if (hasUnsavedEdits) discardEdits();
+              }}
+              disabled={!hasUnsavedEdits}
+            >
+              Discard
+            </button>
+            <button
+              className={`${styles['btn-save']} ${
+                !hasUnsavedEdits ? styles['is-disabled'] : ''
+              }`}
+              onClick={async () => {
+                if (hasUnsavedEdits) {
+                  await saveEdits();
+                }
+              }}
+              disabled={!hasUnsavedEdits}
+            >
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}

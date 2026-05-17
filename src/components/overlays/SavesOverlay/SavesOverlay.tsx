@@ -59,16 +59,9 @@ function SavesOverlayModal() {
   const handleExportJson = useSavesOverlayStore((s) => s.handleExportJson);
   const handleExportPng = useSavesOverlayStore((s) => s.handleExportPng);
 
-
   return createPortal(
-    <div
-      className={styles['saves-overlay']}
-      onClick={() => setSavesOverlayOpen(false)}
-    >
-      <div
-        className={styles['saves-modal']}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className={styles['saves-overlay']} onClick={() => setSavesOverlayOpen(false)}>
+      <div className={styles['saves-modal']} onClick={(e) => e.stopPropagation()}>
         <div className={styles['saves-header']}>
           <div className={styles['saves-title']} id="saves-dialog-title">
             <SaveIcon size={18} />
@@ -93,16 +86,11 @@ function SavesOverlayModal() {
                 <Upload size={18} />
               )}
             </button>
-            <button
-              className={styles['saves-close']}
-              onClick={() => setSavesOverlayOpen(false)}
-            >
+            <button className={styles['saves-close']} onClick={() => setSavesOverlayOpen(false)}>
               <X size={18} />
             </button>
           </div>
         </div>
-
-
 
         <div className={styles['saves-toolbar']}>
           <input

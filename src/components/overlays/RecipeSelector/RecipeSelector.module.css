@@ -58,7 +58,6 @@
   border-radius: 6px 6px 0 0;
 }
 
-
 .recipe-selector-tab.is-active {
   z-index: 2;
   color: var(--theme-color-text-primary);
@@ -195,7 +194,6 @@
   background: var(--theme-color-border-light);
   border-radius: 3px;
 }
-
 
 .recipe-selector-table {
   width: 100%;
@@ -840,4 +838,9 @@
 .cell-item.text-center,
 .header-cell.text-center {
   justify-content: center;
+}
+
+.recipe-selector-table-viewport {
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable !important;
 }

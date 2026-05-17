@@ -141,10 +141,7 @@ export function ControlsTray() {
 
   return (
     <div className={styles['controls-tray-container']}>
-      <button 
-        className={styles['controls-tray-bar']} 
-        onClick={toggleMinimized}
-      >
+      <button className={styles['controls-tray-bar']} onClick={toggleMinimized}>
         <span className={styles['controls-tray-bar-text']}>
           {isMinimized ? (
             <>

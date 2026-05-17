@@ -12,6 +12,7 @@ import styles from './FlowCanvas.module.css';
 
 const FallbackRecipeSelector: React.ComponentType<Record<string, never>> = () => null;
 const FallbackSavesOverlay: React.ComponentType<Record<string, never>> = () => null;
+const FallbackDataOverlay: React.ComponentType<Record<string, never>> = () => null;
 
 const LazyRecipeSelector = React.lazy(
   () =>
@@ -43,10 +44,24 @@ const LazySavesOverlay = React.lazy(
       }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
 );
 
+const LazyDataOverlay = React.lazy(
+  () =>
+    import('../overlays/DataOverlay/DataOverlay')
+      .then((m) => {
+        prefetchCache.DataOverlay = m.DataOverlay;
+        return { default: m.DataOverlay };
+      })
+      .catch((err) => {
+        console.warn('DataOverlay chunk load failed.', err);
+        return { default: FallbackDataOverlay };
+      }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
+);
+
 export function FlowCanvas() {
   const isDeleteMode = useUIStore((s) => getEffectiveToggleId(s) === 'delete_mode');
   const isRecipeSelectorOpen = useUIStore((s) => s.isRecipeSelectorOpen);
   const isSavesOverlayOpen = useUIStore((s) => s.isSavesOverlayOpen);
+  const isDataOverlayOpen = useUIStore((s) => s.isDataOverlayOpen);
   const isTransformingStore = useUIStore((s) => s.isTransforming);
   const zoomLevel = useUIStore((s) => s.zoomLevel);
   const isExporting = useUIStore((s) => s.isExporting);
@@ -84,6 +99,13 @@ export function FlowCanvas() {
           .catch((err) => {
             console.warn('Failed to prefetch SavesOverlay chunk on idle:', err);
           }),
+        import('../overlays/DataOverlay/DataOverlay')
+          .then((m) => {
+            prefetchCache.DataOverlay = m.DataOverlay;
+          })
+          .catch((err) => {
+            console.warn('Failed to prefetch DataOverlay chunk on idle:', err);
+          }),
       ]);
     };
 
@@ -104,11 +126,15 @@ export function FlowCanvas() {
 
   const RecipeSelector = prefetchCache.RecipeSelector;
   const SavesOverlay = prefetchCache.SavesOverlay;
+  const DataOverlay = prefetchCache.DataOverlay;
 
   if (!isAutosaveLoaded) {
     return (
       <div className={styles['canvas-container']}>
-        <LoadingScreen title="INDUSTRIALIST CALCULATOR" subtitle="Restoring previous session layout..." />
+        <LoadingScreen
+          title="INDUSTRIALIST CALCULATOR"
+          subtitle="Restoring previous session layout..."
+        />
       </div>
     );
   }
@@ -145,11 +171,19 @@ export function FlowCanvas() {
           React.createElement(SavesOverlay)
         ) : (
           <Suspense
-            fallback={
-              <LoadingScreen title="SAVE MANAGER" subtitle="Loading storage database..." />
-            }
+            fallback={<LoadingScreen title="SAVE MANAGER" subtitle="Loading storage database..." />}
           >
             <LazySavesOverlay />
+          </Suspense>
+        ))}
+      {isDataOverlayOpen &&
+        (DataOverlay ? (
+          React.createElement(DataOverlay)
+        ) : (
+          <Suspense
+            fallback={<LoadingScreen title="DATA MANAGER" subtitle="Loading data editor..." />}
+          >
+            <LazyDataOverlay />
           </Suspense>
         ))}
     </div>

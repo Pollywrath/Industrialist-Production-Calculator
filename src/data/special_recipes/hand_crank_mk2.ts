@@ -31,4 +31,4 @@ const recipes: Recipe[] = [
   },
 ];
 
-export { CRANKERS , recipes };
+export { CRANKERS, recipes };

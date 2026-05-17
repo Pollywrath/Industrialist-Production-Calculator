@@ -21,6 +21,7 @@ interface UIState {
   temporaryOverrides: CanvasToggleId[];
   isRecipeSelectorOpen: boolean;
   isSavesOverlayOpen: boolean;
+  isDataOverlayOpen: boolean;
   preselectedProductId: string | null;
   preselectedSourceSide: 'input' | 'output' | null;
   preselectedNodeId: string | null;
@@ -43,6 +44,7 @@ interface UIState {
     preselectedHandleIndex?: number | null,
   ) => void;
   setSavesOverlayOpen: (isOpen: boolean) => void;
+  setDataOverlayOpen: (isOpen: boolean) => void;
   isAutosaveLoaded: boolean;
   setAutosaveLoaded: () => void;
   isTransforming: boolean;
@@ -68,16 +70,20 @@ const useUIStore = create<UIState>((set) => ({
   temporaryOverrides: [],
   isRecipeSelectorOpen: false,
   isSavesOverlayOpen: false,
+  isDataOverlayOpen: false,
   preselectedProductId: null,
   preselectedSourceSide: null,
   preselectedNodeId: null,
   preselectedHandleIndex: null,
   rateMode: 'second',
 
-  toggleControlsMinimized: () => set((state) => ({ isControlsMinimized: !state.isControlsMinimized })),
-  toggleOverlaysMinimized: () => set((state) => ({ isOverlaysMinimized: !state.isOverlaysMinimized })),
+  toggleControlsMinimized: () =>
+    set((state) => ({ isControlsMinimized: !state.isControlsMinimized })),
+  toggleOverlaysMinimized: () =>
+    set((state) => ({ isOverlaysMinimized: !state.isOverlaysMinimized })),
   toggleStatsMinimized: () => set((state) => ({ isStatsMinimized: !state.isStatsMinimized })),
-  toggleExtendedMinimized: () => set((state) => ({ isExtendedMinimized: !state.isExtendedMinimized })),
+  toggleExtendedMinimized: () =>
+    set((state) => ({ isExtendedMinimized: !state.isExtendedMinimized })),
   toggleButton: (id) =>
     set((state) => ({
       activeToggleId: state.activeToggleId === id ? null : id,
@@ -117,6 +123,12 @@ const useUIStore = create<UIState>((set) => ({
   setSavesOverlayOpen: (isOpen) =>
     set((state) => ({
       isSavesOverlayOpen: isOpen,
+      activeToggleId: isOpen ? null : state.activeToggleId,
+      temporaryOverrides: isOpen ? [] : state.temporaryOverrides,
+    })),
+  setDataOverlayOpen: (isOpen) =>
+    set((state) => ({
+      isDataOverlayOpen: isOpen,
       activeToggleId: isOpen ? null : state.activeToggleId,
       temporaryOverrides: isOpen ? [] : state.temporaryOverrides,
     })),

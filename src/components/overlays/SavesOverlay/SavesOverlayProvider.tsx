@@ -9,7 +9,11 @@ import { serializeCanvas, deserializeCanvas } from '../../../persistence/transfo
 import { nextSaveId } from '../../../utils/idGenerator';
 import { mergeSaveIntoCanvas } from '../../../utils/graphMerge';
 import { exportCanvasAsPng, exportRecordAsJson } from '../../../utils/canvasExport';
-import { SavesOverlayContext, type SavesOverlayState, type SaveStatus } from './SavesOverlayContext';
+import {
+  SavesOverlayContext,
+  type SavesOverlayState,
+  type SaveStatus,
+} from './SavesOverlayContext';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -23,12 +27,16 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
       subscribeWithSelector<SavesOverlayState>((set, get) => {
         let statusTimer: ReturnType<typeof setTimeout>;
 
-        const setStatusWithTimeout = (status: SaveStatus, pendingId: string | null = null, pendingAction: SavesOverlayState['pendingAction'] = null) => {
+        const setStatusWithTimeout = (
+          status: SaveStatus,
+          pendingId: string | null = null,
+          pendingAction: SavesOverlayState['pendingAction'] = null,
+        ) => {
           clearTimeout(statusTimer);
-          set({ 
-            status, 
+          set({
+            status,
             pendingId: status.type === 'pending' ? pendingId : null,
-            pendingAction: status.type === 'pending' ? pendingAction : null
+            pendingAction: status.type === 'pending' ? pendingAction : null,
           });
           if (status.type === 'success') {
             statusTimer = setTimeout(() => {
@@ -72,7 +80,11 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
             const state = get();
             if (!state.newSaveName.trim()) return;
 
-            setStatusWithTimeout({ type: 'pending', message: 'Writing save file...' }, null, 'create');
+            setStatusWithTimeout(
+              { type: 'pending', message: 'Writing save file...' },
+              null,
+              'create',
+            );
             await delay(200);
             const { nodes, edges } = useFlowStore.getState();
             const data = serializeCanvas(nodes, edges);
@@ -99,7 +111,11 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
 
           handleOverwriteLoad: async (record) => {
             try {
-              setStatusWithTimeout({ type: 'pending', message: 'Loading save...' }, record.id, 'load');
+              setStatusWithTimeout(
+                { type: 'pending', message: 'Loading save...' },
+                record.id,
+                'load',
+              );
               await delay(200);
               const { nodes, edges } = deserializeCanvas(record.data);
               await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
@@ -115,10 +131,18 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
 
           handleMergeLoad: async (record) => {
             try {
-              setStatusWithTimeout({ type: 'pending', message: 'Merging save...' }, record.id, 'merge');
+              setStatusWithTimeout(
+                { type: 'pending', message: 'Merging save...' },
+                record.id,
+                'merge',
+              );
               await delay(200);
               const { nodes: loadedNodes, edges: loadedEdges } = deserializeCanvas(record.data);
-              const { nodes: currentNodes, edges: currentEdges, setNodesAndEdges } = useFlowStore.getState();
+              const {
+                nodes: currentNodes,
+                edges: currentEdges,
+                setNodesAndEdges,
+              } = useFlowStore.getState();
 
               const { nodes, edges } = mergeSaveIntoCanvas(
                 loadedNodes,
@@ -147,7 +171,11 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
             });
             if (!confirmed) return;
 
-            setStatusWithTimeout({ type: 'pending', message: 'Overwriting save file...' }, record.id, 'save');
+            setStatusWithTimeout(
+              { type: 'pending', message: 'Overwriting save file...' },
+              record.id,
+              'save',
+            );
             await delay(200);
             const { nodes, edges } = useFlowStore.getState();
             const data = serializeCanvas(nodes, edges);
@@ -171,7 +199,7 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
           },
 
           handleDeleteSave: async (id) => {
-            const record = get().saves.find(s => s.id === id);
+            const record = get().saves.find((s) => s.id === id);
             const name = record?.name || 'this save';
 
             const confirmed = await useUIStore.getState().confirm({
@@ -212,7 +240,7 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
                 set((s) => ({
                   editingId: null,
                   saves: s.saves.map((save) =>
-                    save.id === id ? { ...save, name: newName } : save
+                    save.id === id ? { ...save, name: newName } : save,
                   ),
                 }));
                 setStatusWithTimeout({ type: 'success', message: 'Save renamed successfully!' });
@@ -236,7 +264,11 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
             const file = e.target.files?.[0];
             if (!file) return;
 
-            setStatusWithTimeout({ type: 'pending', message: 'Importing JSON save file...' }, null, 'import');
+            setStatusWithTimeout(
+              { type: 'pending', message: 'Importing JSON save file...' },
+              null,
+              'import',
+            );
             await delay(200);
 
             const reader = new FileReader();
@@ -246,13 +278,19 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
                 if (parsed && parsed.data) {
                   const record: SaveRecord = {
                     id: nextSaveId(),
-                    name: typeof parsed.name === 'string' ? `${parsed.name} (Imported)` : 'Imported Save',
+                    name:
+                      typeof parsed.name === 'string'
+                        ? `${parsed.name} (Imported)`
+                        : 'Imported Save',
                     timestamp: Date.now(),
                     data: parsed.data,
                   };
                   const success = await saveSave(record);
                   if (success) {
-                    setStatusWithTimeout({ type: 'success', message: 'Save imported successfully!' });
+                    setStatusWithTimeout({
+                      type: 'success',
+                      message: 'Save imported successfully!',
+                    });
                     await get().refreshSaves();
                   } else {
                     setStatusWithTimeout({
@@ -306,7 +344,11 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
               return;
             }
 
-            setStatusWithTimeout({ type: 'pending', message: 'Rendering PNG snapshot...' }, null, 'export_png');
+            setStatusWithTimeout(
+              { type: 'pending', message: 'Rendering PNG snapshot...' },
+              null,
+              'export_png',
+            );
             await delay(200);
             try {
               await exportCanvasAsPng(nodes);
@@ -335,4 +377,3 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
 
   return <SavesOverlayContext.Provider value={store}>{children}</SavesOverlayContext.Provider>;
 }
-

@@ -137,4 +137,4 @@ const recipes: Recipe[] = [
   },
 ];
 
-export { FUEL_TYPE, fuel , recipes };
+export { FUEL_TYPE, fuel, recipes };

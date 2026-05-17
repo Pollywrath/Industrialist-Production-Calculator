@@ -176,7 +176,9 @@ export function RecipeNodeIO({
     const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
     const entry = list[ref.index];
     if (entry) {
-      useUIStore.getState().setRecipeSelectorOpen(true, entry.product_id, ref.side, nodeId, ref.index);
+      useUIStore
+        .getState()
+        .setRecipeSelectorOpen(true, entry.product_id, ref.side, nodeId, ref.index);
     }
   };
 

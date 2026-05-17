@@ -21,12 +21,5 @@ export function RecipeEdge({
     targetPosition,
   });
 
-  return (
-    <BaseEdge
-      id={id}
-      path={edgePath}
-      markerEnd={markerEnd}
-      style={EDGE_STYLE}
-    />
-  );
+  return <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={EDGE_STYLE} />;
 }

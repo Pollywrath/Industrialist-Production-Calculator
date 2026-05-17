@@ -163,10 +163,7 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
             {searchQuery && (
-              <button
-                className={styles['recipe-selector-search-clear']}
-                onClick={clearSearch}
-              >
+              <button className={styles['recipe-selector-search-clear']} onClick={clearSearch}>
                 <X size={12} />
               </button>
             )}
@@ -198,10 +195,7 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
               {searchQuery && (
-                <button
-                  className={styles['recipe-selector-search-clear']}
-                  onClick={clearSearch}
-                >
+                <button className={styles['recipe-selector-search-clear']} onClick={clearSearch}>
                   <X size={12} />
                 </button>
               )}

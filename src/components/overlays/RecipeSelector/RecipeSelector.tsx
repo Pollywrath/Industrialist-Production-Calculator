@@ -84,7 +84,6 @@ function RecipeSelectorModal() {
   const stage = useRecipeSelectorStore((s) => s.stage);
   const activeTab = useRecipeSelectorStore((s) => s.activeTab);
 
-
   useEffect(() => {
     if (inputRef.current && stage === 'select') {
       inputRef.current.focus();
@@ -133,14 +132,8 @@ function RecipeSelectorModal() {
   };
 
   return createPortal(
-    <div 
-      className={styles['recipe-selector-overlay']} 
-      onClick={() => setRecipeSelectorOpen(false)}
-    >
-      <div 
-        className={styles['recipe-selector-modal']} 
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className={styles['recipe-selector-overlay']} onClick={() => setRecipeSelectorOpen(false)}>
+      <div className={styles['recipe-selector-modal']} onClick={(e) => e.stopPropagation()}>
         {stage === 'select' ? (
           <SelectionStage inputRef={inputRef} />
         ) : (

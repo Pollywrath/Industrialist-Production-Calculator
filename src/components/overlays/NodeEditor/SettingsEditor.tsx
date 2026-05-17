@@ -13,7 +13,9 @@ export function SettingsEditor({ recipe }: SettingsEditorProps) {
   const updateSetting = useNodeEditorStore((s) => s.updateSetting);
 
   if (!sr) {
-    return <div className={styles['node-editor-empty']}>No settings available for this recipe.</div>;
+    return (
+      <div className={styles['node-editor-empty']}>No settings available for this recipe.</div>
+    );
   }
 
   return (

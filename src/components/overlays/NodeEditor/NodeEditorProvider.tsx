@@ -12,7 +12,6 @@ import {
 import { getSpecialRecipe } from '../../../data/registry';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 
-
 interface NodeEditorProviderProps {
   children: React.ReactNode;
   recipe: Recipe;
@@ -52,16 +51,17 @@ export function NodeEditorProvider({
             },
             {} as Record<string, unknown>,
           );
-
         })(),
 
       getCurrentRecipe: () => {
         const { settings } = get();
         const sr = getSpecialRecipe(recipe.id);
-        const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+        const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
+          string,
+          unknown
+        >;
         return sr ? sr.compute(settings, globalSettings) : recipe;
       },
-
 
       setInputs: (inputs) => set({ inputs }),
       setOutputs: (outputs) => set({ outputs }),
@@ -76,7 +76,10 @@ export function NodeEditorProvider({
         const { settings, inputs, outputs, machineCount } = get();
         const newSettings = { ...settings, [key]: value };
         const sr = getSpecialRecipe(recipe.id);
-        const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+        const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
+          string,
+          unknown
+        >;
         const currentRecipe = sr ? sr.compute(newSettings, globalSettings) : recipe;
 
         set({
@@ -84,7 +87,6 @@ export function NodeEditorProvider({
           qtyStrMap: computeQuantityMap(currentRecipe, inputs, outputs, machineCount, multiplier),
         });
       },
-
 
       handleMove: (side, listIdx, direction) => {
         const { inputs, outputs } = get();
@@ -125,7 +127,6 @@ export function NodeEditorProvider({
                 key,
                 rawVal,
               ),
-
             });
           } else {
             set((state) => ({
@@ -136,8 +137,15 @@ export function NodeEditorProvider({
           set({
             machineCount: 0,
             machineCountStr: '',
-            qtyStrMap: computeQuantityMap(get().getCurrentRecipe(), inputs, outputs, 0, multiplier, key, rawVal),
-
+            qtyStrMap: computeQuantityMap(
+              get().getCurrentRecipe(),
+              inputs,
+              outputs,
+              0,
+              multiplier,
+              key,
+              rawVal,
+            ),
           });
         }
       },
@@ -161,14 +169,12 @@ export function NodeEditorProvider({
               key,
               toPlainString(cleaned, 8),
             ),
-
           });
         } else {
           set({
             machineCount: 0,
             machineCountStr: '0',
             qtyStrMap: computeQuantityMap(get().getCurrentRecipe(), inputs, outputs, 0, multiplier),
-
           });
         }
       },
@@ -184,14 +190,18 @@ export function NodeEditorProvider({
           const cleaned = cleanMachineCount(parsed);
           set({
             machineCount: cleaned,
-            qtyStrMap: computeQuantityMap(get().getCurrentRecipe(), inputs, outputs, cleaned, multiplier),
-
+            qtyStrMap: computeQuantityMap(
+              get().getCurrentRecipe(),
+              inputs,
+              outputs,
+              cleaned,
+              multiplier,
+            ),
           });
         } else {
           set({
             machineCount: 0,
             qtyStrMap: computeQuantityMap(get().getCurrentRecipe(), inputs, outputs, 0, multiplier),
-
           });
         }
       },
@@ -204,7 +214,13 @@ export function NodeEditorProvider({
           set({
             machineCount: cleaned,
             machineCountStr: toPlainString(cleaned, 12),
-            qtyStrMap: computeQuantityMap(get().getCurrentRecipe(), inputs, outputs, cleaned, multiplier),
+            qtyStrMap: computeQuantityMap(
+              get().getCurrentRecipe(),
+              inputs,
+              outputs,
+              cleaned,
+              multiplier,
+            ),
           });
         } else {
           set({
@@ -212,7 +228,6 @@ export function NodeEditorProvider({
             machineCountStr: '0',
             qtyStrMap: computeQuantityMap(get().getCurrentRecipe(), inputs, outputs, 0, multiplier),
           });
-
         }
       },
 
@@ -230,7 +245,6 @@ export function NodeEditorProvider({
             machineCount,
             multiplier,
           ),
-
         });
       },
     })),
@@ -238,5 +252,3 @@ export function NodeEditorProvider({
 
   return <NodeEditorContext.Provider value={store}>{children}</NodeEditorContext.Provider>;
 }
-
-

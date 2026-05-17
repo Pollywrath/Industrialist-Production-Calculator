@@ -20,12 +20,16 @@ const BUTTONS: OverlayButtonConfig[] = [
 export function OverlaysTray() {
   const isSavesOverlayOpen = useUIStore((s) => s.isSavesOverlayOpen);
   const setSavesOverlayOpen = useUIStore((s) => s.setSavesOverlayOpen);
+  const isDataOverlayOpen = useUIStore((s) => s.isDataOverlayOpen);
+  const setDataOverlayOpen = useUIStore((s) => s.setDataOverlayOpen);
   const isOverlaysMinimized = useUIStore((s) => s.isOverlaysMinimized);
   const toggleOverlaysMinimized = useUIStore((s) => s.toggleOverlaysMinimized);
 
   const handleClick = (id: 'saves' | 'data' | 'theme' | 'help') => {
     if (id === 'saves') {
       setSavesOverlayOpen(!isSavesOverlayOpen);
+    } else if (id === 'data') {
+      setDataOverlayOpen(!isDataOverlayOpen);
     }
   };
 
@@ -34,8 +38,10 @@ export function OverlaysTray() {
       {!isOverlaysMinimized && (
         <div className={styles['overlays-tray-grid']}>
           {BUTTONS.map((btn) => {
-            const isDisabled = btn.id !== 'saves';
-            const isActive = btn.id === 'saves' && isSavesOverlayOpen;
+            const isDisabled = btn.id !== 'saves' && btn.id !== 'data';
+            const isActive =
+              (btn.id === 'saves' && isSavesOverlayOpen) ||
+              (btn.id === 'data' && isDataOverlayOpen);
             const Icon = btn.Icon;
 
             return (
@@ -53,10 +59,7 @@ export function OverlaysTray() {
         </div>
       )}
 
-      <button 
-        className={styles['overlays-tray-bar']} 
-        onClick={toggleOverlaysMinimized}
-      >
+      <button className={styles['overlays-tray-bar']} onClick={toggleOverlaysMinimized}>
         <span className={styles['overlays-tray-bar-text']}>
           {isOverlaysMinimized ? (
             <>

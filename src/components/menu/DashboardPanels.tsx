@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
-import { 
-  ChevronUp, 
-  ChevronDown, 
+import {
+  ChevronUp,
+  ChevronDown,
   ChevronRight,
-  Zap, 
-  TrendingUp, 
-  AlertTriangle, 
-  Coins, 
-  Activity 
+  Zap,
+  TrendingUp,
+  AlertTriangle,
+  Coins,
+  Activity,
 } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
 import { useFlowStore } from '../../stores/useFlowStore';
@@ -16,12 +16,12 @@ import { useFlowResultStore } from '../../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import { getRecipe, getMachine, getProduct, getProductName } from '../../data/lookup';
 import { getSpecialRecipe } from '../../data/registry';
-import { 
-  formatCurrency, 
-  formatPower, 
-  formatPollution, 
-  formatQuantity, 
-  formatMachineCount 
+import {
+  formatCurrency,
+  formatPower,
+  formatPollution,
+  formatQuantity,
+  formatMachineCount,
 } from '../../utils/unitFormatting';
 import { VirtualList } from '../shared/VirtualList';
 import styles from './DashboardPanels.module.css';
@@ -59,14 +59,14 @@ export function DashboardPanels() {
   const isExtendedMinimized = useUIStore((s) => s.isExtendedMinimized);
   const toggleStatsMinimized = useUIStore((s) => s.toggleStatsMinimized);
   const toggleExtendedMinimized = useUIStore((s) => s.toggleExtendedMinimized);
-  
+
   const rateMode = useUIStore((s) => s.rateMode);
   const nodes = useFlowStore((s) => s.nodes);
   const results = useFlowResultStore((s) => s.results);
-  
+
   const globalPollution = useGlobalSettingsStore((s) => s.settings.global_pollution);
   const setGlobalPollution = useGlobalSettingsStore((s) => s.setGlobalPollution);
-  
+
   const [prevGlobalPollution, setPrevGlobalPollution] = useState(globalPollution);
   const [pollutionInput, setPollutionInput] = useState(String(globalPollution));
 
@@ -124,7 +124,10 @@ export function DashboardPanels() {
     // Resolve special recipe formulas dynamically
     const sr = getSpecialRecipe(recipe.id);
     if (sr && node.data.settings) {
-      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
+        string,
+        unknown
+      >;
       recipe = sr.compute(node.data.settings, globalSettings);
     }
 
@@ -135,7 +138,7 @@ export function DashboardPanels() {
     if (machine) {
       // Rounded machine counts for machine cost
       totalMachineCost += machine.cost * roundedCount;
-      
+
       // Calculate profit from Depot sales (scaled by temporal rateModes)
       if (machine.subcategory === 'Depot') {
         const nodeFlowResult = results.get(node.id);
@@ -207,7 +210,10 @@ export function DashboardPanels() {
 
     const sr = getSpecialRecipe(recipe.id);
     if (sr && node.data.settings) {
-      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
+        string,
+        unknown
+      >;
       recipe = sr.compute(node.data.settings, globalSettings);
     }
 
@@ -350,67 +356,58 @@ export function DashboardPanels() {
     <div className={styles['dashboard-container']}>
       {/* ─── 1. STATS PANEL ─────────────────────────────────────────── */}
       <div className={styles['panel']}>
-        <button 
-          className={styles['panel-header']} 
-          onClick={toggleStatsMinimized}
-        >
+        <button className={styles['panel-header']} onClick={toggleStatsMinimized}>
           <span className={styles['panel-header-title']}>
             <Activity className={styles['panel-header-icon']} size={12} />
             Production Stats
           </span>
           {isStatsMinimized ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
         </button>
-        
+
         {!isStatsMinimized && (
           <div className={styles['panel-body']}>
             <div className={styles['stat-row']}>
               <span className={styles['stat-label']}>
-                <Zap size={10} /> Consuming
+                <Zap size={10} /> Power Consumption
               </span>
-              <span className={styles['stat-value']}>
-                {formatPower(totalConsumption)}
-              </span>
+              <span className={styles['stat-value']}>{formatPower(totalConsumption)}</span>
             </div>
-            
+
             <div className={styles['stat-row']}>
               <span className={styles['stat-label']}>
-                <Zap size={10} style={{ color: 'var(--theme-color-success)' }} /> Producing
+                <Zap size={10} style={{ color: 'var(--theme-color-success)' }} /> Power Production
               </span>
-              <span className={styles['stat-value']}>
-                {formatPower(totalProduction)}
-              </span>
+              <span className={styles['stat-value']}>{formatPower(totalProduction)}</span>
             </div>
 
             <div className={styles['stat-row']}>
               <span className={styles['stat-label']}>
                 <Activity size={10} /> Minimum Model Count
               </span>
-              <span className={styles['stat-value']}>
-                {formatMachineCount(totalModelCount)}
-              </span>
+              <span className={styles['stat-value']}>{formatMachineCount(totalModelCount)}</span>
             </div>
 
             <div className={styles['stat-row']}>
               <span className={styles['stat-label']}>
                 <Coins size={10} /> Machine Cost
               </span>
-              <span className={styles['stat-value']}>
-                {formatCurrency(totalMachineCost)}
-              </span>
+              <span className={styles['stat-value']}>{formatCurrency(totalMachineCost)}</span>
             </div>
 
             <div className={styles['stat-row']}>
               <span className={styles['stat-label']}>
                 <TrendingUp size={10} /> Profit
               </span>
-              <span className={`${styles['stat-value']} ${
-                totalProfit > 0.0001 
-                  ? styles['success'] 
-                  : totalProfit < -0.0001 
-                    ? styles['error'] 
-                    : styles['neutral']
-              }`}>
-                {formatCurrency(totalProfit)}{getProfitSuffix()}
+              <span
+                className={`${styles['stat-value']} ${totalProfit > 0.0001
+                    ? styles['success']
+                    : totalProfit < -0.0001
+                      ? styles['error']
+                      : styles['neutral']
+                  }`}
+              >
+                {formatCurrency(totalProfit)}
+                {getProfitSuffix()}
               </span>
             </div>
 
@@ -418,13 +415,14 @@ export function DashboardPanels() {
               <span className={styles['stat-label']}>
                 <AlertTriangle size={10} /> Net Pollution
               </span>
-              <span className={`${styles['stat-value']} ${
-                netPollution < -0.0001 
-                  ? styles['success'] 
-                  : netPollution > 0.0001 
-                    ? styles['error'] 
-                    : styles['neutral']
-              }`}>
+              <span
+                className={`${styles['stat-value']} ${netPollution < -0.0001
+                    ? styles['success']
+                    : netPollution > 0.0001
+                      ? styles['error']
+                      : styles['neutral']
+                  }`}
+              >
                 {formatPollution(netPollution)}
               </span>
             </div>
@@ -434,10 +432,7 @@ export function DashboardPanels() {
 
       {/* ─── 2. EXTENDED PANEL ──────────────────────────────────────── */}
       <div className={styles['panel']}>
-        <button 
-          className={styles['panel-header']} 
-          onClick={toggleExtendedMinimized}
-        >
+        <button className={styles['panel-header']} onClick={toggleExtendedMinimized}>
           <span className={styles['panel-header-title']}>
             <AlertTriangle className={styles['panel-header-icon']} size={12} />
             More Stats
@@ -451,7 +446,7 @@ export function DashboardPanels() {
             <div className={styles['global-var-group']}>
               <span className={styles['global-var-label']}>Global Pollution</span>
               <div className={styles['global-var-control']}>
-                <input 
+                <input
                   type="number"
                   className={styles['global-var-input']}
                   value={pollutionInput}
@@ -463,9 +458,7 @@ export function DashboardPanels() {
             </div>
 
             {/* Deficiencies (Shortages) */}
-            <div className={styles['diagnostic-section-title']}>
-              Deficiencies (Shortages)
-            </div>
+            <div className={styles['diagnostic-section-title']}>Deficiencies (Shortages)</div>
             <div className={styles['diagnostic-container']}>
               {flatDeficiencies.length === 0 ? (
                 <div className={styles['empty-message']}>No shortages detected</div>
@@ -476,36 +469,42 @@ export function DashboardPanels() {
                   height={Math.min(flatDeficiencies.length * 28, 140)}
                   getKey={(item) => item.key}
                 >
-                  {(item) => (
+                  {(item) =>
                     item.type === 'header' ? (
-                      <div 
+                      <div
                         className={styles['diagnostic-row-header']}
                         onClick={() => toggleProductExpanded(`def-${item.productId}`)}
                       >
                         <div className={styles['diagnostic-header-left']}>
                           {item.isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                          <span className={styles['diagnostic-product-name']}>{item.productName}</span>
+                          <span className={styles['diagnostic-product-name']}>
+                            {item.productName}
+                          </span>
                         </div>
                         <div className={styles['diagnostic-header-right']}>
                           <span className={`${styles['diagnostic-rate']} ${styles['deficiency']}`}>
-                            -{formatQuantity(item.rate)}{getRateSuffix()}
+                            -{formatQuantity(item.rate)}
+                            {getRateSuffix()}
                           </span>
                         </div>
                       </div>
                     ) : (
-                      <div 
+                      <div
                         className={styles['diagnostic-row-node']}
                         onClick={() => handleNodeClick(item.nodeId)}
                       >
                         <span className={styles['diagnostic-node-indent']}>└─ {item.nodeName}</span>
                         <div className={styles['diagnostic-node-right']}>
-                          <span className={`${styles['diagnostic-rate-sub']} ${styles['deficiency']}`}>
-                            -{formatQuantity(item.rate)}{getRateSuffix()}
+                          <span
+                            className={`${styles['diagnostic-rate-sub']} ${styles['deficiency']}`}
+                          >
+                            -{formatQuantity(item.rate)}
+                            {getRateSuffix()}
                           </span>
                         </div>
                       </div>
                     )
-                  )}
+                  }
                 </VirtualList>
               )}
             </div>
@@ -524,19 +523,22 @@ export function DashboardPanels() {
                   height={Math.min(flatExcesses.length * 28, 140)}
                   getKey={(item) => item.key}
                 >
-                  {(item) => (
+                  {(item) =>
                     item.type === 'header' ? (
-                      <div 
+                      <div
                         className={styles['diagnostic-row-header']}
                         onClick={() => toggleProductExpanded(`exc-${item.productId}`)}
                       >
                         <div className={styles['diagnostic-header-left']}>
                           {item.isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                          <span className={styles['diagnostic-product-name']}>{item.productName}</span>
+                          <span className={styles['diagnostic-product-name']}>
+                            {item.productName}
+                          </span>
                         </div>
                         <div className={styles['diagnostic-header-right']}>
                           <span className={`${styles['diagnostic-rate']} ${styles['excess']}`}>
-                            +{formatQuantity(item.rate)}{getRateSuffix()}
+                            +{formatQuantity(item.rate)}
+                            {getRateSuffix()}
                           </span>
                           {item.voidable && (
                             <span className={`${styles['badge']} ${styles['voided']}`}>Voided</span>
@@ -544,14 +546,15 @@ export function DashboardPanels() {
                         </div>
                       </div>
                     ) : (
-                      <div 
+                      <div
                         className={styles['diagnostic-row-node']}
                         onClick={() => handleNodeClick(item.nodeId)}
                       >
                         <span className={styles['diagnostic-node-indent']}>└─ {item.nodeName}</span>
                         <div className={styles['diagnostic-node-right']}>
                           <span className={`${styles['diagnostic-rate-sub']} ${styles['excess']}`}>
-                            +{formatQuantity(item.rate)}{getRateSuffix()}
+                            +{formatQuantity(item.rate)}
+                            {getRateSuffix()}
                           </span>
                           {item.voidable && (
                             <span className={`${styles['badge']} ${styles['voided']}`}>Voided</span>
@@ -559,11 +562,10 @@ export function DashboardPanels() {
                         </div>
                       </div>
                     )
-                  )}
+                  }
                 </VirtualList>
               )}
             </div>
-
           </div>
         )}
       </div>

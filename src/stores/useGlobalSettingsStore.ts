@@ -17,12 +17,12 @@ export const useGlobalSettingsStore = create<GlobalSettingsState>((set) => ({
   setGlobalPollution: (value: number) =>
     set((state) => {
       const nextSettings = { ...state.settings, global_pollution: value };
-      
+
       // Force graph re-solver calculation by bumping solverVersion
       useFlowStore.setState((flowState) => ({
         solverVersion: flowState.solverVersion + 1,
       }));
-      
+
       return { settings: nextSettings };
     }),
 }));
