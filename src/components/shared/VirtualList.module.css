@@ -1,0 +1,19 @@
+.container {
+  overflow-y: auto;
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.inner {
+  width: 100%;
+  position: relative;
+}
+
+.item {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+}

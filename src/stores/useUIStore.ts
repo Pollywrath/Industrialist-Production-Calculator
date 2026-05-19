@@ -49,10 +49,14 @@ interface UIState {
   setAutosaveLoaded: () => void;
   isTransforming: boolean;
   setIsTransforming: (isTransforming: boolean) => void;
-  zoomLevel: number;
-  setZoomLevel: (zoom: number) => void;
+  isZoomedOut: boolean;
+  setIsZoomedOut: (isZoomedOut: boolean) => void;
   isExporting: boolean;
   setIsExporting: (isExporting: boolean) => void;
+  confirmQueue: {
+    options: ConfirmOptions;
+    resolve: (confirmed: boolean) => void;
+  }[];
   confirmDialog: {
     options: ConfirmOptions;
     resolve: (confirmed: boolean) => void;
@@ -136,21 +140,27 @@ const useUIStore = create<UIState>((set) => ({
   setAutosaveLoaded: () => set({ isAutosaveLoaded: true }),
   isTransforming: false,
   setIsTransforming: (isTransforming) => set({ isTransforming }),
-  zoomLevel: 1,
-  setZoomLevel: (zoomLevel) => set({ zoomLevel }),
+  isZoomedOut: false,
+  setIsZoomedOut: (isZoomedOut) => set({ isZoomedOut }),
   isExporting: false,
   setIsExporting: (isExporting) => set({ isExporting }),
+  confirmQueue: [],
   confirmDialog: null,
   confirm: (options) => {
     return new Promise((resolve) => {
-      set({
-        confirmDialog: {
+      set((state) => {
+        const newRequest = {
           options,
-          resolve: (confirmed) => {
-            set({ confirmDialog: null });
+          resolve: (confirmed: boolean) => {
             resolve(confirmed);
           },
-        },
+        };
+        const nextQueue = [...state.confirmQueue, newRequest];
+        const nextActive = state.confirmDialog ? state.confirmDialog : newRequest;
+        return {
+          confirmQueue: nextQueue,
+          confirmDialog: nextActive,
+        };
       });
     });
   },
@@ -159,7 +169,12 @@ const useUIStore = create<UIState>((set) => ({
       if (state.confirmDialog) {
         state.confirmDialog.resolve(confirmed);
       }
-      return { confirmDialog: null };
+      const nextQueue = state.confirmQueue.filter((req) => req !== state.confirmDialog);
+      const nextActive = nextQueue.length > 0 ? nextQueue[0] : null;
+      return {
+        confirmQueue: nextQueue,
+        confirmDialog: nextActive,
+      };
     });
   },
 }));

@@ -14,11 +14,10 @@
   font-weight: 400;
 
   font-synthesis: none;
-  line-height: 1.5;
-  color: var(--theme-color-text-secondary, #999999);
+  color: var(--theme-color-text-secondary);
 
   color-scheme: dark;
-  background-color: var(--theme-color-canvas-bg, #0a0a0a);
+  background-color: var(--theme-color-canvas-bg);
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -80,6 +79,25 @@
   --theme-color-border-light-translucent: rgba(255, 255, 255, 0.1);
   --theme-color-btn-bg-translucent: rgba(0, 0, 0, 0.3);
   --theme-color-panel-empty-bg: rgba(42, 42, 53, 0.5);
+
+  --theme-color-warning: #ffaa00;
+  --theme-color-error: #ef4444;
+  --theme-color-error-translucent: rgba(239, 68, 68, 0.1);
+  --theme-color-warning-translucent: rgba(255, 170, 0, 0.1);
+  --theme-color-white: #ffffff;
+  --theme-color-black: #000000;
+  --theme-color-bg-active: #2b2b35;
+  --theme-color-node-selected-border: #ffffff;
+  --theme-color-handle-border: #121214;
+  --theme-color-edge-selected-stroke: #ffffff;
+
+  /* Handle Layout Specifiers */
+  --theme-handle-size: 12px;
+  --theme-handle-position: absolute;
+  --theme-handle-left: 0px;
+  --theme-handle-right: 0px;
+  --theme-handle-transform-left: translate(-50%, -50%);
+  --theme-handle-transform-right: translate(50%, -50%);
 }
 
 body {
@@ -104,12 +122,12 @@ body {
 
 .react-flow .react-flow__node.selected {
   outline: none;
-  border-color: #ffffff;
+  border-color: var(--theme-color-node-selected-border);
   box-shadow: none;
 }
 
 .react-flow .react-flow__handle {
-  border: 1px solid #121214;
+  border: 1px solid var(--theme-color-handle-border);
   box-shadow: none;
 }
 
@@ -119,7 +137,7 @@ body {
 }
 
 .react-flow .react-flow__edge.selected .react-flow__edge-path {
-  stroke: #ffffff;
+  stroke: var(--theme-color-edge-selected-stroke);
 }
 
 .is-delete-mode .react-flow__node {

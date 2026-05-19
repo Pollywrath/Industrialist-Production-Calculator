@@ -180,3 +180,35 @@ export async function clearDataOverrides(): Promise<boolean> {
     return false;
   }
 }
+
+export async function clearCategoryDataOverrides(category: 'products' | 'machines' | 'recipes' | 'researches'): Promise<boolean> {
+  try {
+    const db = await getDB();
+    if (!db) return false;
+    
+    const prefix = category === 'products'
+      ? 'product:'
+      : category === 'machines'
+        ? 'machine:'
+        : category === 'recipes'
+          ? 'recipe:'
+          : 'research:';
+
+    const tx = db.transaction('data_overrides', 'readwrite');
+    const store = tx.objectStore('data_overrides');
+    
+    let cursor = await store.openCursor();
+    while (cursor) {
+      if (cursor.key.startsWith(prefix)) {
+        await cursor.delete();
+      }
+      cursor = await cursor.continue();
+    }
+    
+    await tx.done;
+    return true;
+  } catch (err) {
+    console.warn(`Failed to clear category overrides for ${category} in IndexedDB:`, err);
+    return false;
+  }
+}

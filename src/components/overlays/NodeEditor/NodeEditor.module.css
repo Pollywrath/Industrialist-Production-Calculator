@@ -208,6 +208,16 @@
   white-space: nowrap;
 }
 
+.node-editor-handle-label.is-stale {
+  color: var(--theme-color-text-error);
+  font-style: italic;
+}
+
+.node-editor-quantity-neutral {
+  color: var(--theme-color-text-neutral);
+  font-size: 13px;
+}
+
 .node-editor-quantity-section {
   display: flex;
   gap: 4px;

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import styles from './VirtualList.module.css';
 
 interface VirtualListProps<T> {
   items: T[];
@@ -6,6 +7,7 @@ interface VirtualListProps<T> {
   height: number;
   overscan?: number;
   className?: string;
+  style?: React.CSSProperties;
   getKey: (item: T, index: number) => string | number;
   children: (item: T, index: number) => React.ReactNode;
 }
@@ -16,6 +18,7 @@ export function VirtualList<T>({
   height,
   overscan = 5,
   className = '',
+  style = {},
   getKey,
   children,
 }: VirtualListProps<T>) {
@@ -76,19 +79,14 @@ export function VirtualList<T>({
     const item = items[i];
     if (item !== undefined) {
       const itemStyle: React.CSSProperties = {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
         height: itemHeight,
         transform: `translateY(${i * itemHeight}px)`,
-        boxSizing: 'border-box',
       };
 
       const stableKey = getKey(item, i);
 
       visibleItems.push(
-        <div key={stableKey} style={itemStyle}>
+        <div key={stableKey} className={styles.item} style={itemStyle}>
           {children(item, i)}
         </div>,
       );
@@ -99,20 +97,16 @@ export function VirtualList<T>({
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className={className}
+      className={`${styles.container} ${className}`.trim()}
       style={{
         height,
-        overflowY: 'auto',
-        position: 'relative',
-        width: '100%',
-        boxSizing: 'border-box',
+        ...style,
       }}
     >
       <div
+        className={styles.inner}
         style={{
           height: totalHeight,
-          width: '100%',
-          position: 'relative',
         }}
       >
         {visibleItems}

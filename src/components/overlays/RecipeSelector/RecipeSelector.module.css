@@ -841,6 +841,6 @@
 }
 
 .recipe-selector-table-viewport {
-  overflow-y: scroll !important;
-  scrollbar-gutter: stable !important;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
 }

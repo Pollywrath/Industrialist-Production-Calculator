@@ -49,13 +49,12 @@ export function HandleRow({
     return (
       <div className={`${styles['node-editor-item']} ${styles[`node-editor-item--${side}`]}`}>
         <div
-          className={styles['node-editor-handle-label']}
-          style={{ color: 'var(--theme-color-text-error)', fontStyle: 'italic' }}
+          className={`${styles['node-editor-handle-label']} ${styles['is-stale']}`}
         >
           Stale / Invalid Handle
         </div>
         <div className={styles['node-editor-quantity-section']}>
-          <span style={{ color: 'var(--theme-color-text-neutral)', fontSize: '13px' }}>N/A</span>
+          <span className={styles['node-editor-quantity-neutral']}>N/A</span>
         </div>
       </div>
     );

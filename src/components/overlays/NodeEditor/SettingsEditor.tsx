@@ -1,6 +1,7 @@
 import type { Recipe } from '../../../types/data';
 import { getSpecialRecipe } from '../../../data/registry';
 import { useNodeEditorStore } from './NodeEditorContext';
+import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
 import styles from './NodeEditor.module.css';
 
 interface SettingsEditorProps {
@@ -27,13 +28,15 @@ export function SettingsEditor({ recipe }: SettingsEditorProps) {
           <div key={key} className={styles['node-editor-group']}>
             <label>{def.label}</label>
             {def.type === 'number' && (
-              <input
-                type="number"
+              <ValidatedNumberInput
                 value={value as number}
+                onChange={(val) => updateSetting(key, val)}
+                defaultValue={def.default as number}
+                allowDecimals={true}
+                allowNegatives={true}
                 min={def.min}
                 max={def.max}
                 step={def.step}
-                onChange={(e) => updateSetting(key, parseFloat(e.target.value))}
                 className={styles['node-editor-input']}
               />
             )}
@@ -45,7 +48,7 @@ export function SettingsEditor({ recipe }: SettingsEditorProps) {
               >
                 {def.options.map((opt) => (
                   <option key={String(opt.value)} value={opt.value as string | number}>
-                    {opt.label}
+                    {def.options.find((o) => o.value === opt.value)?.label ?? String(opt.value)}
                   </option>
                 ))}
               </select>

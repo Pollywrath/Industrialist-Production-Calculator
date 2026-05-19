@@ -143,6 +143,7 @@ export function RecipeStage({
             height={activeTab === 'product' ? 488 : 540}
             overscan={5}
             getKey={(recipe) => recipe.id}
+            className={styles['recipe-selector-table-viewport']}
           >
             {(recipe) => (
               <RecipeCard

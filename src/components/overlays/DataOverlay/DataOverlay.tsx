@@ -15,6 +15,7 @@ import { useUIStore } from '../../../stores/useUIStore';
 import { useDataStore } from '../../../stores/useDataStore';
 import { ProductsTab } from './ProductsTab';
 import { MachinesTab } from './MachinesTab';
+import { ResearchesTab } from './ResearchesTab';
 import styles from './DataOverlay.module.css';
 
 export function DataOverlay() {
@@ -46,16 +47,24 @@ function DataOverlayModal() {
     Object.keys(pendingEdits.researches).length > 0;
 
   const handleRestoreDefaults = async () => {
+    const tabNameMap = {
+      products: 'Products',
+      machines: 'Machines',
+      recipes: 'Recipes',
+      researches: 'Researches',
+    };
+    const activeLabel = tabNameMap[activeEditTab];
+
     const confirmed = await useUIStore.getState().confirm({
-      title: 'Restore Database Defaults',
+      title: `Restore ${activeLabel} Defaults`,
       message:
-        'Are you sure you want to revert all custom database overrides back to baseline defaults? This will erase all added, edited, or deleted entries permanently.',
+        `Are you sure you want to revert all custom ${activeLabel.toLowerCase()} overrides back to baseline defaults? This will erase all added, edited, or deleted ${activeLabel.toLowerCase()} entries permanently.`,
       confirmLabel: 'Restore Baseline',
       cancelLabel: 'Keep Custom Edits',
       intent: 'error',
     });
     if (confirmed) {
-      await restoreDefaults();
+      await restoreDefaults(activeEditTab);
     }
   };
 
@@ -162,16 +171,7 @@ function DataOverlayModal() {
                     </div>
                   </div>
                 )}
-                {activeEditTab === 'researches' && (
-                  <div className={styles['empty-state']}>
-                    <FlaskConical size={32} className={styles['empty-icon']} />
-                    <div className={styles['empty-title']}>Edit Researches</div>
-                    <div className={styles['empty-desc']}>
-                      Custom research tree and progression configuration. Editor interface coming
-                      soon.
-                    </div>
-                  </div>
-                )}
+                {activeEditTab === 'researches' && <ResearchesTab />}
               </div>
             </div>
           )}

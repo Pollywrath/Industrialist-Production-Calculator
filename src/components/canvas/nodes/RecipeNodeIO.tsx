@@ -66,12 +66,7 @@ function RecipeNodeIORect({
     <div className={styles['recipe-node-io__rect-wrapper']}>
       <div
         className={`${styles['recipe-node-io__rect']} ${styles[`recipe-node-io__rect--${refVal.side}`]}`}
-        style={{
-          width,
-          height: RECT_HEIGHT,
-          minWidth: width,
-          cursor: 'pointer',
-        }}
+        style={{ '--rect-width': `${width}px` } as React.CSSProperties}
         onClick={(e) => {
           if (getEffectiveToggleId(useUIStore.getState()) === 'delete_mode') return;
           e.stopPropagation();
@@ -115,7 +110,15 @@ function RecipeNodeIOHandle({
       className={`${styles['recipe-node-io__handle']} ${styles[`recipe-node-io__handle--${refVal.side}`]}${
         isFlipped ? ` ${styles['recipe-node-io__handle--flipped']}` : ''
       }`}
-      style={{ top }}
+      style={{
+        top,
+        width: 'var(--theme-handle-size)',
+        height: 'var(--theme-handle-size)',
+        position: 'var(--theme-handle-position)' as 'absolute',
+        ...(refVal.side === 'input'
+          ? { left: 'var(--theme-handle-left)', transform: 'var(--theme-handle-transform-left)' }
+          : { right: 'var(--theme-handle-right)', transform: 'var(--theme-handle-transform-right)' }),
+      }}
       onClick={(e) => onSquareClick(e, handleId)}
       onDoubleClick={(e) => {
         e.stopPropagation();
@@ -212,13 +215,16 @@ export function RecipeNodeIO({
   };
 
   return (
-    <div className={styles['recipe-node-io']} style={{ height: ioAreaHeight }}>
+    <div
+      className={styles['recipe-node-io']}
+      style={{ '--io-area-height': `${ioAreaHeight}px` } as React.CSSProperties}
+    >
       <div
         className={styles['recipe-node-io__columns']}
         style={{
-          gridTemplateColumns,
-          padding: `0 ${SIDE_PADDING}px`,
-        }}
+          '--grid-template-columns': gridTemplateColumns,
+          '--padding-horizontal': `${SIDE_PADDING}px`,
+        } as React.CSSProperties}
       >
         {hasLeft && (
           <div

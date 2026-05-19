@@ -87,7 +87,7 @@ export function FlowViewport() {
   const onNodesChange = useFlowStore((s) => s.onNodesChange);
   const onEdgesChange = useFlowStore((s) => s.onEdgesChange);
   const onConnect = useFlowStore((s) => s.onConnect);
-  const zoomLevel = useUIStore((s) => s.zoomLevel);
+  const isZoomedOut = useUIStore((s) => s.isZoomedOut);
 
   useFlowSolver();
 
@@ -162,10 +162,15 @@ export function FlowViewport() {
       elevateNodesOnSelect={true}
       fitView={true}
       minZoom={0.15}
-      onMove={(_e, viewport) => useUIStore.getState().setZoomLevel(viewport.zoom)}
+      onMove={(_e, viewport) => {
+        const nextZoomedOut = viewport.zoom < 0.35;
+        if (nextZoomedOut !== useUIStore.getState().isZoomedOut) {
+          useUIStore.getState().setIsZoomedOut(nextZoomedOut);
+        }
+      }}
       onMoveStart={() => useUIStore.getState().setIsTransforming(true)}
       onMoveEnd={() => useUIStore.getState().setIsTransforming(false)}
-      onlyRenderVisibleElements={nodes.length > 250 && zoomLevel > 0.8}
+      onlyRenderVisibleElements={nodes.length > 250 && !isZoomedOut}
     >
       <Background
         variant={BackgroundVariant.Dots}

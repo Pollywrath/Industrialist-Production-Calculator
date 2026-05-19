@@ -1,11 +1,17 @@
 import type { Recipe, Machine, Product, Research } from '../types/data';
-import { getAllSpecialRecipes } from './registry';
+import { getAllSpecialRecipes, getSpecialRecipe } from './registry';
 import { getDataOverrides } from '../persistence/idb';
+import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
+import { clearFlowCache } from '../solver/flowSolver';
 
 let recipes: Recipe[] = [];
 let machines: Machine[] = [];
 let products: Product[] = [];
 let researches: Research[] = [];
+
+const overriddenProducts = new Set<string>();
+const overriddenMachines = new Set<string>();
+const overriddenResearches = new Set<string>();
 
 let defaultRecipes: Recipe[] = [];
 let defaultMachines: Machine[] = [];
@@ -19,110 +25,50 @@ const researchMap = new Map<string, Research>();
 
 let initPromise: Promise<void> | null = null;
 
+function processCategory<T extends { id: string }>(
+  prefix: string,
+  defaults: T[],
+  overrides: { id: string; data: Record<string, unknown> }[]
+): T[] {
+  const activeMap = new Map<string, T>(defaults.map((item) => [item.id, item]));
+
+  for (let i = 0; i < overrides.length; i++) {
+    const override = overrides[i];
+    if (override.id.startsWith(prefix)) {
+      const entityId = override.id.substring(prefix.length);
+      const data = override.data;
+      if (data._tombstone) {
+        activeMap.delete(entityId);
+      } else {
+        const existing = activeMap.get(entityId);
+        activeMap.set(entityId, {
+          ...(existing || {}),
+          ...data,
+        } as T);
+      }
+    }
+  }
+
+  return Array.from(activeMap.values());
+}
+
 export function rebuildActiveDatabase(
   overrides: { id: string; data: Record<string, unknown> }[]
 ): void {
+  // Clear solver flow cache as active database attributes have changed
+  clearFlowCache();
+
   // Clear maps
   recipeMap.clear();
   machineMap.clear();
   productMap.clear();
   researchMap.clear();
 
-  // 1. Process products
-  let activeProducts = [...defaultProducts];
-  for (let i = 0; i < overrides.length; i++) {
-    const override = overrides[i];
-    if (override.id.startsWith('product:')) {
-      const entityId = override.id.substring('product:'.length);
-      const data = override.data;
-      if (data._tombstone) {
-        activeProducts = activeProducts.filter((p) => p.id !== entityId);
-      } else {
-        const existingIdx = activeProducts.findIndex((p) => p.id === entityId);
-        if (existingIdx !== -1) {
-          activeProducts[existingIdx] = {
-            ...activeProducts[existingIdx],
-            ...data,
-          } as unknown as Product;
-        } else {
-          activeProducts.push(data as unknown as Product);
-        }
-      }
-    }
-  }
-  products = activeProducts;
-
-  // 2. Process machines
-  let activeMachines = [...defaultMachines];
-  for (let i = 0; i < overrides.length; i++) {
-    const override = overrides[i];
-    if (override.id.startsWith('machine:')) {
-      const entityId = override.id.substring('machine:'.length);
-      const data = override.data;
-      if (data._tombstone) {
-        activeMachines = activeMachines.filter((m) => m.id !== entityId);
-      } else {
-        const existingIdx = activeMachines.findIndex((m) => m.id === entityId);
-        if (existingIdx !== -1) {
-          activeMachines[existingIdx] = {
-            ...activeMachines[existingIdx],
-            ...data,
-          } as unknown as Machine;
-        } else {
-          activeMachines.push(data as unknown as Machine);
-        }
-      }
-    }
-  }
-  machines = activeMachines;
-
-  // 3. Process recipes
-  let activeRecipes = [...defaultRecipes];
-  for (let i = 0; i < overrides.length; i++) {
-    const override = overrides[i];
-    if (override.id.startsWith('recipe:')) {
-      const entityId = override.id.substring('recipe:'.length);
-      const data = override.data;
-      if (data._tombstone) {
-        activeRecipes = activeRecipes.filter((r) => r.id !== entityId);
-      } else {
-        const existingIdx = activeRecipes.findIndex((r) => r.id === entityId);
-        if (existingIdx !== -1) {
-          activeRecipes[existingIdx] = {
-            ...activeRecipes[existingIdx],
-            ...data,
-          } as unknown as Recipe;
-        } else {
-          activeRecipes.push(data as unknown as Recipe);
-        }
-      }
-    }
-  }
-  recipes = activeRecipes;
-
-  // 4. Process researches
-  let activeResearches = [...defaultResearches];
-  for (let i = 0; i < overrides.length; i++) {
-    const override = overrides[i];
-    if (override.id.startsWith('research:')) {
-      const entityId = override.id.substring('research:'.length);
-      const data = override.data;
-      if (data._tombstone) {
-        activeResearches = activeResearches.filter((r) => r.id !== entityId);
-      } else {
-        const existingIdx = activeResearches.findIndex((r) => r.id === entityId);
-        if (existingIdx !== -1) {
-          activeResearches[existingIdx] = {
-            ...activeResearches[existingIdx],
-            ...data,
-          } as unknown as Research;
-        } else {
-          activeResearches.push(data as unknown as Research);
-        }
-      }
-    }
-  }
-  researches = activeResearches;
+  // Process categories in O(N + M) linear time
+  products = processCategory('product:', defaultProducts, overrides);
+  machines = processCategory('machine:', defaultMachines, overrides);
+  recipes = processCategory('recipe:', defaultRecipes, overrides);
+  researches = processCategory('research:', defaultResearches, overrides);
 
   // Re-build maps
   for (let i = 0; i < recipes.length; i++) {
@@ -136,6 +82,38 @@ export function rebuildActiveDatabase(
   }
   for (let i = 0; i < researches.length; i++) {
     researchMap.set(researches[i].id, researches[i]);
+  }
+
+  // Precompute overrides
+  overriddenProducts.clear();
+  overriddenMachines.clear();
+  overriddenResearches.clear();
+
+  const defaultProductMap = new Map(defaultProducts.map((p) => [p.id, p]));
+  for (let i = 0; i < products.length; i++) {
+    const p = products[i];
+    const baseline = defaultProductMap.get(p.id);
+    if (baseline && JSON.stringify(baseline) !== JSON.stringify(p)) {
+      overriddenProducts.add(p.id);
+    }
+  }
+
+  const defaultMachineMap = new Map(defaultMachines.map((m) => [m.id, m]));
+  for (let i = 0; i < machines.length; i++) {
+    const m = machines[i];
+    const baseline = defaultMachineMap.get(m.id);
+    if (baseline && JSON.stringify(baseline) !== JSON.stringify(m)) {
+      overriddenMachines.add(m.id);
+    }
+  }
+
+  const defaultResearchMap = new Map(defaultResearches.map((r) => [r.id, r]));
+  for (let i = 0; i < researches.length; i++) {
+    const r = researches[i];
+    const baseline = defaultResearchMap.get(r.id);
+    if (baseline && JSON.stringify(baseline) !== JSON.stringify(r)) {
+      overriddenResearches.add(r.id);
+    }
   }
 }
 
@@ -211,6 +189,25 @@ export function getRecipe(id: string): Recipe | undefined {
   return recipeMap.get(id);
 }
 
+export function resolveActiveRecipe(
+  recipeId: string,
+  nodeSettings?: Record<string, unknown>
+): Recipe | undefined {
+  const recipe = recipeMap.get(recipeId);
+  if (!recipe) return undefined;
+
+  const sr = getSpecialRecipe(recipeId);
+  if (sr && nodeSettings) {
+    const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
+      string,
+      unknown
+    >;
+    return sr.compute(nodeSettings, globalSettings);
+  }
+
+  return recipe;
+}
+
 export function getMachine(id: string): Machine | undefined {
   return machineMap.get(id);
 }
@@ -263,16 +260,18 @@ export function isBaselineMachine(id: string): boolean {
   return defaultMachines.some((m) => m.id === id);
 }
 
+export function isBaselineResearch(id: string): boolean {
+  return defaultResearches.some((r) => r.id === id);
+}
+
 export function hasProductOverride(id: string): boolean {
-  const baseline = defaultProducts.find((p) => p.id === id);
-  const active = productMap.get(id);
-  if (!baseline || !active) return false;
-  return JSON.stringify(baseline) !== JSON.stringify(active);
+  return overriddenProducts.has(id);
 }
 
 export function hasMachineOverride(id: string): boolean {
-  const baseline = defaultMachines.find((m) => m.id === id);
-  const active = machineMap.get(id);
-  if (!baseline || !active) return false;
-  return JSON.stringify(baseline) !== JSON.stringify(active);
+  return overriddenMachines.has(id);
+}
+
+export function hasResearchOverride(id: string): boolean {
+  return overriddenResearches.has(id);
 }

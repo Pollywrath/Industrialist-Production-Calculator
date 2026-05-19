@@ -12,9 +12,9 @@
   box-sizing: border-box;
   width: 100%;
   padding: 6px 28px 6px 10px; /* Space for the right arrow */
-  background-color: var(--theme-color-bg-dark, #1e1e24);
-  border: 1px solid var(--theme-color-border, #33333c);
-  color: var(--theme-color-text, #ffffff);
+  background-color: var(--theme-color-bg-secondary);
+  border: 1px solid var(--theme-color-border-light);
+  color: var(--theme-color-text-dim);
   font-family: inherit;
   font-size: 13px;
   text-align: left;
@@ -22,7 +22,7 @@
 }
 
 .dropdown-input:focus {
-  border-color: var(--theme-color-primary, #4facfe);
+  border-color: var(--theme-color-primary);
 }
 
 .dropdown-input.is-disabled {
@@ -36,7 +36,7 @@
   right: 10px;
   transform: translateY(-50%);
   font-size: 8px;
-  color: var(--theme-color-text-muted, #888);
+  color: var(--theme-color-text-neutral);
   pointer-events: none; /* Let clicks pass through to the input */
   user-select: none;
 }
@@ -48,8 +48,8 @@
   right: 0;
   z-index: 1000;
   margin-top: 2px;
-  background-color: var(--theme-color-bg-dark, #1e1e24);
-  border: 1px solid var(--theme-color-border, #33333c);
+  background-color: var(--theme-color-bg-secondary);
+  border: 1px solid var(--theme-color-border-light);
   box-sizing: border-box;
 }
 
@@ -60,7 +60,7 @@
 
 .no-options {
   padding: 8px;
-  color: var(--theme-color-text-muted, #888);
+  color: var(--theme-color-text-neutral);
   font-size: 12px;
   text-align: center;
 }
@@ -71,7 +71,7 @@
   padding: 6px 10px;
   background: none;
   border: none;
-  color: var(--theme-color-text, #ffffff);
+  color: var(--theme-color-text-dim);
   font-family: inherit;
   font-size: 13px;
   text-align: left;
@@ -81,8 +81,8 @@
 }
 
 .option-item.is-selected {
-  background-color: var(--theme-color-active, #2b2b35);
-  color: var(--theme-color-primary, #4facfe);
+  background-color: var(--theme-color-bg-active);
+  color: var(--theme-color-primary);
 }
 
 /* Scrollbar styling - CAD like */
@@ -91,9 +91,9 @@
 }
 
 .options-list::-webkit-scrollbar-track {
-  background: var(--theme-color-bg-dark, #1e1e24);
+  background: var(--theme-color-bg-secondary);
 }
 
 .options-list::-webkit-scrollbar-thumb {
-  background: var(--theme-color-border, #33333c);
+  background: var(--theme-color-border-light);
 }

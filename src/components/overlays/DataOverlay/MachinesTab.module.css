@@ -109,12 +109,17 @@
 }
 
 .list-item[data-new='true'] {
-  border-left: 3px solid var(--theme-color-border-success, #00aa55);
+  border-left: 3px solid var(--theme-color-success);
   padding-left: 13px;
 }
 
 .list-item[data-modified='true'] {
-  border-left: 3px solid var(--theme-color-border-warning, #ffaa00);
+  border-left: 3px solid var(--theme-color-warning);
+  padding-left: 13px;
+}
+
+.list-item[data-pending='true'] {
+  border-left: 3px dashed var(--theme-color-warning);
   padding-left: 13px;
 }
 
@@ -128,8 +133,8 @@
 .badge-new {
   font-size: 8px;
   font-weight: 700;
-  color: #ffffff;
-  background: var(--theme-color-border-success, #00aa55);
+  color: var(--theme-color-white);
+  background: var(--theme-color-success);
   padding: 1px 4px;
   border-radius: 2px;
   text-transform: uppercase;
@@ -140,9 +145,22 @@
 .badge-modified {
   font-size: 8px;
   font-weight: 700;
-  color: #000000;
-  background: var(--theme-color-border-warning, #ffaa00);
+  color: var(--theme-color-black);
+  background: var(--theme-color-warning);
   padding: 1px 4px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
+}
+
+.badge-pending {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--theme-color-warning);
+  background: var(--theme-color-black);
+  border: 1px solid var(--theme-color-warning);
+  padding: 0 3px;
   border-radius: 2px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -368,15 +386,15 @@
   font-family: inherit;
   font-size: 12px;
   font-weight: 700;
-  color: #ff3333;
+  color: var(--theme-color-error);
   cursor: pointer;
   background: transparent;
-  border: 1px solid #ff3333;
+  border: 1px solid var(--theme-color-error);
   border-radius: 4px;
 }
 
 .btn-delete-machine:active {
-  background: rgba(255, 51, 51, 0.1);
+  background: var(--theme-color-error-translucent);
 }
 
 .btn-restore-machine {
@@ -390,13 +408,13 @@
   font-family: inherit;
   font-size: 12px;
   font-weight: 700;
-  color: var(--theme-color-border-warning, #ffaa00);
+  color: var(--theme-color-warning);
   cursor: pointer;
   background: transparent;
-  border: 1px solid var(--theme-color-border-warning, #ffaa00);
+  border: 1px solid var(--theme-color-warning);
   border-radius: 4px;
 }
 
 .btn-restore-machine:active {
-  background: rgba(255, 170, 0, 0.1);
+  background: var(--theme-color-warning-translucent);
 }

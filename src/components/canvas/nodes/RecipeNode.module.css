@@ -8,6 +8,7 @@
   display: flex;
   flex-direction: column;
   width: 380px;
+  height: var(--node-height, auto);
   overflow: visible;
   font-family: inherit;
   font-weight: 500;
@@ -141,6 +142,7 @@
   display: flex;
   flex: none;
   flex-direction: column;
+  height: var(--io-area-height, auto);
 }
 
 .recipe-node-io__columns {
@@ -148,6 +150,8 @@
   align-items: center;
   width: 100%;
   height: 100%;
+  grid-template-columns: var(--grid-template-columns);
+  padding: 0 var(--padding-horizontal);
 }
 
 .recipe-node-io__column {
@@ -191,6 +195,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  width: var(--rect-width);
+  min-width: var(--rect-width);
   height: 44px;
   padding: 4px 8px;
   overflow: hidden;
@@ -199,6 +205,7 @@
   text-align: center;
   border: 2px solid;
   border-radius: 6px;
+  cursor: pointer;
 }
 
 .recipe-node-io__rect--input {
@@ -229,8 +236,6 @@
 }
 
 :global(.is-zoomed-out) .recipe-node-io__rect {
-  height: 12px;
-  min-height: 12px;
   padding: 0;
 }
 
@@ -248,9 +253,6 @@
 }
 
 .recipe-node-io__handle {
-  position: absolute !important;
-  width: 12px !important;
-  height: 12px !important;
   cursor: pointer;
   border: 2px solid var(--theme-color-node-bg);
   border-radius: 2px;
@@ -282,14 +284,4 @@
 
 .recipe-node-io__handle.recipe-node-io__handle--output.recipe-node-io__handle--flipped {
   background: var(--theme-color-handle-output-excess);
-}
-
-.recipe-node-io__handle:global(.react-flow__handle-left) {
-  left: 0 !important;
-  transform: translate(-50%, -50%) !important;
-}
-
-.recipe-node-io__handle:global(.react-flow__handle-right) {
-  right: 0 !important;
-  transform: translate(50%, -50%) !important;
 }

@@ -377,7 +377,7 @@ const flowCache = new LRUCache<{
   connectionFlows: Record<string, number>;
 }>(1000);
 
-export function calculateFlows(graph: SolverGraph): FlowResults {
+export function calculateFlows(graph: SolverGraph, bypassCache = false): FlowResults {
   const results: FlowResults = new Map();
 
   for (const [nodeId, node] of Object.entries(graph.nodes)) {
@@ -405,15 +405,18 @@ export function calculateFlows(graph: SolverGraph): FlowResults {
     for (const component of components) {
       if (component.connections.length === 0) continue;
 
-      const componentHash = hashComponent(component);
-      const cacheKey = componentHash;
-      const cached = flowCache.get(cacheKey);
+      let connFlowMap: Record<string, number> | null = null;
+      let componentHash = '';
 
-      let connFlowMap: Record<string, number>;
+      if (!bypassCache) {
+        componentHash = hashComponent(component);
+        const cached = flowCache.get(componentHash);
+        if (cached) {
+          connFlowMap = cached.connectionFlows;
+        }
+      }
 
-      if (cached) {
-        connFlowMap = cached.connectionFlows;
-      } else {
+      if (!connFlowMap) {
         const totalProduction = component.ports
           .filter((p) => p.type === 'output')
           .reduce((sum, p) => sum + p.rate, 0);
@@ -421,20 +424,22 @@ export function calculateFlows(graph: SolverGraph): FlowResults {
         connFlowMap = {};
         if (totalProduction < EPSILON) {
           component.connections.forEach((conn) => {
-            connFlowMap[conn.id] = 0;
+            connFlowMap![conn.id] = 0;
           });
         } else {
           const network = buildFlowNetwork(component.connections, totalProduction);
           const { connectionFlows } = dinic(network);
 
           component.connections.forEach((conn, idx) => {
-            connFlowMap[conn.id] = connectionFlows[idx] ?? 0;
+            connFlowMap![conn.id] = connectionFlows[idx] ?? 0;
           });
         }
 
-        flowCache.set(cacheKey, {
-          connectionFlows: connFlowMap,
-        });
+        if (!bypassCache) {
+          flowCache.set(componentHash, {
+            connectionFlows: connFlowMap,
+          });
+        }
       }
 
       for (const conn of component.connections) {

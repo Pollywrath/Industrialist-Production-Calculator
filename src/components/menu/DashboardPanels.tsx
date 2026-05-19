@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import {
   ChevronUp,
@@ -24,6 +24,7 @@ import {
   formatMachineCount,
 } from '../../utils/unitFormatting';
 import { VirtualList } from '../shared/VirtualList';
+import { ValidatedNumberInput } from '../shared/ValidatedNumberInput';
 import styles from './DashboardPanels.module.css';
 
 interface DiagnosticVirtualItem {
@@ -67,23 +68,7 @@ export function DashboardPanels() {
   const globalPollution = useGlobalSettingsStore((s) => s.settings.global_pollution);
   const setGlobalPollution = useGlobalSettingsStore((s) => s.setGlobalPollution);
 
-  const [prevGlobalPollution, setPrevGlobalPollution] = useState(globalPollution);
-  const [pollutionInput, setPollutionInput] = useState(String(globalPollution));
 
-  // Sync state cleanly in render to prevent linter effect warnings
-  if (globalPollution !== prevGlobalPollution) {
-    setPrevGlobalPollution(globalPollution);
-    setPollutionInput(String(globalPollution));
-  }
-
-  const handlePollutionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setPollutionInput(val);
-    const parsed = parseFloat(val);
-    if (!isNaN(parsed) && parsed >= 0) {
-      setGlobalPollution(parsed);
-    }
-  };
 
   const handleNodeClick = (nodeId?: string) => {
     if (!nodeId) return;
@@ -375,7 +360,7 @@ export function DashboardPanels() {
 
             <div className={styles['stat-row']}>
               <span className={styles['stat-label']}>
-                <Zap size={10} style={{ color: 'var(--theme-color-success)' }} /> Power Production
+                <Zap size={10} className={styles['power-production-icon']} /> Power Production
               </span>
               <span className={styles['stat-value']}>{formatPower(totalProduction)}</span>
             </div>
@@ -446,13 +431,15 @@ export function DashboardPanels() {
             <div className={styles['global-var-group']}>
               <span className={styles['global-var-label']}>Global Pollution</span>
               <div className={styles['global-var-control']}>
-                <input
-                  type="number"
+                <ValidatedNumberInput
+                  value={globalPollution}
+                  onChange={setGlobalPollution}
+                  defaultValue={1}
+                  allowDecimals={true}
+                  allowNegatives={false}
+                  min={0}
+                  step="any"
                   className={styles['global-var-input']}
-                  value={pollutionInput}
-                  onChange={handlePollutionChange}
-                  min="0"
-                  step="1"
                 />
               </div>
             </div>
@@ -510,7 +497,7 @@ export function DashboardPanels() {
             </div>
 
             {/* Excess Byproducts */}
-            <div className={styles['diagnostic-section-title']} style={{ marginTop: '8px' }}>
+            <div className={`${styles['diagnostic-section-title']} ${styles['is-spaced']}`}>
               Excess Byproducts
             </div>
             <div className={styles['diagnostic-container']}>

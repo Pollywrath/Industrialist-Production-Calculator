@@ -13,6 +13,7 @@ import {
 import type { RecipeNodeData } from '../types/nodes';
 import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { getRecipe } from '../data/lookup';
+import { clearFlowCache } from '../solver/flowSolver';
 import {
   RECT_HEIGHT,
   RECT_GAP,
@@ -216,6 +217,7 @@ const useFlowStore = create(
     },
 
     setNodes: (nodes) => {
+      clearFlowCache();
       const { nodes: sanitizedNodes } = ensureGraphIntegrity(nodes, get().edges);
       const enriched = sanitizedNodes.map(enrichNodeDimensions);
       set({
@@ -225,6 +227,7 @@ const useFlowStore = create(
       });
     },
     setEdges: (edges) => {
+      clearFlowCache();
       const { edges: sanitizedEdges } = ensureGraphIntegrity(get().nodes, edges);
       set({
         edges: sanitizedEdges,
@@ -232,6 +235,7 @@ const useFlowStore = create(
       });
     },
     setNodesAndEdges: (nodes, edges) => {
+      clearFlowCache();
       const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(nodes, edges);
       const len = sanitizedNodes.length;
       const enriched = new Array<Node<RecipeNodeData>>(len);

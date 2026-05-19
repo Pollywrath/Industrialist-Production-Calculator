@@ -1,8 +1,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import type { RecipeNodeType } from '../../../types/nodes';
-import { getRecipe, getMachineName } from '../../../data/lookup';
-import { getSpecialRecipe } from '../../../data/registry';
+import { resolveActiveRecipe, getMachineName } from '../../../data/lookup';
 import { RecipeNodeInfo } from './RecipeNodeInfo';
 import { RecipeNodeIO } from './RecipeNodeIO';
 import styles from './RecipeNode.module.css';
@@ -36,6 +35,7 @@ import {
 
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { useDataStore } from '../../../stores/useDataStore';
+import { getSpecialRecipe } from '../../../data/registry';
 
 export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -45,24 +45,18 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   // Reactively subscribe to dbVersion changes (database compile reloads)
   const dbVersion = useDataStore((s) => s.dbVersion);
 
-  // Reactively subscribe to global settings changes (e.g. global pollution edits)
-  const globalSettings = useGlobalSettingsStore((s) => s.settings) as unknown as Record<
-    string,
-    unknown
-  >;
+  // Reactively subscribe to global settings changes (e.g. global pollution edits) ONLY if this node's recipe dynamically relies on them
+  useGlobalSettingsStore((s) => {
+    const isSpecial = !!getSpecialRecipe(data.recipeId);
+    return isSpecial ? s.settings.global_pollution : null;
+  });
 
   useEffect(() => {
     updateNodeInternals(id);
   }, [id, data.inputOrder, data.outputOrder, updateNodeInternals]);
 
   // Bust React Compiler memoization by including dbVersion in the baseline lookup
-  let recipe = dbVersion !== -1 ? getRecipe(data.recipeId) : undefined;
-  if (recipe) {
-    const sr = getSpecialRecipe(recipe.id);
-    if (sr && data.settings) {
-      recipe = sr.compute(data.settings, globalSettings);
-    }
-  }
+  const recipe = dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings) : undefined;
 
   const leftHandles = data.inputOrder
     ? data.inputOrder.map((idx) => ({ side: 'input' as const, index: idx }))
@@ -88,7 +82,10 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
 
   return (
     <>
-      <div className={styles['recipe-node']} style={{ height: displayHeight }}>
+      <div
+        className={styles['recipe-node']}
+        style={{ '--node-height': `${displayHeight}px` } as React.CSSProperties}
+      >
         <RecipeNodeInfo
           recipe={recipe}
           machineName={recipe ? getMachineName(recipe.machine_id) : '\u2014'}

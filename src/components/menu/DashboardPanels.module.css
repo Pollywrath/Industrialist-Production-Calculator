@@ -187,6 +187,14 @@
   gap: 4px;
 }
 
+.diagnostic-section-title.is-spaced {
+  margin-top: 8px;
+}
+
+.power-production-icon {
+  color: var(--theme-color-success);
+}
+
 /* Grouped Dropdown Row Styles */
 .diagnostic-row-header {
   box-sizing: border-box;

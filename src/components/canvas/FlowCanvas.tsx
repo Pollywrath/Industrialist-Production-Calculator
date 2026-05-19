@@ -63,11 +63,11 @@ export function FlowCanvas() {
   const isSavesOverlayOpen = useUIStore((s) => s.isSavesOverlayOpen);
   const isDataOverlayOpen = useUIStore((s) => s.isDataOverlayOpen);
   const isTransformingStore = useUIStore((s) => s.isTransforming);
-  const zoomLevel = useUIStore((s) => s.zoomLevel);
+  const isZoomedOutStore = useUIStore((s) => s.isZoomedOut);
   const isExporting = useUIStore((s) => s.isExporting);
   const isAutosaveLoaded = useUIStore((s) => s.isAutosaveLoaded);
 
-  const isZoomedOut = !isExporting && zoomLevel < 0.35;
+  const isZoomedOut = !isExporting && isZoomedOutStore;
   const isTransforming = !isExporting && isTransformingStore;
 
   useAutosave();

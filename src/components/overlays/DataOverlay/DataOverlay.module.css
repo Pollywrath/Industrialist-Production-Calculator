@@ -229,7 +229,7 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.5px;
-  color: var(--theme-color-border-warning, #ffaa00);
+  color: var(--theme-color-warning);
 }
 
 .btn-restore {
@@ -293,10 +293,12 @@
   background: var(--theme-color-primary-hover);
 }
 
-.is-disabled {
+.btn-save.is-disabled,
+.btn-discard.is-disabled,
+.btn-restore.is-disabled {
   opacity: 0.4;
-  cursor: not-allowed !important;
-  background: transparent !important;
-  border: 1px solid var(--theme-color-border-light) !important;
-  color: var(--theme-color-text-dim) !important;
+  cursor: not-allowed;
+  background: transparent;
+  border: 1px solid var(--theme-color-border-light);
+  color: var(--theme-color-text-dim);
 }
