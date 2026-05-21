@@ -12235,5 +12235,141 @@
         "q_mode": "none"
       }
     ]
+  },
+  {
+    "id": "r_advanced_diesel_refinery_01",
+    "name": "Makes Poor Quality Diesel, Residue",
+    "machine_id": "m_advanced_diesel_refinery",
+    "cycle_time": 1,
+    "c_mode": "none",
+    "power_consumption": 1000000,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [
+      {
+        "product_id": "p_crude_diesel",
+        "quantity": 3.15,
+        "q_mode": "none"
+      },
+      {
+        "product_id": "p_machine_oil",
+        "quantity": 0.15,
+        "q_mode": "none"
+      }
+    ],
+    "outputs": [
+      {
+        "product_id": "p_poor_quality_diesel",
+        "quantity": 2.87,
+        "q_mode": "none"
+      },
+      {
+        "product_id": "p_residue",
+        "quantity": 0.28,
+        "q_mode": "none"
+      }
+    ]
+  },
+  {
+    "id": "r_advanced_diesel_refinery_02",
+    "name": "Makes Diesel, Residue",
+    "machine_id": "m_advanced_diesel_refinery",
+    "cycle_time": 1,
+    "c_mode": "none",
+    "power_consumption": 1000000,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [
+      {
+        "product_id": "p_poor_quality_diesel",
+        "quantity": 2.87,
+        "q_mode": "none"
+      },
+      {
+        "product_id": "p_machine_oil",
+        "quantity": 0.15,
+        "q_mode": "none"
+      }
+    ],
+    "outputs": [
+      {
+        "product_id": "p_diesel",
+        "quantity": 2.59,
+        "q_mode": "none"
+      },
+      {
+        "product_id": "p_residue",
+        "quantity": 0.28,
+        "q_mode": "none"
+      }
+    ]
+  },
+  {
+    "id": "r_advanced_diesel_refinery_03",
+    "name": "Makes Refined Diesel, Residue",
+    "machine_id": "m_advanced_diesel_refinery",
+    "cycle_time": 1,
+    "c_mode": "none",
+    "power_consumption": 1000000,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [
+      {
+        "product_id": "p_diesel",
+        "quantity": 2.59,
+        "q_mode": "none"
+      },
+      {
+        "product_id": "p_machine_oil",
+        "quantity": 0.15,
+        "q_mode": "none"
+      }
+    ],
+    "outputs": [
+      {
+        "product_id": "p_refined_diesel",
+        "quantity": 2.38 ,
+        "q_mode": "none"
+      },
+      {
+        "product_id": "p_residue",
+        "quantity": 0.21,
+        "q_mode": "none"
+      }
+    ]
+  },
+  {
+    "id": "r_advanced_diesel_refinery_04",
+    "name": "Makes Gasoline, Residue",
+    "machine_id": "m_advanced_diesel_refinery",
+    "cycle_time": 1,
+    "c_mode": "none",
+    "power_consumption": 1000000,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [
+      {
+        "product_id": "p_refined_diesel",
+        "quantity": 2.38,
+        "q_mode": "none"
+      },
+      {
+        "product_id": "p_machine_oil",
+        "quantity": 0.15,
+        "q_mode": "none"
+      }
+    ],
+    "outputs": [
+      {
+        "product_id": "p_gasoline",
+        "quantity": 2.17,
+        "q_mode": "none"
+      },
+      {
+        "product_id": "p_residue",
+        "quantity": 0.21,
+        "q_mode": "none"
+      }
+    ]
   }
 ]
