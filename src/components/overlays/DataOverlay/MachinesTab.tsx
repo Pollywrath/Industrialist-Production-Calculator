@@ -8,14 +8,8 @@ export function MachinesTab() {
 
   return (
     <div className={styles['machines-tab-container']}>
-      <MachinesList
-        selectedMachineId={selectedMachineId}
-        onSelectMachine={setSelectedMachineId}
-      />
-      <MachineForm
-        selectedMachineId={selectedMachineId}
-        onSelectMachine={setSelectedMachineId}
-      />
+      <MachinesList selectedMachineId={selectedMachineId} onSelectMachine={setSelectedMachineId} />
+      <MachineForm selectedMachineId={selectedMachineId} onSelectMachine={setSelectedMachineId} />
     </div>
   );
 }

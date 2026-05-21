@@ -7,9 +7,15 @@ interface HandleEditorColumnsProps {
   recipe: Recipe;
   multiplier: number;
   rateMode: 'second' | 'minute' | 'hour' | 'raw';
+  nodeId: string;
 }
 
-export function HandleEditorColumns({ recipe, multiplier, rateMode }: HandleEditorColumnsProps) {
+export function HandleEditorColumns({
+  recipe,
+  multiplier,
+  rateMode,
+  nodeId,
+}: HandleEditorColumnsProps) {
   const inputs = useNodeEditorStore((s) => s.inputs);
   const outputs = useNodeEditorStore((s) => s.outputs);
 
@@ -21,6 +27,7 @@ export function HandleEditorColumns({ recipe, multiplier, rateMode }: HandleEdit
           {inputs.map((idx, listIdx) => (
             <HandleRow
               key={`input-${idx}`}
+              nodeId={nodeId}
               recipe={recipe}
               side="input"
               index={idx}
@@ -40,6 +47,7 @@ export function HandleEditorColumns({ recipe, multiplier, rateMode }: HandleEdit
           {outputs.map((idx, listIdx) => (
             <HandleRow
               key={`output-${idx}`}
+              nodeId={nodeId}
               recipe={recipe}
               side="output"
               index={idx}

@@ -195,6 +195,7 @@ function NodeEditorModal({
                 recipe={currentRecipe}
                 multiplier={multiplier}
                 rateMode={rateMode}
+                nodeId={nodeId}
               />
             </>
           ) : (

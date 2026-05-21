@@ -2,6 +2,7 @@ import type { Node, Edge } from '@xyflow/react';
 import type { RecipeNodeData } from '../types/nodes';
 import { parseHandleId, buildHandleId, nextNodeId, nextEdgeId } from '../utils/idGenerator';
 import { getRecipe } from '../data/lookup';
+import { cleanMachineCount } from '../utils/precision';
 
 import type { SavedNode, SavedEdge, SaveData } from '../types/saves';
 
@@ -46,10 +47,10 @@ export function migrateSaveData(rawData: unknown): SaveData {
     }
 
     let machineCount = typeof n.machineCount === 'number' ? n.machineCount : 1;
-    if (!Number.isFinite(machineCount) || Number.isNaN(machineCount) || machineCount < 1) {
+    if (!Number.isFinite(machineCount) || Number.isNaN(machineCount) || machineCount < 0) {
       machineCount = 1;
     } else {
-      machineCount = Math.floor(machineCount);
+      machineCount = cleanMachineCount(machineCount);
     }
 
     const savedNode: SavedNode = {

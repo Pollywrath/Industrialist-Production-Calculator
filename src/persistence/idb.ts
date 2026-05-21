@@ -122,11 +122,6 @@ export async function saveAutosave(data: SaveData): Promise<void> {
   });
 }
 
-/**
- * Clears the active session (autosave) and data overrides.
- * Preserves the manual saves library.
- * Used by the ErrorBoundary to recover from crash loops.
- */
 export async function clearAllData(): Promise<void> {
   const db = await getDB();
   if (!db) return;
@@ -145,7 +140,10 @@ export async function getDataOverrides(): Promise<{ id: string; data: Record<str
   }
 }
 
-export async function saveDataOverride(id: string, data: Record<string, unknown>): Promise<boolean> {
+export async function saveDataOverride(
+  id: string,
+  data: Record<string, unknown>,
+): Promise<boolean> {
   try {
     const db = await getDB();
     if (!db) return false;
@@ -181,22 +179,25 @@ export async function clearDataOverrides(): Promise<boolean> {
   }
 }
 
-export async function clearCategoryDataOverrides(category: 'products' | 'machines' | 'recipes' | 'researches'): Promise<boolean> {
+export async function clearCategoryDataOverrides(
+  category: 'products' | 'machines' | 'recipes' | 'researches',
+): Promise<boolean> {
   try {
     const db = await getDB();
     if (!db) return false;
-    
-    const prefix = category === 'products'
-      ? 'product:'
-      : category === 'machines'
-        ? 'machine:'
-        : category === 'recipes'
-          ? 'recipe:'
-          : 'research:';
+
+    const prefix =
+      category === 'products'
+        ? 'product:'
+        : category === 'machines'
+          ? 'machine:'
+          : category === 'recipes'
+            ? 'recipe:'
+            : 'research:';
 
     const tx = db.transaction('data_overrides', 'readwrite');
     const store = tx.objectStore('data_overrides');
-    
+
     let cursor = await store.openCursor();
     while (cursor) {
       if (cursor.key.startsWith(prefix)) {
@@ -204,7 +205,7 @@ export async function clearCategoryDataOverrides(category: 'products' | 'machine
       }
       cursor = await cursor.continue();
     }
-    
+
     await tx.done;
     return true;
   } catch (err) {

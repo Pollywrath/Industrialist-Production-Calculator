@@ -24,11 +24,12 @@ const productMap = new Map<string, Product>();
 const researchMap = new Map<string, Research>();
 
 let initPromise: Promise<void> | null = null;
+let filteredProducts: Product[] = [];
 
 function processCategory<T extends { id: string }>(
   prefix: string,
   defaults: T[],
-  overrides: { id: string; data: Record<string, unknown> }[]
+  overrides: { id: string; data: Record<string, unknown> }[],
 ): T[] {
   const activeMap = new Map<string, T>(defaults.map((item) => [item.id, item]));
 
@@ -52,25 +53,44 @@ function processCategory<T extends { id: string }>(
   return Array.from(activeMap.values());
 }
 
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== typeof b || a === null || b === null) return false;
+  if (typeof a !== 'object') return false;
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (!deepEqual(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  const objA = a as Record<string, unknown>;
+  const objB = b as Record<string, unknown>;
+  const keysA = Object.keys(objA);
+  if (keysA.length !== Object.keys(objB).length) return false;
+  for (let i = 0; i < keysA.length; i++) {
+    const key = keysA[i];
+    if (!deepEqual(objA[key], objB[key])) return false;
+  }
+  return true;
+}
+
 export function rebuildActiveDatabase(
-  overrides: { id: string; data: Record<string, unknown> }[]
+  overrides: { id: string; data: Record<string, unknown> }[],
 ): void {
-  // Clear solver flow cache as active database attributes have changed
   clearFlowCache();
 
-  // Clear maps
   recipeMap.clear();
   machineMap.clear();
   productMap.clear();
   researchMap.clear();
 
-  // Process categories in O(N + M) linear time
   products = processCategory('product:', defaultProducts, overrides);
   machines = processCategory('machine:', defaultMachines, overrides);
   recipes = processCategory('recipe:', defaultRecipes, overrides);
   researches = processCategory('research:', defaultResearches, overrides);
 
-  // Re-build maps
   for (let i = 0; i < recipes.length; i++) {
     recipeMap.set(recipes[i].id, recipes[i]);
   }
@@ -84,7 +104,6 @@ export function rebuildActiveDatabase(
     researchMap.set(researches[i].id, researches[i]);
   }
 
-  // Precompute overrides
   overriddenProducts.clear();
   overriddenMachines.clear();
   overriddenResearches.clear();
@@ -93,7 +112,7 @@ export function rebuildActiveDatabase(
   for (let i = 0; i < products.length; i++) {
     const p = products[i];
     const baseline = defaultProductMap.get(p.id);
-    if (baseline && JSON.stringify(baseline) !== JSON.stringify(p)) {
+    if (baseline && !deepEqual(baseline, p)) {
       overriddenProducts.add(p.id);
     }
   }
@@ -102,7 +121,7 @@ export function rebuildActiveDatabase(
   for (let i = 0; i < machines.length; i++) {
     const m = machines[i];
     const baseline = defaultMachineMap.get(m.id);
-    if (baseline && JSON.stringify(baseline) !== JSON.stringify(m)) {
+    if (baseline && !deepEqual(baseline, m)) {
       overriddenMachines.add(m.id);
     }
   }
@@ -111,10 +130,12 @@ export function rebuildActiveDatabase(
   for (let i = 0; i < researches.length; i++) {
     const r = researches[i];
     const baseline = defaultResearchMap.get(r.id);
-    if (baseline && JSON.stringify(baseline) !== JSON.stringify(r)) {
+    if (baseline && !deepEqual(baseline, r)) {
       overriddenResearches.add(r.id);
     }
   }
+
+  filteredProducts = products.filter((p) => p.id !== 'any_fluid' && p.id !== 'any_item');
 }
 
 export async function reloadDatabase(): Promise<void> {
@@ -135,10 +156,25 @@ export function initializeDatabase(): Promise<void> {
 
     defaultRecipes = recipesJson.default as Recipe[];
     defaultMachines = machinesJson.default as Machine[];
-    defaultProducts = productsJson.default as Product[];
+    defaultProducts = [
+      ...(productsJson.default as Product[]),
+      {
+        id: 'any_fluid',
+        name: 'Any Fluid',
+        sell_price: 0,
+        rp_multiplier: 0,
+        type: 'Fluid',
+      },
+      {
+        id: 'any_item',
+        name: 'Any Item',
+        sell_price: 0,
+        rp_multiplier: 0,
+        type: 'Item',
+      },
+    ];
     defaultResearches = researchesJson.default as Research[];
 
-    // Integrate Special Recipes into defaults
     const specialRecipes = getAllSpecialRecipes().map((sr) => {
       const defaults = Object.entries(sr.settings).reduce(
         (acc, [key, def]) => {
@@ -153,10 +189,8 @@ export function initializeDatabase(): Promise<void> {
 
     defaultRecipes = [...defaultRecipes, ...specialRecipes];
 
-    // Load overrides from IndexedDB
     const overrides = await getDataOverrides();
 
-    // Compile active database structures
     rebuildActiveDatabase(overrides);
 
     if (import.meta.env.DEV) {
@@ -191,7 +225,7 @@ export function getRecipe(id: string): Recipe | undefined {
 
 export function resolveActiveRecipe(
   recipeId: string,
-  nodeSettings?: Record<string, unknown>
+  nodeSettings?: Record<string, unknown>,
 ): Recipe | undefined {
   const recipe = recipeMap.get(recipeId);
   if (!recipe) return undefined;
@@ -233,7 +267,7 @@ export function getAllRecipes(): Recipe[] {
 }
 
 export function getAllProducts(): Product[] {
-  return products;
+  return filteredProducts;
 }
 
 export function getAllMachines(): Machine[] {

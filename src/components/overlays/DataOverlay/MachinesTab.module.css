@@ -4,7 +4,6 @@
   background: var(--theme-color-canvas-bg);
 }
 
-/* Master Sidebar (Left Pane) */
 .sidebar-pane {
   display: flex;
   flex-direction: column;
@@ -204,7 +203,6 @@
   border-radius: 2px;
 }
 
-/* Detail Form Pane (Right Pane) */
 .detail-pane {
   display: flex;
   flex-direction: column;
@@ -244,7 +242,6 @@
   line-height: 1.4;
 }
 
-/* Editor Form View */
 .editor-form {
   box-sizing: border-box;
   display: flex;

@@ -4,7 +4,6 @@
   background: var(--theme-color-canvas-bg);
 }
 
-/* Master Sidebar (Left Pane) */
 .sidebar-pane {
   display: flex;
   flex-direction: column;
@@ -188,7 +187,6 @@
   text-overflow: ellipsis;
 }
 
-/* Detail Form Pane (Right Pane) */
 .detail-pane {
   display: flex;
   flex-direction: column;
@@ -228,7 +226,6 @@
   line-height: 1.4;
 }
 
-/* Editor Form View */
 .editor-form {
   box-sizing: border-box;
   display: flex;
@@ -371,7 +368,6 @@
   background: var(--theme-color-warning-translucent);
 }
 
-/* Prerequisites Manager Styling */
 .prereqs-container {
   display: flex;
   flex-direction: column;

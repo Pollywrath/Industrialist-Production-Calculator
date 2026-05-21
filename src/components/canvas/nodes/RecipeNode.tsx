@@ -42,10 +42,8 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   const updateNodeInternals = useUpdateNodeInternals();
   const NodeEditor = prefetchCache.NodeEditor;
 
-  // Reactively subscribe to dbVersion changes (database compile reloads)
   const dbVersion = useDataStore((s) => s.dbVersion);
 
-  // Reactively subscribe to global settings changes (e.g. global pollution edits) ONLY if this node's recipe dynamically relies on them
   useGlobalSettingsStore((s) => {
     const isSpecial = !!getSpecialRecipe(data.recipeId);
     return isSpecial ? s.settings.global_pollution : null;
@@ -55,7 +53,6 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
     updateNodeInternals(id);
   }, [id, data.inputOrder, data.outputOrder, updateNodeInternals]);
 
-  // Bust React Compiler memoization by including dbVersion in the baseline lookup
   const recipe = dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings) : undefined;
 
   const leftHandles = data.inputOrder

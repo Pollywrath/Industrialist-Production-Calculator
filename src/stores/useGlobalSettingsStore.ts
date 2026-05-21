@@ -12,13 +12,12 @@ interface GlobalSettingsState {
 
 export const useGlobalSettingsStore = create<GlobalSettingsState>((set) => ({
   settings: {
-    global_pollution: 10, // default value as specified in ASU and system specs
+    global_pollution: 10,
   },
   setGlobalPollution: (value: number) =>
     set((state) => {
       const nextSettings = { ...state.settings, global_pollution: value };
 
-      // Force graph re-solver calculation by bumping solverVersion
       useFlowStore.setState((flowState) => ({
         solverVersion: flowState.solverVersion + 1,
       }));

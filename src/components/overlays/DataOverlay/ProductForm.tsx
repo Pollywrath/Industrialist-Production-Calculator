@@ -18,9 +18,16 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
   const restoreProductDefault = useDataStore((s) => s.restoreProductDefault);
   const dbVersion = useDataStore((s) => s.dbVersion);
 
-  // Bust React Compiler memoization by including dbVersion in the baseline lookup safely
-  const baseline = selectedProductId ? (dbVersion !== -1 ? getProduct(selectedProductId) : undefined) : undefined;
-  const isModified = selectedProductId ? (dbVersion !== -1 ? hasProductOverride(selectedProductId) : false) : false;
+  const baseline = selectedProductId
+    ? dbVersion !== -1
+      ? getProduct(selectedProductId)
+      : undefined
+    : undefined;
+  const isModified = selectedProductId
+    ? dbVersion !== -1
+      ? hasProductOverride(selectedProductId)
+      : false
+    : false;
   const pending = selectedProductId ? pendingEdits.products[selectedProductId] : undefined;
   const activeProduct = overlayPendingEdit(baseline, pending);
 
@@ -30,7 +37,8 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
         <Box className={styles['empty-icon']} size={40} strokeWidth={1} />
         <div className={styles['empty-title']}>No Product Selected</div>
         <div className={styles['empty-desc']}>
-          Select a product from the master index list on the left to view or edit its parameters, or click the plus button to create a new custom product.
+          Select a product from the master index list on the left to view or edit its parameters, or
+          click the plus button to create a new custom product.
         </div>
       </div>
     );
@@ -42,7 +50,8 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
         <Box className={styles['empty-icon']} size={40} strokeWidth={1} />
         <div className={styles['empty-title']}>No Product Selected</div>
         <div className={styles['empty-desc']}>
-          Select a product from the master index list on the left to view or edit its parameters, or click the plus button to create a new custom product.
+          Select a product from the master index list on the left to view or edit its parameters, or
+          click the plus button to create a new custom product.
         </div>
       </div>
     );
@@ -74,7 +83,6 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
       entityLabel="Product"
       EmptyIcon={Box}
     >
-      {/* Editable product Sell Price */}
       <div className={styles['form-group']}>
         <label className={styles['form-label']}>Sell Cost ($)</label>
         <ValidatedNumberInput
@@ -88,7 +96,6 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
         />
       </div>
 
-      {/* Editable product RP Multiplier */}
       <div className={styles['form-group']}>
         <label className={styles['form-label']}>Research Point Multiplier</label>
         <ValidatedNumberInput
@@ -104,7 +111,6 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
         />
       </div>
 
-      {/* Editable product Type (Item / Fluid) */}
       <div className={styles['form-group']}>
         <label className={styles['form-label']}>Product Type</label>
         <select

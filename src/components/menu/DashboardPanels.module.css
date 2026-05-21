@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
   width: 240px;
-  pointer-events: none; /* Let clicks pass through container gaps to canvas */
+  pointer-events: none;
   max-height: 100vh;
   overflow-y: auto;
   scrollbar-width: none;
@@ -18,7 +18,7 @@
 }
 
 .panel {
-  pointer-events: auto; /* Re-enable click capture on panels */
+  pointer-events: auto;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -108,7 +108,6 @@
   color: var(--theme-color-text-neutral);
 }
 
-/* Extended Panel Input Styles */
 .global-var-group {
   display: flex;
   flex-direction: column;
@@ -137,7 +136,7 @@
   padding: 4px 8px;
   background: var(--theme-color-primary-dark);
   border: 1px solid var(--theme-color-border-light);
-  border-radius: 0; /* Strict CAD aesthetics */
+  border-radius: 0;
   color: var(--theme-color-stat-value);
   font-family: inherit;
   font-size: 11px;
@@ -148,7 +147,6 @@
   border-color: var(--theme-color-primary);
 }
 
-/* Diagnostic List Styles */
 .diagnostic-container {
   display: flex;
   flex-direction: column;
@@ -195,7 +193,6 @@
   color: var(--theme-color-success);
 }
 
-/* Grouped Dropdown Row Styles */
 .diagnostic-row-header {
   box-sizing: border-box;
   display: flex;
@@ -297,7 +294,7 @@
   font-size: 8px;
   font-weight: bold;
   padding: 1px 3px;
-  border-radius: 0; /* CAD style is square and flat */
+  border-radius: 0;
   text-transform: uppercase;
   line-height: 1;
 }

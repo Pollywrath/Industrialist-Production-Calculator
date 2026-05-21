@@ -1,9 +1,18 @@
 import React from 'react';
 import { Cpu } from 'lucide-react';
-import { getMachine, getAllMachines, getAllResearches, hasMachineOverride } from '../../../data/lookup';
+import {
+  getMachine,
+  getAllMachines,
+  getAllResearches,
+  hasMachineOverride,
+} from '../../../data/lookup';
 import { useDataStore, overlayPendingEdit } from '../../../stores/useDataStore';
 import { SearchDropdown } from '../../shared/SearchDropdown';
-import { CANONICAL_CATEGORY_MAP, UNIQUE_CATEGORIES, UNIQUE_SUBCATEGORIES } from '../../../utils/machineTaxonomy';
+import {
+  CANONICAL_CATEGORY_MAP,
+  UNIQUE_CATEGORIES,
+  UNIQUE_SUBCATEGORIES,
+} from '../../../utils/machineTaxonomy';
 import type { Machine, MachineSize } from '../../../types/data';
 import { GenericDataFormShell } from './GenericDataFormShell';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
@@ -21,9 +30,16 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
   const restoreMachineDefault = useDataStore((s) => s.restoreMachineDefault);
   const dbVersion = useDataStore((s) => s.dbVersion);
 
-  // Bust React Compiler memoization safely before hooks
-  const baseline = selectedMachineId ? (dbVersion !== -1 ? getMachine(selectedMachineId) : undefined) : undefined;
-  const isModified = selectedMachineId ? (dbVersion !== -1 ? hasMachineOverride(selectedMachineId) : false) : false;
+  const baseline = selectedMachineId
+    ? dbVersion !== -1
+      ? getMachine(selectedMachineId)
+      : undefined
+    : undefined;
+  const isModified = selectedMachineId
+    ? dbVersion !== -1
+      ? hasMachineOverride(selectedMachineId)
+      : false
+    : false;
   const pending = selectedMachineId ? pendingEdits.machines[selectedMachineId] : undefined;
   const activeMachine = overlayPendingEdit(baseline, pending);
 
@@ -33,7 +49,8 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
         <Cpu className={styles['empty-icon']} size={40} strokeWidth={1} />
         <div className={styles['empty-title']}>No Machine Selected</div>
         <div className={styles['empty-desc']}>
-          Select a machine from the master index list on the left to view or edit its parameters, or click the plus button to create a new custom machine.
+          Select a machine from the master index list on the left to view or edit its parameters, or
+          click the plus button to create a new custom machine.
         </div>
       </div>
     );
@@ -45,22 +62,22 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
         <Cpu className={styles['empty-icon']} size={40} strokeWidth={1} />
         <div className={styles['empty-title']}>No Machine Selected</div>
         <div className={styles['empty-desc']}>
-          Select a machine from the master index list on the left to view or edit its parameters, or click the plus button to create a new custom machine.
+          Select a machine from the master index list on the left to view or edit its parameters, or
+          click the plus button to create a new custom machine.
         </div>
       </div>
     );
   }
 
-  // 2. Prepare Dropdown Options
   const categoryOptions = [
     ...UNIQUE_CATEGORIES.map((cat) => ({ value: cat, label: cat })),
     { value: 'Removed', label: 'Removed' },
   ];
 
-  // Filter subcategories according to selected category
-  const allowedSubs = activeMachine.category && activeMachine.category !== 'Removed'
-    ? CANONICAL_CATEGORY_MAP[activeMachine.category]
-    : UNIQUE_SUBCATEGORIES;
+  const allowedSubs =
+    activeMachine.category && activeMachine.category !== 'Removed'
+      ? CANONICAL_CATEGORY_MAP[activeMachine.category]
+      : UNIQUE_SUBCATEGORIES;
 
   const subcategoryOptions = allowedSubs
     ? allowedSubs.map((sub) => ({ value: sub, label: sub }))
@@ -72,16 +89,14 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
     ...researchList.map((res) => ({ value: res.id, label: res.name })),
   ];
 
-  // Variant options: Base machines (excluding itself, whose variant is 'none' or falsy)
   const baseMachines = getAllMachines().filter(
-    (m) => m.id !== selectedMachineId && (m.variant === 'none' || !m.variant)
+    (m) => m.id !== selectedMachineId && (m.variant === 'none' || !m.variant),
   );
   const variantOptions = [
     { value: 'none', label: 'None' },
     ...baseMachines.map((m) => ({ value: m.name, label: m.name })),
   ];
 
-  // 3. Event Handlers
   const handleTierChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     updateMachinePendingEdit(selectedMachineId, { tier: parseInt(e.target.value, 10) });
   };
@@ -96,7 +111,6 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
 
   const handleCategoryChange = (newCat: string) => {
     const updates: Partial<Machine> = { category: newCat };
-    // Automatically clamp subcategory to standard if the new category makes the current one invalid
     if (newCat !== 'Removed') {
       const nextSubs = CANONICAL_CATEGORY_MAP[newCat];
       if (nextSubs && !nextSubs.includes(activeMachine.subcategory || '')) {
@@ -136,9 +150,7 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
       entityLabel="Machine"
       EmptyIcon={Cpu}
     >
-      {/* Cost and Tier Row */}
       <div className={styles['form-row-grid']}>
-        {/* Editable machine Cost */}
         <div className={styles['form-group']}>
           <label className={styles['form-label']}>Cost ($)</label>
           <ValidatedNumberInput
@@ -154,7 +166,6 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
           />
         </div>
 
-        {/* Editable machine Tier */}
         <div className={styles['form-group']}>
           <label className={styles['form-label']}>Machine Tier</label>
           <select
@@ -170,9 +181,7 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
         </div>
       </div>
 
-      {/* Size X and Size Y Row */}
       <div className={styles['form-row-grid']}>
-        {/* Size X */}
         <div className={styles['form-group']}>
           <label className={styles['form-label']}>Size X (Grid Units)</label>
           <ValidatedNumberInput
@@ -192,7 +201,6 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
           />
         </div>
 
-        {/* Size Y */}
         <div className={styles['form-group']}>
           <label className={styles['form-label']}>Size Y (Grid Units)</label>
           <ValidatedNumberInput
@@ -213,9 +221,7 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
         </div>
       </div>
 
-      {/* Variant and Limited Row */}
       <div className={styles['form-row-grid']}>
-        {/* Variant Dropdown */}
         <div className={styles['form-group']}>
           <label className={styles['form-label']}>Variant Of</label>
           <SearchDropdown
@@ -226,7 +232,6 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
           />
         </div>
 
-        {/* Limited check */}
         <div className={styles['form-group']}>
           <label className={styles['form-label']}>Availability</label>
           <label className={styles['form-group-row']}>
@@ -241,7 +246,6 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
         </div>
       </div>
 
-      {/* Category SearchDropdown */}
       <div className={styles['form-group']}>
         <label className={styles['form-label']}>Category</label>
         <SearchDropdown
@@ -252,7 +256,6 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
         />
       </div>
 
-      {/* Subcategory SearchDropdown */}
       <div className={styles['form-group']}>
         <label className={styles['form-label']}>Subcategory</label>
         <SearchDropdown
@@ -263,7 +266,6 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
         />
       </div>
 
-      {/* Required Research Required SearchDropdown */}
       <div className={styles['form-group']}>
         <label className={styles['form-label']}>Required Research</label>
         <SearchDropdown

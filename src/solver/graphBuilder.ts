@@ -2,9 +2,12 @@ import type { ReactFlowNode, ReactFlowEdge, SolverGraph, SolverConnection } from
 import { resolveActiveRecipe } from '../data/lookup';
 import { getRateMultiplier } from '../utils/recipeComputation';
 import { parseHandleId } from '../utils/idGenerator';
+import { resolveHandleProduct, buildEdgeLookupMap } from '../utils/productResolver';
 
 export function buildSolverGraph(nodes: ReactFlowNode[], edges: ReactFlowEdge[]): SolverGraph {
   const graph: SolverGraph = { nodes: {}, products: {} };
+  const nodesMap = new Map<string, ReactFlowNode>(nodes.map((n) => [n.id, n]));
+  const edgeLookup = buildEdgeLookupMap(edges);
 
   for (const node of nodes) {
     const data = node.data;
@@ -14,13 +17,13 @@ export function buildSolverGraph(nodes: ReactFlowNode[], edges: ReactFlowEdge[])
     const multiplier = getRateMultiplier(recipe.cycle_time, 'second');
     const machineCount = data.machineCount ?? 1;
 
-    const inputs = recipe.inputs.map((inp) => ({
-      productId: inp.product_id,
+    const inputs = recipe.inputs.map((inp, idx) => ({
+      productId: resolveHandleProduct(node.id, 'input', idx, nodesMap, edgeLookup),
       rate: inp.quantity * machineCount * multiplier,
     }));
 
-    const outputs = recipe.outputs.map((out) => ({
-      productId: out.product_id,
+    const outputs = recipe.outputs.map((out, idx) => ({
+      productId: resolveHandleProduct(node.id, 'output', idx, nodesMap, edgeLookup),
       rate: out.quantity * machineCount * multiplier,
     }));
 

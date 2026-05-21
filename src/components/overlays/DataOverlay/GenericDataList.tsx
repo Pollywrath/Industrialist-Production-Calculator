@@ -32,53 +32,60 @@ export function GenericDataList({ type, selectedId, onSelect, styles }: GenericD
   const addResearch = useDataStore((s) => s.addResearch);
   const dbVersion = useDataStore((s) => s.dbVersion);
 
-  // 1. Gather baseline data and overlay transient edits
-  const baseline = dbVersion !== -1
-    ? (type === 'product' ? getAllProducts() : type === 'machine' ? getAllMachines() : getAllResearches())
-    : [];
+  const baseline =
+    dbVersion !== -1
+      ? type === 'product'
+        ? getAllProducts()
+        : type === 'machine'
+          ? getAllMachines()
+          : getAllResearches()
+      : [];
 
-  const pendingSubset = type === 'product'
-    ? pendingEdits.products
-    : type === 'machine'
-      ? pendingEdits.machines
-      : pendingEdits.researches;
+  const pendingSubset =
+    type === 'product'
+      ? pendingEdits.products
+      : type === 'machine'
+        ? pendingEdits.machines
+        : pendingEdits.researches;
 
   const compiledItems: DataEntity[] = baseline
-    .map((item) => overlayPendingEdit(item, pendingSubset[item.id] as Partial<typeof item> & { _tombstone?: boolean; _isNew?: boolean }))
+    .map((item) =>
+      overlayPendingEdit(
+        item,
+        pendingSubset[item.id] as Partial<typeof item> & { _tombstone?: boolean; _isNew?: boolean },
+      ),
+    )
     .filter((item): item is DataEntity => item !== null);
 
-  // Append newly created unsaved records
   const newItems = Object.values(pendingSubset).filter(
-    (item) => item._isNew && !item._tombstone
+    (item) => item._isNew && !item._tombstone,
   ) as DataEntity[];
   compiledItems.push(...newItems);
 
-  // 2. Apply search text query filtering
   const query = searchQuery.toLowerCase().trim();
   const filteredItems = compiledItems.filter((item) => {
     if (!query) return true;
     return item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query);
   });
 
-  // Sort alphabetically by ID
   filteredItems.sort((a, b) => a.id.localeCompare(b.id));
 
-  // 3. Trigger adding a new entry
   const handleAddNew = () => {
-    const newId = type === 'product'
-      ? addProduct('New Product')
-      : type === 'machine'
-        ? addMachine('New Machine')
-        : addResearch('New Research');
+    const newId =
+      type === 'product'
+        ? addProduct('New Product')
+        : type === 'machine'
+          ? addMachine('New Machine')
+          : addResearch('New Research');
     onSelect(newId);
   };
 
-  const labelPlural = type === 'product' ? 'products' : type === 'machine' ? 'machines' : 'researches';
+  const labelPlural =
+    type === 'product' ? 'products' : type === 'machine' ? 'machines' : 'researches';
   const labelSingle = type === 'product' ? 'Product' : type === 'machine' ? 'Machine' : 'Research';
 
   return (
     <div className={styles['sidebar-pane']}>
-      {/* Search and Add Toolbar */}
       <div className={styles['sidebar-toolbar']}>
         <div className={styles['search-box']}>
           <Search className={styles['search-icon']} size={14} />
@@ -108,30 +115,30 @@ export function GenericDataList({ type, selectedId, onSelect, styles }: GenericD
         </button>
       </div>
 
-      {/* Virtual Scrollable List Container */}
       <div className={styles['list-viewport']}>
-        <VirtualList
-          items={filteredItems}
-          itemHeight={44}
-          height={500} // Physical sidebar viewport height limit
-          getKey={(item) => item.id}
-        >
+        <VirtualList items={filteredItems} itemHeight={44} height={500} getKey={(item) => item.id}>
           {(item) => {
             const isSelected = selectedId === item.id;
-            const isSavedNew = type === 'product'
-              ? !isBaselineProduct(item.id)
-              : type === 'machine'
-                ? !isBaselineMachine(item.id)
-                : !isBaselineResearch(item.id);
-            const isNew = !!(pendingSubset[item.id]?._isNew || isSavedNew);
-            const isPending = !!(pendingSubset[item.id] && !pendingSubset[item.id]?._isNew && !pendingSubset[item.id]?._tombstone);
-            const isModified = dbVersion !== -1
-              ? (type === 'product'
-                ? hasProductOverride(item.id)
+            const isSavedNew =
+              type === 'product'
+                ? !isBaselineProduct(item.id)
                 : type === 'machine'
-                  ? hasMachineOverride(item.id)
-                  : hasResearchOverride(item.id))
-              : false;
+                  ? !isBaselineMachine(item.id)
+                  : !isBaselineResearch(item.id);
+            const isNew = !!(pendingSubset[item.id]?._isNew || isSavedNew);
+            const isPending = !!(
+              pendingSubset[item.id] &&
+              !pendingSubset[item.id]?._isNew &&
+              !pendingSubset[item.id]?._tombstone
+            );
+            const isModified =
+              dbVersion !== -1
+                ? type === 'product'
+                  ? hasProductOverride(item.id)
+                  : type === 'machine'
+                    ? hasMachineOverride(item.id)
+                    : hasResearchOverride(item.id)
+                : false;
 
             return (
               <div
@@ -145,7 +152,9 @@ export function GenericDataList({ type, selectedId, onSelect, styles }: GenericD
                   <div className={styles['item-name']}>{item.name}</div>
                   {isNew && <span className={styles['badge-new']}>New</span>}
                   {isPending && <span className={styles['badge-pending']}>Pending</span>}
-                  {isModified && !isPending && <span className={styles['badge-modified']}>Edited</span>}
+                  {isModified && !isPending && (
+                    <span className={styles['badge-modified']}>Edited</span>
+                  )}
                 </div>
                 <div className={styles['item-meta'] || ''}>
                   <div className={styles['item-id']}>{item.id}</div>

@@ -8,14 +8,8 @@ export function ProductsTab() {
 
   return (
     <div className={styles['products-tab-container']}>
-      <ProductsList
-        selectedProductId={selectedProductId}
-        onSelectProduct={setSelectedProductId}
-      />
-      <ProductForm
-        selectedProductId={selectedProductId}
-        onSelectProduct={setSelectedProductId}
-      />
+      <ProductsList selectedProductId={selectedProductId} onSelectProduct={setSelectedProductId} />
+      <ProductForm selectedProductId={selectedProductId} onSelectProduct={setSelectedProductId} />
     </div>
   );
 }

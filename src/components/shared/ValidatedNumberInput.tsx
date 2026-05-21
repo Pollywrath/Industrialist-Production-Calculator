@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useEffect } from 'react';
 import type { ChangeEvent } from 'react';
 
 interface ValidatedNumberInputProps {
@@ -28,28 +28,29 @@ export function ValidatedNumberInput({
   className,
   title,
 }: ValidatedNumberInputProps) {
-  const [prevValue, setPrevValue] = useState<number | undefined>(value);
-  const [localVal, setLocalVal] = useState<string>(
-    value === undefined || value === null ? '' : value.toString()
-  );
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  if (value !== prevValue) {
-    setPrevValue(value);
-    setLocalVal(value === undefined || value === null ? '' : value.toString());
-  }
+  useEffect(() => {
+    if (inputRef.current && document.activeElement !== inputRef.current) {
+      inputRef.current.value = value === undefined || value === null ? '' : value.toString();
+    }
+  }, [value]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const valStr = e.target.value;
 
-    // Filter characters early
     if (!allowNegatives && valStr.startsWith('-')) {
+      if (inputRef.current) {
+        inputRef.current.value = valStr.replace('-', '');
+      }
       return;
     }
     if (!allowDecimals && valStr.includes('.')) {
+      if (inputRef.current) {
+        inputRef.current.value = valStr.replace('.', '');
+      }
       return;
     }
-
-    setLocalVal(valStr);
 
     const parsed = allowDecimals ? parseFloat(valStr) : parseInt(valStr, 10);
     if (!isNaN(parsed) && !valStr.endsWith('.') && valStr !== '-') {
@@ -61,20 +62,24 @@ export function ValidatedNumberInput({
   };
 
   const handleBlur = () => {
-    const parsed = allowDecimals ? parseFloat(localVal) : parseInt(localVal, 10);
+    const currentValStr = inputRef.current?.value || '';
+    const parsed = allowDecimals ? parseFloat(currentValStr) : parseInt(currentValStr, 10);
     let committed = isNaN(parsed) ? defaultValue : parsed;
 
     if (min !== undefined) committed = Math.max(min, committed);
     if (max !== undefined) committed = Math.min(max, committed);
 
-    setLocalVal(committed.toString());
+    if (inputRef.current) {
+      inputRef.current.value = committed.toString();
+    }
     onChange(committed);
   };
 
   return (
     <input
+      ref={inputRef}
       type="number"
-      value={localVal}
+      defaultValue={value === undefined || value === null ? '' : value.toString()}
       onChange={handleChange}
       onBlur={handleBlur}
       min={min}

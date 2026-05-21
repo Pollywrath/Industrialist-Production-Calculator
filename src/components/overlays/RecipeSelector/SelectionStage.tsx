@@ -14,10 +14,8 @@ import {
 import styles from './RecipeSelector.module.css';
 import { formatCurrency, formatRpMultiplier } from '../../../utils/unitFormatting';
 import { useUIStore } from '../../../stores/useUIStore';
+import { useDataStore } from '../../../stores/useDataStore';
 import { useRecipeSelectorStore } from './RecipeSelectorContext';
-
-const staticMachines = getAllMachines();
-const uniqueTiers = Array.from(new Set(staticMachines.map((m) => m.tier))).sort((a, b) => a - b);
 
 const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multiplier'>[] = [
   {
@@ -81,6 +79,10 @@ interface SelectionStageProps {
 }
 
 export function SelectionStage({ inputRef }: SelectionStageProps) {
+  const dbVersion = useDataStore((s) => s.dbVersion);
+  const staticMachines = dbVersion !== -1 ? getAllMachines() : [];
+  const uniqueTiers = Array.from(new Set(staticMachines.map((m) => m.tier))).sort((a, b) => a - b);
+
   const {
     activeTab,
     setActiveTab,
@@ -274,6 +276,7 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
 }
 
 function ProductList() {
+  const dbVersion = useDataStore((s) => s.dbVersion);
   const {
     debouncedSearch,
     productTypeFilter,
@@ -292,7 +295,7 @@ function ProductList() {
     })),
   );
 
-  let list = getAllProducts();
+  let list = dbVersion !== -1 ? getAllProducts() : [];
 
   if (debouncedSearch.trim()) {
     const q = debouncedSearch.toLowerCase().trim();
@@ -320,6 +323,7 @@ function ProductList() {
 }
 
 function MachineList() {
+  const dbVersion = useDataStore((s) => s.dbVersion);
   const {
     debouncedSearch,
     machineTierFilter,
@@ -342,7 +346,7 @@ function MachineList() {
     })),
   );
 
-  let list = getAllMachines();
+  let list = dbVersion !== -1 ? getAllMachines() : [];
 
   if (debouncedSearch.trim()) {
     const q = debouncedSearch.toLowerCase().trim();

@@ -25,12 +25,15 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
   const deleteResearch = useDataStore((s) => s.deleteResearch);
   const restoreResearchDefault = useDataStore((s) => s.restoreResearchDefault);
   const dbVersion = useDataStore((s) => s.dbVersion);
- 
-  // Gather baseline and overlay edits safely
+
   const baseline = selectedResearchId ? getResearch(selectedResearchId) : undefined;
   const pending = selectedResearchId ? pendingEdits.researches[selectedResearchId] : undefined;
   const activeResearch = overlayPendingEdit(baseline, pending) as Research | undefined;
-  const isModified = selectedResearchId ? (dbVersion !== -1 ? hasResearchOverride(selectedResearchId) : false) : false;
+  const isModified = selectedResearchId
+    ? dbVersion !== -1
+      ? hasResearchOverride(selectedResearchId)
+      : false
+    : false;
 
   const [customPrereqText, setCustomPrereqText] = useState('');
 
@@ -46,7 +49,6 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
     );
   }
 
-  // If tombstoned, show empty selection
   if (pending?._tombstone) {
     return (
       <div className={styles['empty-detail']}>
@@ -85,7 +87,6 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
     }
   };
 
-  // Prerequisites Management
   const currentPrereqs = activeResearch.prerequisites || [];
 
   const handleRemovePrereq = (prereqIdOrText: string) => {
@@ -110,7 +111,6 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
     setCustomPrereqText('');
   };
 
-  // Compile options for the searchable dropdown of research prerequisites
   const allResearches = getAllResearches();
   const searchDropdownOptions = allResearches
     .filter((r) => {
@@ -140,7 +140,6 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
       entityLabel="Research"
       EmptyIcon={FlaskConical}
     >
-      {/* RP Cost */}
       <div className={styles['form-group']}>
         <label className={styles['form-label']}>RP Cost</label>
         <ValidatedNumberInput
@@ -154,7 +153,6 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
         />
       </div>
 
-      {/* Category Select */}
       <div className={styles['form-group']}>
         <label className={styles['form-label']}>Category</label>
         <select
@@ -170,11 +168,9 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
         </select>
       </div>
 
-      {/* Prerequisites Manager */}
       <div className={styles['form-group']}>
         <label className={styles['form-label']}>Prerequisites</label>
         <div className={styles['prereqs-container']}>
-          {/* Prerequisites List */}
           <div className={styles['prereqs-list']}>
             {currentPrereqs.length === 0 ? (
               <div className={styles['no-prereqs']}>No prerequisites added yet.</div>
@@ -188,9 +184,13 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
                     <div className={styles['prereq-info']}>
                       {isResearchPrereq ? (
                         <>
-                          <FlaskConical size={12} className={`${styles['prereq-icon']} ${styles['prereq-icon-flask']}`} />
+                          <FlaskConical
+                            size={12}
+                            className={`${styles['prereq-icon']} ${styles['prereq-icon-flask']}`}
+                          />
                           <span>
-                            <strong>{matchedResearch ? matchedResearch.name : prereq}</strong> (Research)
+                            <strong>{matchedResearch ? matchedResearch.name : prereq}</strong>{' '}
+                            (Research)
                           </span>
                         </>
                       ) : (
@@ -214,11 +214,11 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
             )}
           </div>
 
-          {/* Add Prerequisites Controls */}
           <div className={styles['prereqs-add-controls']}>
-            {/* Search Dropdown for Research Prereqs */}
             <div className={styles['form-group']}>
-              <span className={styles['form-label']} style={{ fontSize: '9px' }}>Add Research Prerequisite</span>
+              <span className={styles['form-label']} style={{ fontSize: '9px' }}>
+                Add Research Prerequisite
+              </span>
               <SearchDropdown
                 value=""
                 options={searchDropdownOptions}
@@ -232,10 +232,14 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
               />
             </div>
 
-            {/* Custom Prereq Text Input */}
             <div className={styles['form-group']}>
-              <span className={styles['form-label']} style={{ fontSize: '9px' }}>Add Custom Prerequisite</span>
-              <form onSubmit={handleAddCustomPrereq} className={styles['custom-prereq-input-group']}>
+              <span className={styles['form-label']} style={{ fontSize: '9px' }}>
+                Add Custom Prerequisite
+              </span>
+              <form
+                onSubmit={handleAddCustomPrereq}
+                className={styles['custom-prereq-input-group']}
+              >
                 <input
                   type="text"
                   className={styles['custom-prereq-input']}

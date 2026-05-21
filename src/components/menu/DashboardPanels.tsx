@@ -15,6 +15,7 @@ import { useFlowStore } from '../../stores/useFlowStore';
 import { useFlowResultStore } from '../../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import { getRecipe, getMachine, getProduct, getProductName } from '../../data/lookup';
+import { resolveHandleProduct, buildEdgeLookupMap } from '../../utils/productResolver';
 import { getSpecialRecipe } from '../../data/registry';
 import {
   formatCurrency,
@@ -60,19 +61,18 @@ export function DashboardPanels() {
   const isExtendedMinimized = useUIStore((s) => s.isExtendedMinimized);
   const toggleStatsMinimized = useUIStore((s) => s.toggleStatsMinimized);
   const toggleExtendedMinimized = useUIStore((s) => s.toggleExtendedMinimized);
-
   const rateMode = useUIStore((s) => s.rateMode);
-  const nodes = useFlowStore((s) => s.nodes);
+
+  useFlowStore((s) => s.solverVersion);
+  const nodes = useFlowStore.getState().nodes;
   const results = useFlowResultStore((s) => s.results);
 
   const globalPollution = useGlobalSettingsStore((s) => s.settings.global_pollution);
   const setGlobalPollution = useGlobalSettingsStore((s) => s.setGlobalPollution);
 
-
-
   const handleNodeClick = (nodeId?: string) => {
     if (!nodeId) return;
-    const node = nodes.find((n) => n.id === nodeId);
+    const node = useFlowStore.getState().nodes.find((n) => n.id === nodeId);
     if (node) {
       const x = node.position.x + (node.measured?.width ?? 200) / 2;
       const y = node.position.y + (node.measured?.height ?? 120) / 2;
@@ -94,7 +94,6 @@ export function DashboardPanels() {
     });
   };
 
-  // ─── STATS COMPUTATION ──────────────────────────────────────────────
   let totalConsumption = 0;
   let totalProduction = 0;
   let totalModelCount = 0;
@@ -102,174 +101,158 @@ export function DashboardPanels() {
   let netPollution = 0;
   let totalProfit = 0;
 
-  nodes.forEach((node) => {
-    let recipe = getRecipe(node.data.recipeId);
-    if (!recipe) return;
+  const deficienciesMap = new Map<string, ProductDeficiencyGroup>();
+  const excessesMap = new Map<string, ProductExcessGroup>();
 
-    // Resolve special recipe formulas dynamically
-    const sr = getSpecialRecipe(recipe.id);
-    if (sr && node.data.settings) {
-      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
-        string,
-        unknown
-      >;
-      recipe = sr.compute(node.data.settings, globalSettings);
-    }
+  if (!isStatsMinimized || !isExtendedMinimized) {
+    const rateModeFactor = rateMode === 'minute' ? 60 : rateMode === 'hour' ? 3600 : 1;
 
-    const machineCount = node.data.machineCount ?? 0;
-    const roundedCount = Math.ceil(machineCount);
+    const store = useFlowStore.getState();
+    const storeNodesMap = store.nodesMap;
+    const edges = store.edges;
+    const edgeLookup = buildEdgeLookupMap(edges);
 
-    const machine = getMachine(recipe.machine_id);
-    if (machine) {
-      // Rounded machine counts for machine cost
-      totalMachineCost += machine.cost * roundedCount;
+    nodes.forEach((node) => {
+      let recipe = getRecipe(node.data.recipeId);
+      if (!recipe) return;
 
-      // Calculate profit from Depot sales (scaled by temporal rateModes)
-      if (machine.subcategory === 'Depot') {
-        const nodeFlowResult = results.get(node.id);
-        if (nodeFlowResult) {
-          for (let i = 0; i < recipe.inputs.length; i++) {
-            const inputEntry = recipe.inputs[i];
-            const inputFlow = nodeFlowResult.inputFlows[i];
-            if (inputEntry && inputFlow) {
-              const ratePerSec = inputFlow.connected;
-              const product = getProduct(inputEntry.product_id);
-              if (product) {
-                const profitPerSec = ratePerSec * product.sell_price;
-                let scaledProfit = profitPerSec;
-                if (rateMode === 'minute') {
-                  scaledProfit = profitPerSec * 60;
-                } else if (rateMode === 'hour') {
-                  scaledProfit = profitPerSec * 3600;
+      const sr = getSpecialRecipe(recipe.id);
+      if (sr && node.data.settings) {
+        const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
+          string,
+          unknown
+        >;
+        recipe = sr.compute(node.data.settings, globalSettings);
+      }
+
+      const machineCount = node.data.machineCount ?? 0;
+      const roundedCount = Math.ceil(machineCount);
+
+      const machine = getMachine(recipe.machine_id);
+      const machineName = machine?.name ?? 'Machine';
+
+      if (machine) {
+        totalMachineCost += machine.cost * roundedCount;
+
+        if (machine.subcategory === 'Depot') {
+          const nodeFlowResult = results.get(node.id);
+          if (nodeFlowResult) {
+            for (let i = 0; i < recipe.inputs.length; i++) {
+              const inputEntry = recipe.inputs[i];
+              const inputFlow = nodeFlowResult.inputFlows[i];
+              if (inputEntry && inputFlow) {
+                const ratePerSec = inputFlow.connected;
+                const product = getProduct(inputEntry.product_id);
+                if (product) {
+                  const profitPerSec = ratePerSec * product.sell_price;
+                  let scaledProfit = profitPerSec;
+                  if (rateMode === 'minute') {
+                    scaledProfit = profitPerSec * 60;
+                  } else if (rateMode === 'hour') {
+                    scaledProfit = profitPerSec * 3600;
+                  }
+                  totalProfit += scaledProfit;
                 }
-                totalProfit += scaledProfit;
               }
             }
           }
         }
       }
-    }
 
-    // Power consumption and pollution use raw fractional values
-    if (recipe.power_consumption > 0) {
-      totalConsumption += recipe.power_consumption * machineCount;
-    } else if (recipe.power_consumption < 0) {
-      totalProduction += Math.abs(recipe.power_consumption) * machineCount;
-    }
-
-    netPollution += recipe.pollution * machineCount;
-
-    // Model Count special formula:
-    // - 1 for machine itself
-    // - 2 for each input and output
-    // - if HV and has power: + 2
-    // - if MV and has power: divide by 1500000, ceil, multiply by 2
-    let baseModelCount = 1;
-    baseModelCount += 2 * recipe.inputs.length;
-    baseModelCount += 2 * recipe.outputs.length;
-
-    if (recipe.power_consumption !== 0) {
-      if (recipe.power_type === 'HV') {
-        baseModelCount += 2;
-      } else if (recipe.power_type === 'MV') {
-        const absPower = Math.abs(recipe.power_consumption);
-        baseModelCount += Math.ceil(absPower / 1500000) * 2;
+      if (recipe.power_consumption > 0) {
+        totalConsumption += recipe.power_consumption * machineCount;
+      } else if (recipe.power_consumption < 0) {
+        totalProduction += Math.abs(recipe.power_consumption) * machineCount;
       }
-    }
 
-    totalModelCount += baseModelCount * roundedCount;
-  });
+      netPollution += recipe.pollution * machineCount;
 
-  // ─── DIAGNOSTICS GROUPED BY PRODUCT ────────────────────────────────
-  const deficienciesMap = new Map<string, ProductDeficiencyGroup>();
-  const excessesMap = new Map<string, ProductExcessGroup>();
+      let baseModelCount = 1;
+      baseModelCount += 2 * recipe.inputs.length;
+      baseModelCount += 2 * recipe.outputs.length;
 
-  const rateModeFactor = rateMode === 'minute' ? 60 : rateMode === 'hour' ? 3600 : 1;
-
-  nodes.forEach((node) => {
-    const nodeFlowResult = results.get(node.id);
-    if (!nodeFlowResult) return;
-
-    let recipe = getRecipe(node.data.recipeId);
-    if (!recipe) return;
-
-    const sr = getSpecialRecipe(recipe.id);
-    if (sr && node.data.settings) {
-      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
-        string,
-        unknown
-      >;
-      recipe = sr.compute(node.data.settings, globalSettings);
-    }
-
-    const machine = getMachine(recipe.machine_id);
-    const machineName = machine?.name ?? 'Machine';
-
-    // Inputs -> Deficiencies
-    for (let i = 0; i < recipe.inputs.length; i++) {
-      const inputFlow = nodeFlowResult.inputFlows[i];
-      if (inputFlow && inputFlow.hasDeficiency) {
-        const productId = recipe.inputs[i]?.product_id;
-        if (!productId) continue;
-        const defRate = (inputFlow.rate - inputFlow.connected) * rateModeFactor;
-        if (defRate > 0.0001) {
-          let group = deficienciesMap.get(productId);
-          if (!group) {
-            group = {
-              productId,
-              productName: getProductName(productId),
-              totalRate: 0,
-              nodes: [],
-            };
-            deficienciesMap.set(productId, group);
-          }
-          group.totalRate += defRate;
-          group.nodes.push({
-            nodeId: node.id,
-            nodeName: machineName,
-            rate: defRate,
-          });
+      if (recipe.power_consumption !== 0) {
+        if (recipe.power_type === 'HV') {
+          baseModelCount += 2;
+        } else if (recipe.power_type === 'MV') {
+          const absPower = Math.abs(recipe.power_consumption);
+          baseModelCount += Math.ceil(absPower / 1500000) * 2;
         }
       }
-    }
 
-    // Outputs -> Excesses
-    for (let i = 0; i < recipe.outputs.length; i++) {
-      const outputFlow = nodeFlowResult.outputFlows[i];
-      if (outputFlow && outputFlow.hasExcess) {
-        const outDef = recipe.outputs[i];
-        const productId = outDef?.product_id;
-        if (!productId) continue;
-        const excRate = (outputFlow.rate - outputFlow.connected) * rateModeFactor;
-        if (excRate > 0.0001) {
-          let group = excessesMap.get(productId);
-          if (!group) {
-            group = {
-              productId,
-              productName: getProductName(productId),
-              totalRate: 0,
-              allVoidable: true,
-              nodes: [],
-            };
-            excessesMap.set(productId, group);
+      totalModelCount += baseModelCount * roundedCount;
+
+      if (!isExtendedMinimized) {
+        const nodeFlowResult = results.get(node.id);
+        if (!nodeFlowResult) return;
+
+        for (let i = 0; i < recipe.inputs.length; i++) {
+          const inputFlow = nodeFlowResult.inputFlows[i];
+          if (inputFlow && inputFlow.hasDeficiency) {
+            const rawProductId = recipe.inputs[i]?.product_id;
+            if (!rawProductId) continue;
+            const productId = resolveHandleProduct(node.id, 'input', i, storeNodesMap, edgeLookup);
+            if (!productId) continue;
+            const defRate = (inputFlow.rate - inputFlow.connected) * rateModeFactor;
+            if (defRate > 0.0001) {
+              let group = deficienciesMap.get(productId);
+              if (!group) {
+                group = {
+                  productId,
+                  productName: getProductName(productId),
+                  totalRate: 0,
+                  nodes: [],
+                };
+                deficienciesMap.set(productId, group);
+              }
+              group.totalRate += defRate;
+              group.nodes.push({
+                nodeId: node.id,
+                nodeName: machineName,
+                rate: defRate,
+              });
+            }
           }
-          group.totalRate += excRate;
-          const isVoidable = !!outDef.voidable;
-          if (!isVoidable) {
-            group.allVoidable = false;
+        }
+
+        for (let i = 0; i < recipe.outputs.length; i++) {
+          const outputFlow = nodeFlowResult.outputFlows[i];
+          if (outputFlow && outputFlow.hasExcess) {
+            const outDef = recipe.outputs[i];
+            if (!outDef) continue;
+            const productId = resolveHandleProduct(node.id, 'output', i, storeNodesMap, edgeLookup);
+            if (!productId) continue;
+            const excRate = (outputFlow.rate - outputFlow.connected) * rateModeFactor;
+            if (excRate > 0.0001) {
+              let group = excessesMap.get(productId);
+              if (!group) {
+                group = {
+                  productId,
+                  productName: getProductName(productId),
+                  totalRate: 0,
+                  allVoidable: true,
+                  nodes: [],
+                };
+                excessesMap.set(productId, group);
+              }
+              group.totalRate += excRate;
+              const isVoidable = !!outDef.voidable;
+              if (!isVoidable) {
+                group.allVoidable = false;
+              }
+              group.nodes.push({
+                nodeId: node.id,
+                nodeName: machineName,
+                rate: excRate,
+                voidable: isVoidable,
+              });
+            }
           }
-          group.nodes.push({
-            nodeId: node.id,
-            nodeName: machineName,
-            rate: excRate,
-            voidable: isVoidable,
-          });
         }
       }
-    }
-  });
+    });
+  }
 
-  // Flatten maps to expand/collapse-ready lists for VirtualList
   const flatDeficiencies: DiagnosticVirtualItem[] = [];
   deficienciesMap.forEach((group) => {
     const isExpanded = expandedProducts.has(`def-${group.productId}`);
@@ -339,7 +322,6 @@ export function DashboardPanels() {
 
   return (
     <div className={styles['dashboard-container']}>
-      {/* ─── 1. STATS PANEL ─────────────────────────────────────────── */}
       <div className={styles['panel']}>
         <button className={styles['panel-header']} onClick={toggleStatsMinimized}>
           <span className={styles['panel-header-title']}>
@@ -384,12 +366,13 @@ export function DashboardPanels() {
                 <TrendingUp size={10} /> Profit
               </span>
               <span
-                className={`${styles['stat-value']} ${totalProfit > 0.0001
+                className={`${styles['stat-value']} ${
+                  totalProfit > 0.0001
                     ? styles['success']
                     : totalProfit < -0.0001
                       ? styles['error']
                       : styles['neutral']
-                  }`}
+                }`}
               >
                 {formatCurrency(totalProfit)}
                 {getProfitSuffix()}
@@ -401,12 +384,13 @@ export function DashboardPanels() {
                 <AlertTriangle size={10} /> Net Pollution
               </span>
               <span
-                className={`${styles['stat-value']} ${netPollution < -0.0001
+                className={`${styles['stat-value']} ${
+                  netPollution < -0.0001
                     ? styles['success']
                     : netPollution > 0.0001
                       ? styles['error']
                       : styles['neutral']
-                  }`}
+                }`}
               >
                 {formatPollution(netPollution)}
               </span>
@@ -415,7 +399,6 @@ export function DashboardPanels() {
         )}
       </div>
 
-      {/* ─── 2. EXTENDED PANEL ──────────────────────────────────────── */}
       <div className={styles['panel']}>
         <button className={styles['panel-header']} onClick={toggleExtendedMinimized}>
           <span className={styles['panel-header-title']}>
@@ -427,7 +410,6 @@ export function DashboardPanels() {
 
         {!isExtendedMinimized && (
           <div className={styles['panel-body']}>
-            {/* Global Pollution Control */}
             <div className={styles['global-var-group']}>
               <span className={styles['global-var-label']}>Global Pollution</span>
               <div className={styles['global-var-control']}>
@@ -444,7 +426,6 @@ export function DashboardPanels() {
               </div>
             </div>
 
-            {/* Deficiencies (Shortages) */}
             <div className={styles['diagnostic-section-title']}>Deficiencies (Shortages)</div>
             <div className={styles['diagnostic-container']}>
               {flatDeficiencies.length === 0 ? (
@@ -496,7 +477,6 @@ export function DashboardPanels() {
               )}
             </div>
 
-            {/* Excess Byproducts */}
             <div className={`${styles['diagnostic-section-title']} ${styles['is-spaced']}`}>
               Excess Byproducts
             </div>

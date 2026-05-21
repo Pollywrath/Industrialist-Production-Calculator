@@ -11,7 +11,7 @@
 .dropdown-input {
   box-sizing: border-box;
   width: 100%;
-  padding: 6px 28px 6px 10px; /* Space for the right arrow */
+  padding: 6px 28px 6px 10px;
   background-color: var(--theme-color-bg-secondary);
   border: 1px solid var(--theme-color-border-light);
   color: var(--theme-color-text-dim);
@@ -37,7 +37,7 @@
   transform: translateY(-50%);
   font-size: 8px;
   color: var(--theme-color-text-neutral);
-  pointer-events: none; /* Let clicks pass through to the input */
+  pointer-events: none;
   user-select: none;
 }
 
@@ -85,7 +85,6 @@
   color: var(--theme-color-primary);
 }
 
-/* Scrollbar styling - CAD like */
 .options-list::-webkit-scrollbar {
   width: 4px;
 }

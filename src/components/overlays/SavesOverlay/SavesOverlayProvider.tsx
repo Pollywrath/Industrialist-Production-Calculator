@@ -236,7 +236,6 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
               await delay(200);
               const success = await renameSave(id, newName);
               if (success) {
-                // Optimistic update to prevent stale data flashing
                 set((s) => ({
                   editingId: null,
                   saves: s.saves.map((save) =>

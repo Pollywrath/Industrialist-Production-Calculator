@@ -43,13 +43,41 @@ export function useAutosave(): void {
         }
       });
 
+    let dirtyVersion = 0;
+    let lastSavedVersion = 0;
+    let isSaving = false;
+
+    const unsub = useFlowStore.subscribe(
+      (state) => ({ nodes: state.nodes, edges: state.edges }),
+      () => {
+        dirtyVersion++;
+      },
+      {
+        equalityFn: (prev, next) => prev.nodes === next.nodes && prev.edges === next.edges,
+      },
+    );
+
     const intervalId = setInterval(() => {
       if (document.hidden) return;
+      if (dirtyVersion === lastSavedVersion) return;
+      if (isSaving) return;
+
+      isSaving = true;
+      const capturedVersion = dirtyVersion;
       const { nodes, edges } = useFlowStore.getState();
       const data = serializeCanvas(nodes, edges);
-      saveAutosave(data).catch((err) => {
-        console.warn('Failed to commit autosave interval:', err);
-      });
+      saveAutosave(data)
+        .then(() => {
+          if (dirtyVersion === capturedVersion) {
+            lastSavedVersion = capturedVersion;
+          }
+        })
+        .catch((err) => {
+          console.warn('Failed to commit autosave interval:', err);
+        })
+        .finally(() => {
+          isSaving = false;
+        });
     }, 5000);
 
     const handleBeforeUnload = () => {
@@ -65,6 +93,7 @@ export function useAutosave(): void {
     return () => {
       isMounted = false;
       clearInterval(intervalId);
+      unsub();
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);

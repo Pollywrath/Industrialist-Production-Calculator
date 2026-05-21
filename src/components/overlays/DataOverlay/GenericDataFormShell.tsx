@@ -31,7 +31,8 @@ export function GenericDataFormShell({
       <EmptyIcon className={styles['empty-icon']} size={40} strokeWidth={1} />
       <div className={styles['empty-title']}>No {entityLabel} Selected</div>
       <div className={styles['empty-desc']}>
-        Select a {entityLabel.toLowerCase()} from the master index list on the left to view or edit its parameters, or click the plus button to create a new custom {entityLabel.toLowerCase()}.
+        Select a {entityLabel.toLowerCase()} from the master index list on the left to view or edit
+        its parameters, or click the plus button to create a new custom {entityLabel.toLowerCase()}.
       </div>
     </div>
   );
@@ -50,7 +51,6 @@ export function GenericDataFormShell({
         </div>
 
         <div className={styles['form-body']}>
-          {/* Read-Only unique ID */}
           <div className={styles['form-group']}>
             <label className={styles['form-label']}>Unique ID</label>
             <input
@@ -62,7 +62,6 @@ export function GenericDataFormShell({
             />
           </div>
 
-          {/* Editable Name */}
           <div className={styles['form-group']}>
             <label className={styles['form-label']}>{entityLabel} Name</label>
             <input
@@ -75,10 +74,8 @@ export function GenericDataFormShell({
             />
           </div>
 
-          {/* Tab-Specific Inner Fields (Children composition) */}
           {children}
 
-          {/* Action Row */}
           <div className={styles['form-actions']}>
             {isModified ? (
               <button

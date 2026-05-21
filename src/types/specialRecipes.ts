@@ -23,7 +23,7 @@ export interface SelectSettingDefinition extends BaseSettingDefinition {
 
 export interface ProductSettingDefinition extends BaseSettingDefinition {
   type: 'product';
-  default: string; // product_id
+  default: string;
 }
 
 export type SettingDefinition =

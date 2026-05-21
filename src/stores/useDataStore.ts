@@ -1,7 +1,20 @@
 import { create } from 'zustand';
 import type { Product, Machine, Recipe, Research } from '../types/data';
-import { getAllProducts, getProduct, getAllMachines, getMachine, getAllResearches, getResearch, reloadDatabase } from '../data/lookup';
-import { saveDataOverride, clearDataOverrides, deleteDataOverride, clearCategoryDataOverrides } from '../persistence/idb';
+import {
+  getAllProducts,
+  getProduct,
+  getAllMachines,
+  getMachine,
+  getAllResearches,
+  getResearch,
+  reloadDatabase,
+} from '../data/lookup';
+import {
+  saveDataOverride,
+  clearDataOverrides,
+  deleteDataOverride,
+  clearCategoryDataOverrides,
+} from '../persistence/idb';
 import { useFlowStore } from './useFlowStore';
 import { useUIStore } from './useUIStore';
 import { validateProduct, validateMachine, validateResearch } from '../utils/dataValidation';
@@ -15,7 +28,7 @@ export interface PendingEdits {
 
 export function overlayPendingEdit<T extends { id: string }>(
   baseline: T | undefined,
-  pending: (Partial<T> & { _tombstone?: boolean; _isNew?: boolean }) | undefined
+  pending: (Partial<T> & { _tombstone?: boolean; _isNew?: boolean }) | undefined,
 ): T | null {
   if (pending?._tombstone) return null;
   if (!baseline) {
@@ -52,7 +65,7 @@ interface DataState {
 export function generateUniqueProductId(
   name: string,
   existingProducts: Product[],
-  pendingProducts: Record<string, Partial<Product> & { _tombstone?: boolean; _isNew?: boolean }>
+  pendingProducts: Record<string, Partial<Product> & { _tombstone?: boolean; _isNew?: boolean }>,
 ): string {
   let baseSlug = name
     .toLowerCase()
@@ -86,7 +99,7 @@ export function generateUniqueProductId(
 export function generateUniqueMachineId(
   name: string,
   existingMachines: Machine[],
-  pendingMachines: Record<string, Partial<Machine> & { _tombstone?: boolean; _isNew?: boolean }>
+  pendingMachines: Record<string, Partial<Machine> & { _tombstone?: boolean; _isNew?: boolean }>,
 ): string {
   let baseSlug = name
     .toLowerCase()
@@ -121,7 +134,7 @@ export function generateUniqueResearchId(
   name: string,
   category: string,
   existingResearches: Research[],
-  pendingResearches: Record<string, Partial<Research> & { _tombstone?: boolean; _isNew?: boolean }>
+  pendingResearches: Record<string, Partial<Research> & { _tombstone?: boolean; _isNew?: boolean }>,
 ): string {
   const catSlug = (category || '')
     .toLowerCase()
@@ -209,8 +222,9 @@ export const useDataStore = create<DataState>((set, get) => ({
       const prevEdit = state.pendingEdits.researches[id] || {};
       const nextResearches = { ...state.pendingEdits.researches };
 
-      const activeCategory = updates.category !== undefined ? updates.category : (prevEdit.category || 'Production');
-      const activeName = updates.name !== undefined ? updates.name : (prevEdit.name || '');
+      const activeCategory =
+        updates.category !== undefined ? updates.category : prevEdit.category || 'Production';
+      const activeName = updates.name !== undefined ? updates.name : prevEdit.name || '';
 
       const nameChanged = updates.name !== undefined && updates.name !== prevEdit.name;
       const catChanged = updates.category !== undefined && updates.category !== prevEdit.category;
@@ -218,7 +232,12 @@ export const useDataStore = create<DataState>((set, get) => ({
       if (prevEdit._isNew && (nameChanged || catChanged)) {
         const otherPending = { ...state.pendingEdits.researches };
         delete otherPending[id];
-        targetId = generateUniqueResearchId(activeName, activeCategory, getAllResearches(), otherPending);
+        targetId = generateUniqueResearchId(
+          activeName,
+          activeCategory,
+          getAllResearches(),
+          otherPending,
+        );
 
         delete nextResearches[id];
         nextResearches[targetId] = {
@@ -243,13 +262,12 @@ export const useDataStore = create<DataState>((set, get) => ({
     return targetId;
   },
 
-
   addProduct: (name = 'New Product') => {
     let generatedId = '';
     set((state) => {
       const activeProducts = getAllProducts();
       generatedId = generateUniqueProductId(name, activeProducts, state.pendingEdits.products);
-      
+
       const newProduct: Product = {
         id: generatedId,
         name,
@@ -391,7 +409,12 @@ export const useDataStore = create<DataState>((set, get) => ({
     let generatedId = '';
     set((state) => {
       const activeResearches = getAllResearches();
-      generatedId = generateUniqueResearchId(name, 'Production', activeResearches, state.pendingEdits.researches);
+      generatedId = generateUniqueResearchId(
+        name,
+        'Production',
+        activeResearches,
+        state.pendingEdits.researches,
+      );
 
       const newResearch: Research = {
         id: generatedId,
@@ -503,25 +526,25 @@ export const useDataStore = create<DataState>((set, get) => ({
   saveEdits: async () => {
     const { pendingEdits } = get();
 
-    // 1. Validate pending products
     for (const [id, editData] of Object.entries(pendingEdits.products)) {
       if (editData._tombstone) continue;
       const existing = getProduct(id);
       const compiled = existing ? { ...existing, ...editData } : editData;
       const validation = validateProduct(compiled);
       if (!validation.valid) {
-        const errorMsg = validation.errors.map(err => `- ${err.field}: ${err.message}`).join('\n');
+        const errorMsg = validation.errors
+          .map((err) => `- ${err.field}: ${err.message}`)
+          .join('\n');
         await useUIStore.getState().confirm({
           title: 'Product Validation Failed',
           message: `The product "${compiled.name || id}" has invalid properties:\n${errorMsg}`,
           confirmLabel: 'Dismiss',
           intent: 'error',
         });
-        return; // Halt saving
+        return;
       }
     }
 
-    // 2. Validate pending machines
     const validResearches = new Set(getAllResearches().map((r) => r.id));
     for (const [id, editData] of Object.entries(pendingEdits.machines)) {
       if (editData._tombstone) continue;
@@ -529,36 +552,38 @@ export const useDataStore = create<DataState>((set, get) => ({
       const compiled = existing ? { ...existing, ...editData } : editData;
       const validation = validateMachine(compiled, validResearches);
       if (!validation.valid) {
-        const errorMsg = validation.errors.map(err => `- ${err.field}: ${err.message}`).join('\n');
+        const errorMsg = validation.errors
+          .map((err) => `- ${err.field}: ${err.message}`)
+          .join('\n');
         await useUIStore.getState().confirm({
           title: 'Machine Validation Failed',
           message: `The machine "${compiled.name || id}" has invalid properties:\n${errorMsg}`,
           confirmLabel: 'Dismiss',
           intent: 'error',
         });
-        return; // Halt saving
+        return;
       }
     }
 
-    // 3. Validate pending researches
     for (const [id, editData] of Object.entries(pendingEdits.researches)) {
       if (editData._tombstone) continue;
       const existing = getResearch(id);
       const compiled = existing ? { ...existing, ...editData } : editData;
       const validation = validateResearch(compiled);
       if (!validation.valid) {
-        const errorMsg = validation.errors.map(err => `- ${err.field}: ${err.message}`).join('\n');
+        const errorMsg = validation.errors
+          .map((err) => `- ${err.field}: ${err.message}`)
+          .join('\n');
         await useUIStore.getState().confirm({
           title: 'Research Validation Failed',
           message: `The research "${compiled.name || id}" has invalid properties:\n${errorMsg}`,
           confirmLabel: 'Dismiss',
           intent: 'error',
         });
-        return; // Halt saving
+        return;
       }
     }
 
-    // 4. Persist product overrides
     for (const [id, editData] of Object.entries(pendingEdits.products)) {
       const dbKey = `product:${id}`;
       if (editData._tombstone) {
@@ -567,15 +592,16 @@ export const useDataStore = create<DataState>((set, get) => ({
         const existing = getProduct(id);
         const savedData = existing ? { ...existing, ...editData } : editData;
 
-        // Remove transient helper keys
-        const cleanData = { ...savedData } as Partial<Product> & { _isNew?: boolean; _tombstone?: boolean };
+        const cleanData = { ...savedData } as Partial<Product> & {
+          _isNew?: boolean;
+          _tombstone?: boolean;
+        };
         delete cleanData._isNew;
         delete cleanData._tombstone;
         await saveDataOverride(dbKey, cleanData as unknown as Record<string, unknown>);
       }
     }
 
-    // 5. Persist machine overrides
     for (const [id, editData] of Object.entries(pendingEdits.machines)) {
       const dbKey = `machine:${id}`;
       if (editData._tombstone) {
@@ -584,15 +610,16 @@ export const useDataStore = create<DataState>((set, get) => ({
         const existing = getMachine(id);
         const savedData = existing ? { ...existing, ...editData } : editData;
 
-        // Remove transient helper keys
-        const cleanData = { ...savedData } as Partial<Machine> & { _isNew?: boolean; _tombstone?: boolean };
+        const cleanData = { ...savedData } as Partial<Machine> & {
+          _isNew?: boolean;
+          _tombstone?: boolean;
+        };
         delete cleanData._isNew;
         delete cleanData._tombstone;
         await saveDataOverride(dbKey, cleanData as unknown as Record<string, unknown>);
       }
     }
 
-    // 6. Persist research overrides
     for (const [id, editData] of Object.entries(pendingEdits.researches)) {
       const dbKey = `research:${id}`;
       if (editData._tombstone) {
@@ -601,18 +628,18 @@ export const useDataStore = create<DataState>((set, get) => ({
         const existing = getResearch(id);
         const savedData = existing ? { ...existing, ...editData } : editData;
 
-        // Remove transient helper keys
-        const cleanData = { ...savedData } as Partial<Research> & { _isNew?: boolean; _tombstone?: boolean };
+        const cleanData = { ...savedData } as Partial<Research> & {
+          _isNew?: boolean;
+          _tombstone?: boolean;
+        };
         delete cleanData._isNew;
         delete cleanData._tombstone;
         await saveDataOverride(dbKey, cleanData as unknown as Record<string, unknown>);
       }
     }
 
-    // 3. Recompile compiled DB maps FIRST
     await reloadDatabase();
 
-    // 4. Clear transient edits AND increment dbVersion atomically
     set((state) => ({
       pendingEdits: {
         products: {},
@@ -623,7 +650,6 @@ export const useDataStore = create<DataState>((set, get) => ({
       dbVersion: state.dbVersion + 1,
     }));
 
-    // 5. Increment solver version to trigger re-computation across components
     useFlowStore.setState((s) => ({ solverVersion: s.solverVersion + 1 }));
   },
 

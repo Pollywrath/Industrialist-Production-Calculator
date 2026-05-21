@@ -29,7 +29,6 @@ export function SearchDropdown({
 
   const selectedOption = options.find((opt) => opt.value === value);
 
-  // Click outside listener to reset values and dismiss dropdown panel
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -43,19 +42,16 @@ export function SearchDropdown({
     };
   }, []);
 
-  // Determine active input text dynamically to avoid redundant useEffect state syncs
-  const inputValue = isFocused ? typedValue : (selectedOption ? selectedOption.label : '');
+  const inputValue = isFocused ? typedValue : selectedOption ? selectedOption.label : '';
 
-  // Filter options based on the typed value
   const filteredOptions = options.filter((opt) =>
-    opt.label.toLowerCase().includes(typedValue.toLowerCase())
+    opt.label.toLowerCase().includes(typedValue.toLowerCase()),
   );
 
   const handleFocus = () => {
     if (disabled) return;
     setIsOpen(true);
     setIsFocused(true);
-    // Initialize query to selected label for editing
     setTypedValue(selectedOption ? selectedOption.label : '');
   };
 

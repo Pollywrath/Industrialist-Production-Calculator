@@ -33,13 +33,11 @@ function DataOverlayModal() {
     'products' | 'machines' | 'recipes' | 'researches'
   >('products');
 
-  // Zustand Store integrations
   const pendingEdits = useDataStore((s) => s.pendingEdits);
   const discardEdits = useDataStore((s) => s.discardEdits);
   const saveEdits = useDataStore((s) => s.saveEdits);
   const restoreDefaults = useDataStore((s) => s.restoreDefaults);
 
-  // Check for unsaved changes across all categories
   const hasUnsavedEdits =
     Object.keys(pendingEdits.products).length > 0 ||
     Object.keys(pendingEdits.machines).length > 0 ||
@@ -57,8 +55,7 @@ function DataOverlayModal() {
 
     const confirmed = await useUIStore.getState().confirm({
       title: `Restore ${activeLabel} Defaults`,
-      message:
-        `Are you sure you want to revert all custom ${activeLabel.toLowerCase()} overrides back to baseline defaults? This will erase all added, edited, or deleted ${activeLabel.toLowerCase()} entries permanently.`,
+      message: `Are you sure you want to revert all custom ${activeLabel.toLowerCase()} overrides back to baseline defaults? This will erase all added, edited, or deleted ${activeLabel.toLowerCase()} entries permanently.`,
       confirmLabel: 'Restore Baseline',
       cancelLabel: 'Keep Custom Edits',
       intent: 'error',
@@ -71,7 +68,6 @@ function DataOverlayModal() {
   return createPortal(
     <div className={styles['data-overlay']} onClick={() => setDataOverlayOpen(false)}>
       <div className={styles['data-modal']} onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
         <div className={styles['data-header']}>
           <div className={styles['data-title']}>
             <Database size={18} />
@@ -82,7 +78,6 @@ function DataOverlayModal() {
           </button>
         </div>
 
-        {/* Main Tabs */}
         <div className={styles['data-tabs-main']}>
           <button
             className={`${styles['tab-btn-main']} ${
@@ -104,7 +99,6 @@ function DataOverlayModal() {
           </button>
         </div>
 
-        {/* Content Area */}
         <div className={styles['data-content']}>
           {activeMainTab === 'comparing' ? (
             <div className={styles['empty-state']}>
@@ -116,7 +110,6 @@ function DataOverlayModal() {
             </div>
           ) : (
             <div className={styles['edit-container']}>
-              {/* Sub-tabs for Editing */}
               <div className={styles['data-tabs-sub']}>
                 <button
                   className={`${styles['tab-btn-sub']} ${
@@ -156,7 +149,6 @@ function DataOverlayModal() {
                 </button>
               </div>
 
-              {/* Sub-tab Content Area */}
               <div className={styles['sub-tab-content']}>
                 {activeEditTab === 'products' && <ProductsTab />}
 
@@ -177,7 +169,6 @@ function DataOverlayModal() {
           )}
         </div>
 
-        {/* Footer Actions */}
         <div className={styles['data-footer']}>
           <div className={styles['footer-left']}>
             <button
@@ -205,9 +196,7 @@ function DataOverlayModal() {
               Discard
             </button>
             <button
-              className={`${styles['btn-save']} ${
-                !hasUnsavedEdits ? styles['is-disabled'] : ''
-              }`}
+              className={`${styles['btn-save']} ${!hasUnsavedEdits ? styles['is-disabled'] : ''}`}
               onClick={async () => {
                 if (hasUnsavedEdits) {
                   await saveEdits();

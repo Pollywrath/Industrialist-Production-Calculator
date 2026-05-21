@@ -1,4 +1,4 @@
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, useNodeConnections } from '@xyflow/react';
 import type { HandleRef } from '../../../types/nodes';
 import type { Recipe } from '../../../types/data';
 import { getProductName } from '../../../data/lookup';
@@ -9,6 +9,7 @@ import { getRateMultiplier, calculateMachineCountFromRate } from '../../../utils
 import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
+import { resolveHandleProduct, buildEdgeLookupMap } from '../../../utils/productResolver';
 import styles from './RecipeNode.module.css';
 
 import {
@@ -26,14 +27,6 @@ interface RecipeNodeIOProps {
   nodeId: string;
   machineCount: number;
 }
-
-function resolveLabel(ref: HandleRef, recipe: Recipe | undefined): string {
-  if (!recipe) return '???';
-  const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
-  const entry = list[ref.index];
-  return entry ? getProductName(entry.product_id) : '???';
-}
-
 function resolveQuantity(ref: HandleRef, recipe: Recipe | undefined): number {
   if (!recipe) return 0;
   const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
@@ -43,6 +36,7 @@ function resolveQuantity(ref: HandleRef, recipe: Recipe | undefined): number {
 
 interface RecipeNodeIORectProps {
   refVal: HandleRef;
+  nodeId: string;
   width: number;
   recipe: Recipe | undefined;
   machineCount: number;
@@ -52,15 +46,34 @@ interface RecipeNodeIORectProps {
 
 function RecipeNodeIORect({
   refVal,
+  nodeId,
   width,
   recipe,
   machineCount,
   multiplier,
   onClick,
 }: RecipeNodeIORectProps) {
+  const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
+  useNodeConnections({
+    handleType: refVal.side === 'input' ? 'target' : 'source',
+    handleId,
+  });
+
+  useFlowStore((s) => s.solverVersion);
+
+  const { nodesMap, edges } = useFlowStore.getState();
+  const edgeLookup = buildEdgeLookupMap(edges);
+  const resolvedProductId = resolveHandleProduct(
+    nodeId,
+    refVal.side,
+    refVal.index,
+    nodesMap,
+    edgeLookup,
+  );
+
   const qty = resolveQuantity(refVal, recipe);
   const totalQty = qty * machineCount * multiplier;
-  const label = resolveLabel(refVal, recipe);
+  const label = getProductName(resolvedProductId);
 
   return (
     <div className={styles['recipe-node-io__rect-wrapper']}>
@@ -117,7 +130,10 @@ function RecipeNodeIOHandle({
         position: 'var(--theme-handle-position)' as 'absolute',
         ...(refVal.side === 'input'
           ? { left: 'var(--theme-handle-left)', transform: 'var(--theme-handle-transform-left)' }
-          : { right: 'var(--theme-handle-right)', transform: 'var(--theme-handle-transform-right)' }),
+          : {
+              right: 'var(--theme-handle-right)',
+              transform: 'var(--theme-handle-transform-right)',
+            }),
       }}
       onClick={(e) => onSquareClick(e, handleId)}
       onDoubleClick={(e) => {
@@ -179,9 +195,16 @@ export function RecipeNodeIO({
     const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
     const entry = list[ref.index];
     if (entry) {
+      const isPlaceholder = entry.product_id === 'any_fluid' || entry.product_id === 'any_item';
       useUIStore
         .getState()
-        .setRecipeSelectorOpen(true, entry.product_id, ref.side, nodeId, ref.index);
+        .setRecipeSelectorOpen(
+          true,
+          isPlaceholder ? null : entry.product_id,
+          ref.side,
+          nodeId,
+          ref.index,
+        );
     }
   };
 
@@ -221,10 +244,12 @@ export function RecipeNodeIO({
     >
       <div
         className={styles['recipe-node-io__columns']}
-        style={{
-          '--grid-template-columns': gridTemplateColumns,
-          '--padding-horizontal': `${SIDE_PADDING}px`,
-        } as React.CSSProperties}
+        style={
+          {
+            '--grid-template-columns': gridTemplateColumns,
+            '--padding-horizontal': `${SIDE_PADDING}px`,
+          } as React.CSSProperties
+        }
       >
         {hasLeft && (
           <div
@@ -234,6 +259,7 @@ export function RecipeNodeIO({
               <RecipeNodeIORect
                 key={`left-${refVal.index}`}
                 refVal={refVal}
+                nodeId={nodeId}
                 width={leftWidth}
                 recipe={recipe}
                 machineCount={machineCount}
@@ -254,6 +280,7 @@ export function RecipeNodeIO({
               <RecipeNodeIORect
                 key={`right-${refVal.index}`}
                 refVal={refVal}
+                nodeId={nodeId}
                 width={rightWidth}
                 recipe={recipe}
                 machineCount={machineCount}

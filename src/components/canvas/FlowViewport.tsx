@@ -10,7 +10,8 @@ import {
 import '@xyflow/react/dist/style.css';
 import { RecipeNode } from './nodes/RecipeNode';
 import { RecipeEdge } from './edges/RecipeEdge';
-import { getRecipe } from '../../data/lookup';
+import { getProduct } from '../../data/lookup';
+import { resolveHandleProduct, buildEdgeLookupMap } from '../../utils/productResolver';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { useFlowSolver } from '../../hooks/useFlowSolver';
@@ -62,23 +63,47 @@ const isValidConnection = (connection: Connection | Edge) => {
   const sourceIndex = sourceParsed.index;
   const targetIndex = targetParsed.index;
 
-  const storeNodesMap = useFlowStore.getState().nodesMap;
+  const store = useFlowStore.getState();
+  const storeNodesMap = store.nodesMap;
   const sourceNode = storeNodesMap.get(connection.source);
   const targetNode = storeNodesMap.get(connection.target);
 
   if (!sourceNode || !targetNode) return false;
 
-  const sourceRecipe = getRecipe(sourceNode.data.recipeId);
-  const targetRecipe = getRecipe(targetNode.data.recipeId);
+  const edges = store.edges;
+  const edgeLookup = buildEdgeLookupMap(edges);
+  const resolvedSourceProductId = resolveHandleProduct(
+    connection.source,
+    'output',
+    sourceIndex,
+    storeNodesMap,
+    edgeLookup,
+  );
+  const resolvedTargetProductId = resolveHandleProduct(
+    connection.target,
+    'input',
+    targetIndex,
+    storeNodesMap,
+    edgeLookup,
+  );
 
-  if (!sourceRecipe || !targetRecipe) return false;
+  const sourceProdObj = getProduct(resolvedSourceProductId);
+  const targetProdObj = getProduct(resolvedTargetProductId);
 
-  const sourceProduct = sourceRecipe.outputs[sourceIndex];
-  const targetProduct = targetRecipe.inputs[targetIndex];
+  if (!sourceProdObj || !targetProdObj) return false;
 
-  if (!sourceProduct || !targetProduct) return false;
+  if (resolvedSourceProductId === resolvedTargetProductId) return true;
 
-  return sourceProduct.product_id === targetProduct.product_id;
+  const isSourceAny =
+    resolvedSourceProductId === 'any_fluid' || resolvedSourceProductId === 'any_item';
+  const isTargetAny =
+    resolvedTargetProductId === 'any_fluid' || resolvedTargetProductId === 'any_item';
+
+  if (isSourceAny || isTargetAny) {
+    return sourceProdObj.type === targetProdObj.type;
+  }
+
+  return false;
 };
 
 export function FlowViewport() {

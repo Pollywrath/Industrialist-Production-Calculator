@@ -33,7 +33,7 @@ export function validateProduct(product: unknown): ValidationResult {
 
   if (typeof p.id !== 'string' || !p.id.trim()) {
     errors.push({ field: 'id', message: 'ID must be a non-empty string' });
-  } else if (!p.id.startsWith('p_')) {
+  } else if (!p.id.startsWith('p_') && p.id !== 'any_fluid' && p.id !== 'any_item') {
     errors.push({
       field: 'id',
       message: `ID "${p.id}" must start with "p_" prefix`,

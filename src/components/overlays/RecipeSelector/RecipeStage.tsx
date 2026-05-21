@@ -5,9 +5,8 @@ import { VirtualList } from '../../shared/VirtualList';
 import { RecipeCard } from './RecipeCard';
 import styles from './RecipeSelector.module.css';
 import { useUIStore } from '../../../stores/useUIStore';
+import { useDataStore } from '../../../stores/useDataStore';
 import { useRecipeSelectorFilters } from './RecipeSelectorContext';
-
-const allRecipes = getAllRecipes();
 
 interface RecipeStageProps {
   clickedRateInfo: { clickedPerSecondRate: number } | null;
@@ -22,6 +21,9 @@ export function RecipeStage({
   preselectedProductId,
   onAddRecipe,
 }: RecipeStageProps) {
+  const dbVersion = useDataStore((s) => s.dbVersion);
+  const allRecipes = dbVersion !== -1 ? getAllRecipes() : [];
+
   const {
     activeTab,
     selectedId,
