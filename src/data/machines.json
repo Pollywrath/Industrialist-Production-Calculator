@@ -42,6 +42,20 @@
     "gamemode": "any"
   },
   {
+    "id": "m_advanced_diesel_refinery",
+    "name": "Advanced Diesel Refinery",
+    "cost": 10000,
+    "size": "14x14",
+    "tier": 2,
+    "transfer_rate": 0,
+    "capacity": 3000000,
+    "category": "Factories",
+    "subcategory": "Refineries",
+    "variant": "none",
+    "limited": true,
+    "gamemode": "any"
+  },
+  {
     "id": "m_advanced_oil_separator",
     "name": "Advanced Oil Separator",
     "cost": 1250000,
