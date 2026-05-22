@@ -84,6 +84,7 @@
   --theme-color-error: #ef4444;
   --theme-color-error-translucent: rgba(239, 68, 68, 0.1);
   --theme-color-warning-translucent: rgba(255, 170, 0, 0.1);
+  --theme-color-success-translucent: rgba(34, 197, 94, 0.1);
   --theme-color-white: #ffffff;
   --theme-color-black: #000000;
   --theme-color-bg-active: #2b2b35;

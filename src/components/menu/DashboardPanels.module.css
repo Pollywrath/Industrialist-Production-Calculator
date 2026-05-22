@@ -74,7 +74,7 @@
   align-items: center;
   font-size: 11px;
   line-height: 1.4;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+  border-bottom: 1px dashed var(--theme-color-border-light-translucent);
   padding-bottom: 4px;
 }
 
@@ -201,7 +201,7 @@
   font-size: 10px;
   height: 28px;
   padding: 0 6px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--theme-color-btn-hover-overlay);
   border: 1px solid var(--theme-color-border-light);
   border-bottom: none;
   cursor: pointer;
@@ -248,7 +248,7 @@
   font-size: 9px;
   height: 28px;
   padding: 0 6px 0 16px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--theme-color-btn-bg-translucent);
   border-right: 1px solid var(--theme-color-border-light);
   border-left: 1px solid var(--theme-color-border-light);
   cursor: pointer;
@@ -300,19 +300,19 @@
 }
 
 .badge.clogged {
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--theme-color-error-translucent);
   border: 1px solid var(--theme-color-text-error);
   color: var(--theme-color-text-error);
 }
 
 .badge.voided {
-  background: rgba(34, 197, 94, 0.15);
+  background: var(--theme-color-success-translucent);
   border: 1px solid var(--theme-color-success);
   color: var(--theme-color-success);
 }
 
 .badge.deficient {
-  background: rgba(239, 68, 68, 0.15);
+  background: var(--theme-color-error-translucent);
   border: 1px solid var(--theme-color-text-error);
   color: var(--theme-color-text-error);
 }

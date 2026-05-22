@@ -13,6 +13,7 @@ interface ValidatedNumberInputProps {
   placeholder?: string;
   className?: string;
   title?: string;
+  disabled?: boolean;
 }
 
 export function ValidatedNumberInput({
@@ -27,6 +28,7 @@ export function ValidatedNumberInput({
   placeholder,
   className,
   title,
+  disabled = false,
 }: ValidatedNumberInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -88,6 +90,7 @@ export function ValidatedNumberInput({
       placeholder={placeholder}
       className={className}
       title={title}
+      disabled={disabled}
     />
   );
 }

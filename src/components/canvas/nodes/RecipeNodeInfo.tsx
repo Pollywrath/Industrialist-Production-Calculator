@@ -14,6 +14,7 @@ interface RecipeNodeInfoProps {
   machineName: string;
   machineCount: number;
   onOpenEditor: () => void;
+  receivedTemp?: number | null;
 }
 
 export function RecipeNodeInfo({
@@ -21,6 +22,7 @@ export function RecipeNodeInfo({
   machineName,
   machineCount,
   onOpenEditor,
+  receivedTemp,
 }: RecipeNodeInfoProps) {
   const rateMode = useUIStore((s) => s.rateMode);
   const displayCycleTime = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 0;
@@ -38,6 +40,11 @@ export function RecipeNodeInfo({
 
   return (
     <div className={styles['recipe-node-info']}>
+      {receivedTemp !== undefined && receivedTemp !== null && (
+        <div className={styles['recipe-node-info__temp-badge']}>
+          {receivedTemp.toFixed(1)}°C
+        </div>
+      )}
       <button className={styles['recipe-node-info__top-right-btn']} onClick={handleBtnClick}>
         <svg
           viewBox="0 0 24 24"

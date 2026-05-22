@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import {
   ChevronUp,
@@ -12,11 +12,8 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
 import { useFlowStore } from '../../stores/useFlowStore';
-import { useFlowResultStore } from '../../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
-import { getRecipe, getMachine, getProduct, getProductName } from '../../data/lookup';
-import { resolveHandleProduct, buildEdgeLookupMap } from '../../utils/productResolver';
-import { getSpecialRecipe } from '../../data/registry';
+import { useDashboardStore, initDashboardStore } from '../../stores/useDashboardStore';
 import {
   formatCurrency,
   formatPower,
@@ -40,22 +37,12 @@ interface DiagnosticVirtualItem {
   isExpanded?: boolean;
 }
 
-interface ProductDeficiencyGroup {
-  productId: string;
-  productName: string;
-  totalRate: number;
-  nodes: { nodeId: string; nodeName: string; rate: number }[];
-}
-
-interface ProductExcessGroup {
-  productId: string;
-  productName: string;
-  totalRate: number;
-  allVoidable: boolean;
-  nodes: { nodeId: string; nodeName: string; rate: number; voidable: boolean }[];
-}
-
 export function DashboardPanels() {
+  useEffect(() => {
+    const unsubscribe = initDashboardStore();
+    return unsubscribe;
+  }, []);
+
   const { setCenter } = useReactFlow();
   const isStatsMinimized = useUIStore((s) => s.isStatsMinimized);
   const isExtendedMinimized = useUIStore((s) => s.isExtendedMinimized);
@@ -63,12 +50,19 @@ export function DashboardPanels() {
   const toggleExtendedMinimized = useUIStore((s) => s.toggleExtendedMinimized);
   const rateMode = useUIStore((s) => s.rateMode);
 
-  useFlowStore((s) => s.solverVersion);
-  const nodes = useFlowStore.getState().nodes;
-  const results = useFlowResultStore((s) => s.results);
-
   const globalPollution = useGlobalSettingsStore((s) => s.settings.global_pollution);
   const setGlobalPollution = useGlobalSettingsStore((s) => s.setGlobalPollution);
+
+  const {
+    totalConsumption,
+    totalProduction,
+    totalModelCount,
+    totalMachineCost,
+    netPollution,
+    totalProfit,
+    deficienciesMap,
+    excessesMap,
+  } = useDashboardStore();
 
   const handleNodeClick = (nodeId?: string) => {
     if (!nodeId) return;
@@ -93,165 +87,6 @@ export function DashboardPanels() {
       return next;
     });
   };
-
-  let totalConsumption = 0;
-  let totalProduction = 0;
-  let totalModelCount = 0;
-  let totalMachineCost = 0;
-  let netPollution = 0;
-  let totalProfit = 0;
-
-  const deficienciesMap = new Map<string, ProductDeficiencyGroup>();
-  const excessesMap = new Map<string, ProductExcessGroup>();
-
-  if (!isStatsMinimized || !isExtendedMinimized) {
-    const rateModeFactor = rateMode === 'minute' ? 60 : rateMode === 'hour' ? 3600 : 1;
-
-    const store = useFlowStore.getState();
-    const storeNodesMap = store.nodesMap;
-    const edges = store.edges;
-    const edgeLookup = buildEdgeLookupMap(edges);
-
-    nodes.forEach((node) => {
-      let recipe = getRecipe(node.data.recipeId);
-      if (!recipe) return;
-
-      const sr = getSpecialRecipe(recipe.id);
-      if (sr && node.data.settings) {
-        const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
-          string,
-          unknown
-        >;
-        recipe = sr.compute(node.data.settings, globalSettings);
-      }
-
-      const machineCount = node.data.machineCount ?? 0;
-      const roundedCount = Math.ceil(machineCount);
-
-      const machine = getMachine(recipe.machine_id);
-      const machineName = machine?.name ?? 'Machine';
-
-      if (machine) {
-        totalMachineCost += machine.cost * roundedCount;
-
-        if (machine.subcategory === 'Depot') {
-          const nodeFlowResult = results.get(node.id);
-          if (nodeFlowResult) {
-            for (let i = 0; i < recipe.inputs.length; i++) {
-              const inputEntry = recipe.inputs[i];
-              const inputFlow = nodeFlowResult.inputFlows[i];
-              if (inputEntry && inputFlow) {
-                const ratePerSec = inputFlow.connected;
-                const product = getProduct(inputEntry.product_id);
-                if (product) {
-                  const profitPerSec = ratePerSec * product.sell_price;
-                  let scaledProfit = profitPerSec;
-                  if (rateMode === 'minute') {
-                    scaledProfit = profitPerSec * 60;
-                  } else if (rateMode === 'hour') {
-                    scaledProfit = profitPerSec * 3600;
-                  }
-                  totalProfit += scaledProfit;
-                }
-              }
-            }
-          }
-        }
-      }
-
-      if (recipe.power_consumption > 0) {
-        totalConsumption += recipe.power_consumption * machineCount;
-      } else if (recipe.power_consumption < 0) {
-        totalProduction += Math.abs(recipe.power_consumption) * machineCount;
-      }
-
-      netPollution += recipe.pollution * machineCount;
-
-      let baseModelCount = 1;
-      baseModelCount += 2 * recipe.inputs.length;
-      baseModelCount += 2 * recipe.outputs.length;
-
-      if (recipe.power_consumption !== 0) {
-        if (recipe.power_type === 'HV') {
-          baseModelCount += 2;
-        } else if (recipe.power_type === 'MV') {
-          const absPower = Math.abs(recipe.power_consumption);
-          baseModelCount += Math.ceil(absPower / 1500000) * 2;
-        }
-      }
-
-      totalModelCount += baseModelCount * roundedCount;
-
-      if (!isExtendedMinimized) {
-        const nodeFlowResult = results.get(node.id);
-        if (!nodeFlowResult) return;
-
-        for (let i = 0; i < recipe.inputs.length; i++) {
-          const inputFlow = nodeFlowResult.inputFlows[i];
-          if (inputFlow && inputFlow.hasDeficiency) {
-            const rawProductId = recipe.inputs[i]?.product_id;
-            if (!rawProductId) continue;
-            const productId = resolveHandleProduct(node.id, 'input', i, storeNodesMap, edgeLookup);
-            if (!productId) continue;
-            const defRate = (inputFlow.rate - inputFlow.connected) * rateModeFactor;
-            if (defRate > 0.0001) {
-              let group = deficienciesMap.get(productId);
-              if (!group) {
-                group = {
-                  productId,
-                  productName: getProductName(productId),
-                  totalRate: 0,
-                  nodes: [],
-                };
-                deficienciesMap.set(productId, group);
-              }
-              group.totalRate += defRate;
-              group.nodes.push({
-                nodeId: node.id,
-                nodeName: machineName,
-                rate: defRate,
-              });
-            }
-          }
-        }
-
-        for (let i = 0; i < recipe.outputs.length; i++) {
-          const outputFlow = nodeFlowResult.outputFlows[i];
-          if (outputFlow && outputFlow.hasExcess) {
-            const outDef = recipe.outputs[i];
-            if (!outDef) continue;
-            const productId = resolveHandleProduct(node.id, 'output', i, storeNodesMap, edgeLookup);
-            if (!productId) continue;
-            const excRate = (outputFlow.rate - outputFlow.connected) * rateModeFactor;
-            if (excRate > 0.0001) {
-              let group = excessesMap.get(productId);
-              if (!group) {
-                group = {
-                  productId,
-                  productName: getProductName(productId),
-                  totalRate: 0,
-                  allVoidable: true,
-                  nodes: [],
-                };
-                excessesMap.set(productId, group);
-              }
-              group.totalRate += excRate;
-              const isVoidable = !!outDef.voidable;
-              if (!isVoidable) {
-                group.allVoidable = false;
-              }
-              group.nodes.push({
-                nodeId: node.id,
-                nodeName: machineName,
-                rate: excRate,
-                voidable: isVoidable,
-              });
-            }
-          }
-        }
-      }
-    });
-  }
 
   const flatDeficiencies: DiagnosticVirtualItem[] = [];
   deficienciesMap.forEach((group) => {

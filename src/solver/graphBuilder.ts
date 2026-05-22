@@ -4,14 +4,22 @@ import { getRateMultiplier } from '../utils/recipeComputation';
 import { parseHandleId } from '../utils/idGenerator';
 import { resolveHandleProduct, buildEdgeLookupMap } from '../utils/productResolver';
 
-export function buildSolverGraph(nodes: ReactFlowNode[], edges: ReactFlowEdge[]): SolverGraph {
+export function buildSolverGraph(
+  nodes: ReactFlowNode[],
+  edges: ReactFlowEdge[],
+  settingsOverrides?: Record<string, Record<string, unknown>>,
+): SolverGraph {
   const graph: SolverGraph = { nodes: {}, products: {} };
   const nodesMap = new Map<string, ReactFlowNode>(nodes.map((n) => [n.id, n]));
   const edgeLookup = buildEdgeLookupMap(edges);
 
   for (const node of nodes) {
     const data = node.data;
-    const recipe = resolveActiveRecipe(data.recipeId, data.settings);
+    const nodeOverrides = settingsOverrides?.[node.id];
+    const settings = nodeOverrides || data.settings
+      ? { ...data.settings, ...nodeOverrides }
+      : undefined;
+    const recipe = resolveActiveRecipe(data.recipeId, settings);
     if (!recipe) continue;
 
     const multiplier = getRateMultiplier(recipe.cycle_time, 'second');

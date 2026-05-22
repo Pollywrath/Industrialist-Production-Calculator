@@ -111,3 +111,28 @@ export function resolveHandleProduct(
   resolveCache.set(handleId, baseProductId);
   return baseProductId;
 }
+
+export function computeResolvedProducts(
+  nodesMap: Map<string, ReactFlowNode>,
+  edges: ReactFlowEdge[],
+): Record<string, string> {
+  const edgeLookup = buildEdgeLookupMap(edges);
+  const resolved: Record<string, string> = {};
+
+  for (const node of nodesMap.values()) {
+    const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings);
+    if (!recipe) continue;
+
+    for (let idx = 0; idx < recipe.inputs.length; idx++) {
+      const handleId = `${node.id}-input-${idx}`;
+      resolved[handleId] = resolveHandleProduct(node.id, 'input', idx, nodesMap, edgeLookup);
+    }
+    for (let idx = 0; idx < recipe.outputs.length; idx++) {
+      const handleId = `${node.id}-output-${idx}`;
+      resolved[handleId] = resolveHandleProduct(node.id, 'output', idx, nodesMap, edgeLookup);
+    }
+  }
+
+  return resolved;
+}
+

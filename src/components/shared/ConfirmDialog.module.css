@@ -117,7 +117,7 @@
 }
 
 .confirm-btn.error {
-  color: #ffffff;
+  color: var(--theme-color-white);
   background: var(--theme-color-confirm-error);
   border-color: var(--theme-color-confirm-error);
 }

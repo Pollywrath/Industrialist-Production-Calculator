@@ -1,8 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useFlowStore } from '../stores/useFlowStore';
 import { useFlowResultStore } from '../stores/useFlowResultStore';
-import { buildSolverGraph } from '../solver/graphBuilder';
-import { calculateFlows } from '../solver/flowSolver';
+import { solveFlowAndTemperature } from '../solver/temperaturePropagator';
 import { SOLVER_DEBOUNCE_MS } from '../components/shared/layoutConstants';
 
 export function useFlowSolver(): void {
@@ -13,13 +12,12 @@ export function useFlowSolver(): void {
       const { nodes, edges } = useFlowStore.getState();
 
       if (nodes.length === 0) {
-        useFlowResultStore.getState().setResults(new Map());
+        useFlowResultStore.getState().setResults(new Map(), {}, {}, {});
         return;
       }
 
-      const graph = buildSolverGraph(nodes, edges);
-      const results = calculateFlows(graph);
-      useFlowResultStore.getState().setResults(results);
+      const { results, edgeFlows, edgeTemps, inputTemps } = solveFlowAndTemperature(nodes, edges);
+      useFlowResultStore.getState().setResults(results, edgeFlows, edgeTemps, inputTemps);
     }
 
     function scheduleRecompute() {

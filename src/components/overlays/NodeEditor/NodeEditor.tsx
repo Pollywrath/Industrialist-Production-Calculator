@@ -199,7 +199,7 @@ function NodeEditorModal({
               />
             </>
           ) : (
-            <SettingsEditor recipe={recipe} />
+            <SettingsEditor recipe={recipe} nodeId={nodeId} />
           )}
         </div>
 

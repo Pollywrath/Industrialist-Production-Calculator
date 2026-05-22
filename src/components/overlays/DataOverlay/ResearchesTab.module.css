@@ -267,6 +267,14 @@
   letter-spacing: 0.5px;
 }
 
+.form-label-small {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--theme-color-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .form-input-readonly {
   box-sizing: border-box;
   width: 100%;
@@ -475,6 +483,10 @@
 
 .btn-add-custom-prereq:active {
   background: var(--theme-color-primary-hover);
+}
+
+.btn-add-custom-prereq svg {
+  margin-right: 4px;
 }
 
 .no-prereqs {

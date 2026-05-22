@@ -35,6 +35,7 @@ import {
 
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { useDataStore } from '../../../stores/useDataStore';
+import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { getSpecialRecipe } from '../../../data/registry';
 
 export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
@@ -54,6 +55,21 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   }, [id, data.inputOrder, data.outputOrder, updateNodeInternals]);
 
   const recipe = dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings) : undefined;
+
+  const inputTempsMap = useFlowResultStore((s) => s.inputTemps[id]);
+  let receivedTemp: number | null = null;
+
+  const sr = recipe ? getSpecialRecipe(recipe.id) : null;
+  if (recipe && sr && sr.inputTemperatureSettings) {
+    const tempInputIndices = Object.keys(sr.inputTemperatureSettings).map(Number);
+    if (tempInputIndices.length > 0) {
+      const firstIndex = tempInputIndices[0];
+      const tempVal = inputTempsMap?.[firstIndex];
+      if (typeof tempVal === 'number') {
+        receivedTemp = tempVal;
+      }
+    }
+  }
 
   const leftHandles = data.inputOrder
     ? data.inputOrder.map((idx) => ({ side: 'input' as const, index: idx }))
@@ -91,6 +107,7 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
             useUIStore.setState({ activeToggleId: null });
             setIsEditorOpen(true);
           }}
+          receivedTemp={receivedTemp}
         />
         <RecipeNodeIO
           leftHandles={leftHandles}

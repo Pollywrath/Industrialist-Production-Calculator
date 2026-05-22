@@ -327,8 +327,8 @@ function dinic(network: FlowNetwork): {
 
     let totalPushed = 0;
     const adjU = adj[u];
-    for (let i = iter[u]; i < adjU.length; i++) {
-      iter[u] = i;
+    for (; iter[u] < adjU.length; iter[u]++) {
+      const i = iter[u];
       const edgeIdx = adjU[i];
       const edge = edges[edgeIdx];
       const to = edge.to;
@@ -377,8 +377,12 @@ const flowCache = new LRUCache<{
   connectionFlows: Record<string, number>;
 }>(1000);
 
-export function calculateFlows(graph: SolverGraph, bypassCache = false): FlowResults {
+export function calculateFlows(graph: SolverGraph, bypassCache = false): {
+  results: FlowResults;
+  edgeFlows: Record<string, number>;
+} {
   const results: FlowResults = new Map();
+  const edgeFlows: Record<string, number> = {};
 
   for (const [nodeId, node] of Object.entries(graph.nodes)) {
     results.set(nodeId, {
@@ -395,6 +399,12 @@ export function calculateFlows(graph: SolverGraph, bypassCache = false): FlowRes
         hasExcess: out.rate > 0,
       })),
     });
+  }
+
+  for (const [, productData] of Object.entries(graph.products)) {
+    for (const conn of productData.connections) {
+      edgeFlows[conn.id] = 0;
+    }
   }
 
   for (const [, productData] of Object.entries(graph.products)) {
@@ -444,6 +454,7 @@ export function calculateFlows(graph: SolverGraph, bypassCache = false): FlowRes
 
       for (const conn of component.connections) {
         const flowRate = connFlowMap[conn.id] ?? 0;
+        edgeFlows[conn.id] = flowRate;
 
         const sourceResult = results.get(conn.sourceNodeId);
         if (sourceResult && sourceResult.outputFlows[conn.sourceOutputIndex]) {
@@ -473,7 +484,7 @@ export function calculateFlows(graph: SolverGraph, bypassCache = false): FlowRes
     }
   }
 
-  return results;
+  return { results, edgeFlows };
 }
 
 export function clearFlowCache(): void {

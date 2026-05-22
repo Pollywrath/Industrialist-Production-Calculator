@@ -1,4 +1,4 @@
-import { Handle, Position, useNodeConnections } from '@xyflow/react';
+import { Handle, Position } from '@xyflow/react';
 import type { HandleRef } from '../../../types/nodes';
 import type { Recipe } from '../../../types/data';
 import { getProductName } from '../../../data/lookup';
@@ -9,7 +9,6 @@ import { getRateMultiplier, calculateMachineCountFromRate } from '../../../utils
 import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
-import { resolveHandleProduct, buildEdgeLookupMap } from '../../../utils/productResolver';
 import styles from './RecipeNode.module.css';
 
 import {
@@ -36,41 +35,23 @@ function resolveQuantity(ref: HandleRef, recipe: Recipe | undefined): number {
 
 interface RecipeNodeIORectProps {
   refVal: HandleRef;
-  nodeId: string;
   width: number;
   recipe: Recipe | undefined;
   machineCount: number;
   multiplier: number;
   onClick: (ref: HandleRef) => void;
+  resolvedProductId: string;
 }
 
 function RecipeNodeIORect({
   refVal,
-  nodeId,
   width,
   recipe,
   machineCount,
   multiplier,
   onClick,
+  resolvedProductId,
 }: RecipeNodeIORectProps) {
-  const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
-  useNodeConnections({
-    handleType: refVal.side === 'input' ? 'target' : 'source',
-    handleId,
-  });
-
-  useFlowStore((s) => s.solverVersion);
-
-  const { nodesMap, edges } = useFlowStore.getState();
-  const edgeLookup = buildEdgeLookupMap(edges);
-  const resolvedProductId = resolveHandleProduct(
-    nodeId,
-    refVal.side,
-    refVal.index,
-    nodesMap,
-    edgeLookup,
-  );
-
   const qty = resolveQuantity(refVal, recipe);
   const totalQty = qty * machineCount * multiplier;
   const label = getProductName(resolvedProductId);
@@ -154,6 +135,7 @@ export function RecipeNodeIO({
   const rateMode = useUIStore((s) => s.rateMode);
   const multiplier = recipe ? getRateMultiplier(recipe.cycle_time, rateMode) : 1;
   const flowResult = useFlowResultStore((s) => s.results.get(nodeId));
+  const resolvedProducts = useFlowStore((s) => s.resolvedProducts);
 
   const isFlipped = (ref: HandleRef): boolean => {
     if (!flowResult) return false;
@@ -259,12 +241,12 @@ export function RecipeNodeIO({
               <RecipeNodeIORect
                 key={`left-${refVal.index}`}
                 refVal={refVal}
-                nodeId={nodeId}
                 width={leftWidth}
                 recipe={recipe}
                 machineCount={machineCount}
                 multiplier={multiplier}
                 onClick={handleRectClick}
+                resolvedProductId={resolvedProducts[buildHandleId(nodeId, refVal.side, refVal.index)] ?? ''}
               />
             ))}
           </div>
@@ -280,12 +262,12 @@ export function RecipeNodeIO({
               <RecipeNodeIORect
                 key={`right-${refVal.index}`}
                 refVal={refVal}
-                nodeId={nodeId}
                 width={rightWidth}
                 recipe={recipe}
                 machineCount={machineCount}
                 multiplier={multiplier}
                 onClick={handleRectClick}
+                resolvedProductId={resolvedProducts[buildHandleId(nodeId, refVal.side, refVal.index)] ?? ''}
               />
             ))}
           </div>

@@ -3,7 +3,15 @@ import type { FlowResults, NodeFlowResult } from '../types/solver';
 
 interface FlowResultState {
   results: FlowResults;
-  setResults: (results: FlowResults) => void;
+  edgeFlows: Record<string, number>;
+  edgeTemps: Record<string, number>;
+  inputTemps: Record<string, Record<number, number>>;
+  setResults: (
+    results: FlowResults,
+    edgeFlows: Record<string, number>,
+    edgeTemps: Record<string, number>,
+    inputTemps: Record<string, Record<number, number>>,
+  ) => void;
 }
 
 function areFlowResultsEqual(a: NodeFlowResult, b: NodeFlowResult): boolean {
@@ -39,10 +47,49 @@ function areFlowResultsEqual(a: NodeFlowResult, b: NodeFlowResult): boolean {
   return true;
 }
 
+function areRecordsEqual(a: Record<string, number>, b: Record<string, number>): boolean {
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (let i = 0; i < keysA.length; i++) {
+    const key = keysA[i];
+    if (a[key] !== b[key]) return false;
+  }
+  return true;
+}
+
+function areInputTempsEqual(
+  a: Record<string, Record<number, number>>,
+  b: Record<string, Record<number, number>>,
+): boolean {
+  const keysA = Object.keys(a);
+  const keysB = Object.keys(b);
+  if (keysA.length !== keysB.length) return false;
+  for (let i = 0; i < keysA.length; i++) {
+    const key = keysA[i];
+    const subA = a[key];
+    const subB = b[key];
+    if (!subA || !subB) return false;
+    const subKeysA = Object.keys(subA);
+    const subKeysB = Object.keys(subB);
+    if (subKeysA.length !== subKeysB.length) return false;
+    for (let j = 0; j < subKeysA.length; j++) {
+      const subKey = subKeysA[j];
+      const idx = Number(subKey);
+      if (subA[idx] !== subB[idx]) return false;
+    }
+  }
+  return true;
+}
+
 const useFlowResultStore = create<FlowResultState>((set, get) => ({
   results: new Map(),
-  setResults: (newResults) => {
-    const oldResults = get().results;
+  edgeFlows: {},
+  edgeTemps: {},
+  inputTemps: {},
+  setResults: (newResults, newEdgeFlows, newEdgeTemps, newInputTemps) => {
+    const oldState = get();
+    const oldResults = oldState.results;
     let hasChanged = oldResults.size !== newResults.size;
     const updatedResults = new Map<string, NodeFlowResult>();
 
@@ -56,8 +103,17 @@ const useFlowResultStore = create<FlowResultState>((set, get) => ({
       }
     });
 
-    if (hasChanged) {
-      set({ results: updatedResults });
+    const edgeFlowsChanged = !areRecordsEqual(oldState.edgeFlows, newEdgeFlows);
+    const edgeTempsChanged = !areRecordsEqual(oldState.edgeTemps, newEdgeTemps);
+    const inputTempsChanged = !areInputTempsEqual(oldState.inputTemps, newInputTemps);
+
+    if (hasChanged || edgeFlowsChanged || edgeTempsChanged || inputTempsChanged) {
+      set({
+        results: updatedResults,
+        edgeFlows: newEdgeFlows,
+        edgeTemps: newEdgeTemps,
+        inputTemps: newInputTemps,
+      });
     }
   },
 }));

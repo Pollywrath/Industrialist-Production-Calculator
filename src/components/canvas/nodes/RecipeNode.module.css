@@ -57,9 +57,26 @@
   height: 14px;
 }
 
+.recipe-node-info__temp-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--theme-color-input-text);
+  background: var(--theme-color-input-bg);
+  border: 1px solid var(--theme-color-input-border);
+  border-radius: 6px;
+}
+
 .recipe-node-info__title {
   max-width: 100%;
-  padding: 0 30px;
+  padding: 0 65px;
   margin-bottom: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -133,7 +150,8 @@
 
 :global(.is-zoomed-out) .recipe-node-info__stats,
 :global(.is-zoomed-out) .recipe-node-info__machine-name,
-:global(.is-zoomed-out) .recipe-node-info__top-right-btn {
+:global(.is-zoomed-out) .recipe-node-info__top-right-btn,
+:global(.is-zoomed-out) .recipe-node-info__temp-badge {
   display: none;
 }
 

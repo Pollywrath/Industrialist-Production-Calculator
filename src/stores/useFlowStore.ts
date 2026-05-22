@@ -14,6 +14,7 @@ import type { RecipeNodeData } from '../types/nodes';
 import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { getRecipe } from '../data/lookup';
 import { clearFlowCache } from '../solver/flowSolver';
+import { computeResolvedProducts } from '../utils/productResolver';
 import {
   RECT_HEIGHT,
   RECT_GAP,
@@ -28,6 +29,7 @@ interface FlowState {
   nodesMap: Map<string, Node<RecipeNodeData>>;
   edges: Edge[];
   solverVersion: number;
+  resolvedProducts: Record<string, string>;
 
   onNodesChange: OnNodesChange<Node<RecipeNodeData>>;
   onEdgesChange: OnEdgesChange;
@@ -145,6 +147,7 @@ const useFlowStore = create(
     nodesMap: new Map(),
     edges: [],
     solverVersion: 0,
+    resolvedProducts: {},
 
     onNodesChange: (changes) => {
       const nextNodes = applyNodeChanges(changes, get().nodes);
@@ -162,12 +165,21 @@ const useFlowStore = create(
       }
 
       const finalNodes = needsEnrichment ? nextNodes.map(enrichNodeDimensions) : nextNodes;
+      const nextNodesMap = hasStructuralChange ? createNodesMap(finalNodes) : get().nodesMap;
+      const nextSolverVersion = hasStructuralChange ? get().solverVersion + 1 : get().solverVersion;
 
-      set({
-        nodes: finalNodes,
-        nodesMap: hasStructuralChange ? createNodesMap(finalNodes) : get().nodesMap,
-        solverVersion: hasStructuralChange ? get().solverVersion + 1 : get().solverVersion,
-      });
+      if (hasStructuralChange) {
+        set({
+          nodes: finalNodes,
+          nodesMap: nextNodesMap,
+          solverVersion: nextSolverVersion,
+          resolvedProducts: computeResolvedProducts(nextNodesMap, get().edges),
+        });
+      } else {
+        set({
+          nodes: finalNodes,
+        });
+      }
     },
 
     onEdgesChange: (changes) => {
@@ -185,6 +197,7 @@ const useFlowStore = create(
         set({
           edges: nextEdges,
           solverVersion: get().solverVersion + 1,
+          resolvedProducts: computeResolvedProducts(get().nodesMap, nextEdges),
         });
       } else {
         set({
@@ -210,9 +223,11 @@ const useFlowStore = create(
       }
 
       const newEdge = { ...connection, id: nextEdgeId() } as Edge;
+      const nextEdges = addEdge(newEdge, currentEdges);
       set({
-        edges: addEdge(newEdge, currentEdges),
+        edges: nextEdges,
         solverVersion: get().solverVersion + 1,
+        resolvedProducts: computeResolvedProducts(get().nodesMap, nextEdges),
       });
     },
 
@@ -220,10 +235,12 @@ const useFlowStore = create(
       clearFlowCache();
       const { nodes: sanitizedNodes } = ensureGraphIntegrity(nodes, get().edges);
       const enriched = sanitizedNodes.map(enrichNodeDimensions);
+      const nextNodesMap = createNodesMap(enriched);
       set({
         nodes: enriched,
-        nodesMap: createNodesMap(enriched),
+        nodesMap: nextNodesMap,
         solverVersion: get().solverVersion + 1,
+        resolvedProducts: computeResolvedProducts(nextNodesMap, get().edges),
       });
     },
     setEdges: (edges) => {
@@ -232,6 +249,7 @@ const useFlowStore = create(
       set({
         edges: sanitizedEdges,
         solverVersion: get().solverVersion + 1,
+        resolvedProducts: computeResolvedProducts(get().nodesMap, sanitizedEdges),
       });
     },
     setNodesAndEdges: (nodes, edges) => {
@@ -250,6 +268,7 @@ const useFlowStore = create(
         nodesMap: map,
         edges: sanitizedEdges,
         solverVersion: get().solverVersion + 1,
+        resolvedProducts: computeResolvedProducts(map, sanitizedEdges),
       });
     },
 
@@ -277,6 +296,7 @@ const useFlowStore = create(
         nodes: nextNodes,
         nodesMap: nextNodesMap,
         solverVersion: get().solverVersion + 1,
+        resolvedProducts: computeResolvedProducts(nextNodesMap, get().edges),
       });
     },
 
@@ -296,11 +316,14 @@ const useFlowStore = create(
         }
       }
 
+      const nextEdges = get().edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
+
       set({
         nodes: nextNodes,
         nodesMap: nextNodesMap,
-        edges: get().edges.filter((e) => e.source !== nodeId && e.target !== nodeId),
+        edges: nextEdges,
         solverVersion: get().solverVersion + 1,
+        resolvedProducts: computeResolvedProducts(nextNodesMap, nextEdges),
       });
     },
 
@@ -313,6 +336,7 @@ const useFlowStore = create(
         set({
           edges: nextEdges,
           solverVersion: get().solverVersion + 1,
+          resolvedProducts: computeResolvedProducts(get().nodesMap, nextEdges),
         });
       }
     },

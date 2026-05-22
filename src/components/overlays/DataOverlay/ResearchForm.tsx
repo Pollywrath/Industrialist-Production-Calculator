@@ -216,7 +216,7 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
 
           <div className={styles['prereqs-add-controls']}>
             <div className={styles['form-group']}>
-              <span className={styles['form-label']} style={{ fontSize: '9px' }}>
+              <span className={styles['form-label-small']}>
                 Add Research Prerequisite
               </span>
               <SearchDropdown
@@ -233,7 +233,7 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
             </div>
 
             <div className={styles['form-group']}>
-              <span className={styles['form-label']} style={{ fontSize: '9px' }}>
+              <span className={styles['form-label-small']}>
                 Add Custom Prerequisite
               </span>
               <form
@@ -248,7 +248,7 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
                   onChange={(e) => setCustomPrereqText(e.target.value)}
                 />
                 <button type="submit" className={styles['btn-add-custom-prereq']}>
-                  <Plus size={12} style={{ marginRight: '4px' }} /> Add
+                  <Plus size={12} /> Add
                 </button>
               </form>
             </div>

@@ -257,7 +257,7 @@ function solveGoldenSection(
     };
 
     const trialGraph = buildSolverGraph(trialNodes, localEdges);
-    const trialResults = calculateFlows(trialGraph, true);
+    const { results: trialResults } = calculateFlows(trialGraph, true);
 
     let sumMetric = 0;
     for (let i = 0; i < componentPorts.length; i++) {
