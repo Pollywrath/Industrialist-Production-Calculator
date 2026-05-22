@@ -1,4 +1,5 @@
 import type { SpecialRecipe } from '../../types/specialRecipes';
+import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
 const calculateCycleTime = (tempC: number): number => {
   if (tempC <= 0) return 40;
@@ -22,101 +23,69 @@ const inputTemperatureSettings = {
   2: 'steam_temp',
 };
 
-export const alloyer_ferroaluminium: SpecialRecipe = {
+const commonAlloyerConfig = {
+  machineId: 'm_alloyer',
+  settings: settingDefinitions,
+  inputTemperatureSettings,
+  powerConsumption: 150000,
+  powerType: 'MV' as const,
+  pollution: 0.324,
+  computeCycleTime: (settings: Record<string, unknown>) => {
+    const steamTemp = (settings.steam_temp as number) ?? 400;
+    return calculateCycleTime(steamTemp);
+  },
+};
+
+export const alloyer_ferroaluminium: SpecialRecipe = createSpecialRecipe({
+  ...commonAlloyerConfig,
   id: 'r_alloyer_01',
   name: 'Makes Molten Ferroaluminium Alloy',
-  machine_id: 'm_alloyer',
-  settings: settingDefinitions,
-  inputTemperatureSettings,
-  compute: (settings) => {
-    const steamTemp = (settings.steam_temp as number) ?? 400;
-    const cycleTime = calculateCycleTime(steamTemp);
-    return {
-      id: 'r_alloyer_01',
-      name: 'Makes Molten Ferroaluminium Alloy',
-      machine_id: 'm_alloyer',
-      cycle_time: cycleTime,
-      power_consumption: 150000,
-      power_type: 'MV',
-      pollution: 0.324,
-      inputs: [
-        { product_id: 'p_iron_ingot', quantity: 4 },
-        { product_id: 'p_aluminium_ingot', quantity: 2 },
-        { product_id: 'p_steam', quantity: 200 },
-      ],
-      outputs: [
-        {
-          product_id: 'p_molten_ferroaluminium_alloy',
-          quantity: 2,
-          temperature: 18,
-        },
-      ],
-    };
-  },
-};
+  inputs: [
+    { product_id: 'p_iron_ingot', quantity: 4 },
+    { product_id: 'p_aluminium_ingot', quantity: 2 },
+    { product_id: 'p_steam', quantity: 200 },
+  ],
+  outputs: [
+    {
+      product_id: 'p_molten_ferroaluminium_alloy',
+      quantity: 2,
+      temperature: 18,
+    },
+  ],
+});
 
-export const alloyer_purple_gold: SpecialRecipe = {
+export const alloyer_purple_gold: SpecialRecipe = createSpecialRecipe({
+  ...commonAlloyerConfig,
   id: 'r_alloyer_02',
   name: 'Makes Molten Purple Gold',
-  machine_id: 'm_alloyer',
-  settings: settingDefinitions,
-  inputTemperatureSettings,
-  compute: (settings) => {
-    const steamTemp = (settings.steam_temp as number) ?? 400;
-    const cycleTime = calculateCycleTime(steamTemp);
-    return {
-      id: 'r_alloyer_02',
-      name: 'Makes Molten Purple Gold',
-      machine_id: 'm_alloyer',
-      cycle_time: cycleTime,
-      power_consumption: 150000,
-      power_type: 'MV',
-      pollution: 0.324,
-      inputs: [
-        { product_id: 'p_gold_ingot', quantity: 1 },
-        { product_id: 'p_aluminium_ingot', quantity: 2 },
-        { product_id: 'p_steam', quantity: 200 },
-      ],
-      outputs: [
-        {
-          product_id: 'p_molten_purple_gold',
-          quantity: 2,
-          temperature: 18,
-        },
-      ],
-    };
-  },
-};
+  inputs: [
+    { product_id: 'p_gold_ingot', quantity: 1 },
+    { product_id: 'p_aluminium_ingot', quantity: 2 },
+    { product_id: 'p_steam', quantity: 200 },
+  ],
+  outputs: [
+    {
+      product_id: 'p_molten_purple_gold',
+      quantity: 2,
+      temperature: 18,
+    },
+  ],
+});
 
-export const alloyer_brass: SpecialRecipe = {
+export const alloyer_brass: SpecialRecipe = createSpecialRecipe({
+  ...commonAlloyerConfig,
   id: 'r_alloyer_03',
   name: 'Makes Liquid Brass',
-  machine_id: 'm_alloyer',
-  settings: settingDefinitions,
-  inputTemperatureSettings,
-  compute: (settings) => {
-    const steamTemp = (settings.steam_temp as number) ?? 400;
-    const cycleTime = calculateCycleTime(steamTemp);
-    return {
-      id: 'r_alloyer_03',
-      name: 'Makes Liquid Brass',
-      machine_id: 'm_alloyer',
-      cycle_time: cycleTime,
-      power_consumption: 150000,
-      power_type: 'MV',
-      pollution: 0.324,
-      inputs: [
-        { product_id: 'p_copper_ingot', quantity: 6 },
-        { product_id: 'p_zinc', quantity: 3 },
-        { product_id: 'p_steam', quantity: 200 },
-      ],
-      outputs: [
-        {
-          product_id: 'p_liquid_brass',
-          quantity: 9,
-          temperature: 18,
-        },
-      ],
-    };
-  },
-};
+  inputs: [
+    { product_id: 'p_copper_ingot', quantity: 6 },
+    { product_id: 'p_zinc', quantity: 3 },
+    { product_id: 'p_steam', quantity: 200 },
+  ],
+  outputs: [
+    {
+      product_id: 'p_liquid_brass',
+      quantity: 9,
+      temperature: 18,
+    },
+  ],
+});

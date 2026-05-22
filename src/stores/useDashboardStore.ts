@@ -3,7 +3,7 @@ import { useFlowStore } from './useFlowStore';
 import { useFlowResultStore } from './useFlowResultStore';
 import { useUIStore } from './useUIStore';
 import { useGlobalSettingsStore } from './useGlobalSettingsStore';
-import { getRecipe, getMachine, getProduct, getProductName } from '../data/lookup';
+import { resolveActiveRecipe, getMachine, getProduct, getProductName } from '../data/lookup';
 import { resolveHandleProduct, buildEdgeLookupMap } from '../utils/productResolver';
 import { getSpecialRecipe } from '../data/registry';
 import { buildHandleId } from '../utils/idGenerator';
@@ -90,13 +90,18 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     const edgeLookup = buildEdgeLookupMap(edges);
 
     nodes.forEach((node) => {
-      let recipe = getRecipe(node.data.recipeId);
+      const helpers = {
+        resolveProduct: (s: 'input' | 'output', idx: number) =>
+          resolveHandleProduct(node.id, s, idx, storeNodesMap, edgeLookup),
+        hasConnection: (s: 'input' | 'output', idx: number) => {
+          const handleId = `${node.id}-${s}-${idx}`;
+          return (edgeLookup.get(handleId)?.length ?? 0) > 0;
+        },
+      };
+      const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id, helpers);
       if (!recipe) return;
 
       const sr = getSpecialRecipe(recipe.id);
-      if (sr && node.data.settings) {
-        recipe = sr.compute(node.data.settings, globalSettings);
-      }
 
       const machineCount = node.data.machineCount ?? 0;
       const roundedCount = Math.ceil(machineCount);
@@ -105,7 +110,10 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       const machineName = machine?.name ?? 'Machine';
 
       if (machine) {
-        totalMachineCost += machine.cost * roundedCount;
+        const baseCost = sr && sr.computeMachineCost
+          ? sr.computeMachineCost(node.data.settings ?? {}, globalSettings, node.id)
+          : machine.cost;
+        totalMachineCost += baseCost * roundedCount;
 
         if (machine.subcategory === 'Depot') {
           const nodeFlowResult = results.get(node.id);
@@ -140,16 +148,19 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
       netPollution += recipe.pollution * machineCount;
 
-      let baseModelCount = 1;
-      baseModelCount += 2 * recipe.inputs.length;
-      baseModelCount += 2 * recipe.outputs.length;
+      let baseModelCount: number;
+      if (sr && sr.computeModelCount) {
+        baseModelCount = sr.computeModelCount(node.data.settings ?? {}, globalSettings, node.id);
+      } else {
+        baseModelCount = 1 + 2 * recipe.inputs.length + 2 * recipe.outputs.length;
 
-      if (recipe.power_consumption !== 0) {
-        if (recipe.power_type === 'HV') {
-          baseModelCount += 2;
-        } else if (recipe.power_type === 'MV') {
-          const absPower = Math.abs(recipe.power_consumption);
-          baseModelCount += Math.ceil(absPower / 1500000) * 2;
+        if (recipe.power_consumption !== 0) {
+          if (recipe.power_type === 'HV') {
+            baseModelCount += 2;
+          } else if (recipe.power_type === 'MV') {
+            const absPower = Math.abs(recipe.power_consumption);
+            baseModelCount += Math.ceil(absPower / 1500000) * 2;
+          }
         }
       }
 

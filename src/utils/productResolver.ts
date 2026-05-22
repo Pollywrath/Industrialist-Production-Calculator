@@ -67,7 +67,18 @@ export function resolveHandleProduct(
   const node = nodesMap.get(nodeId);
   if (!node) return '';
 
-  const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings);
+  const edgeLookup =
+    edgesOrLookup instanceof Map ? edgesOrLookup : buildEdgeLookupMap(edgesOrLookup);
+
+  const helpers = {
+    resolveProduct: (s: 'input' | 'output', idx: number) =>
+      resolveHandleProduct(nodeId, s, idx, nodesMap, edgeLookup, visited),
+    hasConnection: (s: 'input' | 'output', idx: number) => {
+      const hId = `${nodeId}-${s}-${idx}`;
+      return (edgeLookup.get(hId)?.length ?? 0) > 0;
+    },
+  };
+  const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, nodeId, helpers);
   if (!recipe) return '';
 
   const list = side === 'input' ? recipe.inputs : recipe.outputs;
@@ -80,8 +91,6 @@ export function resolveHandleProduct(
     return baseProductId;
   }
 
-  const edgeLookup =
-    edgesOrLookup instanceof Map ? edgesOrLookup : buildEdgeLookupMap(edgesOrLookup);
   const connectedEdges = edgeLookup.get(handleId) ?? [];
 
   for (let i = 0; i < connectedEdges.length; i++) {
@@ -120,7 +129,15 @@ export function computeResolvedProducts(
   const resolved: Record<string, string> = {};
 
   for (const node of nodesMap.values()) {
-    const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings);
+    const helpers = {
+      resolveProduct: (s: 'input' | 'output', idx: number) =>
+        resolveHandleProduct(node.id, s, idx, nodesMap, edgeLookup),
+      hasConnection: (s: 'input' | 'output', idx: number) => {
+        const hId = `${node.id}-${s}-${idx}`;
+        return (edgeLookup.get(hId)?.length ?? 0) > 0;
+      },
+    };
+    const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id, helpers);
     if (!recipe) continue;
 
     for (let idx = 0; idx < recipe.inputs.length; idx++) {

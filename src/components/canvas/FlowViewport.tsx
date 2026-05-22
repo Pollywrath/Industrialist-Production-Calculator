@@ -99,12 +99,55 @@ const isValidConnection = (connection: Connection | Edge) => {
   return false;
 };
 
-export function FlowViewport() {
+interface FlowViewportCanvasProps {
+  isZoomedOut: boolean;
+}
+
+function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const nodes = useFlowStore((s) => s.nodes);
   const edges = useFlowStore((s) => s.edges);
   const onNodesChange = useFlowStore((s) => s.onNodesChange);
   const onEdgesChange = useFlowStore((s) => s.onEdgesChange);
   const onConnect = useFlowStore((s) => s.onConnect);
+
+  return (
+    <ReactFlow
+      nodes={nodes}
+      edges={edges}
+      nodeTypes={nodeTypes}
+      edgeTypes={edgeTypes}
+      onNodesChange={onNodesChange}
+      onEdgesChange={onEdgesChange}
+      onConnect={onConnect}
+      onEdgeClick={onEdgeClick}
+      onNodeClick={onNodeClick}
+      isValidConnection={isValidConnection}
+      snapToGrid={true}
+      snapGrid={SNAP_GRID}
+      elevateNodesOnSelect={true}
+      fitView={true}
+      minZoom={0.15}
+      onMove={(_e, viewport) => {
+        const nextZoomedOut = viewport.zoom < 0.35;
+        if (nextZoomedOut !== useUIStore.getState().isZoomedOut) {
+          useUIStore.getState().setIsZoomedOut(nextZoomedOut);
+        }
+      }}
+      onMoveStart={() => useUIStore.getState().setIsTransforming(true)}
+      onMoveEnd={() => useUIStore.getState().setIsTransforming(false)}
+      onlyRenderVisibleElements={nodes.length > 250 && !isZoomedOut}
+    >
+      <Background
+        variant={BackgroundVariant.Dots}
+        gap={SNAP_GRID}
+        size={GRID_DOT_SIZE}
+        color="var(--theme-color-grid-dots)"
+      />
+    </ReactFlow>
+  );
+}
+
+export function FlowViewport() {
   const isZoomedOut = useUIStore((s) => s.isZoomedOut);
 
   useFlowSolver();
@@ -163,39 +206,6 @@ export function FlowViewport() {
     };
   }, []);
 
-  return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      edgeTypes={edgeTypes}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      onEdgeClick={onEdgeClick}
-      onNodeClick={onNodeClick}
-      isValidConnection={isValidConnection}
-      snapToGrid={true}
-      snapGrid={SNAP_GRID}
-      elevateNodesOnSelect={true}
-      fitView={true}
-      minZoom={0.15}
-      onMove={(_e, viewport) => {
-        const nextZoomedOut = viewport.zoom < 0.35;
-        if (nextZoomedOut !== useUIStore.getState().isZoomedOut) {
-          useUIStore.getState().setIsZoomedOut(nextZoomedOut);
-        }
-      }}
-      onMoveStart={() => useUIStore.getState().setIsTransforming(true)}
-      onMoveEnd={() => useUIStore.getState().setIsTransforming(false)}
-      onlyRenderVisibleElements={nodes.length > 250 && !isZoomedOut}
-    >
-      <Background
-        variant={BackgroundVariant.Dots}
-        gap={SNAP_GRID}
-        size={GRID_DOT_SIZE}
-        color="var(--theme-color-grid-dots)"
-      />
-    </ReactFlow>
-  );
+  return <FlowViewportCanvas isZoomedOut={isZoomedOut} />;
 }
+

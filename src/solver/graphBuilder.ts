@@ -19,21 +19,39 @@ export function buildSolverGraph(
     const settings = nodeOverrides || data.settings
       ? { ...data.settings, ...nodeOverrides }
       : undefined;
-    const recipe = resolveActiveRecipe(data.recipeId, settings);
+    const helpers = {
+      resolveProduct: (s: 'input' | 'output', idx: number) =>
+        resolveHandleProduct(node.id, s, idx, nodesMap, edgeLookup),
+      hasConnection: (s: 'input' | 'output', idx: number) => {
+        const handleId = `${node.id}-${s}-${idx}`;
+        return (edgeLookup.get(handleId)?.length ?? 0) > 0;
+      },
+    };
+    const recipe = resolveActiveRecipe(data.recipeId, settings, node.id, helpers);
     if (!recipe) continue;
 
     const multiplier = getRateMultiplier(recipe.cycle_time, 'second');
     const machineCount = data.machineCount ?? 1;
 
-    const inputs = recipe.inputs.map((inp, idx) => ({
-      productId: resolveHandleProduct(node.id, 'input', idx, nodesMap, edgeLookup),
-      rate: inp.quantity * machineCount * multiplier,
-    }));
+    const inputs = recipe.inputs.map((inp, idx) => {
+      const hasConn = helpers.hasConnection('input', idx);
+      const isVariable = !!inp.variable;
+      const rate = (isVariable && !hasConn) ? 0 : inp.quantity * machineCount * multiplier;
+      return {
+        productId: resolveHandleProduct(node.id, 'input', idx, nodesMap, edgeLookup),
+        rate,
+      };
+    });
 
-    const outputs = recipe.outputs.map((out, idx) => ({
-      productId: resolveHandleProduct(node.id, 'output', idx, nodesMap, edgeLookup),
-      rate: out.quantity * machineCount * multiplier,
-    }));
+    const outputs = recipe.outputs.map((out, idx) => {
+      const hasConn = helpers.hasConnection('output', idx);
+      const isVariable = !!out.variable;
+      const rate = (isVariable && !hasConn) ? 0 : out.quantity * machineCount * multiplier;
+      return {
+        productId: resolveHandleProduct(node.id, 'output', idx, nodesMap, edgeLookup),
+        rate,
+      };
+    });
 
     graph.nodes[node.id] = { inputs, outputs };
 

@@ -2,6 +2,7 @@ import type { Recipe, Machine, Product, Research } from '../types/data';
 import { getAllSpecialRecipes, getSpecialRecipe } from './registry';
 import { getDataOverrides } from '../persistence/idb';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
+import { useFlowStore } from '../stores/useFlowStore';
 import { clearFlowCache } from '../solver/flowSolver';
 
 let recipes: Recipe[] = [];
@@ -226,6 +227,11 @@ export function getRecipe(id: string): Recipe | undefined {
 export function resolveActiveRecipe(
   recipeId: string,
   nodeSettings?: Record<string, unknown>,
+  nodeId?: string,
+  helpers?: {
+    resolveProduct: (side: 'input' | 'output', index: number) => string;
+    hasConnection: (side: 'input' | 'output', index: number) => boolean;
+  },
 ): Recipe | undefined {
   const recipe = recipeMap.get(recipeId);
   if (!recipe) return undefined;
@@ -236,7 +242,22 @@ export function resolveActiveRecipe(
       string,
       unknown
     >;
-    return sr.compute(nodeSettings, globalSettings);
+    const activeHelpers = helpers ?? {
+      resolveProduct: (side: 'input' | 'output', index: number) => {
+        if (!nodeId) return '';
+        const handleId = `${nodeId}-${side}-${index}`;
+        return useFlowStore.getState().resolvedProducts[handleId] ?? '';
+      },
+      hasConnection: (side: 'input' | 'output', index: number) => {
+        if (!nodeId) return false;
+        const handleId = `${nodeId}-${side}-${index}`;
+        const edges = useFlowStore.getState().edges;
+        return edges.some(
+          (edge) => edge.sourceHandle === handleId || edge.targetHandle === handleId,
+        );
+      },
+    };
+    return sr.compute(nodeSettings, globalSettings, nodeId, activeHelpers);
   }
 
   return recipe;

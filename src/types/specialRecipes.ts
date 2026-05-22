@@ -37,5 +37,23 @@ export interface SpecialRecipe {
   machine_id: string;
   settings: Record<string, SettingDefinition>;
   inputTemperatureSettings?: Record<number, string>;
-  compute: (settings: Record<string, unknown>, globalSettings?: Record<string, unknown>) => Recipe;
+  compute: (
+    settings: Record<string, unknown>,
+    globalSettings?: Record<string, unknown>,
+    nodeId?: string,
+    helpers?: {
+      resolveProduct: (side: 'input' | 'output', index: number) => string;
+      hasConnection: (side: 'input' | 'output', index: number) => boolean;
+    }
+  ) => Recipe;
+  computeMachineCost?: (
+    settings: Record<string, unknown>,
+    globalSettings?: Record<string, unknown>,
+    nodeId?: string
+  ) => number;
+  computeModelCount?: (
+    settings: Record<string, unknown>,
+    globalSettings?: Record<string, unknown>,
+    nodeId?: string
+  ) => number;
 }

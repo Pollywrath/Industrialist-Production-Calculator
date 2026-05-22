@@ -4,6 +4,7 @@ import { calculateFlows } from './flowSolver';
 import { resolveActiveRecipe } from '../data/lookup';
 import { getSpecialRecipe } from '../data/registry';
 import { parseHandleId, buildHandleId } from '../utils/idGenerator';
+import { resolveHandleProduct, buildEdgeLookupMap } from '../utils/productResolver';
 
 export interface SolveFlowAndTemperatureResult {
   results: FlowResults;
@@ -16,6 +17,17 @@ export function solveFlowAndTemperature(
   nodes: ReactFlowNode[],
   edges: ReactFlowEdge[],
 ): SolveFlowAndTemperatureResult {
+  const nodesMap = new Map<string, ReactFlowNode>(nodes.map((n) => [n.id, n]));
+  const edgeLookup = buildEdgeLookupMap(edges);
+  const getHelpers = (nodeId: string) => ({
+    resolveProduct: (side: 'input' | 'output', index: number) =>
+      resolveHandleProduct(nodeId, side, index, nodesMap, edgeLookup),
+    hasConnection: (side: 'input' | 'output', index: number) => {
+      const handleId = `${nodeId}-${side}-${index}`;
+      return (edgeLookup.get(handleId)?.length ?? 0) > 0;
+    },
+  });
+
   // 1. Initial Pass: run flow solver using current canvas settings
   const initialGraph = buildSolverGraph(nodes, edges);
   const { edgeFlows: initialEdgeFlows } = calculateFlows(initialGraph);
@@ -37,7 +49,7 @@ export function solveFlowAndTemperature(
 
   // Initialize nodeOutputTemps based on the initial active recipe (using node settings)
   for (const node of nodes) {
-    const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings);
+    const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id, getHelpers(node.id));
     if (recipe) {
       nodeOutputTemps[node.id] = recipe.outputs.map((out) => out.temperature ?? 18);
     } else {
@@ -90,7 +102,7 @@ export function solveFlowAndTemperature(
     // Compute input temperatures for each node
     for (const node of nodes) {
       const nodeId = node.id;
-      const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings);
+      const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, nodeId, getHelpers(nodeId));
       if (!recipe) continue;
 
       const sr = getSpecialRecipe(node.data.recipeId);
@@ -148,10 +160,15 @@ export function solveFlowAndTemperature(
             }
           }
         }
-        const updatedRecipe = resolveActiveRecipe(node.data.recipeId, {
-          ...node.data.settings,
-          ...tempOverrides,
-        });
+        const updatedRecipe = resolveActiveRecipe(
+          node.data.recipeId,
+          {
+            ...node.data.settings,
+            ...tempOverrides,
+          },
+          nodeId,
+          getHelpers(nodeId),
+        );
         if (updatedRecipe) {
           nodeOutputTemps[nodeId] = updatedRecipe.outputs.map((out) => out.temperature ?? 18);
         }
@@ -196,7 +213,7 @@ export function solveFlowAndTemperature(
     const settings = nodeOverrides || node.data.settings
       ? { ...node.data.settings, ...nodeOverrides }
       : undefined;
-    const recipe = resolveActiveRecipe(node.data.recipeId, settings);
+    const recipe = resolveActiveRecipe(node.data.recipeId, settings, node.id, getHelpers(node.id));
     if (recipe) {
       finalNodeOutputTemps[node.id] = recipe.outputs.map((out) => out.temperature ?? 18);
     } else {

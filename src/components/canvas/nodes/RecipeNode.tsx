@@ -54,7 +54,7 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
     updateNodeInternals(id);
   }, [id, data.inputOrder, data.outputOrder, updateNodeInternals]);
 
-  const recipe = dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings) : undefined;
+  const recipe = dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings, id) : undefined;
 
   const inputTempsMap = useFlowResultStore((s) => s.inputTemps[id]);
   let receivedTemp: number | null = null;

@@ -31,6 +31,7 @@ export type PowerType = 'MV' | 'HV';
 export interface RecipeInput {
   product_id: string;
   quantity: number;
+  variable?: boolean;
 }
 
 export interface RecipeOutput {
@@ -38,6 +39,7 @@ export interface RecipeOutput {
   quantity: number;
   temperature: number;
   voidable?: boolean;
+  variable?: boolean;
 }
 
 export interface Recipe {

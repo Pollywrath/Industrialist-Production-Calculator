@@ -5,7 +5,7 @@ import { getProductName } from '../../../data/lookup';
 import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
-import { getRateMultiplier, calculateMachineCountFromRate } from '../../../utils/recipeComputation';
+import { getRateMultiplier, calculateMachineCountFromRate, getNormalizedCycleTime } from '../../../utils/recipeComputation';
 import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
@@ -41,6 +41,7 @@ interface RecipeNodeIORectProps {
   multiplier: number;
   onClick: (ref: HandleRef) => void;
   resolvedProductId: string;
+  actualFlow: number;
 }
 
 function RecipeNodeIORect({
@@ -51,9 +52,13 @@ function RecipeNodeIORect({
   multiplier,
   onClick,
   resolvedProductId,
+  actualFlow,
 }: RecipeNodeIORectProps) {
   const qty = resolveQuantity(refVal, recipe);
-  const totalQty = qty * machineCount * multiplier;
+  const list = refVal.side === 'input' ? recipe?.inputs : recipe?.outputs;
+  const entry = list?.[refVal.index];
+  const isVariable = !!entry?.variable;
+  const totalQty = isVariable ? actualFlow : qty * machineCount * multiplier;
   const label = getProductName(resolvedProductId);
 
   return (
@@ -134,10 +139,16 @@ export function RecipeNodeIO({
 }: RecipeNodeIOProps) {
   const rateMode = useUIStore((s) => s.rateMode);
   const multiplier = recipe ? getRateMultiplier(recipe.cycle_time, rateMode) : 1;
+  const scaleFactor = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 1;
   const flowResult = useFlowResultStore((s) => s.results.get(nodeId));
   const resolvedProducts = useFlowStore((s) => s.resolvedProducts);
 
   const isFlipped = (ref: HandleRef): boolean => {
+    if (!recipe) return false;
+    const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
+    const entry = list[ref.index];
+    if (entry?.variable) return false;
+
     if (!flowResult) return false;
     if (ref.side === 'input') {
       const status = flowResult.inputFlows[ref.index];
@@ -237,18 +248,28 @@ export function RecipeNodeIO({
           <div
             className={`${styles['recipe-node-io__column']} ${styles['recipe-node-io__column--left']}`}
           >
-            {leftHandles.map((refVal) => (
-              <RecipeNodeIORect
-                key={`left-${refVal.index}`}
-                refVal={refVal}
-                width={leftWidth}
-                recipe={recipe}
-                machineCount={machineCount}
-                multiplier={multiplier}
-                onClick={handleRectClick}
-                resolvedProductId={resolvedProducts[buildHandleId(nodeId, refVal.side, refVal.index)] ?? ''}
-              />
-            ))}
+            {leftHandles.map((refVal) => {
+              const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
+              const actualFlow = flowResult
+                ? (refVal.side === 'input'
+                    ? flowResult.inputFlows[refVal.index]?.connected
+                    : flowResult.outputFlows[refVal.index]?.connected) ?? 0
+                : 0;
+              const actualFlowScaled = actualFlow * scaleFactor;
+              return (
+                <RecipeNodeIORect
+                  key={`left-${refVal.index}`}
+                  refVal={refVal}
+                  width={leftWidth}
+                  recipe={recipe}
+                  machineCount={machineCount}
+                  multiplier={multiplier}
+                  onClick={handleRectClick}
+                  resolvedProductId={resolvedProducts[handleId] ?? ''}
+                  actualFlow={actualFlowScaled}
+                />
+              );
+            })}
           </div>
         )}
 
@@ -258,18 +279,28 @@ export function RecipeNodeIO({
           <div
             className={`${styles['recipe-node-io__column']} ${styles['recipe-node-io__column--right']}`}
           >
-            {rightHandles.map((refVal) => (
-              <RecipeNodeIORect
-                key={`right-${refVal.index}`}
-                refVal={refVal}
-                width={rightWidth}
-                recipe={recipe}
-                machineCount={machineCount}
-                multiplier={multiplier}
-                onClick={handleRectClick}
-                resolvedProductId={resolvedProducts[buildHandleId(nodeId, refVal.side, refVal.index)] ?? ''}
-              />
-            ))}
+            {rightHandles.map((refVal) => {
+              const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
+              const actualFlow = flowResult
+                ? (refVal.side === 'input'
+                    ? flowResult.inputFlows[refVal.index]?.connected
+                    : flowResult.outputFlows[refVal.index]?.connected) ?? 0
+                : 0;
+              const actualFlowScaled = actualFlow * scaleFactor;
+              return (
+                <RecipeNodeIORect
+                  key={`right-${refVal.index}`}
+                  refVal={refVal}
+                  width={rightWidth}
+                  recipe={recipe}
+                  machineCount={machineCount}
+                  multiplier={multiplier}
+                  onClick={handleRectClick}
+                  resolvedProductId={resolvedProducts[handleId] ?? ''}
+                  actualFlow={actualFlowScaled}
+                />
+              );
+            })}
           </div>
         )}
       </div>

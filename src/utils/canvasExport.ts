@@ -20,9 +20,13 @@ export async function exportCanvasAsPng(nodes: Node[]): Promise<void> {
     throw new Error('No elements or nodes found for PNG export');
   }
 
-  const themeBg =
-    getComputedStyle(document.documentElement).getPropertyValue('--theme-color-canvas-bg').trim() ||
-    '#0a0a0a';
+  const themeBg = getComputedStyle(document.documentElement)
+    .getPropertyValue('--theme-color-canvas-bg')
+    .trim();
+
+  if (!themeBg) {
+    throw new Error('Required theme variable --theme-color-canvas-bg is not defined on document.documentElement');
+  }
 
   const bounds = getNodesBounds(nodes);
   const padding = 50;
