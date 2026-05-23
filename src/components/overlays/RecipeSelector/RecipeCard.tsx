@@ -1,5 +1,5 @@
 import type { Recipe } from '../../../types/data';
-import { getMachineName, getProductName } from '../../../data/lookup';
+import { getMachineName, getProductName, getProduct } from '../../../data/lookup';
 import {
   getRateMultiplier,
   getNormalizedCycleTime,
@@ -43,7 +43,21 @@ export function RecipeCard({
   if (clickedRateInfo) {
     const { clickedPerSecondRate } = clickedRateInfo;
     const targetList = preselectedSourceSide === 'input' ? recipe.outputs : recipe.inputs;
-    const targetEntry = targetList.find((e) => e.product_id === preselectedProductId);
+
+    const preselectedProd = preselectedProductId ? getProduct(preselectedProductId) : null;
+    const preselectedType = preselectedProd?.type;
+
+    const isCompatible = (recipeProductId: string) => {
+      if (!preselectedProductId) return false;
+      if (recipeProductId === preselectedProductId) return true;
+      if (recipeProductId === 'any_fluid' || recipeProductId === 'any_item') {
+        const recipeProd = getProduct(recipeProductId);
+        return recipeProd?.type === preselectedType;
+      }
+      return false;
+    };
+
+    const targetEntry = targetList.find((e) => isCompatible(e.product_id));
     if (targetEntry) {
       const candidateBaseQty = targetEntry.quantity;
       if (candidateBaseQty > 0) {

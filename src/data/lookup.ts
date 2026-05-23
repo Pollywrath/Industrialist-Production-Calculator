@@ -3,6 +3,7 @@ import { getAllSpecialRecipes, getSpecialRecipe } from './registry';
 import { getDataOverrides } from '../persistence/idb';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { useFlowStore } from '../stores/useFlowStore';
+import { useFlowResultStore } from '../stores/useFlowResultStore';
 import { clearFlowCache } from '../solver/flowSolver';
 
 let recipes: Recipe[] = [];
@@ -237,7 +238,18 @@ export function resolveActiveRecipe(
   if (!recipe) return undefined;
 
   const sr = getSpecialRecipe(recipeId);
-  if (sr && nodeSettings) {
+  if (sr) {
+    const defaultSettings = Object.entries(sr.settings).reduce(
+      (acc, [key, def]) => {
+        acc[key] = def.default;
+        return acc;
+      },
+      {} as Record<string, unknown>,
+    );
+    nodeSettings = {
+      ...defaultSettings,
+      ...(nodeSettings || {}),
+    };
     const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
       string,
       unknown
@@ -257,7 +269,34 @@ export function resolveActiveRecipe(
         );
       },
     };
-    return sr.compute(nodeSettings, globalSettings, nodeId, activeHelpers);
+
+    let resolvedSettings = nodeSettings;
+    if (!helpers && nodeId && sr.inputTemperatureSettings) {
+      let hasOverrides = false;
+      const overrides: Record<string, unknown> = {};
+      const inputTempsMap = useFlowResultStore.getState().inputTemps[nodeId];
+
+      for (const [inpIdxStr, settingKey] of Object.entries(sr.inputTemperatureSettings)) {
+        const inpIdx = Number(inpIdxStr);
+        if (
+          activeHelpers.hasConnection('input', inpIdx) &&
+          inputTempsMap &&
+          inputTempsMap[inpIdx] !== undefined
+        ) {
+          overrides[settingKey] = inputTempsMap[inpIdx];
+          hasOverrides = true;
+        }
+      }
+
+      if (hasOverrides) {
+        resolvedSettings = {
+          ...nodeSettings,
+          ...overrides,
+        };
+      }
+    }
+
+    return sr.compute(resolvedSettings, globalSettings, nodeId, activeHelpers);
   }
 
   return recipe;

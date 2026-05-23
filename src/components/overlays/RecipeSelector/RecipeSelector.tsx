@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useReactFlow } from '@xyflow/react';
-import { getRecipe } from '../../../data/lookup';
+import { getRecipe, getProduct } from '../../../data/lookup';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
@@ -21,7 +21,7 @@ function getClickedPerSecondRate(
   nodeData: { recipeId: string; machineCount: number } | null,
   nodeFlows: NodeFlowResult | undefined | null,
 ): number | null {
-  if (!nodeId || !sourceSide || !productId || handleIndex === null || !nodeData) {
+  if (!nodeId || !sourceSide || handleIndex === null || !nodeData) {
     return null;
   }
   const existingRecipe = nodeData.recipeId ? getRecipe(nodeData.recipeId) : null;
@@ -30,7 +30,16 @@ function getClickedPerSecondRate(
   const existingMachineCount = nodeData.machineCount ?? 1;
   const list = sourceSide === 'input' ? existingRecipe.inputs : existingRecipe.outputs;
   const entry = list[handleIndex];
-  if (!entry || entry.product_id !== productId) return null;
+  if (!entry) return null;
+
+  const isEntryPlaceholder = entry.product_id === 'any_fluid' || entry.product_id === 'any_item';
+  if (!isEntryPlaceholder) {
+    if (entry.product_id !== productId) return null;
+  } else if (productId) {
+    const entryProd = getProduct(entry.product_id);
+    const clickedProd = getProduct(productId);
+    if (entryProd?.type !== clickedProd?.type) return null;
+  }
 
   const clickedBaseQty = entry.quantity;
   const listFlows = sourceSide === 'input' ? nodeFlows?.inputFlows : nodeFlows?.outputFlows;
@@ -83,6 +92,7 @@ function RecipeSelectorModal() {
 
   const stage = useRecipeSelectorStore((s) => s.stage);
   const activeTab = useRecipeSelectorStore((s) => s.activeTab);
+  const selectedId = useRecipeSelectorStore((s) => s.selectedId);
 
   useEffect(() => {
     if (inputRef.current && stage === 'select') {
@@ -90,10 +100,13 @@ function RecipeSelectorModal() {
     }
   }, [activeTab, stage]);
 
+  const effectiveProductId =
+    preselectedProductId || (activeTab === 'product' ? selectedId : null);
+
   const derivedRate = getClickedPerSecondRate(
     preselectedNodeId,
     preselectedSourceSide,
-    preselectedProductId,
+    effectiveProductId,
     preselectedHandleIndex,
     preselectedNodeData,
     preselectedNodeFlows,
@@ -111,7 +124,7 @@ function RecipeSelectorModal() {
       recipe,
       preselectedNodeId,
       preselectedSourceSide,
-      preselectedProductId,
+      preselectedProductId: effectiveProductId,
       preselectedHandleIndex,
       derivedRate,
       nodes,
@@ -140,7 +153,7 @@ function RecipeSelectorModal() {
           <RecipeStage
             clickedRateInfo={clickedRateInfo}
             preselectedSourceSide={preselectedSourceSide}
-            preselectedProductId={preselectedProductId}
+            preselectedProductId={effectiveProductId}
             onAddRecipe={handleAddRecipe}
           />
         )}

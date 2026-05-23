@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { useFlowStore } from './useFlowStore';
 
 export interface GlobalSettings {
   global_pollution: number;
@@ -16,11 +15,9 @@ export const useGlobalSettingsStore = create<GlobalSettingsState>((set) => ({
   },
   setGlobalPollution: (value: number) =>
     set((state) => {
-      const nextSettings = { ...state.settings, global_pollution: value };
+      if (state.settings.global_pollution === value) return state;
 
-      useFlowStore.setState((flowState) => ({
-        solverVersion: flowState.solverVersion + 1,
-      }));
+      const nextSettings = { ...state.settings, global_pollution: value };
 
       return { settings: nextSettings };
     }),

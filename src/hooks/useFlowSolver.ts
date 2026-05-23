@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { useFlowStore } from '../stores/useFlowStore';
 import { useFlowResultStore } from '../stores/useFlowResultStore';
+import { useDataStore } from '../stores/useDataStore';
+import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { solveFlowAndTemperature } from '../solver/temperaturePropagator';
 import { SOLVER_DEBOUNCE_MS } from '../components/shared/layoutConstants';
 
@@ -25,6 +27,24 @@ export function useFlowSolver(): void {
       timerRef.current = setTimeout(recompute, SOLVER_DEBOUNCE_MS);
     }
 
+    // Subscribe to database changes to bump solverVersion dynamically
+    let lastDbVersion = useDataStore.getState().dbVersion;
+    const unsubData = useDataStore.subscribe((state) => {
+      if (state.dbVersion !== lastDbVersion) {
+        lastDbVersion = state.dbVersion;
+        useFlowStore.setState((s) => ({ solverVersion: s.solverVersion + 1 }));
+      }
+    });
+
+    // Subscribe to global settings (pollution) changes to bump solverVersion dynamically
+    let lastPollution = useGlobalSettingsStore.getState().settings.global_pollution;
+    const unsubPollution = useGlobalSettingsStore.subscribe((state) => {
+      if (state.settings.global_pollution !== lastPollution) {
+        lastPollution = state.settings.global_pollution;
+        useFlowStore.setState((s) => ({ solverVersion: s.solverVersion + 1 }));
+      }
+    });
+
     const unsubFlow = useFlowStore.subscribe(
       (state) => state.solverVersion,
       () => {
@@ -35,6 +55,8 @@ export function useFlowSolver(): void {
     recompute();
 
     return () => {
+      unsubData();
+      unsubPollution();
       unsubFlow();
       if (timerRef.current) clearTimeout(timerRef.current);
     };

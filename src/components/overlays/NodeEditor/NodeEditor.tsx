@@ -26,7 +26,12 @@ export function NodeEditor({ recipe, initialData, nodeId, onClose }: NodeEditorP
   const multiplier = getRateMultiplier(recipe.cycle_time, rateMode);
 
   return (
-    <NodeEditorProvider recipe={recipe} initialData={initialData} multiplier={multiplier}>
+    <NodeEditorProvider
+      recipe={recipe}
+      initialData={initialData}
+      multiplier={multiplier}
+      nodeId={nodeId}
+    >
       <NodeEditorModal
         recipe={recipe}
         multiplier={multiplier}

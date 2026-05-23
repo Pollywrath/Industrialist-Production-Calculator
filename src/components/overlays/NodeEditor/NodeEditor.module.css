@@ -180,7 +180,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 42px;
+  min-height: 42px;
+  height: auto;
   padding: 6px 10px;
   border-radius: 6px;
 }
@@ -201,11 +202,25 @@
   flex: 1;
   margin-right: 10px;
   overflow: hidden;
-  text-overflow: ellipsis;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.node-editor-handle-name {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-editor-sink-note {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--theme-color-text-dim);
+  margin-top: 2px;
 }
 
 .node-editor-handle-label.is-stale {

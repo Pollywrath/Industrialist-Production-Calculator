@@ -84,7 +84,14 @@ export function HandleRow({
           </button>
         </div>
       </div>
-      <div className={styles['node-editor-handle-label']}>{name}</div>
+      <div className={styles['node-editor-handle-label']}>
+        <span className={styles['node-editor-handle-name']}>{name}</span>
+        {entry.variable && (
+          <span className={styles['node-editor-sink-note']}>
+            (Sets max sink capacity, not current flow)
+          </span>
+        )}
+      </div>
       <div className={styles['node-editor-quantity-section']}>
         <input
           type="text"

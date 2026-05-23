@@ -171,9 +171,11 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         if (!nodeFlowResult) return;
 
         for (let i = 0; i < recipe.inputs.length; i++) {
+          const inputEntry = recipe.inputs[i];
+          if (inputEntry?.variable) continue;
           const inputFlow = nodeFlowResult.inputFlows[i];
           if (inputFlow && inputFlow.hasDeficiency) {
-            const rawProductId = recipe.inputs[i]?.product_id;
+            const rawProductId = inputEntry?.product_id;
             if (!rawProductId) continue;
             const handleId = buildHandleId(node.id, 'input', i);
             const productId = resolvedProducts[handleId] || resolveHandleProduct(node.id, 'input', i, storeNodesMap, edgeLookup);
@@ -201,9 +203,10 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         }
 
         for (let i = 0; i < recipe.outputs.length; i++) {
+          const outDef = recipe.outputs[i];
+          if (outDef?.variable) continue;
           const outputFlow = nodeFlowResult.outputFlows[i];
           if (outputFlow && outputFlow.hasExcess) {
-            const outDef = recipe.outputs[i];
             if (!outDef) continue;
             const handleId = buildHandleId(node.id, 'output', i);
             const productId = resolvedProducts[handleId] || resolveHandleProduct(node.id, 'output', i, storeNodesMap, edgeLookup);

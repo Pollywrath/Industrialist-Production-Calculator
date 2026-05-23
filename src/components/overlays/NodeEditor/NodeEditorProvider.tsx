@@ -10,13 +10,14 @@ import {
   computeQuantityMap,
 } from '../../../utils/recipeComputation';
 import { getSpecialRecipe } from '../../../data/registry';
-import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
+import { resolveActiveRecipe } from '../../../data/lookup';
 
 interface NodeEditorProviderProps {
   children: React.ReactNode;
   recipe: Recipe;
   initialData: RecipeNodeData;
   multiplier: number;
+  nodeId: string;
 }
 
 export function NodeEditorProvider({
@@ -24,43 +25,43 @@ export function NodeEditorProvider({
   recipe,
   initialData,
   multiplier,
+  nodeId,
 }: NodeEditorProviderProps) {
-  const [store] = useState(() =>
-    createStore<NodeEditorState>((set, get) => ({
+  const [store] = useState(() => {
+    const initialSettings =
+      initialData.settings ??
+      (() => {
+        const sr = getSpecialRecipe(recipe.id);
+        if (!sr) return {};
+        return Object.entries(sr.settings).reduce(
+          (acc, [key, def]) => {
+            acc[key] = def.default;
+            return acc;
+          },
+          {} as Record<string, unknown>,
+        );
+      })();
+
+    const initialRecipe = resolveActiveRecipe(recipe.id, initialSettings, nodeId) ?? recipe;
+
+    return createStore<NodeEditorState>((set, get) => ({
       inputs: initialData.inputOrder ?? recipe.inputs.map((_, i) => i),
       outputs: initialData.outputOrder ?? recipe.outputs.map((_, i) => i),
       machineCount: initialData.machineCount,
       machineCountStr: toPlainString(initialData.machineCount, 12),
       qtyStrMap: computeQuantityMap(
-        recipe,
+        initialRecipe,
         initialData.inputOrder ?? recipe.inputs.map((_, i) => i),
         initialData.outputOrder ?? recipe.outputs.map((_, i) => i),
         initialData.machineCount,
         multiplier,
       ),
       activeTab: 'count',
-      settings:
-        initialData.settings ??
-        (() => {
-          const sr = getSpecialRecipe(recipe.id);
-          if (!sr) return {};
-          return Object.entries(sr.settings).reduce(
-            (acc, [key, def]) => {
-              acc[key] = def.default;
-              return acc;
-            },
-            {} as Record<string, unknown>,
-          );
-        })(),
+      settings: initialSettings,
 
       getCurrentRecipe: () => {
         const { settings } = get();
-        const sr = getSpecialRecipe(recipe.id);
-        const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
-          string,
-          unknown
-        >;
-        return sr ? sr.compute(settings, globalSettings) : recipe;
+        return resolveActiveRecipe(recipe.id, settings, nodeId) ?? recipe;
       },
 
       setInputs: (inputs) => set({ inputs }),
@@ -75,12 +76,7 @@ export function NodeEditorProvider({
       updateSetting: (key, value) => {
         const { settings, inputs, outputs, machineCount } = get();
         const newSettings = { ...settings, [key]: value };
-        const sr = getSpecialRecipe(recipe.id);
-        const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
-          string,
-          unknown
-        >;
-        const currentRecipe = sr ? sr.compute(newSettings, globalSettings) : recipe;
+        const currentRecipe = resolveActiveRecipe(recipe.id, newSettings, nodeId) ?? recipe;
 
         set({
           settings: newSettings,
@@ -158,18 +154,34 @@ export function NodeEditorProvider({
 
         if (!isNaN(parsed) && parsed >= 0) {
           const cleaned = cleanFlow(parsed);
-          const newMachineCount = cleanMachineCount(cleaned / normalizedBaseQuantity);
-          set({
-            qtyStrMap: computeQuantityMap(
-              get().getCurrentRecipe(),
-              inputs,
-              outputs,
-              newMachineCount,
-              multiplier,
-              key,
-              toPlainString(cleaned, 8),
-            ),
-          });
+          if (normalizedBaseQuantity > 0) {
+            const newMachineCount = cleanMachineCount(cleaned / normalizedBaseQuantity);
+            set({
+              machineCount: newMachineCount,
+              machineCountStr: toPlainString(newMachineCount, 12),
+              qtyStrMap: computeQuantityMap(
+                get().getCurrentRecipe(),
+                inputs,
+                outputs,
+                newMachineCount,
+                multiplier,
+                key,
+                toPlainString(cleaned, 8),
+              ),
+            });
+          } else {
+            set({
+              qtyStrMap: computeQuantityMap(
+                get().getCurrentRecipe(),
+                inputs,
+                outputs,
+                get().machineCount,
+                multiplier,
+                key,
+                toPlainString(cleaned, 8),
+              ),
+            });
+          }
         } else {
           set({
             machineCount: 0,
@@ -247,8 +259,8 @@ export function NodeEditorProvider({
           ),
         });
       },
-    })),
-  );
+    }));
+  });
 
   return <NodeEditorContext.Provider value={store}>{children}</NodeEditorContext.Provider>;
 }

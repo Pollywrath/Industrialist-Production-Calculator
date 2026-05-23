@@ -15,7 +15,6 @@ import {
   deleteDataOverride,
   clearCategoryDataOverrides,
 } from '../persistence/idb';
-import { useFlowStore } from './useFlowStore';
 import { useUIStore } from './useUIStore';
 import { validateProduct, validateMachine, validateResearch } from '../utils/dataValidation';
 
@@ -649,8 +648,6 @@ export const useDataStore = create<DataState>((set, get) => ({
       },
       dbVersion: state.dbVersion + 1,
     }));
-
-    useFlowStore.setState((s) => ({ solverVersion: s.solverVersion + 1 }));
   },
 
   restoreDefaults: async (category) => {
@@ -677,7 +674,5 @@ export const useDataStore = create<DataState>((set, get) => ({
         dbVersion: state.dbVersion + 1,
       };
     });
-
-    useFlowStore.setState((s) => ({ solverVersion: s.solverVersion + 1 }));
   },
 }));

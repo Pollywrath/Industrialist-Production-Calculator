@@ -10,6 +10,7 @@ import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
 import styles from './RecipeNode.module.css';
+import { useShallow } from 'zustand/react/shallow';
 
 import {
   RECT_HEIGHT,
@@ -141,7 +142,18 @@ export function RecipeNodeIO({
   const multiplier = recipe ? getRateMultiplier(recipe.cycle_time, rateMode) : 1;
   const scaleFactor = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 1;
   const flowResult = useFlowResultStore((s) => s.results.get(nodeId));
-  const resolvedProducts = useFlowStore((s) => s.resolvedProducts);
+  const resolvedProducts = useFlowStore(
+    useShallow((s) => {
+      const all = s.resolvedProducts;
+      const allHandles = [...leftHandles, ...rightHandles];
+      const result: Record<string, string> = {};
+      for (let i = 0; i < allHandles.length; i++) {
+        const handleId = buildHandleId(nodeId, allHandles[i].side, allHandles[i].index);
+        result[handleId] = all[handleId] ?? '';
+      }
+      return result;
+    }),
+  );
 
   const isFlipped = (ref: HandleRef): boolean => {
     if (!recipe) return false;
@@ -188,12 +200,21 @@ export function RecipeNodeIO({
     const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
     const entry = list[ref.index];
     if (entry) {
+      const handleId = buildHandleId(nodeId, ref.side, ref.index);
+      const resolvedProductId = resolvedProducts[handleId];
+      const concreteProductId =
+        resolvedProductId && resolvedProductId !== 'any_fluid' && resolvedProductId !== 'any_item'
+          ? resolvedProductId
+          : null;
+
       const isPlaceholder = entry.product_id === 'any_fluid' || entry.product_id === 'any_item';
+      const productIdToPass = concreteProductId ?? (isPlaceholder ? null : entry.product_id);
+
       useUIStore
         .getState()
         .setRecipeSelectorOpen(
           true,
-          isPlaceholder ? null : entry.product_id,
+          productIdToPass,
           ref.side,
           nodeId,
           ref.index,
