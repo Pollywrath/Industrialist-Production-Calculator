@@ -16,9 +16,8 @@ export function buildSolverGraph(
   for (const node of nodes) {
     const data = node.data;
     const nodeOverrides = settingsOverrides?.[node.id];
-    const settings = nodeOverrides || data.settings
-      ? { ...data.settings, ...nodeOverrides }
-      : undefined;
+    const settings =
+      nodeOverrides || data.settings ? { ...data.settings, ...nodeOverrides } : undefined;
     const helpers = {
       resolveProduct: (s: 'input' | 'output', idx: number) =>
         resolveHandleProduct(node.id, s, idx, nodesMap, edgeLookup),
@@ -36,7 +35,7 @@ export function buildSolverGraph(
     const inputs = recipe.inputs.map((inp, idx) => {
       const hasConn = helpers.hasConnection('input', idx);
       const isVariable = !!inp.variable;
-      const rate = (isVariable && !hasConn) ? 0 : inp.quantity * machineCount * multiplier;
+      const rate = isVariable && !hasConn ? 0 : inp.quantity * machineCount * multiplier;
       return {
         productId: resolveHandleProduct(node.id, 'input', idx, nodesMap, edgeLookup),
         rate,
@@ -46,7 +45,7 @@ export function buildSolverGraph(
     const outputs = recipe.outputs.map((out, idx) => {
       const hasConn = helpers.hasConnection('output', idx);
       const isVariable = !!out.variable;
-      const rate = (isVariable && !hasConn) ? 0 : out.quantity * machineCount * multiplier;
+      const rate = isVariable && !hasConn ? 0 : out.quantity * machineCount * multiplier;
       return {
         productId: resolveHandleProduct(node.id, 'output', idx, nodesMap, edgeLookup),
         rate,

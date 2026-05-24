@@ -5,6 +5,7 @@ import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { useFlowStore } from '../stores/useFlowStore';
 import { useFlowResultStore } from '../stores/useFlowResultStore';
 import { clearFlowCache } from '../solver/flowSolver';
+import { buildEdgeLookupMap } from '../utils/productResolver';
 
 let recipes: Recipe[] = [];
 let machines: Machine[] = [];
@@ -264,9 +265,8 @@ export function resolveActiveRecipe(
         if (!nodeId) return false;
         const handleId = `${nodeId}-${side}-${index}`;
         const edges = useFlowStore.getState().edges;
-        return edges.some(
-          (edge) => edge.sourceHandle === handleId || edge.targetHandle === handleId,
-        );
+        const edgeLookup = buildEdgeLookupMap(edges);
+        return (edgeLookup.get(handleId)?.length ?? 0) > 0;
       },
     };
 

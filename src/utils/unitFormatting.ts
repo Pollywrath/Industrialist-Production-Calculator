@@ -48,7 +48,7 @@ export function formatPower(value: number, isCapacity = false): string {
 }
 
 export function formatTemperature(value: number): string {
-  return formatWithPrefix(value, 10000, ['', 'k', 'M', 'B', 'T'], ' C');
+  return formatWithPrefix(value, 10000, ['', 'k', 'M', 'B', 'T'], '°C');
 }
 
 export function formatCurrency(value: number): string {

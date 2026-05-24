@@ -110,9 +110,10 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       const machineName = machine?.name ?? 'Machine';
 
       if (machine) {
-        const baseCost = sr && sr.computeMachineCost
-          ? sr.computeMachineCost(node.data.settings ?? {}, globalSettings, node.id)
-          : machine.cost;
+        const baseCost =
+          sr && sr.computeMachineCost
+            ? sr.computeMachineCost(node.data.settings ?? {}, globalSettings, node.id)
+            : machine.cost;
         totalMachineCost += baseCost * roundedCount;
 
         if (machine.subcategory === 'Depot') {
@@ -178,7 +179,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             const rawProductId = inputEntry?.product_id;
             if (!rawProductId) continue;
             const handleId = buildHandleId(node.id, 'input', i);
-            const productId = resolvedProducts[handleId] || resolveHandleProduct(node.id, 'input', i, storeNodesMap, edgeLookup);
+            const productId =
+              resolvedProducts[handleId] ||
+              resolveHandleProduct(node.id, 'input', i, storeNodesMap, edgeLookup);
             if (!productId) continue;
             const defRate = (inputFlow.rate - inputFlow.connected) * rateModeFactor;
             if (defRate > 0.0001) {
@@ -209,7 +212,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
           if (outputFlow && outputFlow.hasExcess) {
             if (!outDef) continue;
             const handleId = buildHandleId(node.id, 'output', i);
-            const productId = resolvedProducts[handleId] || resolveHandleProduct(node.id, 'output', i, storeNodesMap, edgeLookup);
+            const productId =
+              resolvedProducts[handleId] ||
+              resolveHandleProduct(node.id, 'output', i, storeNodesMap, edgeLookup);
             if (!productId) continue;
             const excRate = (outputFlow.rate - outputFlow.connected) * rateModeFactor;
             if (excRate > 0.0001) {
@@ -254,17 +259,14 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   },
 }));
 
-// Setup subscriptions to trigger recomputation only when dependency states change
 export function initDashboardStore(): () => void {
-  // 1. Recompute on solver execution updates
   const unsubFlow = useFlowStore.subscribe(
     (s) => s.solverVersion,
     () => {
       useDashboardStore.getState().recompute();
-    }
+    },
   );
 
-  // 2. Recompute when results map updates
   let lastResults = useFlowResultStore.getState().results;
   const unsubFlowResult = useFlowResultStore.subscribe((state) => {
     if (state.results !== lastResults) {
@@ -273,7 +275,6 @@ export function initDashboardStore(): () => void {
     }
   });
 
-  // 3. Recompute on UI config changes that affect dashboard rendering
   let lastRateMode = useUIStore.getState().rateMode;
   let lastIsStatsMinimized = useUIStore.getState().isStatsMinimized;
   let lastIsExtendedMinimized = useUIStore.getState().isExtendedMinimized;
@@ -291,7 +292,6 @@ export function initDashboardStore(): () => void {
     }
   });
 
-  // 4. Recompute on global settings (pollution) changes
   let lastGlobalPollution = useGlobalSettingsStore.getState().settings.global_pollution;
   const unsubGlobalSettings = useGlobalSettingsStore.subscribe((state) => {
     if (state.settings.global_pollution !== lastGlobalPollution) {
@@ -300,7 +300,6 @@ export function initDashboardStore(): () => void {
     }
   });
 
-  // Run initial computation on setup
   useDashboardStore.getState().recompute();
 
   return () => {
@@ -311,5 +310,4 @@ export function initDashboardStore(): () => void {
   };
 }
 
-// Run initial computation once on module load so the store is pre-populated
 useDashboardStore.getState().recompute();

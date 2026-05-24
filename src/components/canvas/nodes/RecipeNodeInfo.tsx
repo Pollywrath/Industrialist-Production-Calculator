@@ -6,6 +6,7 @@ import {
   formatPower,
   formatTime,
   formatMachineCount,
+  formatTemperature,
 } from '../../../utils/unitFormatting';
 import styles from './RecipeNode.module.css';
 
@@ -42,7 +43,7 @@ export function RecipeNodeInfo({
     <div className={styles['recipe-node-info']}>
       {receivedTemp !== undefined && receivedTemp !== null && (
         <div className={styles['recipe-node-info__temp-badge']}>
-          {receivedTemp.toFixed(1)}°C
+          {formatTemperature(receivedTemp)}
         </div>
       )}
       <button className={styles['recipe-node-info__top-right-btn']} onClick={handleBtnClick}>

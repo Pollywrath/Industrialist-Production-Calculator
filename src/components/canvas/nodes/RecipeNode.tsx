@@ -54,19 +54,24 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
     updateNodeInternals(id);
   }, [id, data.inputOrder, data.outputOrder, updateNodeInternals]);
 
-  const recipe = dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings, id) : undefined;
+  const recipe =
+    dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings, id) : undefined;
 
   const inputTempsMap = useFlowResultStore((s) => s.inputTemps[id]);
   let receivedTemp: number | null = null;
 
-  const sr = recipe ? getSpecialRecipe(recipe.id) : null;
-  if (recipe && sr && sr.inputTemperatureSettings) {
-    const tempInputIndices = Object.keys(sr.inputTemperatureSettings).map(Number);
-    if (tempInputIndices.length > 0) {
-      const firstIndex = tempInputIndices[0];
-      const tempVal = inputTempsMap?.[firstIndex];
-      if (typeof tempVal === 'number') {
-        receivedTemp = tempVal;
+  if (recipe && typeof recipe.runtime?.boilerTemp === 'number') {
+    receivedTemp = recipe.runtime.boilerTemp;
+  } else {
+    const sr = recipe ? getSpecialRecipe(recipe.id) : null;
+    if (recipe && sr && sr.inputTemperatureSettings) {
+      const tempInputIndices = Object.keys(sr.inputTemperatureSettings).map(Number);
+      if (tempInputIndices.length > 0) {
+        const firstIndex = tempInputIndices[0];
+        const tempVal = inputTempsMap?.[firstIndex];
+        if (typeof tempVal === 'number') {
+          receivedTemp = tempVal;
+        }
       }
     }
   }

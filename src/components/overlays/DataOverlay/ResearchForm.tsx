@@ -216,9 +216,7 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
 
           <div className={styles['prereqs-add-controls']}>
             <div className={styles['form-group']}>
-              <span className={styles['form-label-small']}>
-                Add Research Prerequisite
-              </span>
+              <span className={styles['form-label-small']}>Add Research Prerequisite</span>
               <SearchDropdown
                 value=""
                 options={searchDropdownOptions}
@@ -233,9 +231,7 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
             </div>
 
             <div className={styles['form-group']}>
-              <span className={styles['form-label-small']}>
-                Add Custom Prerequisite
-              </span>
+              <span className={styles['form-label-small']}>Add Custom Prerequisite</span>
               <form
                 onSubmit={handleAddCustomPrereq}
                 className={styles['custom-prereq-input-group']}

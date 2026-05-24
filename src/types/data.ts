@@ -42,6 +42,10 @@ export interface RecipeOutput {
   variable?: boolean;
 }
 
+export interface RecipeRuntimeState {
+  boilerTemp?: number;
+}
+
 export interface Recipe {
   id: string;
   name: string;
@@ -52,6 +56,7 @@ export interface Recipe {
   pollution: number;
   inputs: RecipeInput[];
   outputs: RecipeOutput[];
+  runtime?: RecipeRuntimeState;
 }
 
 export interface Research {

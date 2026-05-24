@@ -27,7 +27,6 @@ export function useFlowSolver(): void {
       timerRef.current = setTimeout(recompute, SOLVER_DEBOUNCE_MS);
     }
 
-    // Subscribe to database changes to bump solverVersion dynamically
     let lastDbVersion = useDataStore.getState().dbVersion;
     const unsubData = useDataStore.subscribe((state) => {
       if (state.dbVersion !== lastDbVersion) {
@@ -36,7 +35,6 @@ export function useFlowSolver(): void {
       }
     });
 
-    // Subscribe to global settings (pollution) changes to bump solverVersion dynamically
     let lastPollution = useGlobalSettingsStore.getState().settings.global_pollution;
     const unsubPollution = useGlobalSettingsStore.subscribe((state) => {
       if (state.settings.global_pollution !== lastPollution) {

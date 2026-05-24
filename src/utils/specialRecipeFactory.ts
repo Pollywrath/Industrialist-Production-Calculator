@@ -17,7 +17,7 @@ export interface SpecialRecipeConfig {
         helpers?: {
           resolveProduct: (side: 'input' | 'output', index: number) => string;
           hasConnection: (side: 'input' | 'output', index: number) => boolean;
-        }
+        },
       ) => number);
   powerType:
     | PowerType
@@ -28,7 +28,7 @@ export interface SpecialRecipeConfig {
         helpers?: {
           resolveProduct: (side: 'input' | 'output', index: number) => string;
           hasConnection: (side: 'input' | 'output', index: number) => boolean;
-        }
+        },
       ) => PowerType);
   pollution:
     | number
@@ -39,7 +39,7 @@ export interface SpecialRecipeConfig {
         helpers?: {
           resolveProduct: (side: 'input' | 'output', index: number) => string;
           hasConnection: (side: 'input' | 'output', index: number) => boolean;
-        }
+        },
       ) => number);
   inputs:
     | Recipe['inputs']
@@ -50,7 +50,7 @@ export interface SpecialRecipeConfig {
         helpers?: {
           resolveProduct: (side: 'input' | 'output', index: number) => string;
           hasConnection: (side: 'input' | 'output', index: number) => boolean;
-        }
+        },
       ) => Recipe['inputs']);
   outputs:
     | Recipe['outputs']
@@ -61,7 +61,7 @@ export interface SpecialRecipeConfig {
         helpers?: {
           resolveProduct: (side: 'input' | 'output', index: number) => string;
           hasConnection: (side: 'input' | 'output', index: number) => boolean;
-        }
+        },
       ) => Recipe['outputs']);
   cycleTime?: number;
   computeCycleTime?: (
@@ -71,17 +71,17 @@ export interface SpecialRecipeConfig {
     helpers?: {
       resolveProduct: (side: 'input' | 'output', index: number) => string;
       hasConnection: (side: 'input' | 'output', index: number) => boolean;
-    }
+    },
   ) => number;
   computeMachineCost?: (
     settings: Record<string, unknown>,
     globalSettings?: Record<string, unknown>,
-    nodeId?: string
+    nodeId?: string,
   ) => number;
   computeModelCount?: (
     settings: Record<string, unknown>,
     globalSettings?: Record<string, unknown>,
-    nodeId?: string
+    nodeId?: string,
   ) => number;
 }
 

@@ -10,7 +10,7 @@ import {
   reloadDatabase,
 } from '../data/lookup';
 import {
-  saveDataOverride,
+  batchSaveDataOverrides,
   clearDataOverrides,
   deleteDataOverride,
   clearCategoryDataOverrides,
@@ -583,10 +583,12 @@ export const useDataStore = create<DataState>((set, get) => ({
       }
     }
 
+    const batch: { id: string; data: Record<string, unknown> }[] = [];
+
     for (const [id, editData] of Object.entries(pendingEdits.products)) {
       const dbKey = `product:${id}`;
       if (editData._tombstone) {
-        await saveDataOverride(dbKey, { _tombstone: true });
+        batch.push({ id: dbKey, data: { _tombstone: true } });
       } else {
         const existing = getProduct(id);
         const savedData = existing ? { ...existing, ...editData } : editData;
@@ -597,14 +599,14 @@ export const useDataStore = create<DataState>((set, get) => ({
         };
         delete cleanData._isNew;
         delete cleanData._tombstone;
-        await saveDataOverride(dbKey, cleanData as unknown as Record<string, unknown>);
+        batch.push({ id: dbKey, data: cleanData as unknown as Record<string, unknown> });
       }
     }
 
     for (const [id, editData] of Object.entries(pendingEdits.machines)) {
       const dbKey = `machine:${id}`;
       if (editData._tombstone) {
-        await saveDataOverride(dbKey, { _tombstone: true });
+        batch.push({ id: dbKey, data: { _tombstone: true } });
       } else {
         const existing = getMachine(id);
         const savedData = existing ? { ...existing, ...editData } : editData;
@@ -615,14 +617,14 @@ export const useDataStore = create<DataState>((set, get) => ({
         };
         delete cleanData._isNew;
         delete cleanData._tombstone;
-        await saveDataOverride(dbKey, cleanData as unknown as Record<string, unknown>);
+        batch.push({ id: dbKey, data: cleanData as unknown as Record<string, unknown> });
       }
     }
 
     for (const [id, editData] of Object.entries(pendingEdits.researches)) {
       const dbKey = `research:${id}`;
       if (editData._tombstone) {
-        await saveDataOverride(dbKey, { _tombstone: true });
+        batch.push({ id: dbKey, data: { _tombstone: true } });
       } else {
         const existing = getResearch(id);
         const savedData = existing ? { ...existing, ...editData } : editData;
@@ -633,8 +635,21 @@ export const useDataStore = create<DataState>((set, get) => ({
         };
         delete cleanData._isNew;
         delete cleanData._tombstone;
-        await saveDataOverride(dbKey, cleanData as unknown as Record<string, unknown>);
+        batch.push({ id: dbKey, data: cleanData as unknown as Record<string, unknown> });
       }
+    }
+
+    const success = await batchSaveDataOverrides(batch);
+
+    if (!success) {
+      await useUIStore.getState().confirm({
+        title: 'Save Failed',
+        message:
+          'Your edits could not be saved to the database. All pending changes have been preserved — please try again.',
+        confirmLabel: 'Dismiss',
+        intent: 'error',
+      });
+      return;
     }
 
     await reloadDatabase();

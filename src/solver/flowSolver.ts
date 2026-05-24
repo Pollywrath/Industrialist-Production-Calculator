@@ -377,7 +377,10 @@ const flowCache = new LRUCache<{
   connectionFlows: Record<string, number>;
 }>(1000);
 
-export function calculateFlows(graph: SolverGraph, bypassCache = false): {
+export function calculateFlows(
+  graph: SolverGraph,
+  bypassCache = false,
+): {
   results: FlowResults;
   edgeFlows: Record<string, number>;
 } {

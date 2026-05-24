@@ -23,33 +23,29 @@ export function solveFlowAndTemperature(
     resolveProduct: (side: 'input' | 'output', index: number) =>
       resolveHandleProduct(nodeId, side, index, nodesMap, edgeLookup),
     hasConnection: (side: 'input' | 'output', index: number) => {
-      const handleId = `${nodeId}-${side}-${index}`;
+      const handleId = buildHandleId(nodeId, side, index);
       return (edgeLookup.get(handleId)?.length ?? 0) > 0;
     },
   });
 
-  // 1. Initial Pass: run flow solver using current canvas settings
-  const initialGraph = buildSolverGraph(nodes, edges);
-  const { edgeFlows: initialEdgeFlows } = calculateFlows(initialGraph);
-
-  // Keep track of temperature state
   const nodeOutputTemps: Record<string, number[]> = {};
   const inputTemps: Record<string, Record<number, number>> = {};
   const edgeTemps: Record<string, number> = {};
 
-  // Initialize inputTemps structure
   for (const node of nodes) {
     inputTemps[node.id] = {};
   }
-
-  // Initialize edgeTemps to 18 (default room temperature)
   for (const edge of edges) {
     edgeTemps[edge.id] = 18;
   }
 
-  // Initialize nodeOutputTemps based on the initial active recipe (using node settings)
   for (const node of nodes) {
-    const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id, getHelpers(node.id));
+    const recipe = resolveActiveRecipe(
+      node.data.recipeId,
+      node.data.settings,
+      node.id,
+      getHelpers(node.id),
+    );
     if (recipe) {
       nodeOutputTemps[node.id] = recipe.outputs.map((out) => out.temperature ?? 18);
     } else {
@@ -57,7 +53,6 @@ export function solveFlowAndTemperature(
     }
   }
 
-  // Pre-calculate target handles that are connected by edges for faster lookup
   const connectedTargetHandles = new Set<string>();
   for (const edge of edges) {
     if (edge.targetHandle) {
@@ -65,7 +60,36 @@ export function solveFlowAndTemperature(
     }
   }
 
-  // Pre-calculate incoming edges map by target node and handle index
+  const buildConnectedTemperatureOverrides = (): Record<string, Record<string, unknown>> => {
+    const settingsOverrides: Record<string, Record<string, unknown>> = {};
+
+    for (const node of nodes) {
+      const sr = getSpecialRecipe(node.data.recipeId);
+      if (!sr?.inputTemperatureSettings) continue;
+
+      const nodeOverrides: Record<string, unknown> = {};
+      let hasOverride = false;
+
+      for (const [inpIdxStr, settingKey] of Object.entries(sr.inputTemperatureSettings)) {
+        const inpIdx = Number(inpIdxStr);
+        const handleId = buildHandleId(node.id, 'input', inpIdx);
+        const hasIncoming = connectedTargetHandles.has(handleId);
+        const tempValue = inputTemps[node.id][inpIdx];
+
+        if (hasIncoming && tempValue !== undefined) {
+          nodeOverrides[settingKey] = tempValue;
+          hasOverride = true;
+        }
+      }
+
+      if (hasOverride) {
+        settingsOverrides[node.id] = nodeOverrides;
+      }
+    }
+
+    return settingsOverrides;
+  };
+
   const incomingEdges: Record<string, Record<number, typeof edges>> = {};
   for (const edge of edges) {
     if (!edge.targetHandle) continue;
@@ -81,9 +105,11 @@ export function solveFlowAndTemperature(
     incomingEdges[edge.target][targetParsed.index].push(edge);
   }
 
-  // 2. Propagation Loop (5 iterations)
   for (let iter = 0; iter < 5; iter++) {
-    // Step A: Propagate output temperatures to edges
+    const iterationSettingsOverrides = buildConnectedTemperatureOverrides();
+    const iterationGraph = buildSolverGraph(nodes, edges, iterationSettingsOverrides);
+    const { edgeFlows: iterationEdgeFlows } = calculateFlows(iterationGraph);
+
     for (const edge of edges) {
       if (!edge.sourceHandle) continue;
       const sourceParsed = parseHandleId(edge.sourceHandle);
@@ -97,12 +123,14 @@ export function solveFlowAndTemperature(
       }
     }
 
-    // Step B: Aggregate edge temperatures at node inputs (weighted by initial flow rates)
-
-    // Compute input temperatures for each node
     for (const node of nodes) {
       const nodeId = node.id;
-      const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, nodeId, getHelpers(nodeId));
+      const recipe = resolveActiveRecipe(
+        node.data.recipeId,
+        node.data.settings,
+        nodeId,
+        getHelpers(nodeId),
+      );
       if (!recipe) continue;
 
       const sr = getSpecialRecipe(node.data.recipeId);
@@ -112,7 +140,6 @@ export function solveFlowAndTemperature(
         const hasIncoming = connectedTargetHandles.has(handleId);
 
         if (!hasIncoming) {
-          // Unconnected: if it maps to a setting definitions key, read the current value or fall back to default
           const settingKey = sr?.inputTemperatureSettings?.[i];
           if (settingKey) {
             const settingVal = node.data.settings?.[settingKey];
@@ -126,12 +153,11 @@ export function solveFlowAndTemperature(
             inputTemps[nodeId][i] = 18;
           }
         } else {
-          // Connected: compute weighted average based on flows
           const connected = incomingEdges[nodeId]?.[i] || [];
           let totalFlow = 0;
           let weightedSum = 0;
           for (const edge of connected) {
-            const flow = initialEdgeFlows[edge.id] ?? 0;
+            const flow = iterationEdgeFlows[edge.id] ?? 0;
             totalFlow += flow;
             weightedSum += flow * edgeTemps[edge.id];
           }
@@ -139,7 +165,6 @@ export function solveFlowAndTemperature(
           if (totalFlow > 1e-8) {
             inputTemps[nodeId][i] = weightedSum / totalFlow;
           } else {
-            // Arithmetic average if total flow is zero
             let sumTemp = 0;
             for (const edge of connected) {
               sumTemp += edgeTemps[edge.id];
@@ -149,7 +174,6 @@ export function solveFlowAndTemperature(
         }
       }
 
-      // Step C: Re-evaluate node output temperatures based on computed input temperatures
       if (sr) {
         const tempOverrides: Record<string, unknown> = {};
         if (sr.inputTemperatureSettings) {
@@ -178,41 +202,16 @@ export function solveFlowAndTemperature(
     }
   }
 
-  // 3. Second Pass: Build final overrides and run the final solver
-  const finalSettingsOverrides: Record<string, Record<string, unknown>> = {};
-  for (const node of nodes) {
-    const sr = getSpecialRecipe(node.data.recipeId);
-    if (sr && sr.inputTemperatureSettings) {
-      const nodeOverrides: Record<string, unknown> = {};
-      let hasOverride = false;
-
-      for (const [inpIdxStr, settingKey] of Object.entries(sr.inputTemperatureSettings)) {
-        const inpIdx = Number(inpIdxStr);
-        const handleId = buildHandleId(node.id, 'input', inpIdx);
-        const hasIncoming = connectedTargetHandles.has(handleId);
-
-        if (hasIncoming && inputTemps[node.id][inpIdx] !== undefined) {
-          nodeOverrides[settingKey] = inputTemps[node.id][inpIdx];
-          hasOverride = true;
-        }
-      }
-
-      if (hasOverride) {
-        finalSettingsOverrides[node.id] = nodeOverrides;
-      }
-    }
-  }
+  const finalSettingsOverrides = buildConnectedTemperatureOverrides();
 
   const finalGraph = buildSolverGraph(nodes, edges, finalSettingsOverrides);
   const { results: finalResults, edgeFlows: finalEdgeFlows } = calculateFlows(finalGraph);
 
-  // Propagate one final time to make sure edgeTemps are aligned with final nodeOutputTemps
   const finalNodeOutputTemps: Record<string, number[]> = {};
   for (const node of nodes) {
     const nodeOverrides = finalSettingsOverrides[node.id];
-    const settings = nodeOverrides || node.data.settings
-      ? { ...node.data.settings, ...nodeOverrides }
-      : undefined;
+    const settings =
+      nodeOverrides || node.data.settings ? { ...node.data.settings, ...nodeOverrides } : undefined;
     const recipe = resolveActiveRecipe(node.data.recipeId, settings, node.id, getHelpers(node.id));
     if (recipe) {
       finalNodeOutputTemps[node.id] = recipe.outputs.map((out) => out.temperature ?? 18);

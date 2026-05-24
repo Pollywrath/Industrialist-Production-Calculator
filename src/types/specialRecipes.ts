@@ -44,16 +44,16 @@ export interface SpecialRecipe {
     helpers?: {
       resolveProduct: (side: 'input' | 'output', index: number) => string;
       hasConnection: (side: 'input' | 'output', index: number) => boolean;
-    }
+    },
   ) => Recipe;
   computeMachineCost?: (
     settings: Record<string, unknown>,
     globalSettings?: Record<string, unknown>,
-    nodeId?: string
+    nodeId?: string,
   ) => number;
   computeModelCount?: (
     settings: Record<string, unknown>,
     globalSettings?: Record<string, unknown>,
-    nodeId?: string
+    nodeId?: string,
   ) => number;
 }

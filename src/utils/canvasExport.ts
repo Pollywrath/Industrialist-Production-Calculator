@@ -25,10 +25,16 @@ export async function exportCanvasAsPng(nodes: Node[]): Promise<void> {
     .trim();
 
   if (!themeBg) {
-    throw new Error('Required theme variable --theme-color-canvas-bg is not defined on document.documentElement');
+    throw new Error(
+      'Required theme variable --theme-color-canvas-bg is not defined on document.documentElement',
+    );
   }
 
-  const nodeLookup = new Map(nodes.map((node) => [node.id, node])) as unknown as (Parameters<typeof getNodesBounds>[1] extends { nodeLookup?: infer L } ? L : never);
+  const nodeLookup = new Map(nodes.map((node) => [node.id, node])) as unknown as Parameters<
+    typeof getNodesBounds
+  >[1] extends { nodeLookup?: infer L }
+    ? L
+    : never;
   const bounds = getNodesBounds(nodes, { nodeLookup });
   const padding = 50;
 

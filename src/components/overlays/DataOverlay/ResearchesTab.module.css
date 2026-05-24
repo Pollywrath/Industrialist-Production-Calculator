@@ -80,10 +80,6 @@
   padding: 0;
 }
 
-.btn-add-research:active {
-  background: var(--theme-color-primary-hover);
-}
-
 .list-viewport {
   flex: 1;
   overflow: hidden;
@@ -350,10 +346,6 @@
   border-radius: 4px;
 }
 
-.btn-delete-research:active {
-  background: var(--theme-color-error-translucent);
-}
-
 .btn-restore-research {
   box-sizing: border-box;
   display: flex;
@@ -370,10 +362,6 @@
   background: transparent;
   border: 1px solid var(--theme-color-warning);
   border-radius: 4px;
-}
-
-.btn-restore-research:active {
-  background: var(--theme-color-warning-translucent);
 }
 
 .prereqs-container {
@@ -429,10 +417,6 @@
   border: none;
 }
 
-.prereq-remove-btn:hover {
-  color: var(--theme-color-error);
-}
-
 .prereqs-add-controls {
   display: flex;
   flex-direction: column;
@@ -479,10 +463,6 @@
   background: var(--theme-color-primary);
   border: 1px solid var(--theme-color-border-primary);
   border-radius: 4px;
-}
-
-.btn-add-custom-prereq:active {
-  background: var(--theme-color-primary-hover);
 }
 
 .btn-add-custom-prereq svg {

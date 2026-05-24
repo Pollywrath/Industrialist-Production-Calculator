@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useReactFlow } from '@xyflow/react';
-import { getRecipe, getProduct } from '../../../data/lookup';
+import { resolveActiveRecipe, getProduct } from '../../../data/lookup';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
@@ -10,25 +10,25 @@ import { SelectionStage } from './SelectionStage';
 import { RecipeStage } from './RecipeStage';
 import styles from './RecipeSelector.module.css';
 import type { NodeFlowResult } from '../../../types/solver';
+import type { Recipe } from '../../../types/data';
 import { RecipeSelectorProvider } from './RecipeSelectorProvider';
 import { useRecipeSelectorStore } from './RecipeSelectorContext';
+import { resolveHandleProduct, buildEdgeLookupMap } from '../../../utils/productResolver';
+import { buildHandleId } from '../../../utils/idGenerator';
 
 function getClickedPerSecondRate(
-  nodeId: string | null,
   sourceSide: 'input' | 'output' | null,
   productId: string | null,
   handleIndex: number | null,
-  nodeData: { recipeId: string; machineCount: number } | null,
+  recipe: Recipe | undefined,
+  machineCount: number,
   nodeFlows: NodeFlowResult | undefined | null,
 ): number | null {
-  if (!nodeId || !sourceSide || handleIndex === null || !nodeData) {
+  if (!sourceSide || handleIndex === null || !recipe) {
     return null;
   }
-  const existingRecipe = nodeData.recipeId ? getRecipe(nodeData.recipeId) : null;
-  if (!existingRecipe) return null;
-
-  const existingMachineCount = nodeData.machineCount ?? 1;
-  const list = sourceSide === 'input' ? existingRecipe.inputs : existingRecipe.outputs;
+  const existingMachineCount = machineCount ?? 1;
+  const list = sourceSide === 'input' ? recipe.inputs : recipe.outputs;
   const entry = list[handleIndex];
   if (!entry) return null;
 
@@ -47,7 +47,7 @@ function getClickedPerSecondRate(
 
   return flowStatus
     ? Math.max(0, flowStatus.rate - flowStatus.connected)
-    : (clickedBaseQty / existingRecipe.cycle_time) * existingMachineCount;
+    : (clickedBaseQty / recipe.cycle_time) * existingMachineCount;
 }
 
 export function RecipeSelector() {
@@ -81,6 +81,9 @@ function RecipeSelectorModal() {
   });
 
   const preselectedNodeData = preselectedNode?.data || null;
+  const nodesMap = useFlowStore((s) => s.nodesMap);
+  const edges = useFlowStore((s) => s.edges);
+  const edgeLookup = buildEdgeLookupMap(edges);
 
   const preselectedNodeFlows = useFlowResultStore((s) => {
     if (!preselectedNodeId) return undefined;
@@ -100,22 +103,38 @@ function RecipeSelectorModal() {
     }
   }, [activeTab, stage]);
 
-  const effectiveProductId =
-    preselectedProductId || (activeTab === 'product' ? selectedId : null);
+  const effectiveProductId = preselectedProductId || (activeTab === 'product' ? selectedId : null);
+
+  const preselectedRecipe =
+    preselectedNodeId && preselectedNodeData
+      ? resolveActiveRecipe(
+          preselectedNodeData.recipeId,
+          preselectedNodeData.settings,
+          preselectedNodeId,
+          {
+            resolveProduct: (side: 'input' | 'output', index: number) =>
+              resolveHandleProduct(preselectedNodeId, side, index, nodesMap, edgeLookup),
+            hasConnection: (side: 'input' | 'output', index: number) => {
+              const handleId = buildHandleId(preselectedNodeId, side, index);
+              return (edgeLookup.get(handleId)?.length ?? 0) > 0;
+            },
+          },
+        )
+      : undefined;
 
   const derivedRate = getClickedPerSecondRate(
-    preselectedNodeId,
     preselectedSourceSide,
     effectiveProductId,
     preselectedHandleIndex,
-    preselectedNodeData,
+    preselectedRecipe,
+    preselectedNodeData?.machineCount ?? 1,
     preselectedNodeFlows,
   );
 
   const clickedRateInfo = derivedRate !== null ? { clickedPerSecondRate: derivedRate } : null;
 
   const handleAddRecipe = (recipeId: string) => {
-    const recipe = getRecipe(recipeId);
+    const recipe = resolveActiveRecipe(recipeId);
     if (!recipe) return;
 
     const { nodes, edges } = useFlowStore.getState();

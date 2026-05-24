@@ -136,6 +136,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       onMoveStart={() => useUIStore.getState().setIsTransforming(true)}
       onMoveEnd={() => useUIStore.getState().setIsTransforming(false)}
       onlyRenderVisibleElements={nodes.length > 250 && !isZoomedOut}
+      deleteKeyCode={null}
     >
       <Background
         variant={BackgroundVariant.Dots}
@@ -208,4 +209,3 @@ export function FlowViewport() {
 
   return <FlowViewportCanvas isZoomedOut={isZoomedOut} />;
 }
-

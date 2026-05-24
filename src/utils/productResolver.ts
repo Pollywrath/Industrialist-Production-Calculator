@@ -152,4 +152,3 @@ export function computeResolvedProducts(
 
   return resolved;
 }
-

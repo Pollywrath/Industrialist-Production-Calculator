@@ -5,7 +5,11 @@ import { getProductName } from '../../../data/lookup';
 import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
-import { getRateMultiplier, calculateMachineCountFromRate, getNormalizedCycleTime } from '../../../utils/recipeComputation';
+import {
+  getRateMultiplier,
+  calculateMachineCountFromRate,
+  getNormalizedCycleTime,
+} from '../../../utils/recipeComputation';
 import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
@@ -212,13 +216,7 @@ export function RecipeNodeIO({
 
       useUIStore
         .getState()
-        .setRecipeSelectorOpen(
-          true,
-          productIdToPass,
-          ref.side,
-          nodeId,
-          ref.index,
-        );
+        .setRecipeSelectorOpen(true, productIdToPass, ref.side, nodeId, ref.index);
     }
   };
 
@@ -272,9 +270,9 @@ export function RecipeNodeIO({
             {leftHandles.map((refVal) => {
               const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
               const actualFlow = flowResult
-                ? (refVal.side === 'input'
+                ? ((refVal.side === 'input'
                     ? flowResult.inputFlows[refVal.index]?.connected
-                    : flowResult.outputFlows[refVal.index]?.connected) ?? 0
+                    : flowResult.outputFlows[refVal.index]?.connected) ?? 0)
                 : 0;
               const actualFlowScaled = actualFlow * scaleFactor;
               return (
@@ -303,9 +301,9 @@ export function RecipeNodeIO({
             {rightHandles.map((refVal) => {
               const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
               const actualFlow = flowResult
-                ? (refVal.side === 'input'
+                ? ((refVal.side === 'input'
                     ? flowResult.inputFlows[refVal.index]?.connected
-                    : flowResult.outputFlows[refVal.index]?.connected) ?? 0
+                    : flowResult.outputFlows[refVal.index]?.connected) ?? 0)
                 : 0;
               const actualFlowScaled = actualFlow * scaleFactor;
               return (

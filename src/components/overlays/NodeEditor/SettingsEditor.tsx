@@ -6,6 +6,7 @@ import { useNodeEditorStore } from './NodeEditorContext';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
 import { buildHandleId } from '../../../utils/idGenerator';
+import { getAllProducts } from '../../../data/lookup';
 import styles from './NodeEditor.module.css';
 
 interface SettingsEditorProps {
@@ -74,6 +75,22 @@ function SettingItem({
               {def.options.find((o) => o.value === opt.value)?.label ?? String(opt.value)}
             </option>
           ))}
+        </select>
+      )}
+      {def.type === 'product' && (
+        <select
+          value={displayValue as string}
+          onChange={(e) => updateSetting(settingKey, e.target.value)}
+          className={styles['node-editor-input']}
+          disabled={isConnected}
+        >
+          {getAllProducts()
+            .filter((p) => p.type === 'Fluid')
+            .map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
         </select>
       )}
     </div>

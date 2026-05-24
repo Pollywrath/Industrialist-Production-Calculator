@@ -155,6 +155,26 @@ export async function saveDataOverride(
   }
 }
 
+export async function batchSaveDataOverrides(
+  entries: { id: string; data: Record<string, unknown> }[],
+): Promise<boolean> {
+  if (entries.length === 0) return true;
+  try {
+    const db = await getDB();
+    if (!db) return false;
+    const tx = db.transaction('data_overrides', 'readwrite');
+    const store = tx.objectStore('data_overrides');
+    for (let i = 0; i < entries.length; i++) {
+      store.put(entries[i]);
+    }
+    await tx.done;
+    return true;
+  } catch (err) {
+    console.warn('Failed to batch-save data overrides in IndexedDB:', err);
+    return false;
+  }
+}
+
 export async function deleteDataOverride(id: string): Promise<boolean> {
   try {
     const db = await getDB();
