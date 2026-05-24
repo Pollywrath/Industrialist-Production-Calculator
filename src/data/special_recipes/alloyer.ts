@@ -15,7 +15,6 @@ const settingDefinitions = {
     default: 400,
     min: 0,
     max: 1000,
-    step: 1,
   },
 };
 

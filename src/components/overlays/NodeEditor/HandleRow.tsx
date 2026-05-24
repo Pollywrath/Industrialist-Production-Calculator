@@ -74,13 +74,13 @@ export function HandleRow({
       <div className={styles['node-editor-actions']}>
         <div className={styles['node-editor-actions-stack']}>
           <button disabled={listIdx === 0} onClick={() => handleMove(side, listIdx, -1)}>
-            <ChevronUp size={12} />
+            <ChevronUp size={14} />
           </button>
           <button
             disabled={listIdx === totalLength - 1}
             onClick={() => handleMove(side, listIdx, 1)}
           >
-            <ChevronDown size={12} />
+            <ChevronDown size={14} />
           </button>
         </div>
       </div>

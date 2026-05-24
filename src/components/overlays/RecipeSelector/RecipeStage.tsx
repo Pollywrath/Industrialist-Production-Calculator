@@ -31,6 +31,10 @@ export function RecipeStage({
     setFilterProducers,
     filterConsumers,
     setFilterConsumers,
+    filterSellTrash,
+    setFilterSellTrash,
+    filterHeatPower,
+    setFilterHeatPower,
     handleBack,
     matchingRecipes,
   } = useRecipeSelectorFilters({ recipes: allRecipes });
@@ -78,6 +82,19 @@ export function RecipeStage({
       if (aFav !== bFav) {
         return bFav - aFav;
       }
+      
+      const machineA = getMachineName(a.r.machine_id) || '';
+      const machineB = getMachineName(b.r.machine_id) || '';
+      const machineCmp = machineA.localeCompare(machineB);
+      if (machineCmp !== 0) {
+        return machineCmp;
+      }
+
+      const nameCmp = a.r.name.localeCompare(b.r.name);
+      if (nameCmp !== 0) {
+        return nameCmp;
+      }
+
       return a.index - b.index;
     })
     .map((x) => x.r);
@@ -124,13 +141,19 @@ export function RecipeStage({
             <span className={`${styles['filter-btn-dot']} ${styles['consumer']}`} />
             Consumer
           </button>
-          <button className={styles['recipe-selector-filter-btn']} disabled={true}>
+          <button
+            className={`${styles['recipe-selector-filter-btn']} ${filterSellTrash ? styles['is-active'] : ''}`}
+            onClick={() => setFilterSellTrash(!filterSellTrash)}
+          >
             <span className={`${styles['filter-btn-dot']} ${styles['sell']}`} />
-            Sell/Trash (Soon)
+            Sell/RP/Trash
           </button>
-          <button className={styles['recipe-selector-filter-btn']} disabled={true}>
+          <button
+            className={`${styles['recipe-selector-filter-btn']} ${filterHeatPower ? styles['is-active'] : ''}`}
+            onClick={() => setFilterHeatPower(!filterHeatPower)}
+          >
             <span className={`${styles['filter-btn-dot']} ${styles['heat']}`} />
-            Heat/Power (Soon)
+            Heat/Power
           </button>
         </div>
       )}

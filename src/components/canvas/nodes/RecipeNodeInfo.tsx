@@ -16,6 +16,7 @@ interface RecipeNodeInfoProps {
   machineCount: number;
   onOpenEditor: () => void;
   receivedTemp?: number | null;
+  machineTier?: number;
 }
 
 export function RecipeNodeInfo({
@@ -24,6 +25,7 @@ export function RecipeNodeInfo({
   machineCount,
   onOpenEditor,
   receivedTemp,
+  machineTier = 1,
 }: RecipeNodeInfoProps) {
   const rateMode = useUIStore((s) => s.rateMode);
   const displayCycleTime = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 0;
@@ -86,7 +88,9 @@ export function RecipeNodeInfo({
         </div>
 
         <div className={styles['recipe-node-info__col--right']}>
-          <div className={styles['recipe-node-info__machine-name']}>{machineName}</div>
+          <div className={`${styles['recipe-node-info__machine-name']} ${styles[`tier-${machineTier}`]}`}>
+            {machineName}
+          </div>
           <div className={styles['recipe-node-info__machine-count']}>
             {formatMachineCount(machineCount)}
           </div>

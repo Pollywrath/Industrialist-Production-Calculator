@@ -389,7 +389,7 @@
   padding: 2px 8px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--theme-color-text-secondary);
+  color: var(--tier-color, var(--theme-color-text-secondary));
   background: var(--theme-color-canvas-bg);
   border: 1px solid var(--theme-color-border-light);
   border-radius: 4px;
@@ -403,6 +403,12 @@
   background: var(--theme-color-output-bg);
   border: 1px solid var(--theme-color-output-border);
   border-radius: 4px;
+}
+
+.recipe-card-pollution.success {
+  color: var(--theme-color-success);
+  background: var(--theme-color-success-translucent);
+  border-color: var(--theme-color-success);
 }
 
 .recipe-card-machine-count {

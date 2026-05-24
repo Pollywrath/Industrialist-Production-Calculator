@@ -134,12 +134,18 @@
   margin-bottom: 4px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--theme-color-text-primary);
+  color: var(--tier-color, var(--theme-color-text-primary));
   text-align: right;
   word-wrap: break-word;
   overflow-wrap: break-word;
   white-space: normal;
 }
+
+.tier-1 { --tier-color: var(--theme-color-tier-1); }
+.tier-2 { --tier-color: var(--theme-color-tier-2); }
+.tier-3 { --tier-color: var(--theme-color-tier-3); }
+.tier-4 { --tier-color: var(--theme-color-tier-4); }
+.tier-5 { --tier-color: var(--theme-color-tier-5); }
 
 .recipe-node-info__machine-count {
   font-size: 20px;

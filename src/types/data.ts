@@ -57,6 +57,7 @@ export interface Recipe {
   inputs: RecipeInput[];
   outputs: RecipeOutput[];
   runtime?: RecipeRuntimeState;
+  isSellTrash?: boolean;
 }
 
 export interface Research {

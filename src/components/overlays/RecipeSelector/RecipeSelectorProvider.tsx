@@ -35,6 +35,8 @@ export function RecipeSelectorProvider({
           preselectedProductId && preselectedSourceSide ? preselectedSourceSide === 'input' : true,
         filterConsumers:
           preselectedProductId && preselectedSourceSide ? preselectedSourceSide === 'output' : true,
+        filterSellTrash: true,
+        filterHeatPower: true,
 
         setActiveTab: (activeTab) => set({ activeTab }),
         setSearchQuery: (searchQuery) => set({ searchQuery }),
@@ -45,6 +47,8 @@ export function RecipeSelectorProvider({
           set({ machineSubcategoryFilter }),
         setFilterProducers: (filterProducers) => set({ filterProducers }),
         setFilterConsumers: (filterConsumers) => set({ filterConsumers }),
+        setFilterSellTrash: (filterSellTrash) => set({ filterSellTrash }),
+        setFilterHeatPower: (filterHeatPower) => set({ filterHeatPower }),
 
         handleProductSort: (field) =>
           set((state) => {
@@ -68,6 +72,8 @@ export function RecipeSelectorProvider({
             stage: 'recipes',
             filterProducers: true,
             filterConsumers: true,
+            filterSellTrash: true,
+            filterHeatPower: true,
           }),
         handleBack: () =>
           set({

@@ -226,20 +226,17 @@ export const boiler_standard: SpecialRecipe = {
       type: 'number',
       label: 'Water Temperature (°C)',
       default: 18,
-      step: 1,
     },
     coolant_temp: {
       type: 'number',
       label: 'Coolant Temperature (°C)',
       default: 240,
-      step: 1,
     },
     heat_loss: {
       type: 'number',
       label: 'Heat Loss (°C)',
       default: 1,
       min: 0,
-      step: 1,
     },
   },
   inputTemperatureSettings: {
@@ -308,14 +305,12 @@ export const boiler_preheater: SpecialRecipe = {
       type: 'number',
       label: 'Coolant Temperature (°C)',
       default: 240,
-      step: 1,
     },
     heat_loss: {
       type: 'number',
       label: 'Heat Loss (°C)',
       default: 1,
       min: 0,
-      step: 1,
     },
   },
   inputTemperatureSettings: {
@@ -366,14 +361,12 @@ export const boiler_self_heating: SpecialRecipe = {
       type: 'number',
       label: 'Water Temperature (°C)',
       default: 240,
-      step: 1,
     },
     heat_loss: {
       type: 'number',
       label: 'Heat Loss (°C)',
       default: 1,
       min: 0,
-      step: 1,
     },
   },
   inputTemperatureSettings: {
@@ -421,14 +414,12 @@ export const boiler_coolant_loop: SpecialRecipe = {
       type: 'number',
       label: 'Water Temperature (°C)',
       default: 240,
-      step: 1,
     },
     heat_loss: {
       type: 'number',
       label: 'Heat Loss (°C)',
       default: 1,
       min: 0,
-      step: 1,
     },
     coolant_used: {
       type: 'select',

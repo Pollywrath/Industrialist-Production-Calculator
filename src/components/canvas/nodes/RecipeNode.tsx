@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import type { RecipeNodeType } from '../../../types/nodes';
-import { resolveActiveRecipe, getMachineName } from '../../../data/lookup';
+import { resolveActiveRecipe, getMachineName, getMachine } from '../../../data/lookup';
 import { RecipeNodeInfo } from './RecipeNodeInfo';
 import { RecipeNodeIO } from './RecipeNodeIO';
 import styles from './RecipeNode.module.css';
@@ -108,6 +108,7 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
           recipe={recipe}
           machineName={recipe ? getMachineName(recipe.machine_id) : '\u2014'}
           machineCount={data.machineCount}
+          machineTier={recipe ? getMachine(recipe.machine_id)?.tier : 1}
           onOpenEditor={() => {
             useUIStore.setState({ activeToggleId: null });
             setIsEditorOpen(true);

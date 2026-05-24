@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import type { Recipe } from '../../../types/data';
-import { getMachineName, getProductName, getProduct } from '../../../data/lookup';
+import { getProductIconPath } from '../../../data/productIcons';
+import { getMachineName, getProductName, getProduct, getMachine } from '../../../data/lookup';
 import {
   getRateMultiplier,
   getNormalizedCycleTime,
@@ -26,6 +28,25 @@ interface RecipeCardProps {
   onToggleFavorite: (recipeId: string) => void;
 }
 
+function ProductIcon({ productId, productName }: { productId: string; productName: string }) {
+  const [error, setError] = useState(false);
+
+  if (error) {
+    return <>{productName.charAt(0).toUpperCase()}</>;
+  }
+
+  return (
+    <img
+      src={getProductIconPath(productId) || ''}
+      alt={productName}
+      loading="lazy"
+      decoding="async"
+      style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }}
+      onError={() => setError(true)}
+    />
+  );
+}
+
 export function RecipeCard({
   recipe,
   rateMode,
@@ -38,6 +59,7 @@ export function RecipeCard({
 }: RecipeCardProps) {
   const multiplier = getRateMultiplier(recipe.cycle_time, rateMode);
   const displayCycleTime = getNormalizedCycleTime(recipe.cycle_time, rateMode);
+  const machineTier = getMachine(recipe.machine_id)?.tier || 1;
   let neededMachineCount = 1;
 
   if (clickedRateInfo) {
@@ -90,10 +112,12 @@ export function RecipeCard({
           <span className={styles['recipe-card-title']}>{recipe.name}</span>
         </div>
         <div className={styles['recipe-card-top-right']}>
-          <span className={styles['recipe-card-machine-name']}>
+          <span className={`${styles['recipe-card-machine-name']} ${styles[`tier-${machineTier}`]}`}>
             {getMachineName(recipe.machine_id)}
           </span>
-          <span className={styles['recipe-card-pollution']}>
+          <span
+            className={`${styles['recipe-card-pollution']} ${recipe.pollution < 0 ? styles['success'] : ''}`.trim()}
+          >
             {formatPollution(recipe.pollution * neededMachineCount)}
           </span>
           <span className={styles['recipe-card-machine-count']}>
@@ -113,7 +137,7 @@ export function RecipeCard({
                 <div key={inp.product_id} className={styles['recipe-card-io-item']}>
                   <div className={styles['recipe-card-io-square-wrapper']}>
                     <div className={styles['recipe-card-io-square']}>
-                      {productName.charAt(0).toUpperCase()}
+                      <ProductIcon productId={inp.product_id} productName={productName} />
                     </div>
                     <span className={styles['recipe-card-io-quantity']}>
                       {formatQuantity(inp.quantity * multiplier * neededMachineCount)}
@@ -149,7 +173,7 @@ export function RecipeCard({
                 <div key={out.product_id} className={styles['recipe-card-io-item']}>
                   <div className={styles['recipe-card-io-square-wrapper']}>
                     <div className={styles['recipe-card-io-square']}>
-                      {productName.charAt(0).toUpperCase()}
+                      <ProductIcon productId={out.product_id} productName={productName} />
                     </div>
                     <span className={styles['recipe-card-io-quantity']}>
                       {formatQuantity(out.quantity * multiplier * neededMachineCount)}

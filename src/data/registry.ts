@@ -11,6 +11,7 @@ import {
   boiler_self_heating,
   boiler_coolant_loop,
 } from './special_recipes/boiler';
+import { chemical_plant_recipes } from './special_recipes/chemical_plant';
 
 export const SPECIAL_RECIPES: Record<string, SpecialRecipe> = {
   [air_separation_unit.id]: air_separation_unit,
@@ -22,6 +23,10 @@ export const SPECIAL_RECIPES: Record<string, SpecialRecipe> = {
   [boiler_self_heating.id]: boiler_self_heating,
   [boiler_coolant_loop.id]: boiler_coolant_loop,
 };
+
+for (const cp of chemical_plant_recipes) {
+  SPECIAL_RECIPES[cp.id] = cp;
+}
 
 export function getSpecialRecipe(recipeId: string): SpecialRecipe | undefined {
   return SPECIAL_RECIPES[recipeId];
