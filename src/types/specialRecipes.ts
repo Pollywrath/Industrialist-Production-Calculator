@@ -37,6 +37,9 @@ export interface SpecialRecipe {
   machine_id: string;
   settings: Record<string, SettingDefinition>;
   inputTemperatureSettings?: Record<number, string>;
+  potentialInputs?: string[];
+  potentialOutputs?: string[];
+  resolveSettings?: (productId: string) => Record<string, unknown> | null;
   compute: (
     settings: Record<string, unknown>,
     globalSettings?: Record<string, unknown>,

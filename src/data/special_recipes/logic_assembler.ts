@@ -115,6 +115,17 @@ export const logic_assembler_01: SpecialRecipe = createSpecialRecipe({
   powerConsumption: 3000000,
   powerType: 'MV' as const,
   pollution: 0,
+  potentialOutputs: [...CHIP_STAGES.map((c) => c.productId), 'p_microchip_scrap'],
+  resolveSettings: (productId) => {
+    if (productId === 'p_microchip_scrap') {
+      return { fail_step: 'Yes' };
+    }
+    const stage = CHIP_STAGES.find((c) => c.productId === productId);
+    if (stage) {
+      return { target_chip: productId, fail_step: 'No' };
+    }
+    return null;
+  },
   inputs: (settings) => {
     const { cycleTime, totalStages, hasMachineOil } = getComputedValues(settings);
 

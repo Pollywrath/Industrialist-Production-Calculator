@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import type { Recipe } from '../../../types/data';
 import { getProductIconPath } from '../../../data/productIcons';
-import { getMachineName, getProductName, getProduct, getMachine } from '../../../data/lookup';
+import { getMachineName, getProductName, getProduct, getMachine, resolveActiveRecipe } from '../../../data/lookup';
+import { getSpecialRecipe } from '../../../data/registry';
 import {
   getRateMultiplier,
   getNormalizedCycleTime,
@@ -48,7 +49,7 @@ function ProductIcon({ productId, productName }: { productId: string; productNam
 }
 
 export function RecipeCard({
-  recipe,
+  recipe: initialRecipe,
   rateMode,
   clickedRateInfo,
   preselectedSourceSide,
@@ -57,6 +58,17 @@ export function RecipeCard({
   isFavorite,
   onToggleFavorite,
 }: RecipeCardProps) {
+  let recipe = initialRecipe;
+  if (preselectedProductId) {
+    const sr = getSpecialRecipe(initialRecipe.id);
+    if (sr && sr.resolveSettings) {
+      const customSettings = sr.resolveSettings(preselectedProductId);
+      if (customSettings) {
+        recipe = resolveActiveRecipe(initialRecipe.id, customSettings) || initialRecipe;
+      }
+    }
+  }
+
   const multiplier = getRateMultiplier(recipe.cycle_time, rateMode);
   const displayCycleTime = getNormalizedCycleTime(recipe.cycle_time, rateMode);
   const machineTier = getMachine(recipe.machine_id)?.tier || 1;

@@ -46,6 +46,12 @@ export const industrial_firebox_01: SpecialRecipe = createSpecialRecipe({
   powerConsumption: 0,
   powerType: 'MV' as const,
   pollution: 1.8,
+  potentialInputs: Object.values(FUEL_MAP).map((f) => f.product_id),
+  resolveSettings: (productId) => {
+    const fuel = Object.entries(FUEL_MAP).find(([, f]) => f.product_id === productId);
+    if (fuel) return { fuel_type: fuel[0] };
+    return null;
+  },
   inputs: (settings) => [
     { product_id: getFuel(settings).product_id, quantity: getFuelQty(900000)(settings) },
     { product_id: 'p_liquid_sulfur', quantity: 4.5 },
@@ -62,6 +68,12 @@ export const industrial_firebox_02: SpecialRecipe = createSpecialRecipe({
   powerConsumption: 0,
   powerType: 'MV' as const,
   pollution: 1.8,
+  potentialInputs: Object.values(FUEL_MAP).map((f) => f.product_id),
+  resolveSettings: (productId) => {
+    const fuel = Object.entries(FUEL_MAP).find(([, f]) => f.product_id === productId);
+    if (fuel) return { fuel_type: fuel[0] };
+    return null;
+  },
   inputs: (settings) => [
     { product_id: getFuel(settings).product_id, quantity: getFuelQty(900000)(settings) },
     { product_id: 'p_boric_acid', quantity: 2 },
@@ -78,6 +90,12 @@ export const industrial_firebox_03: SpecialRecipe = createSpecialRecipe({
   powerConsumption: 0,
   powerType: 'MV' as const,
   pollution: 1.8,
+  potentialInputs: Object.values(FUEL_MAP).map((f) => f.product_id),
+  resolveSettings: (productId) => {
+    const fuel = Object.entries(FUEL_MAP).find(([, f]) => f.product_id === productId);
+    if (fuel) return { fuel_type: fuel[0] };
+    return null;
+  },
   inputs: (settings) => [
     { product_id: getFuel(settings).product_id, quantity: getFuelQty(300000)(settings) },
     { product_id: 'p_water', quantity: 12 },
@@ -94,6 +112,12 @@ export const industrial_firebox_04: SpecialRecipe = createSpecialRecipe({
   powerConsumption: 0,
   powerType: 'MV' as const,
   pollution: 1.8,
+  potentialInputs: Object.values(FUEL_MAP).map((f) => f.product_id),
+  resolveSettings: (productId) => {
+    const fuel = Object.entries(FUEL_MAP).find(([, f]) => f.product_id === productId);
+    if (fuel) return { fuel_type: fuel[0] };
+    return null;
+  },
   inputs: (settings) => [
     { product_id: getFuel(settings).product_id, quantity: getFuelQty(300000)(settings) },
     { product_id: 'p_filtered_water', quantity: 12 },
@@ -110,6 +134,12 @@ export const industrial_firebox_05: SpecialRecipe = createSpecialRecipe({
   powerConsumption: 0,
   powerType: 'MV' as const,
   pollution: 1.8,
+  potentialInputs: Object.values(FUEL_MAP).map((f) => f.product_id),
+  resolveSettings: (productId) => {
+    const fuel = Object.entries(FUEL_MAP).find(([, f]) => f.product_id === productId);
+    if (fuel) return { fuel_type: fuel[0] };
+    return null;
+  },
   inputs: (settings) => [
     { product_id: getFuel(settings).product_id, quantity: getFuelQty(300000)(settings) },
     { product_id: 'p_distilled_water', quantity: 12 },
@@ -126,6 +156,12 @@ export const industrial_firebox_06: SpecialRecipe = createSpecialRecipe({
   powerConsumption: 0,
   powerType: 'MV' as const,
   pollution: 1.8,
+  potentialInputs: Object.values(FUEL_MAP).map((f) => f.product_id),
+  resolveSettings: (productId) => {
+    const fuel = Object.entries(FUEL_MAP).find(([, f]) => f.product_id === productId);
+    if (fuel) return { fuel_type: fuel[0] };
+    return null;
+  },
   inputs: (settings) => [
     { product_id: getFuel(settings).product_id, quantity: getFuelQty(300000)(settings) },
     { product_id: 'p_concentrated_salt_solution', quantity: 12 },

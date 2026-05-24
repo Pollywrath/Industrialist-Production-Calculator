@@ -99,8 +99,10 @@ export function useRecipeSelectorFilters({ recipes }: UseRecipeSelectorFiltersPa
               ? r.inputs.some((inp) => inp.product_id === 'any_item')
               : false;
 
-        const isDirectProducer = r.outputs.some((out) => out.product_id === s.selectedId);
-        const isDirectConsumer = r.inputs.some((inp) => inp.product_id === s.selectedId);
+        const isDirectProducer = r.outputs.some((out) => out.product_id === s.selectedId) || 
+                                 (r.potential_outputs && r.potential_outputs.includes(s.selectedId!));
+        const isDirectConsumer = r.inputs.some((inp) => inp.product_id === s.selectedId) ||
+                                 (r.potential_inputs && r.potential_inputs.includes(s.selectedId!));
 
         const producesProduct = isDirectProducer || matchesProducerWildcard;
         const consumesProduct = isDirectConsumer || matchesConsumerWildcard;

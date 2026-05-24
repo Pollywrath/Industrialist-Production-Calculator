@@ -9,6 +9,9 @@ export interface SpecialRecipeConfig {
   isSellTrash?: boolean;
   settings?: Record<string, SettingDefinition>;
   inputTemperatureSettings?: Record<number, string>;
+  potentialInputs?: string[];
+  potentialOutputs?: string[];
+  resolveSettings?: (productId: string) => Record<string, unknown> | null;
   powerConsumption:
     | number
     | ((
@@ -93,6 +96,9 @@ export function createSpecialRecipe(config: SpecialRecipeConfig): SpecialRecipe 
     machine_id: config.machineId,
     settings: config.settings ?? {},
     inputTemperatureSettings: config.inputTemperatureSettings,
+    potentialInputs: config.potentialInputs,
+    potentialOutputs: config.potentialOutputs,
+    resolveSettings: config.resolveSettings,
     compute: (settings, globalSettings, nodeId, helpers) => {
       const cycleTime = config.computeCycleTime
         ? config.computeCycleTime(settings, globalSettings, nodeId, helpers)
@@ -134,6 +140,8 @@ export function createSpecialRecipe(config: SpecialRecipeConfig): SpecialRecipe 
         inputs,
         outputs,
         isSellTrash: config.isSellTrash,
+        potential_inputs: config.potentialInputs,
+        potential_outputs: config.potentialOutputs,
       };
     },
     computeMachineCost: config.computeMachineCost,

@@ -60,6 +60,8 @@ export interface Recipe {
   outputs: RecipeOutput[];
   runtime?: RecipeRuntimeState;
   isSellTrash?: boolean;
+  potential_inputs?: string[];
+  potential_outputs?: string[];
 }
 
 export interface Research {
