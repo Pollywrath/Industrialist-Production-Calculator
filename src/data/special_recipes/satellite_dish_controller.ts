@@ -1,40 +1,30 @@
-import products from '../products.json';
-import type { Product } from '../../types/data';
+import type { Recipe } from '../../types/data';
+import type { SpecialRecipe } from '../../types/specialRecipes';
 
-// ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
-const FLUID_ID_1: string = 'p_liquid_oxygen';
+export const satellite_dish_controller_01: SpecialRecipe = {
+  id: 'r_satellite_dish_controller_01',
+  name: 'Satellite Dish Controller',
+  machine_id: 'm_satellite_dish_controller',
+  isSellTrash: true,
+  settings: {},
+  compute: (_settings, _globalSettings, _nodeId, helpers) => {
+    let resolvedFluid = 'any_fluid';
+    if (helpers?.hasConnection('input', 0)) {
+      resolvedFluid = helpers.resolveProduct('input', 0) || 'any_fluid';
+    }
 
-// ─── 2. COMPUTATIONS ───────────────────────────────────────────────────
-const found1 = (products as Product[]).find((p) => p.id === FLUID_ID_1);
-const isValid = found1 && found1.type === 'Fluid';
+    const recipe: Recipe = {
+      id: 'r_satellite_dish_controller_01',
+      name: 'Satellite Dish Controller',
+      machine_id: 'm_satellite_dish_controller',
+      cycle_time: 1,
+      power_consumption: 75000,
+      power_type: 'MV',
+      pollution: 0,
+      inputs: [{ product_id: resolvedFluid, quantity: 0.5 }],
+      outputs: [],
+    };
 
-// ─── 3. EXPORT ───────────────────────────────────────────────────────
-export interface Recipe {
-  id: string;
-  name: string;
-  machine_id: string;
-  cycle_time: number;
-  power_consumption: number;
-  power_type: 'MV' | 'HV';
-  pollution: number;
-  inputs: { product_id: string; quantity: number }[];
-  outputs: { product_id: string; quantity: number; temperature?: number }[];
-}
-
-const recipes: Recipe[] = isValid
-  ? [
-      {
-        id: 'r_satellite_dish_controller_01',
-        name: 'Satellite Dish Controller',
-        machine_id: 'm_satellite_dish_controller',
-        cycle_time: 1,
-        power_consumption: 75000,
-        power_type: 'MV',
-        pollution: 0,
-        inputs: [{ product_id: FLUID_ID_1, quantity: 0.5 }],
-        outputs: [],
-      },
-    ]
-  : [];
-
-export { recipes };
+    return recipe;
+  },
+};

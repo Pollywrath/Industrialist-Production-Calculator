@@ -1,5 +1,5 @@
+import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 import type { PowerType } from '../../types/data';
 
 const MODE_MAP: Record<number, { power: number; type: PowerType }> = {
@@ -31,50 +31,80 @@ const getPowerType = (settings: Record<string, unknown>) => {
   return MODE_MAP[target]?.type ?? 'MV';
 };
 
-export const electric_water_heater_01: SpecialRecipe = createSpecialRecipe({
+export const electric_water_heater_01: SpecialRecipe = {
   id: 'r_electric_water_heater_01',
   name: 'Heats Water',
-  machineId: 'm_electric_water_heater',
+  machine_id: 'm_electric_water_heater',
   settings: settingDefinitions,
-  powerConsumption: getPowerConsumption,
-  powerType: getPowerType,
-  pollution: 0,
-  cycleTime: 1,
-  inputs: [{ product_id: 'p_water', quantity: 6 }],
-  outputs: (settings: Record<string, unknown>) => {
+  compute: (settings) => {
     const target = (settings.target_temperature as number) ?? 120;
-    return [{ product_id: 'p_water', quantity: 6, temperature: target }];
-  },
-});
+    const powerConsumption = getPowerConsumption(settings);
+    const powerType = getPowerType(settings);
 
-export const electric_water_heater_02: SpecialRecipe = createSpecialRecipe({
+    const recipe: Recipe = {
+      id: 'r_electric_water_heater_01',
+      name: 'Heats Water',
+      machine_id: 'm_electric_water_heater',
+      cycle_time: 1,
+      power_consumption: powerConsumption,
+      power_type: powerType,
+      pollution: 0,
+      inputs: [{ product_id: 'p_water', quantity: 6 }],
+      outputs: [{ product_id: 'p_water', quantity: 6, temperature: target }],
+    };
+
+    return recipe;
+  },
+};
+
+export const electric_water_heater_02: SpecialRecipe = {
   id: 'r_electric_water_heater_02',
   name: 'Heats Filtered Water',
-  machineId: 'm_electric_water_heater',
+  machine_id: 'm_electric_water_heater',
   settings: settingDefinitions,
-  powerConsumption: getPowerConsumption,
-  powerType: getPowerType,
-  pollution: 0,
-  cycleTime: 1,
-  inputs: [{ product_id: 'p_filtered_water', quantity: 6 }],
-  outputs: (settings: Record<string, unknown>) => {
+  compute: (settings) => {
     const target = (settings.target_temperature as number) ?? 120;
-    return [{ product_id: 'p_filtered_water', quantity: 6, temperature: target }];
-  },
-});
+    const powerConsumption = getPowerConsumption(settings);
+    const powerType = getPowerType(settings);
 
-export const electric_water_heater_03: SpecialRecipe = createSpecialRecipe({
+    const recipe: Recipe = {
+      id: 'r_electric_water_heater_02',
+      name: 'Heats Filtered Water',
+      machine_id: 'm_electric_water_heater',
+      cycle_time: 1,
+      power_consumption: powerConsumption,
+      power_type: powerType,
+      pollution: 0,
+      inputs: [{ product_id: 'p_filtered_water', quantity: 6 }],
+      outputs: [{ product_id: 'p_filtered_water', quantity: 6, temperature: target }],
+    };
+
+    return recipe;
+  },
+};
+
+export const electric_water_heater_03: SpecialRecipe = {
   id: 'r_electric_water_heater_03',
   name: 'Heats Distilled Water',
-  machineId: 'm_electric_water_heater',
+  machine_id: 'm_electric_water_heater',
   settings: settingDefinitions,
-  powerConsumption: getPowerConsumption,
-  powerType: getPowerType,
-  pollution: 0,
-  cycleTime: 1,
-  inputs: [{ product_id: 'p_distilled_water', quantity: 6 }],
-  outputs: (settings: Record<string, unknown>) => {
+  compute: (settings) => {
     const target = (settings.target_temperature as number) ?? 120;
-    return [{ product_id: 'p_distilled_water', quantity: 6, temperature: target }];
+    const powerConsumption = getPowerConsumption(settings);
+    const powerType = getPowerType(settings);
+
+    const recipe: Recipe = {
+      id: 'r_electric_water_heater_03',
+      name: 'Heats Distilled Water',
+      machine_id: 'm_electric_water_heater',
+      cycle_time: 1,
+      power_consumption: powerConsumption,
+      power_type: powerType,
+      pollution: 0,
+      inputs: [{ product_id: 'p_distilled_water', quantity: 6 }],
+      outputs: [{ product_id: 'p_distilled_water', quantity: 6, temperature: target }],
+    };
+
+    return recipe;
   },
-});
+};

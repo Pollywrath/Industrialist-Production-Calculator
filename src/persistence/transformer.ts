@@ -3,8 +3,9 @@ import type { RecipeNodeData } from '../types/nodes';
 import { parseHandleId, buildHandleId, nextNodeId, nextEdgeId } from '../utils/idGenerator';
 import { getRecipe } from '../data/lookup';
 import { cleanMachineCount } from '../utils/precision';
+import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 
-import type { SavedNode, SavedEdge, SaveData } from '../types/saves';
+import type { SavedNode, SavedEdge, SaveData, GlobalSettings } from '../types/saves';
 
 export const CURRENT_SAVE_VERSION = 1;
 
@@ -117,10 +118,19 @@ export function migrateSaveData(rawData: unknown): SaveData {
     };
   });
 
+  let globalSettings: GlobalSettings | undefined;
+  if (data.globalSettings && typeof data.globalSettings === 'object') {
+    const gs = data.globalSettings as Record<string, unknown>;
+    globalSettings = {
+      global_pollution: typeof gs.global_pollution === 'number' ? gs.global_pollution : 10,
+    };
+  }
+
   return {
     version,
     nodes,
     edges,
+    globalSettings,
   };
 }
 
@@ -157,10 +167,13 @@ export function serializeCanvas(nodes: Node<RecipeNodeData>[], edges: Edge[]): S
     });
   }
 
+  const globalSettings: GlobalSettings = useGlobalSettingsStore.getState().settings;
+
   return {
     version: CURRENT_SAVE_VERSION,
     nodes: savedNodes,
     edges: savedEdges,
+    globalSettings,
   };
 }
 
@@ -169,6 +182,10 @@ export function deserializeCanvas(saveData: SaveData): {
   edges: Edge[];
 } {
   const migrated = migrateSaveData(saveData);
+
+  if (migrated.globalSettings) {
+    useGlobalSettingsStore.getState().setGlobalPollution(migrated.globalSettings.global_pollution);
+  }
 
   const idMap = new Map<string, string>();
   const seenNodeIds = new Set<string>();

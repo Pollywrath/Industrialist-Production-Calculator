@@ -268,10 +268,23 @@ export function resolveActiveRecipe(
         const edgeLookup = buildEdgeLookupMap(edges);
         return (edgeLookup.get(handleId)?.length ?? 0) > 0;
       },
+      getFlowRate: (side: 'input' | 'output', index: number) => {
+        if (!nodeId) return 0;
+        const handleId = `${nodeId}-${side}-${index}`;
+        const edges = useFlowStore.getState().edges;
+        const edgeLookup = buildEdgeLookupMap(edges);
+        const connectedEdges = edgeLookup.get(handleId) ?? [];
+        const edgeFlows = useFlowResultStore.getState().edgeFlows;
+        let totalFlow = 0;
+        for (const edge of connectedEdges) {
+          totalFlow += edgeFlows[edge.id] ?? 0;
+        }
+        return totalFlow;
+      },
     };
 
     let resolvedSettings = nodeSettings;
-    if (!helpers && nodeId && sr.inputTemperatureSettings) {
+    if (nodeId && sr.inputTemperatureSettings) {
       let hasOverrides = false;
       const overrides: Record<string, unknown> = {};
       const inputTempsMap = useFlowResultStore.getState().inputTemps[nodeId];

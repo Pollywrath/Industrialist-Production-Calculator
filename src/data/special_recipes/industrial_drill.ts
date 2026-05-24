@@ -1,5 +1,5 @@
+import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
 const settingDefinitions = {
   steam_temp: {
@@ -18,43 +18,77 @@ const getMultiplier = (settings: Record<string, unknown>) => {
   return Math.min(4, Math.max(0, temp / 100));
 };
 
-const commonConfig = {
-  machineId: 'm_industrial_drill',
+export const m_industrial_drill_01: SpecialRecipe = {
+  id: 'r_m_industrial_drill_01',
+  name: 'Extract Raw Iron',
+  machine_id: 'm_industrial_drill',
   settings: settingDefinitions,
   inputTemperatureSettings,
-  powerConsumption: 0,
-  powerType: 'MV' as const,
-  pollution: 0,
-  cycleTime: 1,
-  inputs: [{ product_id: 'p_steam', quantity: 720 }],
+  compute: (settings) => {
+    const multiplier = getMultiplier(settings);
+
+    const recipe: Recipe = {
+      id: 'r_m_industrial_drill_01',
+      name: 'Extract Raw Iron',
+      machine_id: 'm_industrial_drill',
+      cycle_time: 1,
+      power_consumption: 0,
+      power_type: 'MV',
+      pollution: 0,
+      inputs: [{ product_id: 'p_steam', quantity: 720 }],
+      outputs: [{ product_id: 'p_raw_iron', quantity: 10 * multiplier, temperature: 18 }],
+    };
+
+    return recipe;
+  },
 };
 
-export const industrial_drill_iron: SpecialRecipe = createSpecialRecipe({
-  ...commonConfig,
-  id: 'r_industrial_drill_iron',
-  name: 'Extract Raw Iron',
-  outputs: (settings: Record<string, unknown>) => {
-    const multiplier = getMultiplier(settings);
-    return [{ product_id: 'p_raw_iron', quantity: 10 * multiplier, temperature: 18 }];
-  },
-});
-
-export const industrial_drill_copper: SpecialRecipe = createSpecialRecipe({
-  ...commonConfig,
-  id: 'r_industrial_drill_copper',
+export const m_industrial_drill_02: SpecialRecipe = {
+  id: 'r_m_industrial_drill_02',
   name: 'Extract Raw Copper',
-  outputs: (settings: Record<string, unknown>) => {
+  machine_id: 'm_industrial_drill',
+  settings: settingDefinitions,
+  inputTemperatureSettings,
+  compute: (settings) => {
     const multiplier = getMultiplier(settings);
-    return [{ product_id: 'p_raw_copper', quantity: 10 * multiplier, temperature: 18 }];
-  },
-});
 
-export const industrial_drill_bauxite: SpecialRecipe = createSpecialRecipe({
-  ...commonConfig,
-  id: 'r_industrial_drill_bauxite',
-  name: 'Extract Bauxite Residue',
-  outputs: (settings: Record<string, unknown>) => {
-    const multiplier = getMultiplier(settings);
-    return [{ product_id: 'p_bauxite_residue', quantity: 0.5 * multiplier, temperature: 18 }];
+    const recipe: Recipe = {
+      id: 'r_m_industrial_drill_02',
+      name: 'Extract Raw Copper',
+      machine_id: 'm_industrial_drill',
+      cycle_time: 1,
+      power_consumption: 0,
+      power_type: 'MV',
+      pollution: 0,
+      inputs: [{ product_id: 'p_steam', quantity: 720 }],
+      outputs: [{ product_id: 'p_raw_copper', quantity: 10 * multiplier, temperature: 18 }],
+    };
+
+    return recipe;
   },
-});
+};
+
+export const m_industrial_drill_03: SpecialRecipe = {
+  id: 'r_m_industrial_drill_03',
+  name: 'Extract Bauxite Residue',
+  machine_id: 'm_industrial_drill',
+  settings: settingDefinitions,
+  inputTemperatureSettings,
+  compute: (settings) => {
+    const multiplier = getMultiplier(settings);
+
+    const recipe: Recipe = {
+      id: 'r_m_industrial_drill_03',
+      name: 'Extract Bauxite Residue',
+      machine_id: 'm_industrial_drill',
+      cycle_time: 1,
+      power_consumption: 0,
+      power_type: 'MV',
+      pollution: 0,
+      inputs: [{ product_id: 'p_steam', quantity: 720 }],
+      outputs: [{ product_id: 'p_bauxite_residue', quantity: 0.5 * multiplier, temperature: 18 }],
+    };
+
+    return recipe;
+  },
+};

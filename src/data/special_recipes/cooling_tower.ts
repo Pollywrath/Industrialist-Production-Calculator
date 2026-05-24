@@ -1,5 +1,5 @@
+import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
 const settingDefinitions = {
   distilled_water_temp: {
@@ -13,32 +13,34 @@ const inputTemperatureSettings = {
   0: 'distilled_water_temp',
 };
 
-export const cooling_tower_01: SpecialRecipe = createSpecialRecipe({
+export const cooling_tower_01: SpecialRecipe = {
   id: 'r_cooling_tower_01',
   name: 'Cools Distilled Water',
-  machineId: 'm_cooling_tower',
+  machine_id: 'm_cooling_tower',
   settings: settingDefinitions,
   inputTemperatureSettings,
-  powerConsumption: 0,
-  powerType: 'MV' as const,
-  pollution: 0,
-  cycleTime: 1,
-  inputs: [
-    {
-      product_id: 'p_distilled_water',
-      quantity: 12000,
-    },
-  ],
-  outputs: (settings: Record<string, unknown>) => {
+  compute: (settings) => {
     const inputTemp = (settings.distilled_water_temp as number) ?? 100;
     const outputTemp = Math.max(inputTemp / 3, 21);
 
-    return [
-      {
-        product_id: 'p_distilled_water',
-        quantity: 12000,
-        temperature: outputTemp,
-      },
-    ];
+    const recipe: Recipe = {
+      id: 'r_cooling_tower_01',
+      name: 'Cools Distilled Water',
+      machine_id: 'm_cooling_tower',
+      cycle_time: 1,
+      power_consumption: 0,
+      power_type: 'MV',
+      pollution: 0,
+      inputs: [{ product_id: 'p_distilled_water', quantity: 12000 }],
+      outputs: [
+        {
+          product_id: 'p_distilled_water',
+          quantity: 12000,
+          temperature: outputTemp,
+        },
+      ],
+    };
+
+    return recipe;
   },
-});
+};

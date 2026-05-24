@@ -35,6 +35,8 @@ export interface SpecialRecipe {
   id: string;
   name: string;
   machine_id: string;
+  isSellTrash?: boolean;
+  description?: string;
   settings: Record<string, SettingDefinition>;
   inputTemperatureSettings?: Record<number, string>;
   potentialInputs?: string[];
@@ -47,6 +49,7 @@ export interface SpecialRecipe {
     helpers?: {
       resolveProduct: (side: 'input' | 'output', index: number) => string;
       hasConnection: (side: 'input' | 'output', index: number) => boolean;
+      getFlowRate?: (side: 'input' | 'output', index: number) => number;
     },
   ) => Recipe;
   computeMachineCost?: (

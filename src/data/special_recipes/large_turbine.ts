@@ -1,5 +1,5 @@
+import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
 const powerSteps = [
   [0, 0, 1],
@@ -56,22 +56,27 @@ const getComputedValues = (settings: Record<string, unknown>) => {
   return { actualPowerProduction, waterOutputTemp, steamTemp: temp };
 };
 
-export const large_turbine_01: SpecialRecipe = createSpecialRecipe({
+export const large_turbine_01: SpecialRecipe = {
   id: 'r_large_turbine_01',
   name: 'Makes Power. Makes Water',
-  machineId: 'm_large_turbine',
+  machine_id: 'm_large_turbine',
   settings: settingDefinitions,
   inputTemperatureSettings,
-  powerConsumption: (settings) => {
-    const { actualPowerProduction } = getComputedValues(settings);
-    return -actualPowerProduction;
+  compute: (settings) => {
+    const { actualPowerProduction, waterOutputTemp } = getComputedValues(settings);
+
+    const recipe: Recipe = {
+      id: 'r_large_turbine_01',
+      name: 'Makes Power. Makes Water',
+      machine_id: 'm_large_turbine',
+      cycle_time: 1,
+      power_consumption: -actualPowerProduction,
+      power_type: 'MV',
+      pollution: 0,
+      inputs: [{ product_id: 'p_steam', quantity: 90 }],
+      outputs: [{ product_id: 'p_water', quantity: 3, temperature: waterOutputTemp }],
+    };
+
+    return recipe;
   },
-  powerType: 'MV' as const,
-  pollution: 0,
-  cycleTime: 1,
-  inputs: () => [{ product_id: 'p_steam', quantity: 90 }],
-  outputs: (settings) => {
-    const { waterOutputTemp } = getComputedValues(settings);
-    return [{ product_id: 'p_water', quantity: 3, temperature: waterOutputTemp }];
-  },
-});
+};

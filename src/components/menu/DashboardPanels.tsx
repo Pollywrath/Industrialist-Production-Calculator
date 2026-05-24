@@ -253,8 +253,7 @@ export function DashboardPanels() {
                   onChange={setGlobalPollution}
                   defaultValue={1}
                   allowDecimals={true}
-                  allowNegatives={false}
-                  min={0}
+                  allowNegatives={true}
                   step="any"
                   className={styles['global-var-input']}
                 />

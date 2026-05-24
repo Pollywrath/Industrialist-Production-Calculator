@@ -1,72 +1,55 @@
-import products from '../products.json';
-import type { Product } from '../../types/data';
+import type { Recipe } from '../../types/data';
+import type { SpecialRecipe } from '../../types/specialRecipes';
 
-// ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
-const ITEM_ID: string = 'p_uranium_fuel_rod';
-const ITEM_RATE: number = 120;
+export const underground_waste_facility_01: SpecialRecipe = {
+  id: 'r_underground_waste_facility_01',
+  name: 'Underground Waste Disposal',
+  machine_id: 'm_underground_waste_facility',
+  isSellTrash: true,
+  settings: {},
+  compute: (_settings, _globalSettings, _nodeId, helpers) => {
+    let item1 = 'any_item';
+    if (helpers?.hasConnection('input', 0)) {
+      item1 = helpers.resolveProduct('input', 0) || 'any_item';
+    }
+    let fluid1 = 'any_fluid';
+    if (helpers?.hasConnection('input', 1)) {
+      fluid1 = helpers.resolveProduct('input', 1) || 'any_fluid';
+    }
 
-const FLUID_ID: string = 'p_contaminated_water';
-const FLUID_RATE: number = 120;
+    const itemFlow = helpers?.getFlowRate?.('input', 0) ?? 0;
+    const fluidFlow = helpers?.getFlowRate?.('input', 1) ?? 0;
+    const totalFlow = itemFlow + fluidFlow;
 
-// ─── 2. COMPUTATIONS ─────────────────────────────────────────────────
-const productList = products as Product[];
-const foundItem = productList.find((p) => p.id === ITEM_ID);
-const foundFluid = productList.find((p) => p.id === FLUID_ID);
+    let concreteQuantity = 140;
+    let leadQuantity = 70;
 
-const validItem = foundItem && foundItem.type === 'Item';
-const validFluid = foundFluid && foundFluid.type === 'Fluid';
+    if (totalFlow > 0) {
+      const cycleTime = 7000 / totalFlow;
+      concreteQuantity = 140 / cycleTime;
+      leadQuantity = 70 / cycleTime;
+    } else if (helpers) {
+      concreteQuantity = 0;
+      leadQuantity = 0;
+    }
 
-const totalRate =
-  (validItem ? Math.min(240, ITEM_RATE) : 0) + (validFluid ? Math.min(240, FLUID_RATE) : 0);
-const isValid = totalRate > 0;
+    const recipe: Recipe = {
+      id: 'r_underground_waste_facility_01',
+      name: 'Underground Waste Disposal',
+      machine_id: 'm_underground_waste_facility',
+      cycle_time: 1,
+      power_consumption: 1000000,
+      power_type: 'MV',
+      pollution: 0,
+      inputs: [
+        { product_id: item1, quantity: 240, variable: true },
+        { product_id: fluid1, quantity: 240, variable: true },
+        { product_id: 'p_concrete_block', quantity: concreteQuantity},
+        { product_id: 'p_lead_ingot', quantity: leadQuantity},
+      ],
+      outputs: [],
+    };
 
-const cycleTime = isValid ? 7000 / totalRate : 1;
-
-// ─── 3. EXPORT ───────────────────────────────────────────────────────
-export interface Recipe {
-  id: string;
-  name: string;
-  machine_id: string;
-  cycle_time: number;
-  power_consumption: number;
-  power_type: 'MV' | 'HV';
-  pollution: number;
-  inputs: { product_id: string; quantity: number }[];
-  outputs: { product_id: string; quantity: number; temperature?: number }[];
-}
-
-const inputs: { product_id: string; quantity: number }[] = [];
-if (isValid) {
-  if (validItem) {
-    inputs.push({
-      product_id: ITEM_ID,
-      quantity: Math.min(240, ITEM_RATE) * cycleTime,
-    });
-  }
-  if (validFluid) {
-    inputs.push({
-      product_id: FLUID_ID,
-      quantity: Math.min(240, FLUID_RATE) * cycleTime,
-    });
-  }
-  inputs.push({ product_id: 'p_concrete_block', quantity: 140 });
-  inputs.push({ product_id: 'p_lead_ingot', quantity: 70 });
-}
-
-const recipes: Recipe[] = isValid
-  ? [
-      {
-        id: 'r_underground_waste_facility_01',
-        name: 'Underground Waste Disposal',
-        machine_id: 'm_underground_waste_facility',
-        cycle_time: cycleTime,
-        power_consumption: 1000000,
-        power_type: 'MV',
-        pollution: 0,
-        inputs: inputs,
-        outputs: [],
-      },
-    ]
-  : [];
-
-export { recipes };
+    return recipe;
+  },
+};

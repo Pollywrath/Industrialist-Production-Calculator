@@ -1,11 +1,5 @@
-// ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
-
-const DEPTH: number = 9000;
-const DRILL_HEAD: 'copper' | 'iron' | 'steel' | 'tungsten' = 'tungsten';
-const ACID_TYPE: 'none' | 'water' | 'acetic' | 'sulfuric' | 'hydrochloric' = 'sulfuric';
-const HAS_MACHINE_OIL: boolean = true;
-
-// ─── DATA TABLES ──────────────────────────────────────────────────
+import type { Recipe } from '../../types/data';
+import type { SpecialRecipe } from '../../types/specialRecipes';
 
 const DRILL_HEADS: Record<string, { getMulti: (d: number) => number; product_id: string }> = {
   copper: { getMulti: (d) => d / 150, product_id: 'p_copper_drill_head' },
@@ -276,73 +270,143 @@ const DEPTH_YIELDS: Record<number, { product_id: string; amount: number }[]> = {
   ],
 };
 
-// ─── 2. COMPUTATIONS ─────────────────────────────────────────────────
+const DEPTHS = Object.keys(DEPTH_YIELDS).map(Number).sort((a, b) => a - b);
 
-const effectiveDepth = DEPTH === 100 ? 300 : DEPTH;
-const drillHead = DRILL_HEADS[DRILL_HEAD];
-const acid = ACIDS[ACID_TYPE];
-const oilMultiplier = HAS_MACHINE_OIL ? 1.1 : 1;
-
-const deteriorationRate =
-  0.5 * drillHead.getMulti(effectiveDepth) * acid.getMulti(effectiveDepth) * oilMultiplier;
-const lifeTime = Math.ceil(100 / deteriorationRate);
-const travelSpeed = HAS_MACHINE_OIL ? 100 : 50;
-const travelTime = (2 * DEPTH) / travelSpeed;
-const replacementTime = 12;
-const cycleTime = lifeTime + travelTime + replacementTime;
-
-const drillingEfficiency = lifeTime / cycleTime;
-const activeRatio = (lifeTime + travelTime) / cycleTime;
-
-const inputs: { product_id: string; quantity: number }[] = [
-  { product_id: drillHead.product_id, quantity: 1 / cycleTime },
-];
-
-if (acid.product_id) {
-  inputs.push({
-    product_id: acid.product_id,
-    quantity: acid.rate * drillingEfficiency,
-  });
-}
-
-if (HAS_MACHINE_OIL) {
-  inputs.push({ product_id: 'p_machine_oil', quantity: 2 * activeRatio });
-}
-
-const baseYields = DEPTH_YIELDS[DEPTH] ?? [];
-const outputs = baseYields.map((o) => ({
-  product_id: o.product_id,
-  quantity: o.amount * oilMultiplier * drillingEfficiency,
-  voidable: true,
-}));
-
-// ─── 3. EXPORT ───────────────────────────────────────────────────────
-export interface Recipe {
-  id: string;
-  name: string;
-  machine_id: string;
-  cycle_time: number;
-  power_consumption: number;
-  power_type: 'MV' | 'HV';
-  pollution: number;
-  inputs: { product_id: string; quantity: number }[];
-  outputs: { product_id: string; quantity: number; temperature?: number; voidable?: boolean }[];
-}
-
-const averagePower = (3.0 * activeRatio + 0.1) * 1000000;
-
-const recipes: Recipe[] = [
-  {
-    id: 'r_mineshaft_drill_01',
-    name: `${DEPTH}m Mineshaft Drill`,
-    machine_id: 'm_mineshaft_drill',
-    cycle_time: 1,
-    power_consumption: averagePower,
-    power_type: 'HV',
-    pollution: 0,
-    inputs: inputs,
-    outputs: outputs,
+const settingDefinitions = {
+  depth: {
+    type: 'select' as const,
+    label: 'Depth (m)',
+    default: 9000,
+    options: DEPTHS.map((d) => ({ label: `${d}m`, value: d })),
   },
-];
+  drill_head: {
+    type: 'select' as const,
+    label: 'Drill Head',
+    default: 'tungsten',
+    options: [
+      { label: 'Copper', value: 'copper' },
+      { label: 'Iron', value: 'iron' },
+      { label: 'Steel', value: 'steel' },
+      { label: 'Tungsten Carbide', value: 'tungsten' },
+    ],
+  },
+  acid_type: {
+    type: 'select' as const,
+    label: 'Acid Type',
+    default: 'sulfuric',
+    options: [
+      { label: 'None', value: 'none' },
+      { label: 'Water', value: 'water' },
+      { label: 'Acetic Acid', value: 'acetic' },
+      { label: 'Sulfuric Acid', value: 'sulfuric' },
+      { label: 'Hydrochloric Acid', value: 'hydrochloric' },
+    ],
+  },
+  has_machine_oil: {
+    type: 'select' as const,
+    label: 'Use Machine Oil?',
+    default: 'Yes',
+    options: [
+      { label: 'Yes', value: 'Yes' },
+      { label: 'No', value: 'No' },
+    ],
+  },
+};
 
-export { recipes };
+const getComputedValues = (settings: Record<string, unknown>) => {
+  const depth = (settings.depth as number) ?? 9000;
+  const drillHeadType = (settings.drill_head as string) ?? 'tungsten';
+  const acidType = (settings.acid_type as string) ?? 'sulfuric';
+  const hasMachineOil = (settings.has_machine_oil as string) === 'Yes';
+
+  const effectiveDepth = depth === 100 ? 300 : depth;
+  const drillHead = DRILL_HEADS[drillHeadType];
+  const acid = ACIDS[acidType];
+  const oilMultiplier = hasMachineOil ? 1.1 : 1;
+
+  const deteriorationRate =
+    0.5 * drillHead.getMulti(effectiveDepth) * acid.getMulti(effectiveDepth) * oilMultiplier;
+  const lifeTime = Math.ceil(100 / deteriorationRate);
+  const travelSpeed = hasMachineOil ? 100 : 50;
+  const travelTime = (2 * depth) / travelSpeed;
+  const replacementTime = 12;
+  const cycleTime = lifeTime + travelTime + replacementTime;
+
+  const drillingEfficiency = lifeTime / cycleTime;
+  const activeRatio = (lifeTime + travelTime) / cycleTime;
+
+  return {
+    depth,
+    drillHead,
+    acid,
+    oilMultiplier,
+    deteriorationRate,
+    lifeTime,
+    travelTime,
+    replacementTime,
+    cycleTime,
+    drillingEfficiency,
+    activeRatio,
+    hasMachineOil,
+  };
+};
+
+const getPotentialOutputs = () => {
+  const outputs = new Set<string>();
+  for (const depth of DEPTHS) {
+    const yields = DEPTH_YIELDS[depth] ?? [];
+    for (const yieldItem of yields) {
+      outputs.add(yieldItem.product_id);
+    }
+  }
+  return Array.from(outputs);
+};
+
+export const m_mineshaft_drill_01: SpecialRecipe = {
+  id: 'r_m_mineshaft_drill_01',
+  name: 'Mineshaft Drill',
+  machine_id: 'm_mineshaft_drill',
+  settings: settingDefinitions,
+  potentialOutputs: getPotentialOutputs(),
+  compute: (settings) => {
+    const { activeRatio, drillHead, acid, cycleTime, drillingEfficiency, hasMachineOil, depth, oilMultiplier } =
+      getComputedValues(settings);
+
+    const inputsList: { product_id: string; quantity: number }[] = [
+      { product_id: drillHead.product_id, quantity: 1 / cycleTime },
+    ];
+
+    if (acid.product_id) {
+      inputsList.push({
+        product_id: acid.product_id,
+        quantity: acid.rate * drillingEfficiency,
+      });
+    }
+
+    if (hasMachineOil) {
+      inputsList.push({ product_id: 'p_machine_oil', quantity: 2 });
+    }
+
+    const baseYields = DEPTH_YIELDS[depth] ?? [];
+    const outputsList = baseYields.map((o) => ({
+      product_id: o.product_id,
+      quantity: o.amount * oilMultiplier * drillingEfficiency,
+      temperature: 18,
+      voidable: true,
+    }));
+
+    const recipe: Recipe = {
+      id: 'r_m_mineshaft_drill_01',
+      name: 'Mineshaft Drill',
+      machine_id: 'm_mineshaft_drill',
+      cycle_time: 1,
+      power_consumption: (3.1 * activeRatio + 0.1) * 1000000,
+      power_type: 'HV',
+      pollution: 0,
+      inputs: inputsList,
+      outputs: outputsList,
+    };
+
+    return recipe;
+  },
+};

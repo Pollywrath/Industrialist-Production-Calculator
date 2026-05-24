@@ -1,5 +1,5 @@
+import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
 const ZERO_POLLUTION_FLUIDS = [
   'p_water',
@@ -16,27 +16,32 @@ const calculatePollution = (fluidId: string, rate: number): number => {
   return 0.02 * rate;
 };
 
-export const liquid_burner_01: SpecialRecipe = createSpecialRecipe({
+export const liquid_burner_01: SpecialRecipe = {
   id: 'r_liquid_burner_01',
   name: 'Burn Fluid',
-  machineId: 'm_liquid_burner',
+  machine_id: 'm_liquid_burner',
   isSellTrash: true,
-  powerConsumption: 0,
-  powerType: 'MV' as const,
-  cycleTime: 1,
-  pollution: (_settings, _globalSettings, _nodeId, helpers) => {
+  settings: {},
+  compute: (_settings, _globalSettings, _nodeId, helpers) => {
     let resolvedFluid = 'any_fluid';
     if (helpers?.hasConnection('input', 0)) {
       resolvedFluid = helpers.resolveProduct('input', 0) || 'any_fluid';
     }
-    return calculatePollution(resolvedFluid, 120);
+
+    const pollution = calculatePollution(resolvedFluid, 120);
+
+    const recipe: Recipe = {
+      id: 'r_liquid_burner_01',
+      name: 'Burn Fluid',
+      machine_id: 'm_liquid_burner',
+      cycle_time: 1,
+      power_consumption: 0,
+      power_type: 'MV',
+      pollution,
+      inputs: [{ product_id: resolvedFluid, quantity: 120, variable: true }],
+      outputs: [],
+    };
+
+    return recipe;
   },
-  inputs: (_settings, _globalSettings, _nodeId, helpers) => {
-    let resolvedFluid = 'any_fluid';
-    if (helpers?.hasConnection('input', 0)) {
-      resolvedFluid = helpers.resolveProduct('input', 0) || 'any_fluid';
-    }
-    return [{ product_id: resolvedFluid, quantity: 120, variable: true }];
-  },
-  outputs: [],
-});
+};

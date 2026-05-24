@@ -16,10 +16,15 @@ export interface SavedEdge {
   targetIndex: number;
 }
 
+export interface GlobalSettings {
+  global_pollution: number;
+}
+
 export interface SaveData {
   version: number;
   nodes: SavedNode[];
   edges: SavedEdge[];
+  globalSettings?: GlobalSettings;
 }
 
 export interface SaveRecord {

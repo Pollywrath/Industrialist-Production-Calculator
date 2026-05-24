@@ -1,5 +1,5 @@
+import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
 const CORRECT_ORDER = ['p_logic_plate', 'p_copper_wire', 'p_semiconductor', 'p_gold_wire'];
 
@@ -106,15 +106,11 @@ const getComputedValues = (settings: Record<string, unknown>) => {
   return { cycleTime, totalStages, hasMachineOil, failStep, targetChip, scrapQuantity, stage };
 };
 
-export const logic_assembler_01: SpecialRecipe = createSpecialRecipe({
+export const logic_assembler_01: SpecialRecipe = {
   id: 'r_logic_assembler_01',
   name: 'Logic Assembler',
-  machineId: 'm_logic_assembler',
+  machine_id: 'm_logic_assembler',
   settings: settingDefinitions,
-  computeCycleTime: (settings) => getComputedValues(settings).cycleTime,
-  powerConsumption: 3000000,
-  powerType: 'MV' as const,
-  pollution: 0,
   potentialOutputs: [...CHIP_STAGES.map((c) => c.productId), 'p_microchip_scrap'],
   resolveSettings: (productId) => {
     if (productId === 'p_microchip_scrap') {
@@ -126,8 +122,9 @@ export const logic_assembler_01: SpecialRecipe = createSpecialRecipe({
     }
     return null;
   },
-  inputs: (settings) => {
-    const { cycleTime, totalStages, hasMachineOil } = getComputedValues(settings);
+  compute: (settings) => {
+    const { cycleTime, totalStages, hasMachineOil, failStep, targetChip, scrapQuantity } =
+      getComputedValues(settings);
 
     const inputsList = CORRECT_ORDER.map((id) => ({
       product_id: id,
@@ -138,15 +135,22 @@ export const logic_assembler_01: SpecialRecipe = createSpecialRecipe({
       inputsList.push({ product_id: 'p_machine_oil', quantity: MACHINE_OIL_RATE * cycleTime });
     }
 
-    return inputsList;
-  },
-  outputs: (settings) => {
-    const { failStep, targetChip, scrapQuantity } = getComputedValues(settings);
+    const outputsList = failStep
+      ? [{ product_id: 'p_microchip_scrap', quantity: scrapQuantity, temperature: 18 }]
+      : [{ product_id: targetChip, quantity: 1, temperature: 18 }];
 
-    if (failStep) {
-      return [{ product_id: 'p_microchip_scrap', quantity: scrapQuantity, temperature: 18 }];
-    } else {
-      return [{ product_id: targetChip, quantity: 1, temperature: 18 }];
-    }
+    const recipe: Recipe = {
+      id: 'r_logic_assembler_01',
+      name: 'Logic Assembler',
+      machine_id: 'm_logic_assembler',
+      cycle_time: cycleTime,
+      power_consumption: 3000000,
+      power_type: 'MV',
+      pollution: 0,
+      inputs: inputsList,
+      outputs: outputsList,
+    };
+
+    return recipe;
   },
-});
+};

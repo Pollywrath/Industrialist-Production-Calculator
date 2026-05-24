@@ -1,58 +1,53 @@
-import products from '../products.json';
-import type { Product } from '../../types/data';
+//TODO: Read the decompiled code
+import type { Recipe } from '../../types/data';
+import type { SpecialRecipe } from '../../types/specialRecipes';
 
-// ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
-const ITEM_ID_1: string = 'p_coal';
-const ITEM_ID_2: string = 'p_copper_ingot';
-const HAS_STATION_4: boolean = false;
+const settingDefinitions = {
+  has_station_4: {
+    type: 'select' as const,
+    label: 'Has Station 4?',
+    default: 'No',
+    options: [
+      { label: 'Yes', value: 'Yes' },
+      { label: 'No', value: 'No' },
+    ],
+  },
+};
 
-// ─── 2. COMPUTATIONS ─────────────────────────────────────────────────
-const productList = products as Product[];
-const found1 = productList.find((p) => p.id === ITEM_ID_1);
-const found2 = productList.find((p) => p.id === ITEM_ID_2);
+export const m_research_station3_01: SpecialRecipe = {
+  id: 'r_m_research_station3_01',
+  name: 'Research Station 3',
+  machine_id: 'm_research_station3',
+  isSellTrash: true,
+  settings: settingDefinitions,
+  compute: (settings, _globalSettings, _nodeId, helpers) => {
+    const hasStation4 = (settings.has_station_4 as string) === 'Yes';
+    const power = hasStation4 ? 5000000 : 600000;
 
-const inputs: { product_id: string; quantity: number }[] = [];
-const nameParts: string[] = [];
+    const item1 = helpers?.hasConnection('input', 0)
+      ? helpers.resolveProduct('input', 0) || 'any_item'
+      : 'any_item';
+    const item2 = helpers?.hasConnection('input', 1)
+      ? helpers.resolveProduct('input', 1) || 'any_item'
+      : 'any_item';
 
-if (found1 && found1.type === 'Item') {
-  inputs.push({ product_id: ITEM_ID_1, quantity: 0.1 });
-  nameParts.push(found1.name);
-}
-if (found2 && found2.type === 'Item') {
-  inputs.push({ product_id: ITEM_ID_2, quantity: 0.1 });
-  nameParts.push(found2.name);
-}
+    const inputsList: { product_id: string; quantity: number }[] = [
+      { product_id: item1, quantity: 0.1 },
+      { product_id: item2, quantity: 0.1 },
+    ];
 
-const isValid = inputs.length > 0;
-const power = HAS_STATION_4 ? 5000000 : 600000;
+    const recipe: Recipe = {
+      id: 'r_m_research_station3_01',
+      name: 'Research Station 3',
+      machine_id: 'm_research_station3',
+      cycle_time: 1,
+      power_consumption: power,
+      power_type: 'MV',
+      pollution: 0,
+      inputs: inputsList,
+      outputs: [],
+    };
 
-// ─── 3. EXPORT ───────────────────────────────────────────────────────
-export interface Recipe {
-  id: string;
-  name: string;
-  machine_id: string;
-  cycle_time: number;
-  power_consumption: number;
-  power_type: 'MV' | 'HV';
-  pollution: number;
-  inputs: { product_id: string; quantity: number }[];
-  outputs: { product_id: string; quantity: number; temperature?: number }[];
-}
-
-const recipes: Recipe[] = isValid
-  ? [
-      {
-        id: 'r_research_station3_01',
-        name: 'Research Station 3',
-        machine_id: 'm_research_station3',
-        cycle_time: 1,
-        power_consumption: power,
-        power_type: 'MV',
-        pollution: 0,
-        inputs: inputs,
-        outputs: [],
-      },
-    ]
-  : [];
-
-export { recipes };
+    return recipe;
+  },
+};

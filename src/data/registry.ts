@@ -27,9 +27,9 @@ import {
 import { hand_crank_mk2_01 } from './special_recipes/hand_crank_mk2';
 import { huge_truck_depot_01 } from './special_recipes/huge_truck_depot';
 import {
-  industrial_drill_iron,
-  industrial_drill_copper,
-  industrial_drill_bauxite,
+  m_industrial_drill_01,
+  m_industrial_drill_02,
+  m_industrial_drill_03,
 } from './special_recipes/industrial_drill';
 import {
   industrial_firebox_01,
@@ -46,6 +46,24 @@ import { liquid_burner_01 } from './special_recipes/liquid_burner';
 import { liquid_dump_01 } from './special_recipes/liquid_dump';
 import { liquid_truck_depot_01 } from './special_recipes/liquid_truck_depot';
 import { logic_assembler_01 } from './special_recipes/logic_assembler';
+import { m_mineshaft_drill_01 } from './special_recipes/mineshaft_drill';
+import { m_research_station2_01 } from './special_recipes/research_station2';
+import { m_research_station3_01 } from './special_recipes/research_station3';
+import { satellite_dish_controller_01 } from './special_recipes/satellite_dish_controller';
+import {
+  steam_cracking_plant_01,
+  steam_cracking_plant_02,
+  steam_cracking_plant_03,
+} from './special_recipes/steam_cracking_plant';
+import { steam_turbine_01 } from './special_recipes/steam_turbine';
+import { m_truck_depot_01 } from './special_recipes/truck_depot';
+import { m_van_depot_01 } from './special_recipes/van_depot';
+import { underground_waste_facility_01 } from './special_recipes/underground_waste_facility';
+import {
+  water_treatment_plant_01,
+  water_treatment_plant_02,
+  water_treatment_plant_03,
+} from './special_recipes/water_treatment_plant';
 
 export const SPECIAL_RECIPES: Record<string, SpecialRecipe> = {
   [air_separation_unit.id]: air_separation_unit,
@@ -66,9 +84,9 @@ export const SPECIAL_RECIPES: Record<string, SpecialRecipe> = {
   [geothermal_well_03.id]: geothermal_well_03,
   [hand_crank_mk2_01.id]: hand_crank_mk2_01,
   [huge_truck_depot_01.id]: huge_truck_depot_01,
-  [industrial_drill_iron.id]: industrial_drill_iron,
-  [industrial_drill_copper.id]: industrial_drill_copper,
-  [industrial_drill_bauxite.id]: industrial_drill_bauxite,
+  [m_industrial_drill_01.id]: m_industrial_drill_01,
+  [m_industrial_drill_02.id]: m_industrial_drill_02,
+  [m_industrial_drill_03.id]: m_industrial_drill_03,
   [industrial_firebox_01.id]: industrial_firebox_01,
   [industrial_firebox_02.id]: industrial_firebox_02,
   [industrial_firebox_03.id]: industrial_firebox_03,
@@ -82,6 +100,20 @@ export const SPECIAL_RECIPES: Record<string, SpecialRecipe> = {
   [liquid_dump_01.id]: liquid_dump_01,
   [liquid_truck_depot_01.id]: liquid_truck_depot_01,
   [logic_assembler_01.id]: logic_assembler_01,
+  [m_mineshaft_drill_01.id]: m_mineshaft_drill_01,
+  [m_research_station2_01.id]: m_research_station2_01,
+  [m_research_station3_01.id]: m_research_station3_01,
+  [satellite_dish_controller_01.id]: satellite_dish_controller_01,
+  [steam_cracking_plant_01.id]: steam_cracking_plant_01,
+  [steam_cracking_plant_02.id]: steam_cracking_plant_02,
+  [steam_cracking_plant_03.id]: steam_cracking_plant_03,
+  [steam_turbine_01.id]: steam_turbine_01,
+  [m_truck_depot_01.id]: m_truck_depot_01,
+  [m_van_depot_01.id]: m_van_depot_01,
+  [underground_waste_facility_01.id]: underground_waste_facility_01,
+  [water_treatment_plant_01.id]: water_treatment_plant_01,
+  [water_treatment_plant_02.id]: water_treatment_plant_02,
+  [water_treatment_plant_03.id]: water_treatment_plant_03,
 };
 
 for (const cp of chemical_plant_recipes) {

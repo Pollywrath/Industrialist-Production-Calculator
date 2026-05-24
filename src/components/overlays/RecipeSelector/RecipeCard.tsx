@@ -143,10 +143,10 @@ export function RecipeCard({
       >
         {recipe.inputs.length > 0 && (
           <div className={`${styles['recipe-card-col']} ${styles['recipe-card-col-inputs']}`}>
-            {recipe.inputs.map((inp) => {
+            {recipe.inputs.map((inp, idx) => {
               const productName = getProductName(inp.product_id);
               return (
-                <div key={inp.product_id} className={styles['recipe-card-io-item']}>
+                <div key={`${inp.product_id}-${idx}`} className={styles['recipe-card-io-item']}>
                   <div className={styles['recipe-card-io-square-wrapper']}>
                     <div className={styles['recipe-card-io-square']}>
                       <ProductIcon productId={inp.product_id} productName={productName} />
@@ -179,10 +179,10 @@ export function RecipeCard({
 
         {recipe.outputs.length > 0 && (
           <div className={`${styles['recipe-card-col']} ${styles['recipe-card-col-outputs']}`}>
-            {recipe.outputs.map((out) => {
+            {recipe.outputs.map((out, idx) => {
               const productName = getProductName(out.product_id);
               return (
-                <div key={out.product_id} className={styles['recipe-card-io-item']}>
+                <div key={`${out.product_id}-${idx}`} className={styles['recipe-card-io-item']}>
                   <div className={styles['recipe-card-io-square-wrapper']}>
                     <div className={styles['recipe-card-io-square']}>
                       <ProductIcon productId={out.product_id} productName={productName} />

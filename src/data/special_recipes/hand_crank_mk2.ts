@@ -1,5 +1,5 @@
+import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
 const settingDefinitions = {
   crankers: {
@@ -12,18 +12,27 @@ const settingDefinitions = {
   },
 };
 
-export const hand_crank_mk2_01: SpecialRecipe = createSpecialRecipe({
+export const hand_crank_mk2_01: SpecialRecipe = {
   id: 'r_hand_crank_mk2_01',
   name: 'Produces Power',
-  machineId: 'm_hand_crank_mk2',
+  machine_id: 'm_hand_crank_mk2',
   settings: settingDefinitions,
-  powerConsumption: (settings: Record<string, unknown>) => {
+  compute: (settings) => {
     const crankers = (settings.crankers as number) ?? 1;
-    return -135810 * crankers;
+    const powerConsumption = -135810 * crankers;
+
+    const recipe: Recipe = {
+      id: 'r_hand_crank_mk2_01',
+      name: 'Produces Power',
+      machine_id: 'm_hand_crank_mk2',
+      cycle_time: 1,
+      power_consumption: powerConsumption,
+      power_type: 'MV',
+      pollution: 0,
+      inputs: [],
+      outputs: [],
+    };
+
+    return recipe;
   },
-  powerType: 'MV' as const,
-  pollution: 0,
-  cycleTime: 1,
-  inputs: [],
-  outputs: [],
-});
+};

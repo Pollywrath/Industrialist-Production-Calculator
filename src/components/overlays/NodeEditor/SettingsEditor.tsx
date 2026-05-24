@@ -116,6 +116,9 @@ export function SettingsEditor({ recipe, nodeId }: SettingsEditorProps) {
 
   return (
     <div className={styles['settings-editor']}>
+      {sr.description && (
+        <div className={styles['node-editor-description']}>{sr.description}</div>
+      )}
       {Object.entries(sr.settings).map(([key, def]) => {
         const value = settings[key] ?? def.default;
         const inputIndex = settingKeyToInputIndex[key];

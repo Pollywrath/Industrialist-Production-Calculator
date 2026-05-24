@@ -221,6 +221,7 @@ export const boiler_standard: SpecialRecipe = {
   id: 'r_boiler_01',
   name: 'Standard',
   machine_id: 'm_boiler',
+  description: 'Feed water and coolant into the boiler. Coolant heats the water to produce steam.',
   settings: {
     water_temp: {
       type: 'number',
@@ -300,6 +301,7 @@ export const boiler_preheater: SpecialRecipe = {
   id: 'r_boiler_02',
   name: 'Preheater',
   machine_id: 'm_boiler',
+  description: 'Connect coolant output to water input. Only regular water works as coolant - it heats itself to produce steam.',
   settings: {
     coolant_temp: {
       type: 'number',
@@ -356,6 +358,7 @@ export const boiler_self_heating: SpecialRecipe = {
   id: 'r_boiler_03',
   name: 'Self Heating',
   machine_id: 'm_boiler',
+  description: 'Boiler already at ≥100°C. Feed hot water to sustain temperature and produce steam without coolant.',
   settings: {
     water_temp: {
       type: 'number',
@@ -409,6 +412,7 @@ export const boiler_coolant_loop: SpecialRecipe = {
   id: 'r_boiler_04',
   name: 'Coolant Loop',
   machine_id: 'm_boiler',
+  description: 'Boiler already at ≥100°C. Loop coolant output back to coolant input while feeding hot water to water input.',
   settings: {
     water_temp: {
       type: 'number',
@@ -424,7 +428,7 @@ export const boiler_coolant_loop: SpecialRecipe = {
     coolant_used: {
       type: 'select',
       label: 'Coolant Used',
-      default: 'p_distilled_water',
+      default: 'any_fluid',
       options: [
         { label: 'Water', value: 'p_water' },
         { label: 'Filtered Water', value: 'p_filtered_water' },
