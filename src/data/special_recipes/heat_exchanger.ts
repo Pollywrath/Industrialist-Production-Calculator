@@ -1,4 +1,5 @@
 // ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
+// TODO: Skipped for now. Update to new special recipe format later.
 const tempWater: number = 21;
 const tempCoolant: number = 330;
 const flowWater: number = 400;

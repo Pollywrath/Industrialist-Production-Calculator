@@ -74,6 +74,10 @@
   --theme-color-tier-4: #c084fc;
   --theme-color-tier-5: #fbbf24;
 
+  --theme-color-fluid: #60a5fa;
+  --theme-color-item: #d4a637;
+  --theme-color-research: #06b6d4;
+
   --theme-color-btn-hover-overlay: rgba(255, 255, 255, 0.08);
   --theme-color-translucent-dark: rgba(0, 0, 0, 0.4);
   --theme-color-border-light-translucent: rgba(255, 255, 255, 0.1);

@@ -1,52 +1,44 @@
-// ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
-const DISTILLED_WATER_INPUT_TEMP: number = 100;
+import type { SpecialRecipe } from '../../types/specialRecipes';
+import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
-// ─── DATA TABLES ──────────────────────────────────────────────────
-const PRODUCT_ID = 'p_distilled_water';
-
-// ─── 2. COMPUTATIONS ─────────────────────────────────────────────────
-const INPUT_QUANTITY = 12000;
-const OUTPUT_QUANTITY = 12000;
-
-const outputTemperature = Math.max(DISTILLED_WATER_INPUT_TEMP / 3, 21);
-
-// ─── 3. EXPORT ───────────────────────────────────────────────────────
-export interface Recipe {
-  id: string;
-  name: string;
-  machine_id: string;
-  cycle_time: number;
-  power_consumption: number;
-  power_type: 'MV' | 'HV';
-  pollution: number;
-  inputs: { product_id: string; quantity: number; temperature?: number }[];
-  outputs: { product_id: string; quantity: number; temperature?: number }[];
-}
-
-const recipes: Recipe[] = [
-  {
-    id: 'r_cooling_tower_01',
-    name: 'Cooling Distilled Water',
-    machine_id: 'm_cooling_tower',
-    cycle_time: 1,
-    power_consumption: 0,
-    power_type: 'MV',
-    pollution: 0,
-    inputs: [
-      {
-        product_id: PRODUCT_ID,
-        quantity: INPUT_QUANTITY,
-        temperature: DISTILLED_WATER_INPUT_TEMP,
-      },
-    ],
-    outputs: [
-      {
-        product_id: PRODUCT_ID,
-        quantity: OUTPUT_QUANTITY,
-        temperature: outputTemperature,
-      },
-    ],
+const settingDefinitions = {
+  distilled_water_temp: {
+    type: 'number' as const,
+    label: 'Distilled Water Temperature (°C)',
+    default: 320,
   },
-];
+};
 
-export { outputTemperature, recipes };
+const inputTemperatureSettings = {
+  0: 'distilled_water_temp',
+};
+
+export const cooling_tower_01: SpecialRecipe = createSpecialRecipe({
+  id: 'r_cooling_tower_01',
+  name: 'Cools Distilled Water',
+  machineId: 'm_cooling_tower',
+  settings: settingDefinitions,
+  inputTemperatureSettings,
+  powerConsumption: 0,
+  powerType: 'MV' as const,
+  pollution: 0,
+  cycleTime: 1,
+  inputs: [
+    {
+      product_id: 'p_distilled_water',
+      quantity: 12000,
+    },
+  ],
+  outputs: (settings: Record<string, unknown>) => {
+    const inputTemp = (settings.distilled_water_temp as number) ?? 100;
+    const outputTemp = Math.max(inputTemp / 3, 21);
+
+    return [
+      {
+        product_id: 'p_distilled_water',
+        quantity: 12000,
+        temperature: outputTemp,
+      },
+    ];
+  },
+});

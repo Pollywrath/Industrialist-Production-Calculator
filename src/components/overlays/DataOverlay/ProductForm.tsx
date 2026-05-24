@@ -112,6 +112,28 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
       </div>
 
       <div className={styles['form-group']}>
+        <label className={styles['form-checkbox-label']}>
+          <input
+            type="checkbox"
+            checked={!!activeProduct.profit}
+            onChange={(e) => updateProductPendingEdit(selectedProductId, { profit: e.target.checked })}
+          />
+          Good to Sell (Profit)
+        </label>
+      </div>
+
+      <div className={styles['form-group']}>
+        <label className={styles['form-checkbox-label']}>
+          <input
+            type="checkbox"
+            checked={!!activeProduct.research}
+            onChange={(e) => updateProductPendingEdit(selectedProductId, { research: e.target.checked })}
+          />
+          Good for Research
+        </label>
+      </div>
+
+      <div className={styles['form-group']}>
         <label className={styles['form-label']}>Product Type</label>
         <select
           className={styles['form-select']}

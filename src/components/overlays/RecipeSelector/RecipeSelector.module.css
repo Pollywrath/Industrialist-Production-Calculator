@@ -700,6 +700,26 @@
   flex-shrink: 0;
 }
 
+.fluid-text {
+  color: var(--theme-color-fluid);
+}
+
+.item-text {
+  color: var(--theme-color-item);
+}
+
+.sell-price-negative {
+  color: var(--theme-color-error);
+}
+
+.sell-price-profit {
+  color: var(--theme-color-success);
+}
+
+.rp-mult-research {
+  color: var(--theme-color-research);
+}
+
 .header-cell-content {
   position: relative;
   display: inline-flex;

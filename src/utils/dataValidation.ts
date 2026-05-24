@@ -70,6 +70,14 @@ export function validateProduct(product: unknown): ValidationResult {
     });
   }
 
+  if (p.profit !== undefined && typeof p.profit !== 'boolean') {
+    errors.push({ field: 'profit', message: 'Profit must be a boolean' });
+  }
+
+  if (p.research !== undefined && typeof p.research !== 'boolean') {
+    errors.push({ field: 'research', message: 'Research must be a boolean' });
+  }
+
   return {
     valid: errors.length === 0,
     errors,
@@ -340,6 +348,10 @@ export function validateRecipe(
         });
       }
     });
+  }
+
+  if (r.isSellTrash !== undefined && typeof r.isSellTrash !== 'boolean') {
+    errors.push({ field: 'isSellTrash', message: 'isSellTrash must be a boolean' });
   }
 
   return {

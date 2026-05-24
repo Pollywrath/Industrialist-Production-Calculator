@@ -1,85 +1,64 @@
-// ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
-const INPUT_TEMP: number = 40;
+import type { SpecialRecipe } from '../../types/specialRecipes';
+import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
-// ─── DATA TABLES ──────────────────────────────────────────────────
-const OUTPUT_TEMP = Math.min(INPUT_TEMP + 80, 220);
+const settingDefinitions = {
+  input_temp: {
+    type: 'number' as const,
+    label: 'Input Temperature (°C)',
+    default: 40,
+  },
+};
 
-// ─── 2. COMPUTATIONS ─────────────────────────────────────────────────
+const inputTemperatureSettings = {
+  0: 'input_temp',
+};
+
 const cycleTime = 1;
 const inputQty = 9.09;
 const outputQty = 6.05;
 
-// ─── 3. EXPORT ───────────────────────────────────────────────────────
-export interface Recipe {
-  id: string;
-  name: string;
-  machine_id: string;
-  cycle_time: number;
-  power_consumption: number;
-  power_type: 'MV' | 'HV';
-  pollution: number;
-  inputs: { product_id: string; quantity: number; temperature?: number }[];
-  outputs: { product_id: string; quantity: number; temperature?: number }[];
-}
+const commonConfig = {
+  machineId: 'm_geothermal_well',
+  settings: settingDefinitions,
+  inputTemperatureSettings,
+  powerConsumption: 3000,
+  powerType: 'MV' as const,
+  pollution: 0,
+  cycleTime,
+};
 
-const recipes: Recipe[] = [
-  {
-    id: 'r_geothermal_well_01',
-    name: 'Heats Water (+80°C)',
-    machine_id: 'm_geothermal_well',
-    cycle_time: cycleTime,
-    power_consumption: 3000,
-    power_type: 'MV',
-    pollution: 0,
-    inputs: [{ product_id: 'p_water', quantity: inputQty, temperature: INPUT_TEMP }],
-    outputs: [{ product_id: 'p_water', quantity: outputQty, temperature: OUTPUT_TEMP }],
+export const geothermal_well_01: SpecialRecipe = createSpecialRecipe({
+  ...commonConfig,
+  id: 'r_geothermal_well_01',
+  name: 'Heats Water',
+  inputs: [{ product_id: 'p_water', quantity: inputQty }],
+  outputs: (settings: Record<string, unknown>) => {
+    const inputTemp = (settings.input_temp as number) ?? 40;
+    const outputTemp = Math.min(inputTemp + 80, 220);
+    return [{ product_id: 'p_water', quantity: outputQty, temperature: outputTemp }];
   },
-  {
-    id: 'r_geothermal_well_02',
-    name: 'Heats Filtered Water (+80°C)',
-    machine_id: 'm_geothermal_well',
-    cycle_time: cycleTime,
-    power_consumption: 3000,
-    power_type: 'MV',
-    pollution: 0,
-    inputs: [
-      {
-        product_id: 'p_filtered_water',
-        quantity: inputQty,
-        temperature: INPUT_TEMP,
-      },
-    ],
-    outputs: [
-      {
-        product_id: 'p_filtered_water',
-        quantity: outputQty,
-        temperature: OUTPUT_TEMP,
-      },
-    ],
-  },
-  {
-    id: 'r_geothermal_well_03',
-    name: 'Heats Distilled Water (+80°C)',
-    machine_id: 'm_geothermal_well',
-    cycle_time: cycleTime,
-    power_consumption: 3000,
-    power_type: 'MV',
-    pollution: 0,
-    inputs: [
-      {
-        product_id: 'p_distilled_water',
-        quantity: inputQty,
-        temperature: INPUT_TEMP,
-      },
-    ],
-    outputs: [
-      {
-        product_id: 'p_distilled_water',
-        quantity: outputQty,
-        temperature: OUTPUT_TEMP,
-      },
-    ],
-  },
-];
+});
 
-export { INPUT_TEMP, OUTPUT_TEMP, recipes };
+export const geothermal_well_02: SpecialRecipe = createSpecialRecipe({
+  ...commonConfig,
+  id: 'r_geothermal_well_02',
+  name: 'Heats Filtered Water',
+  inputs: [{ product_id: 'p_filtered_water', quantity: inputQty }],
+  outputs: (settings: Record<string, unknown>) => {
+    const inputTemp = (settings.input_temp as number) ?? 40;
+    const outputTemp = Math.min(inputTemp + 80, 220);
+    return [{ product_id: 'p_filtered_water', quantity: outputQty, temperature: outputTemp }];
+  },
+});
+
+export const geothermal_well_03: SpecialRecipe = createSpecialRecipe({
+  ...commonConfig,
+  id: 'r_geothermal_well_03',
+  name: 'Heats Distilled Water',
+  inputs: [{ product_id: 'p_distilled_water', quantity: inputQty }],
+  outputs: (settings: Record<string, unknown>) => {
+    const inputTemp = (settings.input_temp as number) ?? 40;
+    const outputTemp = Math.min(inputTemp + 80, 220);
+    return [{ product_id: 'p_distilled_water', quantity: outputQty, temperature: outputTemp }];
+  },
+});

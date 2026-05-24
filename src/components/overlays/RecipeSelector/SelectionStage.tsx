@@ -29,7 +29,11 @@ const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multipl
         ) : (
           <Package size={14} className={styles['item-icon']} />
         )}
-        <span className={styles['cell-ellipsis-text']}>{p.name}</span>
+        <span
+          className={`${styles['cell-ellipsis-text']} ${p.type === 'Fluid' ? styles['fluid-text'] : styles['item-text']}`}
+        >
+          {p.name}
+        </span>
       </div>
     ),
   },
@@ -37,13 +41,21 @@ const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multipl
     field: 'sell_price',
     label: 'Sell Price',
     widthClass: 'col-25',
-    renderCell: (p) => formatCurrency(p.sell_price),
+    renderCell: (p) => (
+      <span className={p.sell_price < 0 ? styles['sell-price-negative'] : (p.profit ? styles['sell-price-profit'] : '')}>
+        {formatCurrency(p.sell_price)}
+      </span>
+    ),
   },
   {
     field: 'rp_multiplier',
     label: 'RP Multiplier',
     widthClass: 'col-25',
-    renderCell: (p) => formatRpMultiplier(p.rp_multiplier),
+    renderCell: (p) => (
+      <span className={p.research ? styles['rp-mult-research'] : ''}>
+        {formatRpMultiplier(p.rp_multiplier)}
+      </span>
+    ),
   },
 ];
 

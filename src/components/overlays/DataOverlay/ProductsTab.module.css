@@ -267,6 +267,16 @@
   letter-spacing: 0.5px;
 }
 
+.form-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--theme-color-text-primary);
+  cursor: pointer;
+}
+
 .form-input-readonly {
   box-sizing: border-box;
   width: 100%;

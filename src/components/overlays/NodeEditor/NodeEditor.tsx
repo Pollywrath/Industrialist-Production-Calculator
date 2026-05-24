@@ -7,6 +7,11 @@ import { useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { getConnectedNodes } from '../../../utils/graphTraversal';
 import { getRateMultiplier, cleanMachineCount } from '../../../utils/recipeComputation';
+import {
+  clampHandleOrder,
+  collectStaleHandleIndices,
+  buildStaleHandleIds,
+} from '../../../utils/nodeEditorHandles';
 import { HandleEditorColumns } from './HandleEditorColumns';
 import styles from './NodeEditor.module.css';
 import { NodeEditorProvider } from './NodeEditorProvider';
@@ -94,12 +99,54 @@ function NodeEditorModal({
   const currentRecipe = getCurrentRecipe();
   const hasSettings = !!getSpecialRecipe(recipe.id);
 
-  const handleSaveLocal = () => {
+  const prepareHandleSave = () => {
     const { inputs, outputs, settings } = store!.getState();
+    const currentRecipe = getCurrentRecipe();
+    const { edges } = useFlowStore.getState();
+
+    const clampedInputs = clampHandleOrder(inputs, currentRecipe.inputs.length);
+    const clampedOutputs = clampHandleOrder(outputs, currentRecipe.outputs.length);
+
+    const staleInputIndices = collectStaleHandleIndices(
+      inputs,
+      clampedInputs,
+      nodeId,
+      'input',
+      currentRecipe.inputs.length,
+      edges,
+    );
+    const staleOutputIndices = collectStaleHandleIndices(
+      outputs,
+      clampedOutputs,
+      nodeId,
+      'output',
+      currentRecipe.outputs.length,
+      edges,
+    );
+
+    return { settings, clampedInputs, clampedOutputs, staleInputIndices, staleOutputIndices };
+  };
+
+  const deleteStaleHandleEdges = (staleInputIndices: number[], staleOutputIndices: number[]) => {
+    const { deleteEdgesConnectedToHandle } = useFlowStore.getState();
+    for (const handleId of buildStaleHandleIds(nodeId, 'input', staleInputIndices)) {
+      deleteEdgesConnectedToHandle(handleId);
+    }
+    for (const handleId of buildStaleHandleIds(nodeId, 'output', staleOutputIndices)) {
+      deleteEdgesConnectedToHandle(handleId);
+    }
+  };
+
+  const handleSaveLocal = () => {
+    const { settings, clampedInputs, clampedOutputs, staleInputIndices, staleOutputIndices } =
+      prepareHandleSave();
+
+    deleteStaleHandleEdges(staleInputIndices, staleOutputIndices);
+
     updateNodeData(nodeId, {
       machineCount: cleanMachineCount(machineCount),
-      inputOrder: inputs,
-      outputOrder: outputs,
+      inputOrder: clampedInputs,
+      outputOrder: clampedOutputs,
       settings: settings,
     });
     onClose();
@@ -112,9 +159,14 @@ function NodeEditorModal({
   const handleSavePropagated = () => {
     if (isPropagationDisabled) return;
 
-    const { inputs, outputs, settings } = store!.getState();
-    const factor = machineCount / initialMachineCount;
+    const { settings, clampedInputs, clampedOutputs, staleInputIndices, staleOutputIndices } =
+      prepareHandleSave();
+
     const { nodes, edges } = useFlowStore.getState();
+
+    deleteStaleHandleEdges(staleInputIndices, staleOutputIndices);
+
+    const factor = machineCount / initialMachineCount;
     const connectedIds = getConnectedNodes(nodeId, edges);
 
     const updatedNodes = nodes.map((node) => {
@@ -125,8 +177,8 @@ function NodeEditorModal({
             data: {
               ...node.data,
               machineCount: cleanMachineCount(machineCount),
-              inputOrder: inputs,
-              outputOrder: outputs,
+              inputOrder: clampedInputs,
+              outputOrder: clampedOutputs,
               settings: settings,
             },
           };

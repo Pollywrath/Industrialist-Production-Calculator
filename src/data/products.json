@@ -32,6 +32,8 @@
     "name": "Purple Gold Ingot",
     "sell_price": 20000,
     "rp_multiplier": 100,
+    "profit": true,
+    "research": true,
     "type": "Item"
   },
   {
@@ -39,6 +41,8 @@
     "name": "Crankshaft",
     "sell_price": 754,
     "rp_multiplier": 35,
+    "profit": true,
+    "research": true,
     "type": "Item"
   },
   {
@@ -179,6 +183,8 @@
     "name": "Gearbox",
     "sell_price": 2552,
     "rp_multiplier": 50,
+    "profit": true,
+    "research": true,
     "type": "Item"
   },
   {
@@ -193,6 +199,7 @@
     "name": "Leaded Gasoline",
     "sell_price": 112,
     "rp_multiplier": 23,
+    "research": true,
     "type": "Fluid"
   },
   {
@@ -326,6 +333,7 @@
     "name": "Gasoline",
     "sell_price": 40.6,
     "rp_multiplier": 7.5,
+    "research": true,
     "type": "Fluid"
   },
   {
@@ -396,6 +404,8 @@
     "name": "Iron Coil",
     "sell_price": 43.85,
     "rp_multiplier": 4,
+    "profit": true,
+    "research": true,
     "type": "Item"
   },
   {
@@ -550,6 +560,7 @@
     "name": "LNG",
     "sell_price": 160,
     "rp_multiplier": 2,
+    "profit": true,
     "type": "Fluid"
   },
   {
@@ -676,6 +687,7 @@
     "name": "8x64x Microchip",
     "sell_price": 5000000,
     "rp_multiplier": 300,
+    "profit": true,
     "type": "Item"
   },
   {
@@ -823,6 +835,7 @@
     "name": "Concrete Block",
     "sell_price": 150,
     "rp_multiplier": 1,
+    "profit": true,
     "type": "Item"
   },
   {
@@ -900,6 +913,7 @@
     "name": "Acetic Acid",
     "sell_price": 14.5,
     "rp_multiplier": 7,
+    "research": true,
     "type": "Fluid"
   },
   {
@@ -928,6 +942,7 @@
     "name": "Copper Plate",
     "sell_price": 32.86,
     "rp_multiplier": 6,
+    "research": true,
     "type": "Item"
   },
   {
@@ -998,6 +1013,7 @@
     "name": "Aluminium Ingot",
     "sell_price": 800,
     "rp_multiplier": 65,
+    "research": true,
     "type": "Item"
   },
   {
@@ -1026,6 +1042,7 @@
     "name": "Gold Ingot",
     "sell_price": 4250,
     "rp_multiplier": 70,
+    "research": true,
     "type": "Item"
   },
   {
@@ -1201,6 +1218,7 @@
     "name": "GasolineE10",
     "sell_price": 57,
     "rp_multiplier": 13,
+    "research": true,
     "type": "Fluid"
   },
   {

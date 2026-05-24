@@ -6,6 +6,7 @@ export interface SpecialRecipeConfig {
   name: string;
   recipeName?: string;
   machineId: string;
+  isSellTrash?: boolean;
   settings?: Record<string, SettingDefinition>;
   inputTemperatureSettings?: Record<number, string>;
   powerConsumption:
@@ -132,6 +133,7 @@ export function createSpecialRecipe(config: SpecialRecipeConfig): SpecialRecipe 
         pollution,
         inputs,
         outputs,
+        isSellTrash: config.isSellTrash,
       };
     },
     computeMachineCost: config.computeMachineCost,

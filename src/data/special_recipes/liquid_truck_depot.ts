@@ -1,40 +1,21 @@
-import products from '../products.json';
-import type { Product } from '../../types/data';
+import type { SpecialRecipe } from '../../types/specialRecipes';
+import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
-// ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
-const PRODUCT_ID: string = 'p_crude_oil';
-
-// ─── 2. COMPUTATIONS ───────────────────────────────────────────────────
-const found = (products as Product[]).find((p) => p.id === PRODUCT_ID);
-const isValid = found && found.type === 'Fluid';
-
-// ─── 3. EXPORT ───────────────────────────────────────────────────────
-export interface Recipe {
-  id: string;
-  name: string;
-  machine_id: string;
-  cycle_time: number;
-  power_consumption: number;
-  power_type: 'MV' | 'HV';
-  pollution: number;
-  inputs: { product_id: string; quantity: number }[];
-  outputs: { product_id: string; quantity: number; temperature?: number }[];
-}
-
-const recipes: Recipe[] = isValid
-  ? [
-      {
-        id: 'r_liquid_truck_depot_01',
-        name: `Sell ${found.name}`,
-        machine_id: 'm_liquid_truck_depot',
-        cycle_time: 80,
-        power_consumption: 0,
-        power_type: 'MV',
-        pollution: 0.045,
-        inputs: [{ product_id: PRODUCT_ID, quantity: 400 }],
-        outputs: [],
-      },
-    ]
-  : [];
-
-export { recipes };
+export const liquid_truck_depot_01: SpecialRecipe = createSpecialRecipe({
+  id: 'r_liquid_truck_depot_01',
+  name: 'Sell Fluid',
+  machineId: 'm_liquid_truck_depot',
+  isSellTrash: true,
+  powerConsumption: 0,
+  powerType: 'MV' as const,
+  pollution: 0.045,
+  cycleTime: 80,
+  inputs: (_settings, _globalSettings, _nodeId, helpers) => {
+    let resolvedFluid = 'any_fluid';
+    if (helpers?.hasConnection('input', 0)) {
+      resolvedFluid = helpers.resolveProduct('input', 0) || 'any_fluid';
+    }
+    return [{ product_id: resolvedFluid, quantity: 400, variable: true }];
+  },
+  outputs: [],
+});

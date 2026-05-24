@@ -1,10 +1,6 @@
-// ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
-const TARGET_CHIP: string = 'p_8x64x_microchip';
-const HAS_MACHINE_OIL: boolean = true;
-const TICK_CIRCUIT_DELAY: number = 2;
-const INPUT_ORDER: string[] = ['p_logic_plate', 'p_copper_wire', 'p_semiconductor', 'p_gold_wire'];
+import type { SpecialRecipe } from '../../types/specialRecipes';
+import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
-// ─── DATA TABLES ──────────────────────────────────────────────────
 const CORRECT_ORDER = ['p_logic_plate', 'p_copper_wire', 'p_semiconductor', 'p_gold_wire'];
 
 const MATERIALS_PER_STAGE: Record<string, number> = {
@@ -57,62 +53,89 @@ const generateChipStages = (): ChipStage[] => {
 
 const CHIP_STAGES = generateChipStages();
 
-// ─── 2. COMPUTATIONS ─────────────────────────────────────────────────
-const stage = CHIP_STAGES.find((s) => s.productId === TARGET_CHIP);
-if (!stage) {
-  throw new Error(
-    `Invalid TARGET_CHIP: ${TARGET_CHIP}. This machine only supports 1x2x-1x64x and 2x64x-8x64x tiers.`,
-  );
-}
-
-const totalStages = stage.innerPower + (stage.outerStage - 1) * 6;
-const totalSteps = STEPS_PER_STAGE * totalStages;
-
-const avgStepTime = HAS_MACHINE_OIL ? AVG_STEP_TIME_WITH_OIL : AVG_STEP_TIME;
-const circuitDelaySeconds = TICK_CIRCUIT_DELAY / 6;
-const cycleTime = totalSteps * (avgStepTime + circuitDelaySeconds) + BASE_CYCLE_TIME;
-
-const isCorrectOrder = INPUT_ORDER.every((id, i) => id === CORRECT_ORDER[i]);
-const scrapQuantity = totalStages - 1;
-
-const inputs: { product_id: string; quantity: number }[] = CORRECT_ORDER.map((id) => ({
-  product_id: id,
-  quantity: (MATERIALS_PER_STAGE[id] * totalStages) / cycleTime,
-}));
-
-if (HAS_MACHINE_OIL) {
-  inputs.push({ product_id: 'p_machine_oil', quantity: MACHINE_OIL_RATE });
-}
-
-const outputs: { product_id: string; quantity: number }[] = isCorrectOrder
-  ? [{ product_id: TARGET_CHIP, quantity: 1 / cycleTime }]
-  : [{ product_id: 'p_microchip_scrap', quantity: scrapQuantity / cycleTime }];
-
-// ─── 3. EXPORT ───────────────────────────────────────────────────────
-export interface Recipe {
-  id: string;
-  name: string;
-  machine_id: string;
-  cycle_time: number;
-  power_consumption: number;
-  power_type: 'MV' | 'HV';
-  pollution: number;
-  inputs: { product_id: string; quantity: number }[];
-  outputs: { product_id: string; quantity: number; temperature?: number }[];
-}
-
-const recipes: Recipe[] = [
-  {
-    id: 'r_logic_assembler_01',
-    name: stage.name,
-    machine_id: 'm_logic_assembler',
-    cycle_time: 1,
-    power_consumption: 3000000,
-    power_type: 'MV',
-    pollution: 0,
-    inputs: inputs,
-    outputs: outputs,
+const settingDefinitions = {
+  target_chip: {
+    type: 'select' as const,
+    label: 'Target Chip',
+    default: 'p_8x64x_microchip',
+    options: CHIP_STAGES.map((c) => ({ label: c.name, value: c.productId })),
   },
-];
+  has_machine_oil: {
+    type: 'select' as const,
+    label: 'Use Machine Oil?',
+    default: 'Yes',
+    options: [
+      { label: 'Yes', value: 'Yes' },
+      { label: 'No', value: 'No' },
+    ],
+  },
+  fail_step: {
+    type: 'select' as const,
+    label: 'Fail Step?',
+    default: 'No',
+    options: [
+      { label: 'Yes', value: 'Yes' },
+      { label: 'No', value: 'No' },
+    ],
+  },
+  tick_delay: {
+    type: 'number' as const,
+    label: 'Tick Delay',
+    default: 2,
+    min: 0,
+    step: 1,
+  },
+};
 
-export { recipes };
+const getComputedValues = (settings: Record<string, unknown>) => {
+  const targetChip = (settings.target_chip as string) ?? 'p_8x64x_microchip';
+  const hasMachineOil = (settings.has_machine_oil as string) === 'Yes';
+  const failStep = (settings.fail_step as string) === 'Yes';
+  const tickDelay = (settings.tick_delay as number) ?? 2;
+
+  const stage = CHIP_STAGES.find((s) => s.productId === targetChip) || CHIP_STAGES[0];
+  const totalStages = stage.innerPower + (stage.outerStage - 1) * 6;
+  const totalSteps = STEPS_PER_STAGE * totalStages;
+
+  const avgStepTime = hasMachineOil ? AVG_STEP_TIME_WITH_OIL : AVG_STEP_TIME;
+  const circuitDelaySeconds = tickDelay / 6;
+  const cycleTime = totalSteps * (avgStepTime + circuitDelaySeconds) + BASE_CYCLE_TIME;
+
+  const scrapQuantity = totalStages - 1;
+
+  return { cycleTime, totalStages, hasMachineOil, failStep, targetChip, scrapQuantity, stage };
+};
+
+export const logic_assembler_01: SpecialRecipe = createSpecialRecipe({
+  id: 'r_logic_assembler_01',
+  name: 'Logic Assembler',
+  machineId: 'm_logic_assembler',
+  settings: settingDefinitions,
+  computeCycleTime: (settings) => getComputedValues(settings).cycleTime,
+  powerConsumption: 3000000,
+  powerType: 'MV' as const,
+  pollution: 0,
+  inputs: (settings) => {
+    const { cycleTime, totalStages, hasMachineOil } = getComputedValues(settings);
+
+    const inputsList = CORRECT_ORDER.map((id) => ({
+      product_id: id,
+      quantity: MATERIALS_PER_STAGE[id] * totalStages,
+    }));
+
+    if (hasMachineOil) {
+      inputsList.push({ product_id: 'p_machine_oil', quantity: MACHINE_OIL_RATE * cycleTime });
+    }
+
+    return inputsList;
+  },
+  outputs: (settings) => {
+    const { failStep, targetChip, scrapQuantity } = getComputedValues(settings);
+
+    if (failStep) {
+      return [{ product_id: 'p_microchip_scrap', quantity: scrapQuantity, temperature: 18 }];
+    } else {
+      return [{ product_id: targetChip, quantity: 1, temperature: 18 }];
+    }
+  },
+});

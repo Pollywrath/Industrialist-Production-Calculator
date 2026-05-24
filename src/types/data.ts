@@ -24,6 +24,8 @@ export interface Product {
   sell_price: number;
   rp_multiplier: number;
   type: ProductType;
+  profit?: boolean;
+  research?: boolean;
 }
 
 export type PowerType = 'MV' | 'HV';

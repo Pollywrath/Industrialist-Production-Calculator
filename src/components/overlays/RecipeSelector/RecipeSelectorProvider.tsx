@@ -35,8 +35,8 @@ export function RecipeSelectorProvider({
           preselectedProductId && preselectedSourceSide ? preselectedSourceSide === 'input' : true,
         filterConsumers:
           preselectedProductId && preselectedSourceSide ? preselectedSourceSide === 'output' : true,
-        filterSellTrash: true,
-        filterHeatPower: true,
+        filterSellTrash: false,
+        filterHeatPower: false,
 
         setActiveTab: (activeTab) => set({ activeTab }),
         setSearchQuery: (searchQuery) => set({ searchQuery }),
@@ -72,8 +72,8 @@ export function RecipeSelectorProvider({
             stage: 'recipes',
             filterProducers: true,
             filterConsumers: true,
-            filterSellTrash: true,
-            filterHeatPower: true,
+            filterSellTrash: false,
+            filterHeatPower: false,
           }),
         handleBack: () =>
           set({

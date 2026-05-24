@@ -1,11 +1,6 @@
-import products from '../products.json';
-import type { Product } from '../../types/data';
+import type { SpecialRecipe } from '../../types/specialRecipes';
+import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
-// ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
-const FLUID_ID_1: string = 'p_crude_oil';
-const RATE_1: number = 60;
-
-// ─── 2. COMPUTATIONS ─────────────────────────────────────────────────
 const ZERO_POLLUTION_FLUIDS = [
   'p_water',
   'p_filtered_water',
@@ -16,43 +11,32 @@ const ZERO_POLLUTION_FLUIDS = [
 ];
 
 const calculatePollution = (fluidId: string, rate: number): number => {
-  if (ZERO_POLLUTION_FLUIDS.includes(fluidId)) return 0;
+  if (fluidId === 'any_fluid' || ZERO_POLLUTION_FLUIDS.includes(fluidId)) return 0;
   if (fluidId === 'p_residue') return 8.64 * rate;
   return 0.02 * rate;
 };
 
-const found1 = (products as Product[]).find((p) => p.id === FLUID_ID_1);
-const isValid = found1 && found1.type === 'Fluid' && RATE_1 > 0;
-
-const pollution = isValid ? calculatePollution(FLUID_ID_1, RATE_1) : 0;
-
-// ─── 3. EXPORT ───────────────────────────────────────────────────────
-export interface Recipe {
-  id: string;
-  name: string;
-  machine_id: string;
-  cycle_time: number;
-  power_consumption: number;
-  power_type: 'MV' | 'HV';
-  pollution: number;
-  inputs: { product_id: string; quantity: number }[];
-  outputs: { product_id: string; quantity: number; temperature?: number }[];
-}
-
-const recipes: Recipe[] = isValid
-  ? [
-      {
-        id: 'r_liquid_burner_01',
-        name: `Burn ${found1.name}`,
-        machine_id: 'm_liquid_burner',
-        cycle_time: 1,
-        power_consumption: 0,
-        power_type: 'MV',
-        pollution: pollution,
-        inputs: [{ product_id: FLUID_ID_1, quantity: Math.min(120, RATE_1) }],
-        outputs: [],
-      },
-    ]
-  : [];
-
-export { recipes };
+export const liquid_burner_01: SpecialRecipe = createSpecialRecipe({
+  id: 'r_liquid_burner_01',
+  name: 'Burn Fluid',
+  machineId: 'm_liquid_burner',
+  isSellTrash: true,
+  powerConsumption: 0,
+  powerType: 'MV' as const,
+  cycleTime: 1,
+  pollution: (_settings, _globalSettings, _nodeId, helpers) => {
+    let resolvedFluid = 'any_fluid';
+    if (helpers?.hasConnection('input', 0)) {
+      resolvedFluid = helpers.resolveProduct('input', 0) || 'any_fluid';
+    }
+    return calculatePollution(resolvedFluid, 120);
+  },
+  inputs: (_settings, _globalSettings, _nodeId, helpers) => {
+    let resolvedFluid = 'any_fluid';
+    if (helpers?.hasConnection('input', 0)) {
+      resolvedFluid = helpers.resolveProduct('input', 0) || 'any_fluid';
+    }
+    return [{ product_id: resolvedFluid, quantity: 120, variable: true }];
+  },
+  outputs: [],
+});

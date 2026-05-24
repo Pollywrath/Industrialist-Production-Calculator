@@ -1,4 +1,5 @@
 // ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
+// TODO: Skipped for now. Update to new special recipe format later.
 const DISTILLED_WATER_INPUT = 400;
 const COAL_INPUT = 160;
 const DISTILLED_WATER_OUTPUT = 400;

@@ -1,34 +1,29 @@
-// ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
-const CRANKERS: number = 1; // 1 to 4
+import type { SpecialRecipe } from '../../types/specialRecipes';
+import { createSpecialRecipe } from '../../utils/specialRecipeFactory';
 
-// ─── 2. COMPUTATIONS ─────────────────────────────────────────────────
-const powerProduction = 135810 * CRANKERS;
-
-// ─── 3. EXPORT ───────────────────────────────────────────────────────
-export interface Recipe {
-  id: string;
-  name: string;
-  machine_id: string;
-  cycle_time: number;
-  power_consumption: number;
-  power_type: 'MV' | 'HV';
-  pollution: number;
-  inputs: { product_id: string; quantity: number }[];
-  outputs: { product_id: string; quantity: number; temperature?: number }[];
-}
-
-const recipes: Recipe[] = [
-  {
-    id: 'r_hand_crank_mk2_01',
-    name: 'Produces Power',
-    machine_id: 'm_hand_crank_mk2',
-    cycle_time: 1,
-    power_consumption: -powerProduction,
-    power_type: 'MV',
-    pollution: 0,
-    inputs: [],
-    outputs: [],
+const settingDefinitions = {
+  crankers: {
+    type: 'number' as const,
+    label: 'Crankers',
+    default: 1,
+    min: 1,
+    max: 4,
+    step: 1,
   },
-];
+};
 
-export { CRANKERS, recipes };
+export const hand_crank_mk2_01: SpecialRecipe = createSpecialRecipe({
+  id: 'r_hand_crank_mk2_01',
+  name: 'Produces Power',
+  machineId: 'm_hand_crank_mk2',
+  settings: settingDefinitions,
+  powerConsumption: (settings: Record<string, unknown>) => {
+    const crankers = (settings.crankers as number) ?? 1;
+    return -135810 * crankers;
+  },
+  powerType: 'MV' as const,
+  pollution: 0,
+  cycleTime: 1,
+  inputs: [],
+  outputs: [],
+});
