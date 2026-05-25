@@ -28,11 +28,6 @@
       {
         "product_id": "p_hydrochloric_acid",
         "quantity": 1
-      },
-      {
-        "product_id": "any_fluid",
-        "quantity": 1,
-        "variable": true
       }
     ],
     "outputs": [

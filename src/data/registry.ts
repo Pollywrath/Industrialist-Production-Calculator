@@ -25,6 +25,10 @@ import {
   geothermal_well_03,
 } from './special_recipes/geothermal_well';
 import { hand_crank_mk2_01 } from './special_recipes/hand_crank_mk2';
+import {
+  heat_exchanger_standard,
+  heat_exchanger_preheat,
+} from './special_recipes/heat_exchanger';
 import { huge_truck_depot_01 } from './special_recipes/huge_truck_depot';
 import {
   m_industrial_drill_01,
@@ -58,6 +62,10 @@ import {
 import { steam_turbine_01 } from './special_recipes/steam_turbine';
 import { m_truck_depot_01 } from './special_recipes/truck_depot';
 import { m_van_depot_01 } from './special_recipes/van_depot';
+import {
+  vertical_heat_exchanger_standard,
+  vertical_heat_exchanger_preheat,
+} from './special_recipes/vertical_heat_exchanger';
 import { underground_waste_facility_01 } from './special_recipes/underground_waste_facility';
 import {
   water_treatment_plant_01,
@@ -83,6 +91,8 @@ export const SPECIAL_RECIPES: Record<string, SpecialRecipe> = {
   [geothermal_well_02.id]: geothermal_well_02,
   [geothermal_well_03.id]: geothermal_well_03,
   [hand_crank_mk2_01.id]: hand_crank_mk2_01,
+  [heat_exchanger_standard.id]: heat_exchanger_standard,
+  [heat_exchanger_preheat.id]: heat_exchanger_preheat,
   [huge_truck_depot_01.id]: huge_truck_depot_01,
   [m_industrial_drill_01.id]: m_industrial_drill_01,
   [m_industrial_drill_02.id]: m_industrial_drill_02,
@@ -110,6 +120,8 @@ export const SPECIAL_RECIPES: Record<string, SpecialRecipe> = {
   [steam_turbine_01.id]: steam_turbine_01,
   [m_truck_depot_01.id]: m_truck_depot_01,
   [m_van_depot_01.id]: m_van_depot_01,
+  [vertical_heat_exchanger_standard.id]: vertical_heat_exchanger_standard,
+  [vertical_heat_exchanger_preheat.id]: vertical_heat_exchanger_preheat,
   [underground_waste_facility_01.id]: underground_waste_facility_01,
   [water_treatment_plant_01.id]: water_treatment_plant_01,
   [water_treatment_plant_02.id]: water_treatment_plant_02,

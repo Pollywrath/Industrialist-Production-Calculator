@@ -62,6 +62,8 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
 
   if (recipe && typeof recipe.runtime?.boilerTemp === 'number') {
     receivedTemp = recipe.runtime.boilerTemp;
+  } else if (recipe && typeof recipe.runtime?.hxTemp === 'number') {
+    receivedTemp = recipe.runtime.hxTemp;
   } else {
     const sr = recipe ? getSpecialRecipe(recipe.id) : null;
     if (recipe && sr && sr.inputTemperatureSettings) {

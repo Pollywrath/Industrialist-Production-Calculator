@@ -46,6 +46,7 @@ export interface RecipeOutput {
 
 export interface RecipeRuntimeState {
   boilerTemp?: number;
+  hxTemp?: number;
 }
 
 export interface Recipe {
