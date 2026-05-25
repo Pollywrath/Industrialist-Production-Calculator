@@ -1,7 +1,6 @@
 import type { Edge } from '@xyflow/react';
 import { buildHandleId, parseHandleId } from './idGenerator';
 
-/** Normalize handle order to valid indices 0..handleCount-1. */
 export function clampHandleOrder(order: number[], handleCount: number): number[] {
   const clamped = order.filter((idx) => idx >= 0 && idx < handleCount);
   for (let i = 0; i < handleCount; i++) {
@@ -12,16 +11,11 @@ export function clampHandleOrder(order: number[], handleCount: number): number[]
   return clamped;
 }
 
-/**
- * Handle indices present in the editor's original order but dropped after clamping.
- * These need edge cleanup before saving the clamped order.
- */
 export function getRemovedHandleIndices(originalOrder: number[], clampedOrder: number[]): number[] {
   const clampedSet = new Set(clampedOrder);
   return [...new Set(originalOrder.filter((idx) => !clampedSet.has(idx)))];
 }
 
-/** Handle indices on connected edges that are no longer valid for the recipe. */
 export function getStaleHandleIndicesFromEdges(
   nodeId: string,
   side: 'input' | 'output',

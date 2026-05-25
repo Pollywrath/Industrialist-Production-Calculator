@@ -60,6 +60,7 @@ import {
   steam_cracking_plant_03,
 } from './special_recipes/steam_cracking_plant';
 import { steam_turbine_01 } from './special_recipes/steam_turbine';
+import { tree_farm_01 } from './special_recipes/tree_farm';
 import { m_truck_depot_01 } from './special_recipes/truck_depot';
 import { m_van_depot_01 } from './special_recipes/van_depot';
 import {
@@ -118,6 +119,7 @@ export const SPECIAL_RECIPES: Record<string, SpecialRecipe> = {
   [steam_cracking_plant_02.id]: steam_cracking_plant_02,
   [steam_cracking_plant_03.id]: steam_cracking_plant_03,
   [steam_turbine_01.id]: steam_turbine_01,
+  [tree_farm_01.id]: tree_farm_01,
   [m_truck_depot_01.id]: m_truck_depot_01,
   [m_van_depot_01.id]: m_van_depot_01,
   [vertical_heat_exchanger_standard.id]: vertical_heat_exchanger_standard,

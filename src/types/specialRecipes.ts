@@ -5,6 +5,7 @@ export type SettingType = 'number' | 'select' | 'product';
 export interface BaseSettingDefinition {
   type: SettingType;
   label: string;
+  dynamicLabel?: (settings: Record<string, unknown>, globalSettings?: Record<string, unknown>) => string;
 }
 
 export interface NumberSettingDefinition extends BaseSettingDefinition {

@@ -4,6 +4,7 @@ import type { SettingDefinition } from '../../../types/specialRecipes';
 import { getSpecialRecipe } from '../../../data/registry';
 import { useNodeEditorStore } from './NodeEditorContext';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
+import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { getAllProducts } from '../../../data/lookup';
@@ -21,6 +22,8 @@ interface SettingItemProps {
   inputIndex: number | undefined;
   value: unknown;
   updateSetting: (key: string, val: unknown) => void;
+  allSettings: Record<string, unknown>;
+  globalSettings: Record<string, unknown>;
 }
 
 function SettingItem({
@@ -30,6 +33,8 @@ function SettingItem({
   inputIndex,
   value,
   updateSetting,
+  allSettings,
+  globalSettings,
 }: SettingItemProps) {
   const handleId =
     inputIndex !== undefined
@@ -46,15 +51,19 @@ function SettingItem({
   const propagatedTemp = useFlowResultStore((s) => s.inputTemps[nodeId]?.[inputIndex ?? -1]);
   const displayValue = isConnected && propagatedTemp !== undefined ? propagatedTemp : value;
 
+  const labelText = def.dynamicLabel
+    ? def.dynamicLabel(allSettings, globalSettings)
+    : def.label;
+
   return (
     <div className={styles['node-editor-group']}>
-      <label>{def.label}</label>
+      <label>{labelText}</label>
       {def.type === 'number' && (
         <ValidatedNumberInput
           value={displayValue as number}
           onChange={(val) => updateSetting(settingKey, val)}
           defaultValue={def.default as number}
-          allowDecimals={true}
+          allowDecimals={def.step !== 1}
           allowNegatives={true}
           min={def.min}
           max={def.max}
@@ -101,6 +110,7 @@ export function SettingsEditor({ recipe, nodeId }: SettingsEditorProps) {
   const sr = getSpecialRecipe(recipe.id);
   const settings = useNodeEditorStore((s) => s.settings);
   const updateSetting = useNodeEditorStore((s) => s.updateSetting);
+  const globalSettings = useGlobalSettingsStore((s) => s.settings);
 
   if (!sr) {
     return (
@@ -132,6 +142,8 @@ export function SettingsEditor({ recipe, nodeId }: SettingsEditorProps) {
             inputIndex={inputIndex}
             value={value}
             updateSetting={updateSetting}
+            allSettings={settings}
+            globalSettings={globalSettings as unknown as Record<string, unknown>}
           />
         );
       })}

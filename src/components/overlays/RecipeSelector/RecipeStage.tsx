@@ -82,7 +82,7 @@ export function RecipeStage({
       if (aFav !== bFav) {
         return bFav - aFav;
       }
-      
+
       const machineA = getMachineName(a.r.machine_id) || '';
       const machineB = getMachineName(b.r.machine_id) || '';
       const machineCmp = machineA.localeCompare(machineB);

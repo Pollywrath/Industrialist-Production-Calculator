@@ -7,7 +7,7 @@ import type {
   RecipeOutput,
   Research,
 } from '../types/data';
-import { CANONICAL_CATEGORY_MAP, isValidTaxonomy } from './machineTaxonomy';
+import { CANONICAL_CATEGORY_MAP, isValidTaxonomy, validateModularConsistency } from './machineTaxonomy';
 
 export interface ValidationError {
   field: string;
@@ -87,6 +87,7 @@ export function validateProduct(product: unknown): ValidationResult {
 export function validateMachine(
   machine: unknown,
   validResearchIds?: Set<string>,
+  isVirtualModular = false,
 ): ValidationResult {
   const errors: ValidationError[] = [];
 
@@ -114,7 +115,7 @@ export function validateMachine(
 
   if (typeof m.cost !== 'number' || isNaN(m.cost)) {
     errors.push({ field: 'cost', message: 'Cost must be a valid number' });
-  } else if (m.cost <= 0) {
+  } else if (!isVirtualModular && m.cost <= 0) {
     errors.push({ field: 'cost', message: 'Cost must be greater than 0' });
   }
 
@@ -134,16 +135,21 @@ export function validateMachine(
     });
   } else {
     const size = m.size as Partial<MachineSize> & Record<string, unknown>;
-    if (typeof size.x !== 'number' || !Number.isInteger(size.x) || size.x < 1) {
+    const minSize = isVirtualModular ? 0 : 1;
+    if (typeof size.x !== 'number' || !Number.isInteger(size.x) || size.x < minSize) {
       errors.push({
         field: 'size.x',
-        message: 'Size x must be an integer greater than or equal to 1',
+        message: isVirtualModular
+          ? 'Size x must be an integer greater than or equal to 0'
+          : 'Size x must be an integer greater than or equal to 1',
       });
     }
-    if (typeof size.y !== 'number' || !Number.isInteger(size.y) || size.y < 1) {
+    if (typeof size.y !== 'number' || !Number.isInteger(size.y) || size.y < minSize) {
       errors.push({
         field: 'size.y',
-        message: 'Size y must be an integer greater than or equal to 1',
+        message: isVirtualModular
+          ? 'Size y must be an integer greater than or equal to 0'
+          : 'Size y must be an integer greater than or equal to 1',
       });
     }
   }
@@ -241,10 +247,17 @@ export function validateRecipe(
       message: 'Machine ID must be a non-empty string',
     });
   } else if (validMachineIds && !validMachineIds.has(r.machine_id)) {
-    errors.push({
-      field: 'machine_id',
-      message: `Machine ID "${r.machine_id}" does not exist in machine database`,
-    });
+    const modularSubcategories = ['Modular Diesel Engine', 'Modular Turbine', 'Tree Farm'];
+    const isVirtualModular = modularSubcategories.some(
+      (sub) => r.machine_id === `m_${sub.toLowerCase().replace(/\s+/g, '_')}`,
+    );
+
+    if (!isVirtualModular) {
+      errors.push({
+        field: 'machine_id',
+        message: `Machine ID "${r.machine_id}" does not exist in machine database`,
+      });
+    }
   }
 
   if (typeof r.cycle_time !== 'number' || isNaN(r.cycle_time)) {
@@ -429,6 +442,7 @@ export interface DbValidationResults {
   machineErrors: { id: string; errors: ValidationError[] }[];
   recipeErrors: { id: string; errors: ValidationError[] }[];
   researchErrors: { id: string; errors: ValidationError[] }[];
+  modularConsistencyErrors: string[];
 }
 
 export function validateFullDatabase(
@@ -496,11 +510,14 @@ export function validateFullDatabase(
     }
   });
 
+  const modularConsistencyResult = validateModularConsistency(machines as Machine[]);
+
   const valid =
     productErrors.length === 0 &&
     machineErrors.length === 0 &&
     recipeErrors.length === 0 &&
-    researchErrors.length === 0;
+    researchErrors.length === 0 &&
+    modularConsistencyResult.valid;
 
   return {
     valid,
@@ -508,6 +525,7 @@ export function validateFullDatabase(
     machineErrors,
     recipeErrors,
     researchErrors,
+    modularConsistencyErrors: modularConsistencyResult.errors,
   };
 }
 

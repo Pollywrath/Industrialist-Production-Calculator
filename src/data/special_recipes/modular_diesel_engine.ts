@@ -1,6 +1,5 @@
 // SKIPPED - TODO: Convert to createSpecialRecipe factory pattern
-import machines from '../machines.json';
-import type { Machine } from '../../types/data';
+import { getMachine } from '../lookup';
 
 // ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
 const THROTTLE: number = 70;
@@ -64,8 +63,7 @@ const crankshafts = Math.ceil(CYLINDERS / 2 + fuelInputCount + airInputs) + genA
 const sidewaysCrankshafts = 2 * genAbove1;
 
 // ─── COST CALCULATION ────────────────────────────────────────────
-const machineList = machines as Machine[];
-const getCost = (id: string) => machineList.find((m) => m.id === id)?.cost ?? 0;
+const getCost = (id: string) => getMachine(id)?.cost ?? 0;
 
 const totalCost =
   getCost('m_diesel_engine_controller') +

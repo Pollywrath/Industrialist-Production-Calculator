@@ -1,16 +1,18 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
 
-const DRILL_HEADS: Record<string, { getMulti: (d: number) => number; product_id: string }> = {
-  copper: { getMulti: (d) => d / 150, product_id: 'p_copper_drill_head' },
-  iron: { getMulti: (d) => 0.04 * d ** 0.25, product_id: 'p_iron_drill_head' },
+const DRILL_HEADS: Record<string, { getMulti: (d: number) => number; product_id: string; materialAmount: number }> = {
+  copper: { getMulti: (d) => d / 150, product_id: 'p_copper_drill_head', materialAmount: 700 },
+  iron: { getMulti: (d) => 0.04 * d ** 0.25, product_id: 'p_iron_drill_head', materialAmount: 2100 },
   steel: {
     getMulti: (d) => 0.02 * d ** 0.25,
     product_id: 'p_steel_drill_head',
+    materialAmount: 3500,
   },
   tungsten: {
     getMulti: (d) => 0.005 * d ** 0.25,
     product_id: 'p_tungsten_carbide_drill_head',
+    materialAmount: 1275,
   },
 };
 
@@ -276,13 +278,13 @@ const settingDefinitions = {
   depth: {
     type: 'select' as const,
     label: 'Depth (m)',
-    default: 9000,
+    default: 6000,
     options: DEPTHS.map((d) => ({ label: `${d}m`, value: d })),
   },
   drill_head: {
     type: 'select' as const,
     label: 'Drill Head',
-    default: 'tungsten',
+    default: 'steel',
     options: [
       { label: 'Copper', value: 'copper' },
       { label: 'Iron', value: 'iron' },
@@ -293,7 +295,7 @@ const settingDefinitions = {
   acid_type: {
     type: 'select' as const,
     label: 'Acid Type',
-    default: 'sulfuric',
+    default: 'hydrochloric',
     options: [
       { label: 'None', value: 'none' },
       { label: 'Water', value: 'water' },
@@ -305,7 +307,7 @@ const settingDefinitions = {
   has_machine_oil: {
     type: 'select' as const,
     label: 'Use Machine Oil?',
-    default: 'Yes',
+    default: 'No',
     options: [
       { label: 'Yes', value: 'Yes' },
       { label: 'No', value: 'No' },
@@ -335,6 +337,8 @@ const getComputedValues = (settings: Record<string, unknown>) => {
   const drillingEfficiency = lifeTime / cycleTime;
   const activeRatio = (lifeTime + travelTime) / cycleTime;
 
+  const powerConsumption = ((0.1 * replacementTime + 0.5 * travelTime + 2 * lifeTime) / cycleTime) * 1000000;
+
   return {
     depth,
     drillHead,
@@ -348,6 +352,7 @@ const getComputedValues = (settings: Record<string, unknown>) => {
     drillingEfficiency,
     activeRatio,
     hasMachineOil,
+    powerConsumption,
   };
 };
 
@@ -368,12 +373,36 @@ export const m_mineshaft_drill_01: SpecialRecipe = {
   machine_id: 'm_mineshaft_drill',
   settings: settingDefinitions,
   potentialOutputs: getPotentialOutputs(),
+  resolveSettings: (productId: string) => {
+    let bestDepth = 6000;
+    let bestYield = 0;
+
+    for (const depth of DEPTHS) {
+      const yields = DEPTH_YIELDS[depth] || [];
+      const yieldItem = yields.find((y) => y.product_id === productId);
+      if (yieldItem && yieldItem.amount > bestYield) {
+        bestYield = yieldItem.amount;
+        bestDepth = depth;
+      }
+    }
+
+    const defaultSettings = Object.entries(settingDefinitions).reduce(
+      (acc, [key, def]) => {
+        acc[key] = def.default;
+        return acc;
+      },
+      {} as Record<string, unknown>,
+    );
+    defaultSettings.depth = bestDepth;
+
+    return defaultSettings;
+  },
   compute: (settings) => {
-    const { activeRatio, drillHead, acid, cycleTime, drillingEfficiency, hasMachineOil, depth, oilMultiplier } =
+    const { drillHead, acid, cycleTime, drillingEfficiency, hasMachineOil, depth, oilMultiplier, powerConsumption } =
       getComputedValues(settings);
 
     const inputsList: { product_id: string; quantity: number }[] = [
-      { product_id: drillHead.product_id, quantity: 1 / cycleTime },
+      { product_id: drillHead.product_id, quantity: drillHead.materialAmount / cycleTime },
     ];
 
     if (acid.product_id) {
@@ -384,7 +413,8 @@ export const m_mineshaft_drill_01: SpecialRecipe = {
     }
 
     if (hasMachineOil) {
-      inputsList.push({ product_id: 'p_machine_oil', quantity: 2 });
+      const oilRate = 2 * (1 - 12 / cycleTime);
+      inputsList.push({ product_id: 'p_machine_oil', quantity: oilRate });
     }
 
     const baseYields = DEPTH_YIELDS[depth] ?? [];
@@ -397,10 +427,10 @@ export const m_mineshaft_drill_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_m_mineshaft_drill_01',
-      name: 'Mineshaft Drill',
+      name: `${depth}m Mineshaft Drill`,
       machine_id: 'm_mineshaft_drill',
       cycle_time: 1,
-      power_consumption: (3.1 * activeRatio + 0.1) * 1000000,
+      power_consumption: powerConsumption,
       power_type: 'HV',
       pollution: 0,
       inputs: inputsList,

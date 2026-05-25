@@ -1,41 +1,26 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
 
-// ─── STEADY STATE FORMULAS ─────────────────────────────────────────────
-
 export interface SteadyStateInputs {
-  coolantSourceTemp: number;  // Tc - Coolant source temperature
-  waterSourceTemp: number;    // Tw - Distilled water source temperature
+  coolantSourceTemp: number;
+  waterSourceTemp: number;
 }
 
 export interface SteadyStateOutputs {
-  hx: number;           // Predicted heat exchanger temperature
-  coolantOut: number;   // Predicted coolant output temperature
-  steam: number;        // Predicted steam temperature
-  isBoiling: boolean;   // Whether HX temp is >= 100
+  hx: number;
+  coolantOut: number;
+  steam: number;
+  isBoiling: boolean;
 }
 
-// Constants derived from simulator physics
-const k = 2 / 15;           // ≈ 0.1333
-const Kc = 2.2 * k;         // ≈ 0.2933
+const k = 2 / 15;
+const Kc = 2.2 * k;
 
-/**
- * Calculate steady state temperatures for SINK routing method
- * Coolant output is discarded, no recirculation or preheating
- */
 export function calculateSinkSteadyState(inputs: SteadyStateInputs): SteadyStateOutputs {
   const { coolantSourceTemp: Tc, waterSourceTemp: Tw } = inputs;
 
-  // Predicted HX temperature
-  // Formula: (2.2 * (1 - k) * Tc + Tw) / (3.2 - 2.2 * k)
   const predictedHx = (2.2 * (1 - k) * Tc + Tw) / (3.2 - 2.2 * k);
-
-  // Steam temperature (hxPrime)
-  // Formula: predictedHx + (Tc - predictedHx) * Kc
   const hxPrime = predictedHx + (Tc - predictedHx) * Kc;
-
-  // Coolant output temperature
-  // Formula: Tc - (Tc - predictedHx) * 2.2 - hxPrime * 0.25
   const predictedCoolantOut = Tc - (Tc - predictedHx) * 2.2 - hxPrime * 0.25;
 
   return {
@@ -46,23 +31,11 @@ export function calculateSinkSteadyState(inputs: SteadyStateInputs): SteadyState
   };
 }
 
-/**
- * Calculate steady state temperatures for PREHEAT routing method
- * Coolant output returns to water buffer to preheat distilled water
- */
 export function calculatePreheatSteadyState(inputs: SteadyStateInputs): SteadyStateOutputs {
   const { coolantSourceTemp: Tc } = inputs;
 
-  // Predicted HX temperature
-  // Formula: Tc * (1 - 1.25 * Kc) / (1.25 - 1.25 * Kc)
   const predictedHx = Tc * (1 - 1.25 * Kc) / (1.25 - 1.25 * Kc);
-
-  // Steam temperature (hxPrime)
-  // Formula: predictedHx + (Tc - predictedHx) * Kc
   const hxPrime = predictedHx + (Tc - predictedHx) * Kc;
-
-  // Coolant output temperature
-  // Formula: Tc - (Tc - predictedHx) * 2.2 - hxPrime * 0.25
   const predictedCoolantOut = Tc - (Tc - predictedHx) * 2.2 - hxPrime * 0.25;
 
   return {
@@ -72,8 +45,6 @@ export function calculatePreheatSteadyState(inputs: SteadyStateInputs): SteadySt
     isBoiling: Math.max(18, predictedHx) >= 100
   };
 }
-
-// ─── SPECIAL RECIPES ───────────────────────────────────────────────────
 
 const round = (v: number, d = 2) => Math.round(v * 10 ** d) / 10 ** d;
 

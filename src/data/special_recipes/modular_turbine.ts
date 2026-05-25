@@ -1,6 +1,5 @@
 // SKIPPED - TODO: Convert to createSpecialRecipe factory pattern
-import machines from '../machines.json';
-import type { Machine } from '../../types/data';
+import { getMachine } from '../lookup';
 
 // ─── DATA TABLES ──────────────────────────────────────────────────
 export const presets = [
@@ -284,8 +283,7 @@ const generatorCount = 1;
 const outputCount = 1;
 const hptCount = Math.max(0, HPT);
 
-const machineList = machines as Machine[];
-const getCost = (id: string) => machineList.find((m) => m.id === id)?.cost ?? 0;
+const getCost = (id: string) => getMachine(id)?.cost ?? 0;
 
 const totalCost =
   getCost('m_turbine_input') * inputCount +

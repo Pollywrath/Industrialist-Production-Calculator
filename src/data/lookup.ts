@@ -6,6 +6,7 @@ import { useFlowStore } from '../stores/useFlowStore';
 import { useFlowResultStore } from '../stores/useFlowResultStore';
 import { clearFlowCache } from '../solver/flowSolver';
 import { buildEdgeLookupMap } from '../utils/productResolver';
+import { createVirtualModularMachine } from '../utils/machineTaxonomy';
 
 let recipes: Recipe[] = [];
 let machines: Machine[] = [];
@@ -105,6 +106,29 @@ export function rebuildActiveDatabase(
   }
   for (let i = 0; i < researches.length; i++) {
     researchMap.set(researches[i].id, researches[i]);
+  }
+
+  const modularSubcategories = ['Modular Diesel Engine', 'Modular Turbine', 'Tree Farm'];
+  const modularComponents = machines.filter((m) => m.category === 'Modular');
+  for (const sub of modularSubcategories) {
+    const componentMachines = modularComponents.filter((m) => m.subcategory === sub);
+    const virtualMachineId = `m_${sub.toLowerCase().replace(/\s+/g, '_')}`;
+    const specialRecipeId = virtualMachineId.replace('m_', 'r_') + '_01';
+    const specialRecipe = getSpecialRecipe(specialRecipeId);
+    const defaultRecipeCost = specialRecipe?.computeMachineCost
+      ? specialRecipe.computeMachineCost(
+          Object.entries(specialRecipe.settings).reduce(
+            (acc, [key, def]) => {
+              acc[key] = def.default;
+              return acc;
+            },
+            {} as Record<string, unknown>,
+          ),
+        )
+      : 0;
+
+    const virtualMachine = createVirtualModularMachine(sub, componentMachines, defaultRecipeCost);
+    machineMap.set(virtualMachine.id, virtualMachine);
   }
 
   overriddenProducts.clear();

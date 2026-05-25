@@ -565,7 +565,7 @@
     },
     "variant": "none",
     "limited": false,
-    "research": "",
+    "research": "s_energy_modular_diesel_engines",
     "category": "Modular",
     "subcategory": "Modular Diesel Engine"
   },

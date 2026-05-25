@@ -1,5 +1,3 @@
-// This file maps product IDs to their corresponding downloaded icon files in /public/icons/
-
 const ALIAS_MAP: Record<string, string> = {
   p_2x_microchip: 'p_logic_plate',
   p_4x_microchip: 'p_logic_plate',
@@ -20,9 +18,7 @@ const ALIAS_MAP: Record<string, string> = {
 };
 
 export function getProductIconPath(productId: string): string | null {
-  // First check if there is a direct alias for the product ID
   const effectiveId = ALIAS_MAP[productId] || productId;
 
-  // The icons are served statically from the public folder by their ID
   return `/icons/${effectiveId}.webp`;
 }
