@@ -94,7 +94,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         resolveProduct: (s: 'input' | 'output', idx: number) =>
           resolveHandleProduct(node.id, s, idx, storeNodesMap, edgeLookup),
         hasConnection: (s: 'input' | 'output', idx: number) => {
-          const handleId = `${node.id}-${s}-${idx}`;
+          const handleId = buildHandleId(node.id, s, idx);
           return (edgeLookup.get(handleId)?.length ?? 0) > 0;
         },
       };

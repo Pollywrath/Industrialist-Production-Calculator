@@ -1,7 +1,7 @@
 import type { ReactFlowNode, ReactFlowEdge, SolverGraph, SolverConnection } from '../types/solver';
 import { resolveActiveRecipe } from '../data/lookup';
 import { getRateMultiplier } from '../utils/recipeComputation';
-import { parseHandleId } from '../utils/idGenerator';
+import { parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { resolveHandleProduct, buildEdgeLookupMap } from '../utils/productResolver';
 
 export function buildSolverGraph(
@@ -13,52 +13,57 @@ export function buildSolverGraph(
   const nodesMap = new Map<string, ReactFlowNode>(nodes.map((n) => [n.id, n]));
   const edgeLookup = buildEdgeLookupMap(edges);
 
+  // Per-node helper factory
+  const makeHelpers = (nodeId: string) => ({
+    resolveProduct: (s: 'input' | 'output', idx: number) =>
+      resolveHandleProduct(nodeId, s, idx, nodesMap, edgeLookup),
+    hasConnection: (s: 'input' | 'output', idx: number) => {
+      const handleId = buildHandleId(nodeId, s, idx);
+      return (edgeLookup.get(handleId)?.length ?? 0) > 0;
+    },
+    getFlowRate: (s: 'input' | 'output', idx: number) => {
+      const handleId = buildHandleId(nodeId, s, idx);
+      const connectedEdges = edgeLookup.get(handleId) ?? [];
+      let totalFlow = 0;
+      for (const edge of connectedEdges) {
+        if (s === 'input') {
+          const sourceNode = nodesMap.get(edge.source);
+          if (!sourceNode || !edge.sourceHandle) continue;
+          const sourceParsed = parseHandleId(edge.sourceHandle);
+          if (!sourceParsed) continue;
+          const sourceHelpers = makeHelpers(sourceNode.id);
+          const sourceRecipe = resolveActiveRecipe(sourceNode.data.recipeId, sourceNode.data.settings, sourceNode.id, sourceHelpers);
+          if (!sourceRecipe) continue;
+          const sourceOutput = sourceRecipe.outputs[sourceParsed.index];
+          if (!sourceOutput) continue;
+          const sourceMultiplier = getRateMultiplier(sourceRecipe.cycle_time, 'second');
+          const sourceRate = sourceOutput.quantity * (sourceNode.data.machineCount ?? 1) * sourceMultiplier;
+          totalFlow += sourceRate;
+        } else {
+          const targetNode = nodesMap.get(edge.target);
+          if (!targetNode || !edge.targetHandle) continue;
+          const targetParsed = parseHandleId(edge.targetHandle);
+          if (!targetParsed) continue;
+          const targetHelpers = makeHelpers(targetNode.id);
+          const targetRecipe = resolveActiveRecipe(targetNode.data.recipeId, targetNode.data.settings, targetNode.id, targetHelpers);
+          if (!targetRecipe) continue;
+          const targetInput = targetRecipe.inputs[targetParsed.index];
+          if (!targetInput) continue;
+          const targetMultiplier = getRateMultiplier(targetRecipe.cycle_time, 'second');
+          const targetRate = targetInput.quantity * (targetNode.data.machineCount ?? 1) * targetMultiplier;
+          totalFlow += targetRate;
+        }
+      }
+      return totalFlow;
+    },
+  });
+
   for (const node of nodes) {
     const data = node.data;
     const nodeOverrides = settingsOverrides?.[node.id];
     const settings =
       nodeOverrides || data.settings ? { ...data.settings, ...nodeOverrides } : undefined;
-    const helpers = {
-      resolveProduct: (s: 'input' | 'output', idx: number) =>
-        resolveHandleProduct(node.id, s, idx, nodesMap, edgeLookup),
-      hasConnection: (s: 'input' | 'output', idx: number) => {
-        const handleId = `${node.id}-${s}-${idx}`;
-        return (edgeLookup.get(handleId)?.length ?? 0) > 0;
-      },
-      getFlowRate: (s: 'input' | 'output', idx: number) => {
-        const handleId = `${node.id}-${s}-${idx}`;
-        const connectedEdges = edgeLookup.get(handleId) ?? [];
-        let totalFlow = 0;
-        for (const edge of connectedEdges) {
-          if (s === 'input') {
-            const sourceNode = nodesMap.get(edge.source);
-            if (!sourceNode || !edge.sourceHandle) continue;
-            const sourceParsed = parseHandleId(edge.sourceHandle);
-            if (!sourceParsed) continue;
-            const sourceRecipe = resolveActiveRecipe(sourceNode.data.recipeId, sourceNode.data.settings, sourceNode.id, helpers);
-            if (!sourceRecipe) continue;
-            const sourceOutput = sourceRecipe.outputs[sourceParsed.index];
-            if (!sourceOutput) continue;
-            const sourceMultiplier = getRateMultiplier(sourceRecipe.cycle_time, 'second');
-            const sourceRate = sourceOutput.quantity * (sourceNode.data.machineCount ?? 1) * sourceMultiplier;
-            totalFlow += sourceRate;
-          } else {
-            const targetNode = nodesMap.get(edge.target);
-            if (!targetNode || !edge.targetHandle) continue;
-            const targetParsed = parseHandleId(edge.targetHandle);
-            if (!targetParsed) continue;
-            const targetRecipe = resolveActiveRecipe(targetNode.data.recipeId, targetNode.data.settings, targetNode.id, helpers);
-            if (!targetRecipe) continue;
-            const targetInput = targetRecipe.inputs[targetParsed.index];
-            if (!targetInput) continue;
-            const targetMultiplier = getRateMultiplier(targetRecipe.cycle_time, 'second');
-            const targetRate = targetInput.quantity * (targetNode.data.machineCount ?? 1) * targetMultiplier;
-            totalFlow += targetRate;
-          }
-        }
-        return totalFlow;
-      },
-    };
+    const helpers = makeHelpers(node.id);
     const recipe = resolveActiveRecipe(data.recipeId, settings, node.id, helpers);
     if (!recipe) continue;
 

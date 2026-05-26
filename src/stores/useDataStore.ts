@@ -544,7 +544,15 @@ export const useDataStore = create<DataState>((set, get) => ({
       }
     }
 
+    // Build validation research ID set from persisted researches plus pending new researches minus tombstones
     const validResearches = new Set(getAllResearches().map((r) => r.id));
+    for (const [id, editData] of Object.entries(pendingEdits.researches)) {
+      if (editData._tombstone) {
+        validResearches.delete(id);
+      } else if (editData._isNew) {
+        validResearches.add(id);
+      }
+    }
     for (const [id, editData] of Object.entries(pendingEdits.machines)) {
       if (editData._tombstone) continue;
       const existing = getMachine(id);

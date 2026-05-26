@@ -1,18 +1,16 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
 
-const DRILL_HEADS: Record<string, { getMulti: (d: number) => number; product_id: string; materialAmount: number }> = {
-  copper: { getMulti: (d) => d / 150, product_id: 'p_copper_drill_head', materialAmount: 700 },
-  iron: { getMulti: (d) => 0.04 * d ** 0.25, product_id: 'p_iron_drill_head', materialAmount: 2100 },
+const DRILL_HEADS: Record<string, { getMulti: (d: number) => number; product_id: string }> = {
+  copper: { getMulti: (d) => d / 150, product_id: 'p_copper_drill_head' },
+  iron: { getMulti: (d) => 0.04 * d ** 0.25, product_id: 'p_iron_drill_head' },
   steel: {
     getMulti: (d) => 0.02 * d ** 0.25,
     product_id: 'p_steel_drill_head',
-    materialAmount: 3500,
   },
   tungsten: {
     getMulti: (d) => 0.005 * d ** 0.25,
     product_id: 'p_tungsten_carbide_drill_head',
-    materialAmount: 1275,
   },
 };
 
@@ -373,6 +371,17 @@ export const m_mineshaft_drill_01: SpecialRecipe = {
   machine_id: 'm_mineshaft_drill',
   settings: settingDefinitions,
   potentialOutputs: getPotentialOutputs(),
+  potentialInputs: [
+    'p_copper_drill_head',
+    'p_iron_drill_head',
+    'p_steel_drill_head',
+    'p_tungsten_carbide_drill_head',
+    'p_water',
+    'p_acetic_acid',
+    'p_sulfuric_acid',
+    'p_hydrochloric_acid',
+    'p_machine_oil',
+  ],
   resolveSettings: (productId: string) => {
     let bestDepth = 6000;
     let bestYield = 0;
@@ -402,7 +411,7 @@ export const m_mineshaft_drill_01: SpecialRecipe = {
       getComputedValues(settings);
 
     const inputsList: { product_id: string; quantity: number }[] = [
-      { product_id: drillHead.product_id, quantity: drillHead.materialAmount / cycleTime },
+      { product_id: drillHead.product_id, quantity: 1 / cycleTime },
     ];
 
     if (acid.product_id) {

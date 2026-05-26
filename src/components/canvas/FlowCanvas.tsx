@@ -110,7 +110,7 @@ export function FlowCanvas() {
     };
 
     if (hasIdle) {
-      handle = window.requestIdleCallback(prefetch);
+      handle = window.requestIdleCallback(prefetch, { timeout: 1000 });
     } else {
       handle = window.setTimeout(prefetch, 1000);
     }

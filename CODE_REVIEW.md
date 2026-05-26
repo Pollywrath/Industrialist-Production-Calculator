@@ -1,0 +1,140 @@
+# Code Review Findings
+
+## Scope
+- Re-reviewed solver-centric changes with updated `GEMINI.md` guidance.
+- Focused on `src/solver/**`, `src/utils/**`, and solver integration points (`useFlowSolver`, `lookup`).
+- Prioritized regressions and responsibility drift in solver architecture.
+- Validation run:
+  - `npm run lint` (pass)
+  - `npm run build` (pass)
+
+## Findings (Ordered by Severity)
+
+### 1. [High] Temperature-dependent flow convergence is broken after solver split
+- Files:
+  - `src/hooks/useFlowSolver.ts:22`
+  - `src/hooks/useFlowSolver.ts:23`
+  - `src/solver/temperaturePropagator.ts:230`
+  - `src/solver/graphBuilder.ts:10`
+- Why this is a regression:
+  - `useFlowSolver` now runs `solveFlows(...)` first, then `propagateTemperatures(...)`, but never re-solves flows with the propagated `settingsOverrides`.
+  - `propagateTemperatures` computes `settingsOverrides` and returns them, but they are ignored by the caller.
+  - Result: recipes whose rates/cycle depend on propagated input temperatures are no longer coupled to final solved flows in the same pass.
+- Suggested fix:
+  - Restore a coupled pipeline: `solve -> propagate -> solve(with settingsOverrides)`, or fold this coupling into one orchestration function.
+  - Use `settingsOverrides` returned by `propagateTemperatures` as input to final `solveFlows`.
+
+### 2. [High] Post-flow recompute mutates node rates but leaves product connection graph stale
+- Files:
+  - `src/solver/flowSolver.ts:540`
+  - `src/solver/flowSolver.ts:577`
+  - `src/solver/graphBuilder.ts:159`
+  - `src/solver/graphBuilder.ts:166`
+- Why this is a bug:
+  - In `calculateFlows`, flow-dependent recompute updates `graph.nodes[nodeId]` rates.
+  - It does **not** rebuild `graph.products` (producers/consumers/connections), which still carry old `sourceRate/targetRate` from `buildSolverGraph`.
+  - Second flow pass then computes flows from stale connection/port rates, while deficiencies/excesses are evaluated against updated node rates.
+- Suggested fix:
+  - After any flow-dependent recipe rate update, rebuild the full solver graph (`buildSolverGraph(...)`) instead of mutating only `graph.nodes`.
+  - Keep `SolverGraph` immutable during solve passes to avoid stale cross-sections.
+
+### 3. [High] Sink semantics regress in flow-dependent recompute path
+- Files:
+  - `src/solver/graphBuilder.ts:76`
+  - `src/solver/flowSolver.ts:541`
+  - `src/solver/flowSolver.ts:543`
+- Why this is a bug:
+  - `buildSolverGraph` correctly sets disconnected `variable: true` handles to 0 rate.
+  - Post-flow recompute path in `flowSolver` rewrites rates using `inp.quantity * machineCount * multiplier` unconditionally, reintroducing non-zero rates for disconnected sinks.
+  - This conflicts with sink behavior defined in GEMINI (capacity handle, not fixed active flow).
+- Suggested fix:
+  - Apply the same sink rule used by `buildSolverGraph` when rebuilding rates in flow-dependent recompute, or rebuild via `buildSolverGraph` to keep semantics consistent.
+
+### 4. [High] Flow cache can return stale results in second pass due unchanged component hash basis
+- Files:
+  - `src/solver/flowSolver.ts:594`
+  - `src/solver/flowSolver.ts:595`
+  - `src/solver/flowSolver.ts:597`
+  - `src/solver/flowSolver.ts:603`
+- Why this is a bug:
+  - Second pass hashing (`hashComponent`) is based on `productData` ports/connections that were never rebuilt after node rate mutation.
+  - Cache lookup can therefore reuse first-pass flows even when recomputed node rates changed.
+- Suggested fix:
+  - Rebuild `SolverGraph` before second pass and hash the rebuilt component data, or bypass cache for the second pass if graph was mutated.
+
+### 5. [Medium] `flowSolver.ts` has crossed file responsibility boundaries (solver engine + graph build + recipe resolution)
+- Files:
+  - `src/solver/flowSolver.ts:13`
+  - `src/solver/flowSolver.ts:18`
+  - `src/solver/flowSolver.ts:388`
+  - `src/solver/flowSolver.ts:671`
+- Why this is a design issue:
+  - `flowSolver` now owns max-flow solving, flow-dependent recipe recomputation, graph mutation, helper construction, and orchestration (`solveFlows`).
+  - This weakens module clarity and increases regression surface when changing one concern.
+- Suggested fix:
+  - Keep `flowSolver` pure to `SolverGraph -> flows`.
+  - Move orchestration to a dedicated coordinator module (or hook-level orchestrator).
+  - Keep recipe reevaluation and graph rebuild logic in/near `graphBuilder` or a separate `solverPipeline` module.
+
+### 6. [Medium] Max-flow pass is duplicated almost verbatim, increasing divergence risk
+- Files:
+  - `src/solver/flowSolver.ts:401`
+  - `src/solver/flowSolver.ts:557`
+  - `src/solver/flowSolver.ts:645`
+- Why this is an issue:
+  - The same flow accumulation and status-normalization logic appears twice (initial pass and updated pass).
+  - Future fixes can easily land in one path but not the other.
+- Suggested fix:
+  - Extract a single internal function (e.g., `runFlowPass(graph, bypassCache)`) and call it for both passes.
+
+### 7. [Medium] Repeated graph preprocessing allocations per solver tick cause avoidable overhead
+- Files:
+  - `src/solver/graphBuilder.ts:13`
+  - `src/solver/graphBuilder.ts:14`
+  - `src/solver/flowSolver.ts:503`
+  - `src/solver/flowSolver.ts:504`
+  - `src/solver/temperaturePropagator.ts:18`
+  - `src/solver/temperaturePropagator.ts:19`
+  - `src/hooks/useFlowSolver.ts:22`
+  - `src/hooks/useFlowSolver.ts:23`
+- Why this is a regression risk:
+  - A single recompute now rebuilds `nodesMap` + edge lookups in multiple modules sequentially.
+  - On large graphs this adds GC pressure and undermines the 100ms debounced smoothness target.
+- Suggested fix:
+  - Build shared per-tick context once (nodes map, edge lookup, resolved product snapshot) and pass through the solver pipeline.
+
+### 8. [Medium] `graphBuilder` now performs pseudo-flow estimation, mixing construction and dynamic simulation
+- Files:
+  - `src/solver/graphBuilder.ts:24`
+  - `src/solver/graphBuilder.ts:35`
+  - `src/solver/graphBuilder.ts:48`
+- Why this is a design issue:
+  - `buildSolverGraph` now includes `getFlowRate` behavior that recursively resolves neighbor recipes and computes nominal rates.
+  - This blurs boundaries between “graph construction” and “flow solving,” and can grow expensive in dense neighborhoods.
+- Suggested fix:
+  - Keep graph builder deterministic/pure from current node definitions.
+  - Run flow-dependent adjustments in a dedicated post-solve stage driven by actual `edgeFlows`.
+
+### 9. [Medium] `temperaturePropagator` API advertises overrides that are currently dead output
+- Files:
+  - `src/solver/temperaturePropagator.ts:10`
+  - `src/solver/temperaturePropagator.ts:230`
+  - `src/hooks/useFlowSolver.ts:23`
+- Why this is an issue:
+  - Returned `settingsOverrides` are not consumed, making pipeline intent misleading and hiding correctness gaps.
+- Suggested fix:
+  - Either consume `settingsOverrides` in the solver orchestration, or remove it from API until used.
+
+### 10. [Low] Systemic balancer trial solves skip flow-dependent recompute path
+- Files:
+  - `src/solver/systemicBalancer.ts:260`
+  - `src/solver/flowSolver.ts:391`
+- Why this can cause mismatch:
+  - `calculateFlows(trialGraph, true)` omits `nodes/edges`, so flow-dependent second-pass logic is bypassed.
+  - Trial metrics may diverge from main pipeline behavior for components containing flow-dependent recipes.
+- Suggested fix:
+  - Route balancer trial solves through a consistent pipeline helper or a pure flow pass contract explicitly shared by both systems.
+
+## Summary
+- Primary regressions are in solver pipeline coupling and stale graph state during flow-dependent recompute.
+- Main architectural issue: responsibilities currently overlap between `graphBuilder`, `flowSolver`, and `temperaturePropagator`, which is now causing correctness drift.

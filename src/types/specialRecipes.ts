@@ -42,6 +42,7 @@ export interface SpecialRecipe {
   inputTemperatureSettings?: Record<number, string>;
   potentialInputs?: string[];
   potentialOutputs?: string[];
+  flowDependentInputs?: boolean;
   resolveSettings?: (productId: string) => Record<string, unknown> | null;
   compute: (
     settings: Record<string, unknown>,

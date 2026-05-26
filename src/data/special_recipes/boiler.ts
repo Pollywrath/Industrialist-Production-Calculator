@@ -235,7 +235,7 @@ export const boiler_standard: SpecialRecipe = {
     },
     heat_loss: {
       type: 'number',
-      label: 'Heat Loss (°C)',
+      label: 'Heat Loss (°C) (output clamped to 18°C)',
       default: 1,
       min: 0,
     },
@@ -280,12 +280,12 @@ export const boiler_standard: SpecialRecipe = {
         {
           product_id: resolvedCoolant,
           quantity: 3,
-          temperature: round(coolantOutTemp - heatLoss),
+          temperature: Math.max(18, round(coolantOutTemp - heatLoss)),
         },
         {
           product_id: 'p_steam',
           quantity: steamQty,
-          temperature: round(steamOutTemp - heatLoss),
+          temperature: Math.max(18, round(steamOutTemp - heatLoss)),
         },
       ],
       runtime: {
@@ -310,7 +310,7 @@ export const boiler_preheater: SpecialRecipe = {
     },
     heat_loss: {
       type: 'number',
-      label: 'Heat Loss (°C)',
+      label: 'Heat Loss (°C) (output clamped to 18°C)',
       default: 1,
       min: 0,
     },
@@ -342,7 +342,7 @@ export const boiler_preheater: SpecialRecipe = {
         {
           product_id: 'p_steam',
           quantity: steamQty,
-          temperature: round(steamOutTemp - heatLoss),
+          temperature: Math.max(18, round(steamOutTemp - heatLoss)),
         },
       ],
       runtime: {
@@ -367,7 +367,7 @@ export const boiler_self_heating: SpecialRecipe = {
     },
     heat_loss: {
       type: 'number',
-      label: 'Heat Loss (°C)',
+      label: 'Heat Loss (°C) (output clamped to 18°C)',
       default: 1,
       min: 0,
     },
@@ -396,7 +396,7 @@ export const boiler_self_heating: SpecialRecipe = {
         {
           product_id: 'p_steam',
           quantity: steamQty,
-          temperature: round(steamOutTemp - heatLoss),
+          temperature: Math.max(18, round(steamOutTemp - heatLoss)),
         },
       ],
       runtime: {
@@ -421,7 +421,7 @@ export const boiler_coolant_loop: SpecialRecipe = {
     },
     heat_loss: {
       type: 'number',
-      label: 'Heat Loss (°C)',
+      label: 'Heat Loss (°C) (output clamped to 18°C)',
       default: 1,
       min: 0,
     },
@@ -466,7 +466,7 @@ export const boiler_coolant_loop: SpecialRecipe = {
         {
           product_id: 'p_steam',
           quantity: steamQty,
-          temperature: round(steamOutTemp - heatLoss),
+          temperature: Math.max(18, round(steamOutTemp - heatLoss)),
         },
       ],
       runtime: {

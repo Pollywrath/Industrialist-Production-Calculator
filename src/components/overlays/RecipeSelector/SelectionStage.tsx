@@ -10,9 +10,8 @@ import {
   UNIQUE_CATEGORIES,
   UNIQUE_SUBCATEGORIES,
   getTaxonomyIcon,
-  createVirtualModularMachine,
+  buildVirtualModularMachines,
 } from '../../../utils/machineTaxonomy';
-import { getSpecialRecipe } from '../../../data/registry';
 import styles from './RecipeSelector.module.css';
 import { formatCurrency, formatRpMultiplier } from '../../../utils/unitFormatting';
 import { useUIStore } from '../../../stores/useUIStore';
@@ -363,30 +362,9 @@ function MachineList() {
   let list = dbVersion !== -1 ? getAllMachines() : [];
 
   const allMachines = list;
-  const modularComponents = allMachines.filter((m) => m.category === 'Modular');
   list = list.filter((m) => m.category !== 'Modular');
 
-  const modularSubcategories = ['Modular Diesel Engine', 'Modular Turbine', 'Tree Farm'];
-  const virtualModularMachines: Machine[] = modularSubcategories.map((sub) => {
-    const componentMachines = modularComponents.filter((m) => m.subcategory === sub);
-    const virtualMachineId = `m_${sub.toLowerCase().replace(/\s+/g, '_')}`;
-    const specialRecipeId = virtualMachineId.replace('m_', 'r_') + '_01';
-    const specialRecipe = getSpecialRecipe(specialRecipeId);
-    const defaultRecipeCost = specialRecipe?.computeMachineCost
-      ? specialRecipe.computeMachineCost(
-          Object.entries(specialRecipe.settings).reduce(
-            (acc, [key, def]) => {
-              acc[key] = def.default;
-              return acc;
-            },
-            {} as Record<string, unknown>,
-          ),
-        )
-      : 0;
-
-    return createVirtualModularMachine(sub, componentMachines, defaultRecipeCost);
-  });
-
+  const virtualModularMachines = buildVirtualModularMachines(allMachines);
   list = [...list, ...virtualModularMachines];
 
   if (debouncedSearch.trim()) {

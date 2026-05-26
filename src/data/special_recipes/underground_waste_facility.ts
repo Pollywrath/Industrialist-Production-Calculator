@@ -7,6 +7,7 @@ export const underground_waste_facility_01: SpecialRecipe = {
   machine_id: 'm_underground_waste_facility',
   isSellTrash: true,
   settings: {},
+  flowDependentInputs: true,
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
     let item1 = 'any_item';
     if (helpers?.hasConnection('input', 0)) {

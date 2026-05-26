@@ -14,7 +14,7 @@ const inputTemperatureSettings = {
 };
 
 const calculateOutputQuantity = (tempC: number): number => {
-  return Math.min(120, 0.176 * tempC);
+  return Math.min(120, Math.abs(0.176 * tempC));
 };
 
 const calculateOutputTemperature = (tempC: number): number => {

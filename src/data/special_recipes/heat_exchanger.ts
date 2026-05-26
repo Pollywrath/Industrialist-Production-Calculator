@@ -67,7 +67,7 @@ export const heat_exchanger_standard: SpecialRecipe = {
     },
     heat_loss: {
       type: 'number',
-      label: 'Heat Loss (°C)',
+      label: 'Heat Loss (°C) (output clamped to 18°C)',
       default: 1,
       min: 0,
     },
@@ -120,12 +120,12 @@ export const heat_exchanger_standard: SpecialRecipe = {
         {
           product_id: resolvedCoolant,
           quantity: 400,
-          temperature: round(coolantOut - heatLoss),
+          temperature: Math.max(18, round(coolantOut - heatLoss)),
         },
         {
           product_id: 'p_high_pressure_steam',
           quantity: steamQty,
-          temperature: round(steam - heatLoss),
+          temperature: Math.max(18, round(steam - heatLoss)),
         },
       ],
       runtime: {
@@ -150,7 +150,7 @@ export const heat_exchanger_preheat: SpecialRecipe = {
     },
     heat_loss: {
       type: 'number',
-      label: 'Heat Loss (°C)',
+      label: 'Heat Loss (°C) (output clamped to 18°C)',
       default: 1,
       min: 0,
     },
@@ -182,7 +182,7 @@ export const heat_exchanger_preheat: SpecialRecipe = {
         {
           product_id: 'p_high_pressure_steam',
           quantity: steamQty,
-          temperature: round(steam - heatLoss),
+          temperature: Math.max(18, round(steam - heatLoss)),
         },
       ],
       runtime: {

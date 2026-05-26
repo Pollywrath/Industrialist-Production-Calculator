@@ -1,22 +1,20 @@
-import type { ReactFlowNode, ReactFlowEdge, FlowResults } from '../types/solver';
-import { buildSolverGraph } from './graphBuilder';
-import { calculateFlows } from './flowSolver';
+import type { ReactFlowNode, ReactFlowEdge } from '../types/solver';
 import { resolveActiveRecipe } from '../data/lookup';
 import { getSpecialRecipe } from '../data/registry';
 import { parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { resolveHandleProduct, buildEdgeLookupMap } from '../utils/productResolver';
 
-export interface SolveFlowAndTemperatureResult {
-  results: FlowResults;
-  edgeFlows: Record<string, number>;
+export interface TemperaturePropagationResult {
   edgeTemps: Record<string, number>;
   inputTemps: Record<string, Record<number, number>>;
+  settingsOverrides: Record<string, Record<string, unknown>>;
 }
 
-export function solveFlowAndTemperature(
+export function propagateTemperatures(
   nodes: ReactFlowNode[],
   edges: ReactFlowEdge[],
-): SolveFlowAndTemperatureResult {
+  edgeFlows: Record<string, number>,
+): TemperaturePropagationResult {
   const nodesMap = new Map<string, ReactFlowNode>(nodes.map((n) => [n.id, n]));
   const edgeLookup = buildEdgeLookupMap(edges);
   const getHelpers = (nodeId: string) => ({
@@ -106,10 +104,6 @@ export function solveFlowAndTemperature(
   }
 
   for (let iter = 0; iter < 5; iter++) {
-    const iterationSettingsOverrides = buildConnectedTemperatureOverrides();
-    const iterationGraph = buildSolverGraph(nodes, edges, iterationSettingsOverrides);
-    const { edgeFlows: iterationEdgeFlows } = calculateFlows(iterationGraph);
-
     for (const edge of edges) {
       if (!edge.sourceHandle) continue;
       const sourceParsed = parseHandleId(edge.sourceHandle);
@@ -157,7 +151,7 @@ export function solveFlowAndTemperature(
           let totalFlow = 0;
           let weightedSum = 0;
           for (const edge of connected) {
-            const flow = iterationEdgeFlows[edge.id] ?? 0;
+            const flow = edgeFlows[edge.id] ?? 0;
             totalFlow += flow;
             weightedSum += flow * edgeTemps[edge.id];
           }
@@ -204,9 +198,6 @@ export function solveFlowAndTemperature(
 
   const finalSettingsOverrides = buildConnectedTemperatureOverrides();
 
-  const finalGraph = buildSolverGraph(nodes, edges, finalSettingsOverrides);
-  const { results: finalResults, edgeFlows: finalEdgeFlows } = calculateFlows(finalGraph);
-
   const finalNodeOutputTemps: Record<string, number[]> = {};
   for (const node of nodes) {
     const nodeOverrides = finalSettingsOverrides[node.id];
@@ -234,9 +225,8 @@ export function solveFlowAndTemperature(
   }
 
   return {
-    results: finalResults,
-    edgeFlows: finalEdgeFlows,
     edgeTemps,
     inputTemps,
+    settingsOverrides: finalSettingsOverrides,
   };
 }

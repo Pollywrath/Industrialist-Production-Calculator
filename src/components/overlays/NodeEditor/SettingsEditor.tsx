@@ -75,13 +75,16 @@ function SettingItem({
       {def.type === 'select' && (
         <select
           value={displayValue as string}
-          onChange={(e) => updateSetting(settingKey, e.target.value)}
+          onChange={(e) => {
+            const selectedOption = def.options.find((opt) => String(opt.value) === e.target.value);
+            updateSetting(settingKey, selectedOption?.value ?? e.target.value);
+          }}
           className={styles['node-editor-input']}
           disabled={isConnected}
         >
           {def.options.map((opt) => (
             <option key={String(opt.value)} value={opt.value as string | number}>
-              {def.options.find((o) => o.value === opt.value)?.label ?? String(opt.value)}
+              {opt.label}
             </option>
           ))}
         </select>

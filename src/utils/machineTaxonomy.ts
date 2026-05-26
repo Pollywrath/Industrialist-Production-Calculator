@@ -30,6 +30,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { Machine } from '../types/data';
+import { getSpecialRecipe } from '../data/registry';
 
 export const CANONICAL_CATEGORY_MAP: Record<string, string[]> = {
   Extractor: ['Fluid Extractor', 'Item Extractor'],
@@ -187,4 +188,29 @@ export function validateModularConsistency(machines: Machine[]): { valid: boolea
     valid: errors.length === 0,
     errors,
   };
+}
+
+export function buildVirtualModularMachines(machines: Machine[]): Machine[] {
+  const modularSubcategories = ['Modular Diesel Engine', 'Modular Turbine', 'Tree Farm'];
+  const modularComponents = machines.filter((m) => m.category === 'Modular');
+
+  return modularSubcategories.map((sub) => {
+    const componentMachines = modularComponents.filter((m) => m.subcategory === sub);
+    const virtualMachineId = `m_${sub.toLowerCase().replace(/\s+/g, '_')}`;
+    const specialRecipeId = virtualMachineId.replace('m_', 'r_') + '_01';
+    const specialRecipe = getSpecialRecipe(specialRecipeId);
+    const defaultRecipeCost = specialRecipe?.computeMachineCost
+      ? specialRecipe.computeMachineCost(
+          Object.entries(specialRecipe.settings).reduce(
+            (acc, [key, def]) => {
+              acc[key] = def.default;
+              return acc;
+            },
+            {} as Record<string, unknown>,
+          ),
+        )
+      : 0;
+
+    return createVirtualModularMachine(sub, componentMachines, defaultRecipeCost);
+  });
 }

@@ -67,7 +67,7 @@ export function calculateBalancedRate(
 
   while (queueIndex < queue.length) {
     const current = queue[queueIndex++];
-    const key = `${current.nodeId}-${current.side}-${current.index}`;
+    const key = buildHandleId(current.nodeId, current.side, current.index);
     if (visited.has(key)) continue;
     visited.add(key);
 

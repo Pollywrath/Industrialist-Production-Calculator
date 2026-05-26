@@ -118,39 +118,56 @@ export const steam_cracking_plant_03: SpecialRecipe = {
   },
 };
 
-export const recipes: Recipe[] = [
-  {
-    id: 'r_steam_cracking_plant_04',
-    name: 'Makes Naphtha, Residue',
-    machine_id: 'm_steam_cracking_plant',
-    cycle_time: 3,
-    power_consumption: 60000,
-    power_type: 'MV',
-    pollution: 0.432,
-    inputs: [
-      { product_id: 'p_heavy_oil', quantity: 20 },
-      { product_id: 'p_hydrogen', quantity: 3 },
-    ],
-    outputs: [
-      { product_id: 'p_naphtha', quantity: 15, temperature: 18 },
-      { product_id: 'p_residue', quantity: 5, temperature: 18 },
-    ],
+export const steam_cracking_plant_04: SpecialRecipe = {
+  id: 'r_steam_cracking_plant_04',
+  name: 'Makes Naphtha, Residue',
+  machine_id: 'm_steam_cracking_plant',
+  settings: {},
+  compute: () => {
+    const recipe: Recipe = {
+      id: 'r_steam_cracking_plant_04',
+      name: 'Makes Naphtha, Residue',
+      machine_id: 'm_steam_cracking_plant',
+      cycle_time: 3,
+      power_consumption: 60000,
+      power_type: 'MV',
+      pollution: 0.432,
+      inputs: [
+        { product_id: 'p_heavy_oil', quantity: 20 },
+        { product_id: 'p_hydrogen', quantity: 3 },
+      ],
+      outputs: [
+        { product_id: 'p_naphtha', quantity: 15, temperature: 18 },
+        { product_id: 'p_residue', quantity: 5, temperature: 18 },
+      ],
+    };
+    return recipe;
   },
-  {
-    id: 'r_steam_cracking_plant_05',
-    name: 'Makes Light Oil, Residue',
-    machine_id: 'm_steam_cracking_plant',
-    cycle_time: 3,
-    power_consumption: 60000,
-    power_type: 'MV',
-    pollution: 0.432,
-    inputs: [
-      { product_id: 'p_naphtha', quantity: 20 },
-      { product_id: 'p_hydrogen', quantity: 3 },
-    ],
-    outputs: [
-      { product_id: 'p_light_oil', quantity: 15, temperature: 18 },
-      { product_id: 'p_residue', quantity: 5, temperature: 18 },
-    ],
+};
+
+export const steam_cracking_plant_05: SpecialRecipe = {
+  id: 'r_steam_cracking_plant_05',
+  name: 'Makes Light Oil, Residue',
+  machine_id: 'm_steam_cracking_plant',
+  settings: {},
+  compute: () => {
+    const recipe: Recipe = {
+      id: 'r_steam_cracking_plant_05',
+      name: 'Makes Light Oil, Residue',
+      machine_id: 'm_steam_cracking_plant',
+      cycle_time: 3,
+      power_consumption: 60000,
+      power_type: 'MV',
+      pollution: 0.432,
+      inputs: [
+        { product_id: 'p_naphtha', quantity: 20 },
+        { product_id: 'p_hydrogen', quantity: 3 },
+      ],
+      outputs: [
+        { product_id: 'p_light_oil', quantity: 15, temperature: 18 },
+        { product_id: 'p_residue', quantity: 5, temperature: 18 },
+      ],
+    };
+    return recipe;
   },
-];
+};

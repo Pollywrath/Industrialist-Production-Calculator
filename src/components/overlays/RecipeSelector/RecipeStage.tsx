@@ -39,6 +39,8 @@ export function RecipeStage({
     matchingRecipes,
   } = useRecipeSelectorFilters({ recipes: allRecipes });
 
+  const effectivePreselectedProductId = activeTab === 'product' ? selectedId : preselectedProductId;
+
   const rateMode = useUIStore((s) => s.rateMode);
   const setRecipeSelectorOpen = useUIStore((s) => s.setRecipeSelectorOpen);
 
@@ -176,7 +178,7 @@ export function RecipeStage({
                 rateMode={rateMode}
                 clickedRateInfo={clickedRateInfo}
                 preselectedSourceSide={preselectedSourceSide}
-                preselectedProductId={preselectedProductId}
+                preselectedProductId={effectivePreselectedProductId}
                 onAddRecipe={onAddRecipe}
                 isFavorite={favorites.has(recipe.id)}
                 onToggleFavorite={handleToggleFavorite}

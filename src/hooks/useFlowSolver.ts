@@ -3,7 +3,8 @@ import { useFlowStore } from '../stores/useFlowStore';
 import { useFlowResultStore } from '../stores/useFlowResultStore';
 import { useDataStore } from '../stores/useDataStore';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
-import { solveFlowAndTemperature } from '../solver/temperaturePropagator';
+import { solveFlows } from '../solver/flowSolver';
+import { propagateTemperatures } from '../solver/temperaturePropagator';
 import { SOLVER_DEBOUNCE_MS } from '../components/shared/layoutConstants';
 
 export function useFlowSolver(): void {
@@ -18,7 +19,8 @@ export function useFlowSolver(): void {
         return;
       }
 
-      const { results, edgeFlows, edgeTemps, inputTemps } = solveFlowAndTemperature(nodes, edges);
+      const { results, edgeFlows } = solveFlows(nodes, edges);
+      const { edgeTemps, inputTemps } = propagateTemperatures(nodes, edges, edgeFlows);
       useFlowResultStore.getState().setResults(results, edgeFlows, edgeTemps, inputTemps);
     }
 

@@ -1,12 +1,15 @@
 import type { Recipe, Machine, Product, Research } from '../types/data';
+import type { SettingDefinition, SpecialRecipe } from '../types/specialRecipes';
 import { getAllSpecialRecipes, getSpecialRecipe } from './registry';
 import { getDataOverrides } from '../persistence/idb';
+import { setSpecialRecipeOverrides } from './registry';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { useFlowStore } from '../stores/useFlowStore';
 import { useFlowResultStore } from '../stores/useFlowResultStore';
 import { clearFlowCache } from '../solver/flowSolver';
 import { buildEdgeLookupMap } from '../utils/productResolver';
-import { createVirtualModularMachine } from '../utils/machineTaxonomy';
+import { buildVirtualModularMachines } from '../utils/machineTaxonomy';
+import { buildHandleId } from '../utils/idGenerator';
 
 let recipes: Recipe[] = [];
 let machines: Machine[] = [];
@@ -80,6 +83,106 @@ function deepEqual(a: unknown, b: unknown): boolean {
   return true;
 }
 
+function normalizeSettings(
+  settings: Record<string, unknown>,
+  schema: Record<string, SettingDefinition>,
+  productMap: Map<string, Product>,
+): Record<string, unknown> {
+  const normalized: Record<string, unknown> = { ...settings };
+  let hasChanges = false;
+
+  for (const [key, def] of Object.entries(schema)) {
+    const value = settings[key];
+    const defaultValue = def.default;
+
+    if (value === null || value === undefined) {
+      if (value !== defaultValue) {
+        normalized[key] = defaultValue;
+        hasChanges = true;
+        if (import.meta.env.DEV) {
+          console.warn(
+            `[Setting Normalization] Setting "${key}" is null/undefined, using default: ${JSON.stringify(defaultValue)}`,
+          );
+        }
+      }
+      continue;
+    }
+
+    if (def.type === 'number') {
+      const numValue = typeof value === 'string' ? parseFloat(value) : (value as number);
+      if (!Number.isFinite(numValue)) {
+        normalized[key] = defaultValue;
+        hasChanges = true;
+        if (import.meta.env.DEV) {
+          console.warn(
+            `[Setting Normalization] Setting "${key}" has invalid number value: ${JSON.stringify(value)}, using default: ${defaultValue}`,
+          );
+        }
+      } else {
+        let clampedValue = numValue;
+        if (def.min !== undefined && clampedValue < def.min) {
+          clampedValue = def.min;
+          hasChanges = true;
+          if (import.meta.env.DEV) {
+            console.warn(
+              `[Setting Normalization] Setting "${key}" value ${numValue} below min ${def.min}, clamped to ${def.min}`,
+            );
+          }
+        }
+        if (def.max !== undefined && clampedValue > def.max) {
+          clampedValue = def.max;
+          hasChanges = true;
+          if (import.meta.env.DEV) {
+            console.warn(
+              `[Setting Normalization] Setting "${key}" value ${numValue} above max ${def.max}, clamped to ${def.max}`,
+            );
+          }
+        }
+        if (clampedValue !== value) {
+          normalized[key] = clampedValue;
+        }
+      }
+    } else if (def.type === 'select') {
+      const options = def.options;
+      const isValidOption = options.some((opt) => {
+        if (typeof opt.value === 'number' && typeof value === 'string') {
+          return parseFloat(value) === opt.value;
+        }
+        return opt.value === value;
+      });
+
+      if (!isValidOption) {
+        normalized[key] = defaultValue;
+        hasChanges = true;
+        if (import.meta.env.DEV) {
+          console.warn(
+            `[Setting Normalization] Setting "${key}" has invalid value: ${JSON.stringify(value)}, not in options. Using default: ${JSON.stringify(defaultValue)}`,
+          );
+        }
+      } else if (typeof value === 'string' && options.some((opt) => typeof opt.value === 'number')) {
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue) && options.some((opt) => opt.value === numValue)) {
+          normalized[key] = numValue;
+          hasChanges = true;
+        }
+      }
+    } else if (def.type === 'product') {
+      const productId = value as string;
+      if (!productMap.has(productId)) {
+        normalized[key] = defaultValue;
+        hasChanges = true;
+        if (import.meta.env.DEV) {
+          console.warn(
+            `[Setting Normalization] Setting "${key}" has invalid product ID: ${productId}, using default: ${defaultValue}`,
+          );
+        }
+      }
+    }
+  }
+
+  return hasChanges ? normalized : settings;
+}
+
 export function rebuildActiveDatabase(
   overrides: { id: string; data: Record<string, unknown> }[],
 ): void {
@@ -96,6 +199,11 @@ export function rebuildActiveDatabase(
   researches = processCategory('research:', defaultResearches, overrides);
 
   for (let i = 0; i < recipes.length; i++) {
+    const sr = getSpecialRecipe(recipes[i].id);
+    if (sr) {
+      recipes[i].potential_outputs = sr.potentialOutputs;
+      recipes[i].potential_inputs = sr.potentialInputs;
+    }
     recipeMap.set(recipes[i].id, recipes[i]);
   }
   for (let i = 0; i < machines.length; i++) {
@@ -108,26 +216,8 @@ export function rebuildActiveDatabase(
     researchMap.set(researches[i].id, researches[i]);
   }
 
-  const modularSubcategories = ['Modular Diesel Engine', 'Modular Turbine', 'Tree Farm'];
-  const modularComponents = machines.filter((m) => m.category === 'Modular');
-  for (const sub of modularSubcategories) {
-    const componentMachines = modularComponents.filter((m) => m.subcategory === sub);
-    const virtualMachineId = `m_${sub.toLowerCase().replace(/\s+/g, '_')}`;
-    const specialRecipeId = virtualMachineId.replace('m_', 'r_') + '_01';
-    const specialRecipe = getSpecialRecipe(specialRecipeId);
-    const defaultRecipeCost = specialRecipe?.computeMachineCost
-      ? specialRecipe.computeMachineCost(
-          Object.entries(specialRecipe.settings).reduce(
-            (acc, [key, def]) => {
-              acc[key] = def.default;
-              return acc;
-            },
-            {} as Record<string, unknown>,
-          ),
-        )
-      : 0;
-
-    const virtualMachine = createVirtualModularMachine(sub, componentMachines, defaultRecipeCost);
+  const virtualModularMachines = buildVirtualModularMachines(machines);
+  for (const virtualMachine of virtualModularMachines) {
     machineMap.set(virtualMachine.id, virtualMachine);
   }
 
@@ -218,6 +308,16 @@ export function initializeDatabase(): Promise<void> {
 
     const overrides = await getDataOverrides();
 
+    const specialRecipeEdits = overrides
+      .filter((entry) => entry.id.startsWith('special_recipe:'))
+      .reduce((acc, entry) => {
+        const recipeId = entry.id.replace('special_recipe:', '');
+        acc[recipeId] = entry.data as unknown as SpecialRecipe;
+        return acc;
+      }, {} as Record<string, SpecialRecipe>);
+
+    setSpecialRecipeOverrides(specialRecipeEdits);
+
     rebuildActiveDatabase(overrides);
 
     if (import.meta.env.DEV) {
@@ -275,37 +375,38 @@ export function resolveActiveRecipe(
       ...defaultSettings,
       ...(nodeSettings || {}),
     };
+    nodeSettings = normalizeSettings(nodeSettings, sr.settings, productMap);
     const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
       string,
       unknown
     >;
-    const activeHelpers = helpers ?? {
-      resolveProduct: (side: 'input' | 'output', index: number) => {
-        if (!nodeId) return '';
-        const handleId = `${nodeId}-${side}-${index}`;
-        return useFlowStore.getState().resolvedProducts[handleId] ?? '';
-      },
-      hasConnection: (side: 'input' | 'output', index: number) => {
-        if (!nodeId) return false;
-        const handleId = `${nodeId}-${side}-${index}`;
-        const edges = useFlowStore.getState().edges;
-        const edgeLookup = buildEdgeLookupMap(edges);
-        return (edgeLookup.get(handleId)?.length ?? 0) > 0;
-      },
-      getFlowRate: (side: 'input' | 'output', index: number) => {
-        if (!nodeId) return 0;
-        const handleId = `${nodeId}-${side}-${index}`;
-        const edges = useFlowStore.getState().edges;
-        const edgeLookup = buildEdgeLookupMap(edges);
-        const connectedEdges = edgeLookup.get(handleId) ?? [];
-        const edgeFlows = useFlowResultStore.getState().edgeFlows;
-        let totalFlow = 0;
-        for (const edge of connectedEdges) {
-          totalFlow += edgeFlows[edge.id] ?? 0;
-        }
-        return totalFlow;
-      },
-    };
+    const activeHelpers = helpers ?? (() => {
+      const edges = useFlowStore.getState().edges;
+      const edgeLookup = buildEdgeLookupMap(edges);
+      return {
+        resolveProduct: (side: 'input' | 'output', index: number) => {
+          if (!nodeId) return '';
+          const handleId = buildHandleId(nodeId, side, index);
+          return useFlowStore.getState().resolvedProducts[handleId] ?? '';
+        },
+        hasConnection: (side: 'input' | 'output', index: number) => {
+          if (!nodeId) return false;
+          const handleId = buildHandleId(nodeId, side, index);
+          return (edgeLookup.get(handleId)?.length ?? 0) > 0;
+        },
+        getFlowRate: (side: 'input' | 'output', index: number) => {
+          if (!nodeId) return 0;
+          const handleId = buildHandleId(nodeId, side, index);
+          const connectedEdges = edgeLookup.get(handleId) ?? [];
+          const edgeFlows = useFlowResultStore.getState().edgeFlows;
+          let totalFlow = 0;
+          for (const edge of connectedEdges) {
+            totalFlow += edgeFlows[edge.id] ?? 0;
+          }
+          return totalFlow;
+        },
+      };
+    })();
 
     let resolvedSettings = nodeSettings;
     if (nodeId && sr.inputTemperatureSettings) {
@@ -332,8 +433,12 @@ export function resolveActiveRecipe(
         };
       }
     }
+    resolvedSettings = normalizeSettings(resolvedSettings, sr.settings, productMap);
 
-    return sr.compute(resolvedSettings, globalSettings, nodeId, activeHelpers);
+    const computedRecipe = sr.compute(resolvedSettings, globalSettings, nodeId, activeHelpers);
+    computedRecipe.potential_outputs = sr.potentialOutputs;
+    computedRecipe.potential_inputs = sr.potentialInputs;
+    return computedRecipe;
   }
 
   return recipe;

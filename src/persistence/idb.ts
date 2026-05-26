@@ -200,7 +200,7 @@ export async function clearDataOverrides(): Promise<boolean> {
 }
 
 export async function clearCategoryDataOverrides(
-  category: 'products' | 'machines' | 'recipes' | 'researches',
+  category: 'products' | 'machines' | 'recipes' | 'researches' | 'special_recipes',
 ): Promise<boolean> {
   try {
     const db = await getDB();
@@ -213,7 +213,9 @@ export async function clearCategoryDataOverrides(
           ? 'machine:'
           : category === 'recipes'
             ? 'recipe:'
-            : 'research:';
+            : category === 'researches'
+              ? 'research:'
+              : 'special_recipe:';
 
     const tx = db.transaction('data_overrides', 'readwrite');
     const store = tx.objectStore('data_overrides');

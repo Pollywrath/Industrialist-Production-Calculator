@@ -38,11 +38,12 @@ function ProductIcon({ productId, productName }: { productId: string; productNam
 
   return (
     <img
+      key={productId}
       src={getProductIconPath(productId) || ''}
       alt={productName}
       loading="lazy"
       decoding="async"
-      style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '4px' }}
+      className={styles['product-icon']}
       onError={() => setError(true)}
     />
   );
@@ -149,7 +150,7 @@ export function RecipeCard({
                 <div key={`${inp.product_id}-${idx}`} className={styles['recipe-card-io-item']}>
                   <div className={styles['recipe-card-io-square-wrapper']}>
                     <div className={styles['recipe-card-io-square']}>
-                      <ProductIcon productId={inp.product_id} productName={productName} />
+                      <ProductIcon key={inp.product_id} productId={inp.product_id} productName={productName} />
                     </div>
                     <span className={styles['recipe-card-io-quantity']}>
                       {formatQuantity(inp.quantity * multiplier * neededMachineCount)}
@@ -185,7 +186,7 @@ export function RecipeCard({
                 <div key={`${out.product_id}-${idx}`} className={styles['recipe-card-io-item']}>
                   <div className={styles['recipe-card-io-square-wrapper']}>
                     <div className={styles['recipe-card-io-square']}>
-                      <ProductIcon productId={out.product_id} productName={productName} />
+                      <ProductIcon key={out.product_id} productId={out.product_id} productName={productName} />
                     </div>
                     <span className={styles['recipe-card-io-quantity']}>
                       {formatQuantity(out.quantity * multiplier * neededMachineCount)}

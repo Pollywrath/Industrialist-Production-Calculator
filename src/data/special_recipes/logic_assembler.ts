@@ -112,6 +112,7 @@ export const logic_assembler_01: SpecialRecipe = {
   machine_id: 'm_logic_assembler',
   settings: settingDefinitions,
   potentialOutputs: [...CHIP_STAGES.map((c) => c.productId), 'p_microchip_scrap'],
+  potentialInputs: ['p_logic_plate', 'p_copper_wire', 'p_semiconductor', 'p_gold_wire', 'p_machine_oil'],
   resolveSettings: (productId) => {
     if (productId === 'p_microchip_scrap') {
       return { fail_step: 'Yes' };

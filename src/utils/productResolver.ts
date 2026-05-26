@@ -1,6 +1,6 @@
 import type { ReactFlowNode, ReactFlowEdge } from '../types/solver';
 import { resolveActiveRecipe } from '../data/lookup';
-import { parseHandleId } from './idGenerator';
+import { parseHandleId, buildHandleId } from './idGenerator';
 
 export type EdgeLookupMap = Map<string, ReactFlowEdge[]>;
 
@@ -47,7 +47,7 @@ export function resolveHandleProduct(
   edgesOrLookup: ReactFlowEdge[] | EdgeLookupMap,
   visited: Set<string> = new Set(),
 ): string {
-  const handleId = `${nodeId}-${side}-${index}`;
+  const handleId = buildHandleId(nodeId, side, index);
   if (visited.has(handleId)) {
     return '';
   }
@@ -74,7 +74,7 @@ export function resolveHandleProduct(
     resolveProduct: (s: 'input' | 'output', idx: number) =>
       resolveHandleProduct(nodeId, s, idx, nodesMap, edgeLookup, visited),
     hasConnection: (s: 'input' | 'output', idx: number) => {
-      const hId = `${nodeId}-${s}-${idx}`;
+      const hId = buildHandleId(nodeId, s, idx);
       return (edgeLookup.get(hId)?.length ?? 0) > 0;
     },
   };
@@ -133,7 +133,7 @@ export function computeResolvedProducts(
       resolveProduct: (s: 'input' | 'output', idx: number) =>
         resolveHandleProduct(node.id, s, idx, nodesMap, edgeLookup),
       hasConnection: (s: 'input' | 'output', idx: number) => {
-        const hId = `${node.id}-${s}-${idx}`;
+        const hId = buildHandleId(node.id, s, idx);
         return (edgeLookup.get(hId)?.length ?? 0) > 0;
       },
     };
@@ -141,11 +141,11 @@ export function computeResolvedProducts(
     if (!recipe) continue;
 
     for (let idx = 0; idx < recipe.inputs.length; idx++) {
-      const handleId = `${node.id}-input-${idx}`;
+      const handleId = buildHandleId(node.id, 'input', idx);
       resolved[handleId] = resolveHandleProduct(node.id, 'input', idx, nodesMap, edgeLookup);
     }
     for (let idx = 0; idx < recipe.outputs.length; idx++) {
-      const handleId = `${node.id}-output-${idx}`;
+      const handleId = buildHandleId(node.id, 'output', idx);
       resolved[handleId] = resolveHandleProduct(node.id, 'output', idx, nodesMap, edgeLookup);
     }
   }
