@@ -16,6 +16,7 @@ interface InsertionParams {
   nodes: Node<RecipeNodeData>[];
   edges: Edge[];
   screenToFlowPosition: (pos: { x: number; y: number }) => { x: number; y: number };
+  resolvedSettings?: Record<string, unknown>;
 }
 
 interface InsertionResult {
@@ -33,6 +34,7 @@ export function computeRecipeInsertion({
   nodes,
   edges,
   screenToFlowPosition,
+  resolvedSettings,
 }: InsertionParams): InsertionResult {
   const newNodeId = nextNodeId();
   const inputOrder = recipe.inputs.map((_, i) => i);
@@ -140,7 +142,7 @@ export function computeRecipeInsertion({
       machineCount: calculatedMachineCount,
       inputOrder,
       outputOrder,
-      settings: {},
+      settings: resolvedSettings || {},
     },
   };
 

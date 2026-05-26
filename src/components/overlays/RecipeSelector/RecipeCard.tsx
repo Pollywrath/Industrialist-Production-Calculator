@@ -105,6 +105,9 @@ export function RecipeCard({
     }
   }
 
+  const sr = getSpecialRecipe(initialRecipe.id);
+  const pollutionMultiplier = sr?.pollutionIndependentOfMachineCount ? 1 : neededMachineCount;
+
   return (
     <div className={styles['recipe-selector-card']} onClick={() => onAddRecipe(recipe.id)}>
       <div className={styles['recipe-card-top']}>
@@ -131,7 +134,7 @@ export function RecipeCard({
           <span
             className={`${styles['recipe-card-pollution']} ${recipe.pollution < 0 ? styles['success'] : ''}`.trim()}
           >
-            {formatPollution(recipe.pollution * neededMachineCount)}
+            {formatPollution(recipe.pollution * pollutionMultiplier)}
           </span>
           <span className={styles['recipe-card-machine-count']}>
             {formatMachineCount(neededMachineCount)}

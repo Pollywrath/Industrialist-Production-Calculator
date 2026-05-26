@@ -43,6 +43,7 @@ export interface SpecialRecipe {
   potentialInputs?: string[];
   potentialOutputs?: string[];
   flowDependentInputs?: boolean;
+  pollutionIndependentOfMachineCount?: boolean;
   resolveSettings?: (productId: string) => Record<string, unknown> | null;
   compute: (
     settings: Record<string, unknown>,

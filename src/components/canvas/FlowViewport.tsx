@@ -69,6 +69,8 @@ const isValidConnection = (connection: Connection | Edge) => {
       sourceParsed.index,
       store.nodesMap,
       store.edges,
+      new Set(),
+      new Map(),
     );
   const resolvedTargetProductId =
     store.resolvedProducts[connection.targetHandle] ??
@@ -78,6 +80,8 @@ const isValidConnection = (connection: Connection | Edge) => {
       targetParsed.index,
       store.nodesMap,
       store.edges,
+      new Set(),
+      new Map(),
     );
 
   const sourceProdObj = getProduct(resolvedSourceProductId);

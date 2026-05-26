@@ -13,11 +13,12 @@ export function buildSolverGraph(
   const graph: SolverGraph = { nodes: {}, products: {} };
   const nodesMap = new Map<string, ReactFlowNode>(nodes.map((n) => [n.id, n]));
   const edgeLookup = buildEdgeLookupMap(edges);
+  const cache = new Map<string, string>();
 
   // Per-node helper factory
-  const makeHelpers = (nodeId: string) => ({
+  const makeHelpers = (nodeId: string, cache: Map<string, string>) => ({
     resolveProduct: (s: 'input' | 'output', idx: number) =>
-      resolveHandleProduct(nodeId, s, idx, nodesMap, edgeLookup),
+      resolveHandleProduct(nodeId, s, idx, nodesMap, edgeLookup, new Set(), cache),
     hasConnection: (s: 'input' | 'output', idx: number) => {
       const handleId = buildHandleId(nodeId, s, idx);
       return (edgeLookup.get(handleId)?.length ?? 0) > 0;
@@ -41,7 +42,7 @@ export function buildSolverGraph(
           if (!sourceNode || !edge.sourceHandle) continue;
           const sourceParsed = parseHandleId(edge.sourceHandle);
           if (!sourceParsed) continue;
-          const sourceHelpers = makeHelpers(sourceNode.id);
+          const sourceHelpers = makeHelpers(sourceNode.id, cache);
           const sourceRecipe = resolveActiveRecipe(
             sourceNode.data.recipeId,
             sourceNode.data.settings,
@@ -60,7 +61,7 @@ export function buildSolverGraph(
           if (!targetNode || !edge.targetHandle) continue;
           const targetParsed = parseHandleId(edge.targetHandle);
           if (!targetParsed) continue;
-          const targetHelpers = makeHelpers(targetNode.id);
+          const targetHelpers = makeHelpers(targetNode.id, cache);
           const targetRecipe = resolveActiveRecipe(
             targetNode.data.recipeId,
             targetNode.data.settings,
@@ -85,7 +86,7 @@ export function buildSolverGraph(
     const nodeOverrides = settingsOverrides?.[node.id];
     const settings =
       nodeOverrides || data.settings ? { ...data.settings, ...nodeOverrides } : undefined;
-    const helpers = makeHelpers(node.id);
+    const helpers = makeHelpers(node.id, cache);
     const recipe = resolveActiveRecipe(data.recipeId, settings, node.id, helpers, {
       suppressStoreTemperatureOverrides: true,
     });

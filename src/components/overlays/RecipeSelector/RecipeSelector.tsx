@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useReactFlow } from '@xyflow/react';
 import { resolveActiveRecipe, getProduct } from '../../../data/lookup';
+import { getSpecialRecipe } from '../../../data/registry';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
@@ -113,7 +114,7 @@ function RecipeSelectorModal() {
           preselectedNodeId,
           {
             resolveProduct: (side: 'input' | 'output', index: number) =>
-              resolveHandleProduct(preselectedNodeId, side, index, nodesMap, edgeLookup),
+              resolveHandleProduct(preselectedNodeId, side, index, nodesMap, edgeLookup, new Set(), new Map()),
             hasConnection: (side: 'input' | 'output', index: number) => {
               const handleId = buildHandleId(preselectedNodeId, side, index);
               return (edgeLookup.get(handleId)?.length ?? 0) > 0;
@@ -139,6 +140,18 @@ function RecipeSelectorModal() {
 
     const { nodes, edges } = useFlowStore.getState();
 
+    // Resolve settings for special recipes based on preselected product
+    let resolvedSettings: Record<string, unknown> | undefined;
+    if (effectiveProductId) {
+      const sr = getSpecialRecipe(recipeId);
+      if (sr && sr.resolveSettings) {
+        const customSettings = sr.resolveSettings(effectiveProductId);
+        if (customSettings) {
+          resolvedSettings = customSettings;
+        }
+      }
+    }
+
     const { newNode, nextEdges } = computeRecipeInsertion({
       recipe,
       preselectedNodeId,
@@ -149,6 +162,7 @@ function RecipeSelectorModal() {
       nodes,
       edges,
       screenToFlowPosition,
+      resolvedSettings,
     });
 
     const cleanNodes = nodes.map((n) => ({

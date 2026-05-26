@@ -21,6 +21,7 @@ export const liquid_dump_01: SpecialRecipe = {
   name: 'Dump Fluids',
   machine_id: 'm_liquid_dump',
   isSellTrash: true,
+  pollutionIndependentOfMachineCount: true,
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
     let fluid1 = 'any_fluid';
@@ -32,7 +33,9 @@ export const liquid_dump_01: SpecialRecipe = {
       fluid2 = helpers.resolveProduct('input', 1) || 'any_fluid';
     }
 
-    const pollution = calculatePollution(fluid1, 15) + calculatePollution(fluid2, 15);
+    const flow1 = helpers?.getFlowRate?.('input', 0) ?? 15;
+    const flow2 = helpers?.getFlowRate?.('input', 1) ?? 15;
+    const pollution = calculatePollution(fluid1, flow1) + calculatePollution(fluid2, flow2);
 
     const recipe: Recipe = {
       id: 'r_liquid_dump_01',

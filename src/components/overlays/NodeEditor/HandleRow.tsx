@@ -64,7 +64,7 @@ export function HandleRow({
 
   const { nodesMap, edges } = useFlowStore.getState();
   const edgeLookup = buildEdgeLookupMap(edges);
-  const resolvedProductId = resolveHandleProduct(nodeId, side, index, nodesMap, edgeLookup);
+  const resolvedProductId = resolveHandleProduct(nodeId, side, index, nodesMap, edgeLookup, new Set(), new Map());
   const name = getProductName(resolvedProductId);
   const baseQuantity = entry.quantity;
   const normalizedBaseQuantity = baseQuantity * multiplier;

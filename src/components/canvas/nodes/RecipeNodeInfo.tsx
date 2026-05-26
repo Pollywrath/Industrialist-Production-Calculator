@@ -1,5 +1,6 @@
 import type { Recipe } from '../../../types/data';
 import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
+import { getSpecialRecipe } from '../../../data/registry';
 import { getNormalizedCycleTime } from '../../../utils/recipeComputation';
 import {
   formatPollution,
@@ -29,6 +30,8 @@ export function RecipeNodeInfo({
 }: RecipeNodeInfoProps) {
   const rateMode = useUIStore((s) => s.rateMode);
   const displayCycleTime = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 0;
+  const sr = recipe ? getSpecialRecipe(recipe.id) : undefined;
+  const pollutionMultiplier = sr?.pollutionIndependentOfMachineCount ? 1 : machineCount;
 
   const handleBtnClick = (e: React.MouseEvent) => {
     const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
@@ -82,7 +85,7 @@ export function RecipeNodeInfo({
           <div className={styles['recipe-node-info__stat']}>
             <span className={styles['recipe-node-info__stat-label']}>Pollution: </span>
             <span className={styles['recipe-node-info__stat-value']}>
-              {formatPollution((recipe?.pollution ?? 0) * machineCount)}
+              {formatPollution((recipe?.pollution ?? 0) * pollutionMultiplier)}
             </span>
           </div>
         </div>

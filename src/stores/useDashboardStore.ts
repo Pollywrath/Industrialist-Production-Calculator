@@ -90,9 +90,10 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     const edgeLookup = buildEdgeLookupMap(edges);
 
     nodes.forEach((node) => {
+      const cache = new Map<string, string>();
       const helpers = {
         resolveProduct: (s: 'input' | 'output', idx: number) =>
-          resolveHandleProduct(node.id, s, idx, storeNodesMap, edgeLookup),
+          resolveHandleProduct(node.id, s, idx, storeNodesMap, edgeLookup, new Set(), cache),
         hasConnection: (s: 'input' | 'output', idx: number) => {
           const handleId = buildHandleId(node.id, s, idx);
           return (edgeLookup.get(handleId)?.length ?? 0) > 0;
@@ -147,7 +148,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         totalProduction += Math.abs(recipe.power_consumption) * machineCount;
       }
 
-      netPollution += recipe.pollution * machineCount;
+      const pollutionMultiplier = sr?.pollutionIndependentOfMachineCount ? 1 : machineCount;
+      netPollution += recipe.pollution * pollutionMultiplier;
 
       let baseModelCount: number;
       if (sr && sr.computeModelCount) {
@@ -181,7 +183,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             const handleId = buildHandleId(node.id, 'input', i);
             const productId =
               resolvedProducts[handleId] ||
-              resolveHandleProduct(node.id, 'input', i, storeNodesMap, edgeLookup);
+              resolveHandleProduct(node.id, 'input', i, storeNodesMap, edgeLookup, new Set(), cache);
             if (!productId) continue;
             const defRate = (inputFlow.rate - inputFlow.connected) * rateModeFactor;
             if (defRate > 0.0001) {
@@ -214,7 +216,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             const handleId = buildHandleId(node.id, 'output', i);
             const productId =
               resolvedProducts[handleId] ||
-              resolveHandleProduct(node.id, 'output', i, storeNodesMap, edgeLookup);
+              resolveHandleProduct(node.id, 'output', i, storeNodesMap, edgeLookup, new Set(), cache);
             if (!productId) continue;
             const excRate = (outputFlow.rate - outputFlow.connected) * rateModeFactor;
             if (excRate > 0.0001) {

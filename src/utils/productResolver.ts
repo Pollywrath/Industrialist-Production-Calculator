@@ -6,14 +6,11 @@ export type EdgeLookupMap = Map<string, ReactFlowEdge[]>;
 
 let lastEdges: ReactFlowEdge[] | null = null;
 let lastLookup: EdgeLookupMap | null = null;
-let lastNodesMap: Map<string, ReactFlowNode> | null = null;
-let resolveCache = new Map<string, string>();
 
 export function buildEdgeLookupMap(edges: ReactFlowEdge[]): EdgeLookupMap {
   if (edges === lastEdges && lastLookup) {
     return lastLookup;
   }
-  resolveCache = new Map();
   const map = new Map<string, ReactFlowEdge[]>();
   for (let i = 0; i < edges.length; i++) {
     const edge = edges[i];
@@ -46,18 +43,14 @@ export function resolveHandleProduct(
   nodesMap: Map<string, ReactFlowNode>,
   edgesOrLookup: ReactFlowEdge[] | EdgeLookupMap,
   visited: Set<string> = new Set(),
+  cache: Map<string, string> = new Map(),
 ): string {
   const handleId = buildHandleId(nodeId, side, index);
   if (visited.has(handleId)) {
     return '';
   }
 
-  if (nodesMap !== lastNodesMap) {
-    resolveCache = new Map();
-    lastNodesMap = nodesMap;
-  }
-
-  const cached = resolveCache.get(handleId);
+  const cached = cache.get(handleId);
   if (cached !== undefined) {
     return cached;
   }
@@ -89,7 +82,8 @@ export function resolveHandleProduct(
         parsed.index,
         nodesMap,
         edgeLookup,
-        visited,
+        new Set(visited),
+        cache,
       );
 
       if (resolved && resolved !== 'any_fluid' && resolved !== 'any_item') {
@@ -106,7 +100,7 @@ export function resolveHandleProduct(
       if (requestedHandleId === handleId) {
         return resolveFromConnectedHandles(s, idx);
       }
-      return resolveHandleProduct(nodeId, s, idx, nodesMap, edgeLookup, visited);
+      return resolveHandleProduct(nodeId, s, idx, nodesMap, edgeLookup, visited, cache);
     },
     hasConnection: (s: 'input' | 'output', idx: number) => {
       const hId = buildHandleId(nodeId, s, idx);
@@ -124,7 +118,7 @@ export function resolveHandleProduct(
 
   const baseProductId = entry.product_id;
   if (baseProductId !== 'any_fluid' && baseProductId !== 'any_item') {
-    resolveCache.set(handleId, baseProductId);
+    cache.set(handleId, baseProductId);
     return baseProductId;
   }
 
@@ -146,15 +140,16 @@ export function resolveHandleProduct(
       nodesMap,
       edgeLookup,
       visited,
+      cache,
     );
 
     if (resolved && resolved !== 'any_fluid' && resolved !== 'any_item') {
-      resolveCache.set(handleId, resolved);
+      cache.set(handleId, resolved);
       return resolved;
     }
   }
 
-  resolveCache.set(handleId, baseProductId);
+  cache.set(handleId, baseProductId);
   return baseProductId;
 }
 
@@ -164,11 +159,12 @@ export function computeResolvedProducts(
 ): Record<string, string> {
   const edgeLookup = buildEdgeLookupMap(edges);
   const resolved: Record<string, string> = {};
+  const cache = new Map<string, string>();
 
   for (const node of nodesMap.values()) {
     const helpers = {
       resolveProduct: (s: 'input' | 'output', idx: number) =>
-        resolveHandleProduct(node.id, s, idx, nodesMap, edgeLookup),
+        resolveHandleProduct(node.id, s, idx, nodesMap, edgeLookup, new Set(), cache),
       hasConnection: (s: 'input' | 'output', idx: number) => {
         const hId = buildHandleId(node.id, s, idx);
         return (edgeLookup.get(hId)?.length ?? 0) > 0;
@@ -181,11 +177,11 @@ export function computeResolvedProducts(
 
     for (let idx = 0; idx < recipe.inputs.length; idx++) {
       const handleId = buildHandleId(node.id, 'input', idx);
-      resolved[handleId] = resolveHandleProduct(node.id, 'input', idx, nodesMap, edgeLookup);
+      resolved[handleId] = resolveHandleProduct(node.id, 'input', idx, nodesMap, edgeLookup, new Set(), cache);
     }
     for (let idx = 0; idx < recipe.outputs.length; idx++) {
       const handleId = buildHandleId(node.id, 'output', idx);
-      resolved[handleId] = resolveHandleProduct(node.id, 'output', idx, nodesMap, edgeLookup);
+      resolved[handleId] = resolveHandleProduct(node.id, 'output', idx, nodesMap, edgeLookup, new Set(), cache);
     }
   }
 

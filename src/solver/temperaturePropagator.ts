@@ -17,9 +17,9 @@ export function propagateTemperatures(
 ): TemperaturePropagationResult {
   const nodesMap = new Map<string, ReactFlowNode>(nodes.map((n) => [n.id, n]));
   const edgeLookup = buildEdgeLookupMap(edges);
-  const getHelpers = (nodeId: string) => ({
+  const getHelpers = (nodeId: string, cache: Map<string, string>) => ({
     resolveProduct: (side: 'input' | 'output', index: number) =>
-      resolveHandleProduct(nodeId, side, index, nodesMap, edgeLookup),
+      resolveHandleProduct(nodeId, side, index, nodesMap, edgeLookup, new Set(), cache),
     hasConnection: (side: 'input' | 'output', index: number) => {
       const handleId = buildHandleId(nodeId, side, index);
       return (edgeLookup.get(handleId)?.length ?? 0) > 0;
@@ -29,6 +29,7 @@ export function propagateTemperatures(
   const nodeOutputTemps: Record<string, number[]> = {};
   const inputTemps: Record<string, Record<number, number>> = {};
   const edgeTemps: Record<string, number> = {};
+  const cache = new Map<string, string>();
 
   for (const node of nodes) {
     inputTemps[node.id] = {};
@@ -42,7 +43,7 @@ export function propagateTemperatures(
       node.data.recipeId,
       node.data.settings,
       node.id,
-      getHelpers(node.id),
+      getHelpers(node.id, cache),
       { suppressStoreTemperatureOverrides: true },
     );
     if (recipe) {
@@ -124,7 +125,7 @@ export function propagateTemperatures(
         node.data.recipeId,
         node.data.settings,
         nodeId,
-        getHelpers(nodeId),
+        getHelpers(nodeId, cache),
         { suppressStoreTemperatureOverrides: true },
       );
       if (!recipe) continue;
@@ -187,7 +188,7 @@ export function propagateTemperatures(
             ...tempOverrides,
           },
           nodeId,
-          getHelpers(nodeId),
+          getHelpers(nodeId, cache),
           {
             temperatureInputOverrides: inputTemps[nodeId],
             suppressStoreTemperatureOverrides: true,
@@ -213,7 +214,7 @@ export function propagateTemperatures(
       node.data.recipeId,
       settings,
       node.id,
-      getHelpers(node.id),
+      getHelpers(node.id, cache),
       {
         temperatureInputOverrides: inputTemps[node.id],
         suppressStoreTemperatureOverrides: true,
