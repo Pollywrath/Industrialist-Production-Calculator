@@ -6,8 +6,10 @@ import { RecipeNodeInfo } from './RecipeNodeInfo';
 import { RecipeNodeIO } from './RecipeNodeIO';
 import styles from './RecipeNode.module.css';
 import { useUIStore } from '../../../stores/useUIStore';
+import { useFlowStore } from '../../../stores/useFlowStore';
 import { LoadingScreen } from '../../shared/LoadingScreen';
 import { prefetchCache, type NodeEditorProps } from '../../../utils/prefetchCache';
+import { buildHandleId } from '../../../utils/idGenerator';
 
 const FallbackNodeEditor: React.ComponentType<NodeEditorProps> = () => null;
 
@@ -44,6 +46,18 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   const NodeEditor = prefetchCache.NodeEditor;
 
   const dbVersion = useDataStore((s) => s.dbVersion);
+
+  useFlowStore((s) => {
+    const sr = getSpecialRecipe(data.recipeId);
+    if (!sr?.inputTemperatureSettings) return '';
+    const inputIndices = Object.keys(sr.inputTemperatureSettings).map(Number);
+    let signature = '';
+    for (let i = 0; i < inputIndices.length; i++) {
+      const handleId = buildHandleId(id, 'input', inputIndices[i]);
+      signature += `|${s.resolvedProducts[handleId] ?? ''}`;
+    }
+    return signature;
+  });
 
   useGlobalSettingsStore((s) => {
     const isSpecial = !!getSpecialRecipe(data.recipeId);

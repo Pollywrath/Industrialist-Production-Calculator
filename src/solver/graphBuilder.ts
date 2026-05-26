@@ -8,6 +8,7 @@ export function buildSolverGraph(
   nodes: ReactFlowNode[],
   edges: ReactFlowEdge[],
   settingsOverrides?: Record<string, Record<string, unknown>>,
+  resolvedEdgeFlows?: Record<string, number>,
 ): SolverGraph {
   const graph: SolverGraph = { nodes: {}, products: {} };
   const nodesMap = new Map<string, ReactFlowNode>(nodes.map((n) => [n.id, n]));
@@ -24,6 +25,15 @@ export function buildSolverGraph(
     getFlowRate: (s: 'input' | 'output', idx: number) => {
       const handleId = buildHandleId(nodeId, s, idx);
       const connectedEdges = edgeLookup.get(handleId) ?? [];
+
+      if (resolvedEdgeFlows) {
+        let resolvedTotalFlow = 0;
+        for (const edge of connectedEdges) {
+          resolvedTotalFlow += resolvedEdgeFlows[edge.id] ?? 0;
+        }
+        return resolvedTotalFlow;
+      }
+
       let totalFlow = 0;
       for (const edge of connectedEdges) {
         if (s === 'input') {
@@ -32,7 +42,13 @@ export function buildSolverGraph(
           const sourceParsed = parseHandleId(edge.sourceHandle);
           if (!sourceParsed) continue;
           const sourceHelpers = makeHelpers(sourceNode.id);
-          const sourceRecipe = resolveActiveRecipe(sourceNode.data.recipeId, sourceNode.data.settings, sourceNode.id, sourceHelpers);
+          const sourceRecipe = resolveActiveRecipe(
+            sourceNode.data.recipeId,
+            sourceNode.data.settings,
+            sourceNode.id,
+            sourceHelpers,
+            { suppressStoreTemperatureOverrides: true },
+          );
           if (!sourceRecipe) continue;
           const sourceOutput = sourceRecipe.outputs[sourceParsed.index];
           if (!sourceOutput) continue;
@@ -45,7 +61,13 @@ export function buildSolverGraph(
           const targetParsed = parseHandleId(edge.targetHandle);
           if (!targetParsed) continue;
           const targetHelpers = makeHelpers(targetNode.id);
-          const targetRecipe = resolveActiveRecipe(targetNode.data.recipeId, targetNode.data.settings, targetNode.id, targetHelpers);
+          const targetRecipe = resolveActiveRecipe(
+            targetNode.data.recipeId,
+            targetNode.data.settings,
+            targetNode.id,
+            targetHelpers,
+            { suppressStoreTemperatureOverrides: true },
+          );
           if (!targetRecipe) continue;
           const targetInput = targetRecipe.inputs[targetParsed.index];
           if (!targetInput) continue;
@@ -64,7 +86,9 @@ export function buildSolverGraph(
     const settings =
       nodeOverrides || data.settings ? { ...data.settings, ...nodeOverrides } : undefined;
     const helpers = makeHelpers(node.id);
-    const recipe = resolveActiveRecipe(data.recipeId, settings, node.id, helpers);
+    const recipe = resolveActiveRecipe(data.recipeId, settings, node.id, helpers, {
+      suppressStoreTemperatureOverrides: true,
+    });
     if (!recipe) continue;
 
     const multiplier = getRateMultiplier(recipe.cycle_time, 'second');

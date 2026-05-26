@@ -203,6 +203,7 @@ export function rebuildActiveDatabase(
     if (sr) {
       recipes[i].potential_outputs = sr.potentialOutputs;
       recipes[i].potential_inputs = sr.potentialInputs;
+      recipes[i].isSellTrash = !!sr.isSellTrash;
     }
     recipeMap.set(recipes[i].id, recipes[i]);
   }
@@ -301,7 +302,11 @@ export function initializeDatabase(): Promise<void> {
         {} as Record<string, unknown>,
       );
 
-      return sr.compute(defaults);
+      const computedRecipe = sr.compute(defaults);
+      computedRecipe.potential_outputs = sr.potentialOutputs;
+      computedRecipe.potential_inputs = sr.potentialInputs;
+      computedRecipe.isSellTrash = !!sr.isSellTrash;
+      return computedRecipe;
     });
 
     defaultRecipes = [...defaultRecipes, ...specialRecipes];
@@ -357,6 +362,11 @@ export function resolveActiveRecipe(
   helpers?: {
     resolveProduct: (side: 'input' | 'output', index: number) => string;
     hasConnection: (side: 'input' | 'output', index: number) => boolean;
+    getFlowRate?: (side: 'input' | 'output', index: number) => number;
+  },
+  options?: {
+    temperatureInputOverrides?: Record<number, number>;
+    suppressStoreTemperatureOverrides?: boolean;
   },
 ): Recipe | undefined {
   const recipe = recipeMap.get(recipeId);
@@ -412,7 +422,10 @@ export function resolveActiveRecipe(
     if (nodeId && sr.inputTemperatureSettings) {
       let hasOverrides = false;
       const overrides: Record<string, unknown> = {};
-      const inputTempsMap = useFlowResultStore.getState().inputTemps[nodeId];
+      const storeInputTemps = options?.suppressStoreTemperatureOverrides
+        ? undefined
+        : useFlowResultStore.getState().inputTemps[nodeId];
+      const inputTempsMap = options?.temperatureInputOverrides ?? storeInputTemps;
 
       for (const [inpIdxStr, settingKey] of Object.entries(sr.inputTemperatureSettings)) {
         const inpIdx = Number(inpIdxStr);
@@ -438,6 +451,7 @@ export function resolveActiveRecipe(
     const computedRecipe = sr.compute(resolvedSettings, globalSettings, nodeId, activeHelpers);
     computedRecipe.potential_outputs = sr.potentialOutputs;
     computedRecipe.potential_inputs = sr.potentialInputs;
+    computedRecipe.isSellTrash = !!sr.isSellTrash;
     return computedRecipe;
   }
 

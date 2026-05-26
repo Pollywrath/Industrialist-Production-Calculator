@@ -80,42 +80,57 @@ export function useRecipeSelectorFilters({ recipes }: UseRecipeSelectorFiltersPa
   let matchingRecipes: Recipe[] = [];
   if (s.selectedId && s.stage === 'recipes') {
     if (s.activeTab === 'product') {
-      const selectedProductType = getProduct(s.selectedId)?.type;
+      const selectedProductId = s.selectedId;
+      const selectedProductType = getProduct(selectedProductId)?.type;
 
       matchingRecipes = recipes.filter((r) => {
         const isSellTrash = !!r.isSellTrash;
+        const isProductMatch = (productId: string): boolean => {
+          if (productId === selectedProductId) return true;
+          if (selectedProductType === 'Fluid' && productId === 'any_fluid') return true;
+          if (selectedProductType === 'Item' && productId === 'any_item') return true;
+          return false;
+        };
 
-        const matchesProducerWildcard =
-          selectedProductType === 'Fluid'
-            ? r.outputs.some((out) => out.product_id === 'any_fluid')
-            : selectedProductType === 'Item'
-              ? r.outputs.some((out) => out.product_id === 'any_item')
-              : false;
+        const hasSelectedOutput = r.outputs.some((out) => isProductMatch(out.product_id));
+        const hasSelectedInput = r.inputs.some((inp) => isProductMatch(inp.product_id));
+        const hasSelectedPotentialOutput = !!r.potential_outputs?.includes(selectedProductId);
+        const hasSelectedPotentialInput = !!r.potential_inputs?.includes(selectedProductId);
+        const producesProduct = hasSelectedOutput || hasSelectedPotentialOutput;
+        const consumesProduct = hasSelectedInput || hasSelectedPotentialInput;
 
-        const matchesConsumerWildcard =
-          selectedProductType === 'Fluid'
-            ? r.inputs.some((inp) => inp.product_id === 'any_fluid')
-            : selectedProductType === 'Item'
-              ? r.inputs.some((inp) => inp.product_id === 'any_item')
-              : false;
-
-        const isDirectProducer = r.outputs.some((out) => out.product_id === s.selectedId) || 
-                                 (r.potential_outputs && r.potential_outputs.includes(s.selectedId!));
-        const isDirectConsumer = r.inputs.some((inp) => inp.product_id === s.selectedId) ||
-                                 (r.potential_inputs && r.potential_inputs.includes(s.selectedId!));
-
-        const producesProduct = isDirectProducer || matchesProducerWildcard;
-        const consumesProduct = isDirectConsumer || matchesConsumerWildcard;
+        const consumesViaVariableInput = r.inputs.some(
+          (inp) => isProductMatch(inp.product_id) && !!inp.variable,
+        );
+        const consumesViaExplicitNonVariableInput = r.inputs.some(
+          (inp) =>
+            isProductMatch(inp.product_id) &&
+            !inp.variable &&
+            inp.product_id !== 'any_item' &&
+            inp.product_id !== 'any_fluid',
+        );
 
         const isPowerGenerator = (r.power_consumption ?? 0) < 0;
-        const hasLoop = r.inputs.some((inp) => r.outputs.some((out) => out.product_id === inp.product_id));
         const producesHeat = r.outputs.some((out) => (out.temperature ?? 0) > 21);
-        const isHeatLoop = hasLoop && producesHeat;
-        const isHeatPower = (isPowerGenerator || isHeatLoop) && (producesProduct || consumesProduct);
+        const isHeatLoopForSelected = hasSelectedInput && hasSelectedOutput && producesHeat;
+        const isHeatPower = (isPowerGenerator || isHeatLoopForSelected) && (producesProduct || consumesProduct);
 
-        const matchesProducer = s.filterProducers && !isSellTrash && producesProduct;
-        const matchesConsumer = s.filterConsumers && !isSellTrash && consumesProduct;
-        const matchesSellTrash = s.filterSellTrash && isSellTrash && (producesProduct || consumesProduct);
+        // Heat loops for the selected product are shown under Heat/Power only.
+        const isProducerConsumerClutterCase = isHeatLoopForSelected;
+        const matchesProducer =
+          s.filterProducers &&
+          !isSellTrash &&
+          producesProduct &&
+          !isProducerConsumerClutterCase;
+        const matchesConsumer =
+          s.filterConsumers &&
+          consumesProduct &&
+          !isProducerConsumerClutterCase &&
+          (!isSellTrash ||
+            consumesViaExplicitNonVariableInput ||
+            (hasSelectedPotentialInput && !consumesViaVariableInput));
+        const matchesSellTrash =
+          s.filterSellTrash && isSellTrash && (producesProduct || consumesProduct);
         const matchesHeatPower = s.filterHeatPower && isHeatPower;
 
         return matchesProducer || matchesConsumer || matchesSellTrash || matchesHeatPower;

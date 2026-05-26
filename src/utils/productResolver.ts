@@ -70,15 +70,52 @@ export function resolveHandleProduct(
   const edgeLookup =
     edgesOrLookup instanceof Map ? edgesOrLookup : buildEdgeLookupMap(edgesOrLookup);
 
+  const resolveFromConnectedHandles = (s: 'input' | 'output', idx: number): string => {
+    const currentHandleId = buildHandleId(nodeId, s, idx);
+    const connectedEdges = edgeLookup.get(currentHandleId) ?? [];
+
+    for (let i = 0; i < connectedEdges.length; i++) {
+      const edge = connectedEdges[i];
+      const otherNodeId = s === 'input' ? edge.source : edge.target;
+      const otherHandleId = s === 'input' ? edge.sourceHandle : edge.targetHandle;
+      if (!otherHandleId) continue;
+
+      const parsed = parseHandleId(otherHandleId);
+      if (!parsed) continue;
+
+      const resolved = resolveHandleProduct(
+        otherNodeId,
+        parsed.side,
+        parsed.index,
+        nodesMap,
+        edgeLookup,
+        visited,
+      );
+
+      if (resolved && resolved !== 'any_fluid' && resolved !== 'any_item') {
+        return resolved;
+      }
+    }
+
+    return '';
+  };
+
   const helpers = {
-    resolveProduct: (s: 'input' | 'output', idx: number) =>
-      resolveHandleProduct(nodeId, s, idx, nodesMap, edgeLookup, visited),
+    resolveProduct: (s: 'input' | 'output', idx: number) => {
+      const requestedHandleId = buildHandleId(nodeId, s, idx);
+      if (requestedHandleId === handleId) {
+        return resolveFromConnectedHandles(s, idx);
+      }
+      return resolveHandleProduct(nodeId, s, idx, nodesMap, edgeLookup, visited);
+    },
     hasConnection: (s: 'input' | 'output', idx: number) => {
       const hId = buildHandleId(nodeId, s, idx);
       return (edgeLookup.get(hId)?.length ?? 0) > 0;
     },
   };
-  const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, nodeId, helpers);
+  const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, nodeId, helpers, {
+    suppressStoreTemperatureOverrides: true,
+  });
   if (!recipe) return '';
 
   const list = side === 'input' ? recipe.inputs : recipe.outputs;
@@ -137,7 +174,9 @@ export function computeResolvedProducts(
         return (edgeLookup.get(hId)?.length ?? 0) > 0;
       },
     };
-    const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id, helpers);
+    const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id, helpers, {
+      suppressStoreTemperatureOverrides: true,
+    });
     if (!recipe) continue;
 
     for (let idx = 0; idx < recipe.inputs.length; idx++) {

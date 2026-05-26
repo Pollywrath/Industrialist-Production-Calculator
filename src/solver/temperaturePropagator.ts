@@ -43,6 +43,7 @@ export function propagateTemperatures(
       node.data.settings,
       node.id,
       getHelpers(node.id),
+      { suppressStoreTemperatureOverrides: true },
     );
     if (recipe) {
       nodeOutputTemps[node.id] = recipe.outputs.map((out) => out.temperature ?? 18);
@@ -124,6 +125,7 @@ export function propagateTemperatures(
         node.data.settings,
         nodeId,
         getHelpers(nodeId),
+        { suppressStoreTemperatureOverrides: true },
       );
       if (!recipe) continue;
 
@@ -186,6 +188,10 @@ export function propagateTemperatures(
           },
           nodeId,
           getHelpers(nodeId),
+          {
+            temperatureInputOverrides: inputTemps[nodeId],
+            suppressStoreTemperatureOverrides: true,
+          },
         );
         if (updatedRecipe) {
           nodeOutputTemps[nodeId] = updatedRecipe.outputs.map((out) => out.temperature ?? 18);
@@ -203,7 +209,16 @@ export function propagateTemperatures(
     const nodeOverrides = finalSettingsOverrides[node.id];
     const settings =
       nodeOverrides || node.data.settings ? { ...node.data.settings, ...nodeOverrides } : undefined;
-    const recipe = resolveActiveRecipe(node.data.recipeId, settings, node.id, getHelpers(node.id));
+    const recipe = resolveActiveRecipe(
+      node.data.recipeId,
+      settings,
+      node.id,
+      getHelpers(node.id),
+      {
+        temperatureInputOverrides: inputTemps[node.id],
+        suppressStoreTemperatureOverrides: true,
+      },
+    );
     if (recipe) {
       finalNodeOutputTemps[node.id] = recipe.outputs.map((out) => out.temperature ?? 18);
     } else {

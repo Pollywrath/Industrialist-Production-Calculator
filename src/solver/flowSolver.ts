@@ -6,16 +6,8 @@ import type {
   FlowEdge,
   FlowNetwork,
   FlowResults,
-  ReactFlowNode,
-  ReactFlowEdge,
 } from '../types/solver';
 import { clampFlow, EPSILON } from '../utils/precision';
-import { resolveActiveRecipe } from '../data/lookup';
-import { getSpecialRecipe } from '../data/registry';
-import { buildHandleId } from '../utils/idGenerator';
-import { resolveHandleProduct, buildEdgeLookupMap } from '../utils/productResolver';
-import { getRateMultiplier } from '../utils/recipeComputation';
-import { buildSolverGraph } from './graphBuilder';
 
 class LRUCache<V> {
   cache = new Map<string, V>();
@@ -385,12 +377,9 @@ const flowCache = new LRUCache<{
   connectionFlows: Record<string, number>;
 }>(1000);
 
-export function calculateFlows(
+function runFlowPass(
   graph: SolverGraph,
   bypassCache = false,
-  nodes?: ReactFlowNode[],
-  edges?: ReactFlowEdge[],
-  settingsOverrides?: Record<string, Record<string, unknown>>,
 ): {
   results: FlowResults;
   edgeFlows: Record<string, number>;
@@ -498,184 +487,19 @@ export function calculateFlows(
     }
   }
 
-  // Post-flow recompute for flow-dependent recipes
-  if (nodes && edges) {
-    const nodesMap = new Map<string, ReactFlowNode>(nodes.map((n) => [n.id, n]));
-    const edgeLookup = buildEdgeLookupMap(edges);
-
-    const getFlowRateHelpers = (nodeId: string) => ({
-      resolveProduct: (side: 'input' | 'output', index: number) =>
-        resolveHandleProduct(nodeId, side, index, nodesMap, edgeLookup),
-      hasConnection: (side: 'input' | 'output', index: number) => {
-        const handleId = buildHandleId(nodeId, side, index);
-        return (edgeLookup.get(handleId)?.length ?? 0) > 0;
-      },
-      getFlowRate: (side: 'input' | 'output', index: number) => {
-        const handleId = buildHandleId(nodeId, side, index);
-        const connectedEdges = edgeLookup.get(handleId) ?? [];
-        let totalFlow = 0;
-        for (const edge of connectedEdges) {
-          totalFlow += edgeFlows[edge.id] ?? 0;
-        }
-        return totalFlow;
-      },
-    });
-
-    let graphUpdated = false;
-    for (const node of nodes) {
-      const sr = getSpecialRecipe(node.data.recipeId);
-      if (sr?.flowDependentInputs) {
-        const nodeOverrides = settingsOverrides?.[node.id];
-        const settings =
-          nodeOverrides || node.data.settings ? { ...node.data.settings, ...nodeOverrides } : undefined;
-        const updatedRecipe = resolveActiveRecipe(
-          node.data.recipeId,
-          settings,
-          node.id,
-          getFlowRateHelpers(node.id),
-        );
-        if (updatedRecipe && graph.nodes[node.id]) {
-          const multiplier = getRateMultiplier(updatedRecipe.cycle_time, 'second');
-          const machineCount = node.data.machineCount ?? 1;
-          graph.nodes[node.id] = {
-            inputs: updatedRecipe.inputs.map((inp, idx) => ({
-              productId: resolveHandleProduct(node.id, 'input', idx, nodesMap, edgeLookup),
-              rate: inp.quantity * machineCount * multiplier,
-            })),
-            outputs: updatedRecipe.outputs.map((out, idx) => ({
-              productId: resolveHandleProduct(node.id, 'output', idx, nodesMap, edgeLookup),
-              rate: out.quantity * machineCount * multiplier,
-            })),
-          };
-          graphUpdated = true;
-        }
-      }
-    }
-
-    // Recalculate flows with updated graph
-    if (graphUpdated) {
-      const updatedResults = new Map();
-      const updatedEdgeFlows: Record<string, number> = {};
-
-      for (const [nodeId, node] of Object.entries(graph.nodes)) {
-        updatedResults.set(nodeId, {
-          inputFlows: node.inputs.map((inp) => ({
-            rate: inp.rate,
-            connected: 0,
-            hasDeficiency: inp.rate > 0,
-            hasExcess: false,
-          })),
-          outputFlows: node.outputs.map((out) => ({
-            rate: out.rate,
-            connected: 0,
-            hasDeficiency: false,
-            hasExcess: out.rate > 0,
-          })),
-        });
-      }
-
-      for (const [, productData] of Object.entries(graph.products)) {
-        for (const conn of productData.connections) {
-          updatedEdgeFlows[conn.id] = 0;
-        }
-      }
-
-      for (const [, productData] of Object.entries(graph.products)) {
-        if (productData.connections.length === 0) continue;
-
-        const components = findConnectedComponents(productData);
-
-        for (const component of components) {
-          if (component.connections.length === 0) continue;
-
-          let connFlowMap: Record<string, number> | null = null;
-          let componentHash = '';
-
-          if (!bypassCache) {
-            componentHash = hashComponent(component);
-            const cached = flowCache.get(componentHash);
-            if (cached) {
-              connFlowMap = cached.connectionFlows;
-            }
-          }
-
-          if (!connFlowMap) {
-            const totalProduction = component.ports
-              .filter((p) => p.type === 'output')
-              .reduce((sum, p) => sum + p.rate, 0);
-
-            connFlowMap = {};
-            if (totalProduction < EPSILON) {
-              component.connections.forEach((conn) => {
-                connFlowMap![conn.id] = 0;
-              });
-            } else {
-              const network = buildFlowNetwork(component.connections, totalProduction);
-              const { connectionFlows } = dinic(network);
-
-              component.connections.forEach((conn, idx) => {
-                connFlowMap![conn.id] = connectionFlows[idx] ?? 0;
-              });
-            }
-
-            if (!bypassCache) {
-              flowCache.set(componentHash, {
-                connectionFlows: connFlowMap,
-              });
-            }
-          }
-
-          for (const conn of component.connections) {
-            const flowRate = connFlowMap[conn.id] ?? 0;
-            updatedEdgeFlows[conn.id] = flowRate;
-
-            const sourceResult = updatedResults.get(conn.sourceNodeId);
-            if (sourceResult && sourceResult.outputFlows[conn.sourceOutputIndex]) {
-              sourceResult.outputFlows[conn.sourceOutputIndex].connected += flowRate;
-            }
-
-            const targetResult = updatedResults.get(conn.targetNodeId);
-            if (targetResult && targetResult.inputFlows[conn.targetInputIndex]) {
-              targetResult.inputFlows[conn.targetInputIndex].connected += flowRate;
-            }
-          }
-        }
-      }
-
-      for (const [, nodeResult] of updatedResults) {
-        for (const inputFlow of nodeResult.inputFlows) {
-          inputFlow.rate = clampFlow(inputFlow.rate);
-          inputFlow.connected = clampFlow(inputFlow.connected);
-          inputFlow.hasDeficiency = inputFlow.rate > 0 && inputFlow.connected < inputFlow.rate - 1e-8;
-          inputFlow.hasExcess = false;
-        }
-        for (const outputFlow of nodeResult.outputFlows) {
-          outputFlow.rate = clampFlow(outputFlow.rate);
-          outputFlow.connected = clampFlow(outputFlow.connected);
-          outputFlow.hasExcess = outputFlow.rate > 0 && outputFlow.connected < outputFlow.rate - 1e-8;
-          outputFlow.hasDeficiency = false;
-        }
-      }
-
-      return { results: updatedResults, edgeFlows: updatedEdgeFlows };
-    }
-  }
-
   return { results, edgeFlows };
 }
 
-export function clearFlowCache(): void {
-  flowCache.clear();
-}
-
-export function solveFlows(
-  nodes: ReactFlowNode[],
-  edges: ReactFlowEdge[],
-  settingsOverrides?: Record<string, Record<string, unknown>>,
+export function calculateFlows(
+  graph: SolverGraph,
+  bypassCache = false,
 ): {
   results: FlowResults;
   edgeFlows: Record<string, number>;
 } {
-  const graph = buildSolverGraph(nodes, edges, settingsOverrides);
-  return calculateFlows(graph, false, nodes, edges, settingsOverrides);
+  return runFlowPass(graph, bypassCache);
+}
+
+export function clearFlowCache(): void {
+  flowCache.clear();
 }

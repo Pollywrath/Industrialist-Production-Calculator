@@ -1,8 +1,10 @@
-import type { FlowResults, ReactFlowEdge, ReactFlowNode } from '../types/solver';
-import { solveFlows } from './flowSolver';
+import type { FlowResults, ReactFlowEdge, ReactFlowNode, SolverGraph } from '../types/solver';
+import { getSpecialRecipe } from '../data/registry';
+import { buildSolverGraph } from './graphBuilder';
+import { calculateFlows } from './flowSolver';
 import { propagateTemperatures } from './temperaturePropagator';
 
-const MAX_TEMPERATURE_COUPLED_PASSES = 3;
+const MAX_TEMPERATURE_COUPLED_PASSES = 8;
 const NUMERIC_EQUALITY_EPSILON = 1e-6;
 
 type SettingsOverrides = Record<string, Record<string, unknown>>;
@@ -80,11 +82,98 @@ function hasMeaningfulOverrides(
   return false;
 }
 
+function hasFlowDependentRecipes(nodes: ReactFlowNode[]): boolean {
+  for (let i = 0; i < nodes.length; i++) {
+    if (getSpecialRecipe(nodes[i].data.recipeId)?.flowDependentInputs) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function areNodePortsEquivalent(
+  a: SolverGraph['nodes'][string],
+  b: SolverGraph['nodes'][string],
+): boolean {
+  if (a.inputs.length !== b.inputs.length || a.outputs.length !== b.outputs.length) {
+    return false;
+  }
+
+  for (let i = 0; i < a.inputs.length; i++) {
+    const left = a.inputs[i];
+    const right = b.inputs[i];
+    if (left.productId !== right.productId || !areValuesEquivalent(left.rate, right.rate)) {
+      return false;
+    }
+  }
+
+  for (let i = 0; i < a.outputs.length; i++) {
+    const left = a.outputs[i];
+    const right = b.outputs[i];
+    if (left.productId !== right.productId || !areValuesEquivalent(left.rate, right.rate)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function areGraphNodesEquivalent(
+  prev: SolverGraph['nodes'],
+  next: SolverGraph['nodes'],
+): boolean {
+  const prevNodeIds = Object.keys(prev);
+  const nextNodeIds = Object.keys(next);
+  if (prevNodeIds.length !== nextNodeIds.length) return false;
+
+  for (let i = 0; i < prevNodeIds.length; i++) {
+    const nodeId = prevNodeIds[i];
+    const prevNode = prev[nodeId];
+    const nextNode = next[nodeId];
+    if (!prevNode || !nextNode || !areNodePortsEquivalent(prevNode, nextNode)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function solveFlowsForPipeline(
+  nodes: ReactFlowNode[],
+  edges: ReactFlowEdge[],
+  settingsOverrides: SettingsOverrides | undefined,
+  includesFlowDependentRecipes: boolean,
+): {
+  results: FlowResults;
+  edgeFlows: Record<string, number>;
+} {
+  const initialGraph = buildSolverGraph(nodes, edges, settingsOverrides);
+  const firstPass = calculateFlows(initialGraph);
+
+  if (!includesFlowDependentRecipes) {
+    return firstPass;
+  }
+
+  const correctedGraph = buildSolverGraph(
+    nodes,
+    edges,
+    settingsOverrides,
+    firstPass.edgeFlows,
+  );
+  if (areGraphNodesEquivalent(initialGraph.nodes, correctedGraph.nodes)) {
+    return firstPass;
+  }
+
+  // Avoid stale cache interactions after flow-dependent corrections.
+  return calculateFlows(correctedGraph, true);
+}
+
 export function solveFlowPipeline(
   nodes: ReactFlowNode[],
   edges: ReactFlowEdge[],
 ): SolverPipelineResult {
   const nodesById = new Map<string, ReactFlowNode>(nodes.map((node) => [node.id, node]));
+  const includesFlowDependentRecipes = hasFlowDependentRecipes(nodes);
   let activeOverrides: SettingsOverrides | undefined;
   let finalResult: SolverPipelineResult = {
     results: new Map(),
@@ -94,7 +183,12 @@ export function solveFlowPipeline(
   };
 
   for (let pass = 0; pass < MAX_TEMPERATURE_COUPLED_PASSES; pass++) {
-    const { results, edgeFlows } = solveFlows(nodes, edges, activeOverrides);
+    const { results, edgeFlows } = solveFlowsForPipeline(
+      nodes,
+      edges,
+      activeOverrides,
+      includesFlowDependentRecipes,
+    );
     const { edgeTemps, inputTemps, settingsOverrides } = propagateTemperatures(
       nodes,
       edges,
