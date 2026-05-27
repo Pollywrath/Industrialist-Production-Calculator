@@ -98,6 +98,24 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const onNodesChange = useFlowStore((s) => s.onNodesChange);
   const onEdgesChange = useFlowStore((s) => s.onEdgesChange);
   const onConnect = useFlowStore((s) => s.onConnect);
+  const captureDragStart = useFlowStore((s) => s.captureDragStart);
+  const commitDragStop = useFlowStore((s) => s.commitDragStop);
+
+  const handleNodeDragStart = (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
+    captureDragStart(draggedNodes.map((draggedNode) => draggedNode.id));
+  };
+
+  const handleNodeDragStop = (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
+    commitDragStop(draggedNodes.map((draggedNode) => draggedNode.id));
+  };
+
+  const handleSelectionDragStart = (_event: React.MouseEvent, draggedNodes: Node[]) => {
+    captureDragStart(draggedNodes.map((draggedNode) => draggedNode.id));
+  };
+
+  const handleSelectionDragStop = (_event: React.MouseEvent, draggedNodes: Node[]) => {
+    commitDragStop(draggedNodes.map((draggedNode) => draggedNode.id));
+  };
 
   return (
     <ReactFlow
@@ -108,6 +126,10 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       onNodesChange={onNodesChange}
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
+      onNodeDragStart={handleNodeDragStart}
+      onNodeDragStop={handleNodeDragStop}
+      onSelectionDragStart={handleSelectionDragStart}
+      onSelectionDragStop={handleSelectionDragStop}
       onEdgeClick={onEdgeClick}
       onNodeClick={onNodeClick}
       isValidConnection={isValidConnection}
@@ -156,6 +178,23 @@ export function FlowViewport() {
         '.react-flow__nodesselection-rect, .react-flow__connection-path, .react-flow__node.dragging',
       );
       if (isDragging) return;
+
+      const key = e.key.toLowerCase();
+      const hasCommandModifier = e.ctrlKey || e.metaKey;
+      const isUndoShortcut = hasCommandModifier && !e.shiftKey && key === 'z';
+      const isRedoShortcut = hasCommandModifier && ((e.shiftKey && key === 'z') || key === 'y');
+
+      if (isUndoShortcut || isRedoShortcut) {
+        if (e.repeat) return;
+        e.preventDefault();
+        const flowStore = useFlowStore.getState();
+        if (isUndoShortcut) {
+          flowStore.undo();
+        } else {
+          flowStore.redo();
+        }
+        return;
+      }
 
       if (e.key === 'Alt') {
         e.preventDefault();

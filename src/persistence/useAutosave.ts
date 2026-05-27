@@ -30,7 +30,10 @@ export function useAutosave(): void {
               }
             }
 
-            currentStore.setNodesAndEdges(nodes, edges);
+            currentStore.setNodesAndEdges(nodes, edges, {
+              recordHistory: false,
+              resetHistory: true,
+            });
           }
         }
       })

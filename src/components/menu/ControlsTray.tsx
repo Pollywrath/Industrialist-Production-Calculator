@@ -99,8 +99,6 @@ const UNWIRED_IDS = new Set([
   'compute',
   'coming_soon',
   'machine_toggle',
-  'undo',
-  'redo',
 ]);
 
 export function ControlsTray() {
@@ -112,6 +110,10 @@ export function ControlsTray() {
   const toggleButton = useUIStore((s) => s.toggleButton);
   const cycleRateMode = useUIStore((s) => s.cycleRateMode);
   const toggleMinimized = useUIStore((s) => s.toggleControlsMinimized);
+  const canUndo = useFlowStore((s) => s.canUndo);
+  const canRedo = useFlowStore((s) => s.canRedo);
+  const undo = useFlowStore((s) => s.undo);
+  const redo = useFlowStore((s) => s.redo);
   const setNodesAndEdges = useFlowStore((s) => s.setNodesAndEdges);
 
   const handleButtonClick = (btn: ButtonConfig) => {
@@ -123,6 +125,10 @@ export function ControlsTray() {
       cycleRateMode();
     } else if (btn.id === 'clear_canvas') {
       setNodesAndEdges([], []);
+    } else if (btn.id === 'undo') {
+      undo();
+    } else if (btn.id === 'redo') {
+      redo();
     }
   };
 
@@ -160,7 +166,9 @@ export function ControlsTray() {
       {!isMinimized && (
         <div className={styles['controls-tray-grid']}>
           {BUTTONS.map((btn) => {
-            const isDisabled = UNWIRED_IDS.has(btn.id);
+            const isHistoryDisabled =
+              (btn.id === 'undo' && !canUndo) || (btn.id === 'redo' && !canRedo);
+            const isDisabled = UNWIRED_IDS.has(btn.id) || isHistoryDisabled;
             const isToggled = !isDisabled && btn.id === activeToggleId;
             const label = btn.id === 'rate_mode' ? getRateButtonLabel() : btn.label;
             const Icon = btn.Icon;

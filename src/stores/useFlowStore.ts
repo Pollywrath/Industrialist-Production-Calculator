@@ -23,6 +23,24 @@ import {
   IO_COLUMN_PADDING,
   NODE_CSS_WIDTH,
 } from '../components/shared/layoutConstants';
+import {
+  type HistoryEntry,
+  type PositionHistoryEntry,
+  type PositionSnapshot,
+  arePositionsEqual,
+  applyGraphHistoryEntry,
+  applyPositionHistoryEntry,
+  buildGraphHistoryEntry,
+  createNodeMap,
+  toPositionSnapshot,
+} from './flowHistory';
+
+const HISTORY_LIMIT = 50;
+
+interface SetGraphOptions {
+  recordHistory?: boolean;
+  resetHistory?: boolean;
+}
 
 interface FlowState {
   nodes: Node<RecipeNodeData>[];
@@ -33,13 +51,30 @@ interface FlowState {
   resolvedProducts: Record<string, string>;
   markSolutionCommitted: () => void;
 
+  historyPast: HistoryEntry<Node<RecipeNodeData>, Edge>[];
+  historyFuture: HistoryEntry<Node<RecipeNodeData>, Edge>[];
+  canUndo: boolean;
+  canRedo: boolean;
+  undo: () => void;
+  redo: () => void;
+  clearHistory: () => void;
+  beginTransaction: () => void;
+  endTransaction: () => void;
+  runTransaction: (fn: () => void) => void;
+  captureDragStart: (nodeIds: string[]) => void;
+  commitDragStop: (nodeIds: string[]) => void;
+
   onNodesChange: OnNodesChange<Node<RecipeNodeData>>;
   onEdgesChange: OnEdgesChange;
   onConnect: (connection: Connection) => void;
 
-  setNodes: (nodes: Node<RecipeNodeData>[]) => void;
-  setEdges: (edges: Edge[]) => void;
-  setNodesAndEdges: (nodes: Node<RecipeNodeData>[], edges: Edge[]) => void;
+  setNodes: (nodes: Node<RecipeNodeData>[], options?: SetGraphOptions) => void;
+  setEdges: (edges: Edge[], options?: SetGraphOptions) => void;
+  setNodesAndEdges: (
+    nodes: Node<RecipeNodeData>[],
+    edges: Edge[],
+    options?: SetGraphOptions,
+  ) => void;
 
   updateNodeData: (nodeId: string, data: Partial<RecipeNodeData>) => void;
   deleteNode: (nodeId: string) => void;
@@ -69,12 +104,7 @@ const enrichNodeDimensions = (node: Node<RecipeNodeData>): Node<RecipeNodeData> 
 };
 
 const createNodesMap = (nodes: Node<RecipeNodeData>[]): Map<string, Node<RecipeNodeData>> => {
-  const map = new Map<string, Node<RecipeNodeData>>();
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    map.set(node.id, node);
-  }
-  return map;
+  return createNodeMap(nodes);
 };
 
 const ensureGraphIntegrity = (
@@ -144,209 +174,506 @@ const ensureGraphIntegrity = (
 };
 
 const useFlowStore = create(
-  subscribeWithSelector<FlowState>((set, get) => ({
-    nodes: [],
-    nodesMap: new Map(),
-    edges: [],
-    graphVersion: 0,
-    solutionVersion: 0,
-    resolvedProducts: {},
-    markSolutionCommitted: () => {
-      set({ solutionVersion: get().solutionVersion + 1 });
-    },
+  subscribeWithSelector<FlowState>((set, get) => {
+    let isApplyingHistory = false;
+    let transactionDepth = 0;
+    let transactionStart: { nodes: Node<RecipeNodeData>[]; edges: Edge[] } | null = null;
+    let dragStartPositions: Map<string, PositionSnapshot> | null = null;
 
-    onNodesChange: (changes) => {
-      const nextNodes = applyNodeChanges(changes, get().nodes);
-      let needsEnrichment = false;
-      let hasStructuralChange = false;
+    const pushHistoryEntry = (entry: HistoryEntry<Node<RecipeNodeData>, Edge> | null) => {
+      if (!entry) return;
 
-      for (let i = 0; i < changes.length; i++) {
-        const type = changes[i].type;
-        if (type !== 'position' && type !== 'select') {
-          needsEnrichment = true;
-          if (type !== 'dimensions') {
-            hasStructuralChange = true;
+      set((state) => {
+        const overflow = Math.max(0, state.historyPast.length - (HISTORY_LIMIT - 1));
+        const trimmedPast = overflow > 0 ? state.historyPast.slice(overflow) : state.historyPast;
+        const nextPast = [...trimmedPast, entry];
+        return {
+          historyPast: nextPast,
+          historyFuture: [],
+          canUndo: nextPast.length > 0,
+          canRedo: false,
+        };
+      });
+    };
+
+    const shouldRecordHistory = (options?: SetGraphOptions): boolean =>
+      !isApplyingHistory &&
+      transactionDepth === 0 &&
+      options?.recordHistory !== false &&
+      options?.resetHistory !== true;
+
+    const resetHistoryState = () => {
+      transactionDepth = 0;
+      transactionStart = null;
+      dragStartPositions = null;
+      set({
+        historyPast: [],
+        historyFuture: [],
+        canUndo: false,
+        canRedo: false,
+      });
+    };
+
+    return {
+      nodes: [],
+      nodesMap: new Map(),
+      edges: [],
+      graphVersion: 0,
+      solutionVersion: 0,
+      resolvedProducts: {},
+      historyPast: [],
+      historyFuture: [],
+      canUndo: false,
+      canRedo: false,
+      markSolutionCommitted: () => {
+        set({ solutionVersion: get().solutionVersion + 1 });
+      },
+
+      undo: () => {
+        if (isApplyingHistory) return;
+        isApplyingHistory = true;
+        try {
+          set((state) => {
+            const entry = state.historyPast[state.historyPast.length - 1];
+            if (!entry) return {};
+
+            const nextPast = state.historyPast.slice(0, -1);
+            const nextFuture = [...state.historyFuture, entry];
+
+            if (entry.kind === 'position') {
+              const nextNodes = applyPositionHistoryEntry(entry, 'undo', state.nodes);
+              return {
+                nodes: nextNodes,
+                historyPast: nextPast,
+                historyFuture: nextFuture,
+                canUndo: nextPast.length > 0,
+                canRedo: nextFuture.length > 0,
+              };
+            }
+
+            const applied = applyGraphHistoryEntry(entry, 'undo', state.nodes, state.edges);
+            const nextNodesMap = createNodesMap(applied.nodes);
+            return {
+              nodes: applied.nodes,
+              nodesMap: nextNodesMap,
+              edges: applied.edges,
+              graphVersion: state.graphVersion + 1,
+              resolvedProducts: computeResolvedProducts(nextNodesMap, applied.edges),
+              historyPast: nextPast,
+              historyFuture: nextFuture,
+              canUndo: nextPast.length > 0,
+              canRedo: nextFuture.length > 0,
+            };
+          });
+        } finally {
+          isApplyingHistory = false;
+        }
+      },
+
+      redo: () => {
+        if (isApplyingHistory) return;
+        isApplyingHistory = true;
+        try {
+          set((state) => {
+            const entry = state.historyFuture[state.historyFuture.length - 1];
+            if (!entry) return {};
+
+            const nextFuture = state.historyFuture.slice(0, -1);
+            const overflow = Math.max(0, state.historyPast.length - (HISTORY_LIMIT - 1));
+            const trimmedPast = overflow > 0 ? state.historyPast.slice(overflow) : state.historyPast;
+            const nextPast = [...trimmedPast, entry];
+
+            if (entry.kind === 'position') {
+              const nextNodes = applyPositionHistoryEntry(entry, 'redo', state.nodes);
+              return {
+                nodes: nextNodes,
+                historyPast: nextPast,
+                historyFuture: nextFuture,
+                canUndo: nextPast.length > 0,
+                canRedo: nextFuture.length > 0,
+              };
+            }
+
+            const applied = applyGraphHistoryEntry(entry, 'redo', state.nodes, state.edges);
+            const nextNodesMap = createNodesMap(applied.nodes);
+            return {
+              nodes: applied.nodes,
+              nodesMap: nextNodesMap,
+              edges: applied.edges,
+              graphVersion: state.graphVersion + 1,
+              resolvedProducts: computeResolvedProducts(nextNodesMap, applied.edges),
+              historyPast: nextPast,
+              historyFuture: nextFuture,
+              canUndo: nextPast.length > 0,
+              canRedo: nextFuture.length > 0,
+            };
+          });
+        } finally {
+          isApplyingHistory = false;
+        }
+      },
+
+      clearHistory: () => {
+        resetHistoryState();
+      },
+
+      beginTransaction: () => {
+        if (isApplyingHistory) return;
+        if (transactionDepth === 0) {
+          const state = get();
+          transactionStart = { nodes: state.nodes, edges: state.edges };
+        }
+        transactionDepth += 1;
+      },
+
+      endTransaction: () => {
+        if (isApplyingHistory) return;
+        if (transactionDepth === 0) return;
+        transactionDepth -= 1;
+        if (transactionDepth > 0) return;
+
+        const start = transactionStart;
+        transactionStart = null;
+        if (!start) return;
+
+        const state = get();
+        pushHistoryEntry(buildGraphHistoryEntry(start.nodes, start.edges, state.nodes, state.edges));
+      },
+
+      runTransaction: (fn) => {
+        get().beginTransaction();
+        let didComplete = false;
+        try {
+          fn();
+          didComplete = true;
+        } finally {
+          if (didComplete) {
+            get().endTransaction();
+          } else {
+            transactionDepth = 0;
+            transactionStart = null;
           }
         }
-      }
+      },
 
-      const finalNodes = needsEnrichment ? nextNodes.map(enrichNodeDimensions) : nextNodes;
-      const nextNodesMap = hasStructuralChange ? createNodesMap(finalNodes) : get().nodesMap;
-      const nextGraphVersion = hasStructuralChange ? get().graphVersion + 1 : get().graphVersion;
+      captureDragStart: (nodeIds) => {
+        const uniqueIds = new Set<string>();
+        for (let i = 0; i < nodeIds.length; i++) {
+          uniqueIds.add(nodeIds[i]);
+        }
+        if (uniqueIds.size === 0) return;
 
-      if (hasStructuralChange) {
+        const nodesById = createNodesMap(get().nodes);
+        const nextPositions = new Map<string, PositionSnapshot>();
+        for (const id of uniqueIds) {
+          const node = nodesById.get(id);
+          if (!node) continue;
+          nextPositions.set(id, toPositionSnapshot(node.position));
+        }
+
+        dragStartPositions = nextPositions.size > 0 ? nextPositions : null;
+      },
+
+      commitDragStop: (nodeIds) => {
+        if (isApplyingHistory || transactionDepth > 0) {
+          dragStartPositions = null;
+          return;
+        }
+
+        const startPositions = dragStartPositions;
+        dragStartPositions = null;
+        if (!startPositions) return;
+
+        const ids = new Set<string>();
+        for (let i = 0; i < nodeIds.length; i++) {
+          ids.add(nodeIds[i]);
+        }
+        if (ids.size === 0) {
+          for (const id of startPositions.keys()) {
+            ids.add(id);
+          }
+        }
+
+        const nodesById = createNodesMap(get().nodes);
+        const positionDiffs: PositionHistoryEntry['positions'] = [];
+        for (const id of ids) {
+          const start = startPositions.get(id);
+          const currentNode = nodesById.get(id);
+          if (!start || !currentNode) continue;
+
+          const end = toPositionSnapshot(currentNode.position);
+          if (!arePositionsEqual(start, end)) {
+            positionDiffs.push({
+              id,
+              from: start,
+              to: end,
+            });
+          }
+        }
+
+        if (positionDiffs.length === 0) return;
+        pushHistoryEntry({
+          kind: 'position',
+          positions: positionDiffs,
+        });
+      },
+
+      onNodesChange: (changes) => {
+        const state = get();
+        const nextNodes = applyNodeChanges(changes, state.nodes);
+        let needsEnrichment = false;
+        let hasStructuralChange = false;
+
+        for (let i = 0; i < changes.length; i++) {
+          const type = changes[i].type;
+          if (type !== 'position' && type !== 'select') {
+            needsEnrichment = true;
+            if (type !== 'dimensions') {
+              hasStructuralChange = true;
+            }
+          }
+        }
+
+        const finalNodes = needsEnrichment ? nextNodes.map(enrichNodeDimensions) : nextNodes;
+        if (!hasStructuralChange) {
+          set({
+            nodes: finalNodes,
+          });
+          return;
+        }
+
+        const nextNodesMap = createNodesMap(finalNodes);
         set({
           nodes: finalNodes,
           nodesMap: nextNodesMap,
-          graphVersion: nextGraphVersion,
-          resolvedProducts: computeResolvedProducts(nextNodesMap, get().edges),
+          graphVersion: state.graphVersion + 1,
+          resolvedProducts: computeResolvedProducts(nextNodesMap, state.edges),
         });
-      } else {
-        set({
-          nodes: finalNodes,
-        });
-      }
-    },
 
-    onEdgesChange: (changes) => {
-      const nextEdges = applyEdgeChanges(changes, get().edges);
-      let hasStructuralChange = false;
-      for (let i = 0; i < changes.length; i++) {
-        const type = changes[i].type;
-        if (type !== 'select') {
-          hasStructuralChange = true;
-          break;
+        if (!isApplyingHistory && transactionDepth === 0) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, finalNodes, state.edges));
         }
-      }
+      },
 
-      if (hasStructuralChange) {
-        set({
-          edges: nextEdges,
-          graphVersion: get().graphVersion + 1,
-          resolvedProducts: computeResolvedProducts(get().nodesMap, nextEdges),
-        });
-      } else {
-        set({
-          edges: nextEdges,
-        });
-      }
-    },
+      onEdgesChange: (changes) => {
+        const state = get();
+        const nextEdges = applyEdgeChanges(changes, state.edges);
+        let hasStructuralChange = false;
+        for (let i = 0; i < changes.length; i++) {
+          const type = changes[i].type;
+          if (type !== 'select') {
+            hasStructuralChange = true;
+            break;
+          }
+        }
 
-    onConnect: (connection) => {
-      if (!connection.sourceHandle || !connection.targetHandle) return;
-      if (!parseHandleId(connection.sourceHandle) || !parseHandleId(connection.targetHandle))
-        return;
-
-      const currentEdges = get().edges;
-      for (let i = 0; i < currentEdges.length; i++) {
-        const e = currentEdges[i];
-        if (
-          e.sourceHandle === connection.sourceHandle &&
-          e.targetHandle === connection.targetHandle
-        ) {
+        if (!hasStructuralChange) {
+          set({
+            edges: nextEdges,
+          });
           return;
         }
-      }
 
-      const newEdge = { ...connection, id: nextEdgeId() } as Edge;
-      const nextEdges = addEdge(newEdge, currentEdges);
-      set({
-        edges: nextEdges,
-        graphVersion: get().graphVersion + 1,
-        resolvedProducts: computeResolvedProducts(get().nodesMap, nextEdges),
-      });
-    },
-
-    setNodes: (nodes) => {
-      clearFlowCache();
-      const { nodes: sanitizedNodes } = ensureGraphIntegrity(nodes, get().edges);
-      const enriched = sanitizedNodes.map(enrichNodeDimensions);
-      const nextNodesMap = createNodesMap(enriched);
-      set({
-        nodes: enriched,
-        nodesMap: nextNodesMap,
-        graphVersion: get().graphVersion + 1,
-        resolvedProducts: computeResolvedProducts(nextNodesMap, get().edges),
-      });
-    },
-    setEdges: (edges) => {
-      clearFlowCache();
-      const { edges: sanitizedEdges } = ensureGraphIntegrity(get().nodes, edges);
-      set({
-        edges: sanitizedEdges,
-        graphVersion: get().graphVersion + 1,
-        resolvedProducts: computeResolvedProducts(get().nodesMap, sanitizedEdges),
-      });
-    },
-    setNodesAndEdges: (nodes, edges) => {
-      clearFlowCache();
-      const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(nodes, edges);
-      const len = sanitizedNodes.length;
-      const enriched = new Array<Node<RecipeNodeData>>(len);
-      const map = new Map<string, Node<RecipeNodeData>>();
-      for (let i = 0; i < len; i++) {
-        const node = enrichNodeDimensions(sanitizedNodes[i]);
-        enriched[i] = node;
-        map.set(node.id, node);
-      }
-      set({
-        nodes: enriched,
-        nodesMap: map,
-        edges: sanitizedEdges,
-        graphVersion: get().graphVersion + 1,
-        resolvedProducts: computeResolvedProducts(map, sanitizedEdges),
-      });
-    },
-
-    updateNodeData: (nodeId, data) => {
-      const oldNodes = get().nodes;
-      const nextNodes = new Array<Node<RecipeNodeData>>(oldNodes.length);
-      let updatedNode: Node<RecipeNodeData> | null = null;
-
-      for (let i = 0; i < oldNodes.length; i++) {
-        const node = oldNodes[i];
-        if (node.id === nodeId) {
-          updatedNode = enrichNodeDimensions({ ...node, data: { ...node.data, ...data } });
-          nextNodes[i] = updatedNode;
-        } else {
-          nextNodes[i] = node;
-        }
-      }
-
-      if (!updatedNode) return;
-
-      const nextNodesMap = new Map(get().nodesMap);
-      nextNodesMap.set(nodeId, updatedNode);
-
-      set({
-        nodes: nextNodes,
-        nodesMap: nextNodesMap,
-        graphVersion: get().graphVersion + 1,
-        resolvedProducts: computeResolvedProducts(nextNodesMap, get().edges),
-      });
-    },
-
-    deleteNode: (nodeId) => {
-      const oldNodes = get().nodes;
-      const oldNodesMap = get().nodesMap;
-
-      const nextNodesMap = new Map(oldNodesMap);
-      nextNodesMap.delete(nodeId);
-
-      const nextNodes = new Array<Node<RecipeNodeData>>(Math.max(0, oldNodes.length - 1));
-      let idx = 0;
-      for (let i = 0; i < oldNodes.length; i++) {
-        const node = oldNodes[i];
-        if (node.id !== nodeId) {
-          nextNodes[idx++] = node;
-        }
-      }
-
-      const nextEdges = get().edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
-
-      set({
-        nodes: nextNodes,
-        nodesMap: nextNodesMap,
-        edges: nextEdges,
-        graphVersion: get().graphVersion + 1,
-        resolvedProducts: computeResolvedProducts(nextNodesMap, nextEdges),
-      });
-    },
-
-    deleteEdgesConnectedToHandle: (handleId) => {
-      const oldEdges = get().edges;
-      const nextEdges = oldEdges.filter(
-        (edge) => edge.sourceHandle !== handleId && edge.targetHandle !== handleId,
-      );
-      if (nextEdges.length !== oldEdges.length) {
         set({
           edges: nextEdges,
-          graphVersion: get().graphVersion + 1,
-          resolvedProducts: computeResolvedProducts(get().nodesMap, nextEdges),
+          graphVersion: state.graphVersion + 1,
+          resolvedProducts: computeResolvedProducts(state.nodesMap, nextEdges),
         });
-      }
-    },
-  })),
+
+        if (!isApplyingHistory && transactionDepth === 0) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges));
+        }
+      },
+
+      onConnect: (connection) => {
+        if (!connection.sourceHandle || !connection.targetHandle) return;
+        if (!parseHandleId(connection.sourceHandle) || !parseHandleId(connection.targetHandle))
+          return;
+
+        const state = get();
+        const currentEdges = state.edges;
+        for (let i = 0; i < currentEdges.length; i++) {
+          const e = currentEdges[i];
+          if (
+            e.sourceHandle === connection.sourceHandle &&
+            e.targetHandle === connection.targetHandle
+          ) {
+            return;
+          }
+        }
+
+        const newEdge = { ...connection, id: nextEdgeId() } as Edge;
+        const nextEdges = addEdge(newEdge, currentEdges);
+        set({
+          edges: nextEdges,
+          graphVersion: state.graphVersion + 1,
+          resolvedProducts: computeResolvedProducts(state.nodesMap, nextEdges),
+        });
+
+        if (!isApplyingHistory && transactionDepth === 0) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges));
+        }
+      },
+
+      setNodes: (nodes, options) => {
+        clearFlowCache();
+        const state = get();
+        const { nodes: sanitizedNodes } = ensureGraphIntegrity(nodes, state.edges);
+        const enriched = sanitizedNodes.map(enrichNodeDimensions);
+        const nextNodesMap = createNodesMap(enriched);
+        set({
+          nodes: enriched,
+          nodesMap: nextNodesMap,
+          graphVersion: state.graphVersion + 1,
+          resolvedProducts: computeResolvedProducts(nextNodesMap, state.edges),
+        });
+
+        if (options?.resetHistory) {
+          resetHistoryState();
+          return;
+        }
+        if (shouldRecordHistory(options)) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, enriched, state.edges));
+        }
+      },
+
+      setEdges: (edges, options) => {
+        clearFlowCache();
+        const state = get();
+        const { edges: sanitizedEdges } = ensureGraphIntegrity(state.nodes, edges);
+        set({
+          edges: sanitizedEdges,
+          graphVersion: state.graphVersion + 1,
+          resolvedProducts: computeResolvedProducts(state.nodesMap, sanitizedEdges),
+        });
+
+        if (options?.resetHistory) {
+          resetHistoryState();
+          return;
+        }
+        if (shouldRecordHistory(options)) {
+          pushHistoryEntry(
+            buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, sanitizedEdges),
+          );
+        }
+      },
+
+      setNodesAndEdges: (nodes, edges, options) => {
+        clearFlowCache();
+        const state = get();
+        const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(nodes, edges);
+        const len = sanitizedNodes.length;
+        const enriched = new Array<Node<RecipeNodeData>>(len);
+        const map = new Map<string, Node<RecipeNodeData>>();
+        for (let i = 0; i < len; i++) {
+          const node = enrichNodeDimensions(sanitizedNodes[i]);
+          enriched[i] = node;
+          map.set(node.id, node);
+        }
+        set({
+          nodes: enriched,
+          nodesMap: map,
+          edges: sanitizedEdges,
+          graphVersion: state.graphVersion + 1,
+          resolvedProducts: computeResolvedProducts(map, sanitizedEdges),
+        });
+
+        if (options?.resetHistory) {
+          resetHistoryState();
+          return;
+        }
+        if (shouldRecordHistory(options)) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, enriched, sanitizedEdges));
+        }
+      },
+
+      updateNodeData: (nodeId, data) => {
+        const state = get();
+        const oldNodes = state.nodes;
+        const nextNodes = new Array<Node<RecipeNodeData>>(oldNodes.length);
+        let updatedNode: Node<RecipeNodeData> | null = null;
+
+        for (let i = 0; i < oldNodes.length; i++) {
+          const node = oldNodes[i];
+          if (node.id === nodeId) {
+            updatedNode = enrichNodeDimensions({ ...node, data: { ...node.data, ...data } });
+            nextNodes[i] = updatedNode;
+          } else {
+            nextNodes[i] = node;
+          }
+        }
+
+        if (!updatedNode) return;
+
+        const nextNodesMap = new Map(state.nodesMap);
+        nextNodesMap.set(nodeId, updatedNode);
+
+        set({
+          nodes: nextNodes,
+          nodesMap: nextNodesMap,
+          graphVersion: state.graphVersion + 1,
+          resolvedProducts: computeResolvedProducts(nextNodesMap, state.edges),
+        });
+
+        if (!isApplyingHistory && transactionDepth === 0) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, nextNodes, state.edges));
+        }
+      },
+
+      deleteNode: (nodeId) => {
+        const state = get();
+        const oldNodes = state.nodes;
+        const oldNodesMap = state.nodesMap;
+
+        const nextNodesMap = new Map(oldNodesMap);
+        nextNodesMap.delete(nodeId);
+
+        const nextNodes = new Array<Node<RecipeNodeData>>(Math.max(0, oldNodes.length - 1));
+        let idx = 0;
+        for (let i = 0; i < oldNodes.length; i++) {
+          const node = oldNodes[i];
+          if (node.id !== nodeId) {
+            nextNodes[idx++] = node;
+          }
+        }
+
+        const nextEdges = state.edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
+
+        set({
+          nodes: nextNodes,
+          nodesMap: nextNodesMap,
+          edges: nextEdges,
+          graphVersion: state.graphVersion + 1,
+          resolvedProducts: computeResolvedProducts(nextNodesMap, nextEdges),
+        });
+
+        if (!isApplyingHistory && transactionDepth === 0) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, nextNodes, nextEdges));
+        }
+      },
+
+      deleteEdgesConnectedToHandle: (handleId) => {
+        const state = get();
+        const oldEdges = state.edges;
+        const nextEdges = oldEdges.filter(
+          (edge) => edge.sourceHandle !== handleId && edge.targetHandle !== handleId,
+        );
+        if (nextEdges.length === oldEdges.length) {
+          return;
+        }
+
+        set({
+          edges: nextEdges,
+          graphVersion: state.graphVersion + 1,
+          resolvedProducts: computeResolvedProducts(state.nodesMap, nextEdges),
+        });
+
+        if (!isApplyingHistory && transactionDepth === 0) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges));
+        }
+      },
+    };
+  }),
 );
 
 export { useFlowStore };

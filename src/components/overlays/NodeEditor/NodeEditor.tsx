@@ -71,6 +71,7 @@ function NodeEditorModal({
   const store = useContext(NodeEditorContext);
   const updateNodeData = useFlowStore((s) => s.updateNodeData);
   const setNodes = useFlowStore((s) => s.setNodes);
+  const runTransaction = useFlowStore((s) => s.runTransaction);
 
   const {
     machineCount,
@@ -141,13 +142,15 @@ function NodeEditorModal({
     const { settings, clampedInputs, clampedOutputs, staleInputIndices, staleOutputIndices } =
       prepareHandleSave();
 
-    deleteStaleHandleEdges(staleInputIndices, staleOutputIndices);
+    runTransaction(() => {
+      deleteStaleHandleEdges(staleInputIndices, staleOutputIndices);
 
-    updateNodeData(nodeId, {
-      machineCount: cleanMachineCount(machineCount),
-      inputOrder: clampedInputs,
-      outputOrder: clampedOutputs,
-      settings: settings,
+      updateNodeData(nodeId, {
+        machineCount: cleanMachineCount(machineCount),
+        inputOrder: clampedInputs,
+        outputOrder: clampedOutputs,
+        settings: settings,
+      });
     });
     onClose();
   };
@@ -163,8 +166,6 @@ function NodeEditorModal({
       prepareHandleSave();
 
     const { nodes, edges } = useFlowStore.getState();
-
-    deleteStaleHandleEdges(staleInputIndices, staleOutputIndices);
 
     const factor = machineCount / initialMachineCount;
     const connectedIds = getConnectedNodes(nodeId, edges);
@@ -197,7 +198,10 @@ function NodeEditorModal({
       return node;
     });
 
-    setNodes(updatedNodes);
+    runTransaction(() => {
+      deleteStaleHandleEdges(staleInputIndices, staleOutputIndices);
+      setNodes(updatedNodes);
+    });
     onClose();
   };
 
