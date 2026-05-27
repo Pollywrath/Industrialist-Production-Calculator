@@ -20,19 +20,46 @@ const modules = import.meta.glob(
 
 const BASE_SPECIAL_RECIPES: Record<string, SpecialRecipe> = {};
 
+function registerSpecialRecipe(target: Record<string, SpecialRecipe>, recipe: SpecialRecipe): void {
+  if (import.meta.env.DEV && target[recipe.id]) {
+    console.warn(`[Special Recipe Registry] Duplicate special recipe id detected: "${recipe.id}"`);
+  }
+  target[recipe.id] = recipe;
+}
+
+function collectSpecialRecipesFromExport(
+  target: Record<string, SpecialRecipe>,
+  exportValue: unknown,
+): void {
+  if (isSpecialRecipe(exportValue)) {
+    registerSpecialRecipe(target, exportValue);
+    return;
+  }
+
+  if (!Array.isArray(exportValue)) {
+    return;
+  }
+
+  let matchedCount = 0;
+  for (let i = 0; i < exportValue.length; i++) {
+    const entry = exportValue[i];
+    if (isSpecialRecipe(entry)) {
+      registerSpecialRecipe(target, entry);
+      matchedCount++;
+    }
+  }
+
+  if (import.meta.env.DEV && matchedCount > 0 && matchedCount < exportValue.length) {
+    console.warn(
+      `[Special Recipe Registry] Mixed export array detected (${matchedCount}/${exportValue.length} valid special recipes).`,
+    );
+  }
+}
+
 for (const path in modules) {
   const module = modules[path] as Record<string, unknown>;
   for (const exportName in module) {
-    const value = module[exportName];
-    if (isSpecialRecipe(value)) {
-      BASE_SPECIAL_RECIPES[value.id] = value;
-    } else if (exportName === 'chemical_plant_recipes' && Array.isArray(value)) {
-      for (const item of value) {
-        if (isSpecialRecipe(item)) {
-          BASE_SPECIAL_RECIPES[item.id] = item;
-        }
-      }
-    }
+    collectSpecialRecipesFromExport(BASE_SPECIAL_RECIPES, module[exportName]);
   }
 }
 

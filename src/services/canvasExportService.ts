@@ -6,8 +6,7 @@ import { useUIStore } from '../stores/useUIStore';
 const MAX_CANVAS_DIMENSION = 16384;
 
 export function exportRecordAsJson(record: SaveRecord): void {
-  const dataStr =
-    'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(record, null, 2));
+  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(record, null, 2));
   const link = document.createElement('a');
   link.download = `${record.name.replace(/\s+/g, '_')}_save.json`;
   link.href = dataStr;

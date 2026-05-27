@@ -28,8 +28,10 @@ interface FlowState {
   nodes: Node<RecipeNodeData>[];
   nodesMap: Map<string, Node<RecipeNodeData>>;
   edges: Edge[];
-  solverVersion: number;
+  graphVersion: number;
+  solutionVersion: number;
   resolvedProducts: Record<string, string>;
+  markSolutionCommitted: () => void;
 
   onNodesChange: OnNodesChange<Node<RecipeNodeData>>;
   onEdgesChange: OnEdgesChange;
@@ -146,8 +148,12 @@ const useFlowStore = create(
     nodes: [],
     nodesMap: new Map(),
     edges: [],
-    solverVersion: 0,
+    graphVersion: 0,
+    solutionVersion: 0,
     resolvedProducts: {},
+    markSolutionCommitted: () => {
+      set({ solutionVersion: get().solutionVersion + 1 });
+    },
 
     onNodesChange: (changes) => {
       const nextNodes = applyNodeChanges(changes, get().nodes);
@@ -166,13 +172,13 @@ const useFlowStore = create(
 
       const finalNodes = needsEnrichment ? nextNodes.map(enrichNodeDimensions) : nextNodes;
       const nextNodesMap = hasStructuralChange ? createNodesMap(finalNodes) : get().nodesMap;
-      const nextSolverVersion = hasStructuralChange ? get().solverVersion + 1 : get().solverVersion;
+      const nextGraphVersion = hasStructuralChange ? get().graphVersion + 1 : get().graphVersion;
 
       if (hasStructuralChange) {
         set({
           nodes: finalNodes,
           nodesMap: nextNodesMap,
-          solverVersion: nextSolverVersion,
+          graphVersion: nextGraphVersion,
           resolvedProducts: computeResolvedProducts(nextNodesMap, get().edges),
         });
       } else {
@@ -196,7 +202,7 @@ const useFlowStore = create(
       if (hasStructuralChange) {
         set({
           edges: nextEdges,
-          solverVersion: get().solverVersion + 1,
+          graphVersion: get().graphVersion + 1,
           resolvedProducts: computeResolvedProducts(get().nodesMap, nextEdges),
         });
       } else {
@@ -226,7 +232,7 @@ const useFlowStore = create(
       const nextEdges = addEdge(newEdge, currentEdges);
       set({
         edges: nextEdges,
-        solverVersion: get().solverVersion + 1,
+        graphVersion: get().graphVersion + 1,
         resolvedProducts: computeResolvedProducts(get().nodesMap, nextEdges),
       });
     },
@@ -239,7 +245,7 @@ const useFlowStore = create(
       set({
         nodes: enriched,
         nodesMap: nextNodesMap,
-        solverVersion: get().solverVersion + 1,
+        graphVersion: get().graphVersion + 1,
         resolvedProducts: computeResolvedProducts(nextNodesMap, get().edges),
       });
     },
@@ -248,7 +254,7 @@ const useFlowStore = create(
       const { edges: sanitizedEdges } = ensureGraphIntegrity(get().nodes, edges);
       set({
         edges: sanitizedEdges,
-        solverVersion: get().solverVersion + 1,
+        graphVersion: get().graphVersion + 1,
         resolvedProducts: computeResolvedProducts(get().nodesMap, sanitizedEdges),
       });
     },
@@ -267,7 +273,7 @@ const useFlowStore = create(
         nodes: enriched,
         nodesMap: map,
         edges: sanitizedEdges,
-        solverVersion: get().solverVersion + 1,
+        graphVersion: get().graphVersion + 1,
         resolvedProducts: computeResolvedProducts(map, sanitizedEdges),
       });
     },
@@ -295,7 +301,7 @@ const useFlowStore = create(
       set({
         nodes: nextNodes,
         nodesMap: nextNodesMap,
-        solverVersion: get().solverVersion + 1,
+        graphVersion: get().graphVersion + 1,
         resolvedProducts: computeResolvedProducts(nextNodesMap, get().edges),
       });
     },
@@ -322,7 +328,7 @@ const useFlowStore = create(
         nodes: nextNodes,
         nodesMap: nextNodesMap,
         edges: nextEdges,
-        solverVersion: get().solverVersion + 1,
+        graphVersion: get().graphVersion + 1,
         resolvedProducts: computeResolvedProducts(nextNodesMap, nextEdges),
       });
     },
@@ -335,7 +341,7 @@ const useFlowStore = create(
       if (nextEdges.length !== oldEdges.length) {
         set({
           edges: nextEdges,
-          solverVersion: get().solverVersion + 1,
+          graphVersion: get().graphVersion + 1,
           resolvedProducts: computeResolvedProducts(get().nodesMap, nextEdges),
         });
       }

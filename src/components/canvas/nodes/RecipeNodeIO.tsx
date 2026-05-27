@@ -234,7 +234,7 @@ export function RecipeNodeIO({
     const entry = list[ref.index];
     if (!entry) return;
     const handleId = buildHandleId(nodeId, ref.side, ref.index);
-    const { nodes, edges } = useFlowStore.getState();
+    const { nodes, edges, resolvedProducts: allResolvedProducts } = useFlowStore.getState();
     const hasEdges = edges.some(
       (edge) => edge.sourceHandle === handleId || edge.targetHandle === handleId,
     );
@@ -242,7 +242,15 @@ export function RecipeNodeIO({
 
     const flowResults = useFlowResultStore.getState().results;
 
-    const targetRate = calculateBalancedRate(nodeId, ref, recipe, nodes, edges, flowResults);
+    const targetRate = calculateBalancedRate(
+      nodeId,
+      ref,
+      recipe,
+      nodes,
+      edges,
+      flowResults,
+      allResolvedProducts,
+    );
     const q = resolveQuantity(ref, recipe);
     if (q <= 0) return;
     const newMachineCount = calculateMachineCountFromRate(targetRate, recipe.cycle_time, q);

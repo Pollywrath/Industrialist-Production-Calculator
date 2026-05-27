@@ -115,7 +115,6 @@ export function useRecipeSelectorFilters({ recipes }: UseRecipeSelectorFiltersPa
         const isHeatLoopForSelected = hasSelectedInput && hasSelectedOutput && producesHeat;
         const isHeatPower = (isPowerGenerator || isHeatLoopForSelected) && (producesProduct || consumesProduct);
 
-        // Heat loops for the selected product are shown under Heat/Power only.
         const isProducerConsumerClutterCase = isHeatLoopForSelected;
         const matchesProducer =
           s.filterProducers &&

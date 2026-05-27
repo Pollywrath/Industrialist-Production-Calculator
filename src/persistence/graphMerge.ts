@@ -1,6 +1,6 @@
 import type { Node, Edge } from '@xyflow/react';
 import type { RecipeNodeData } from '../types/nodes';
-import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from './idGenerator';
+import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/idGenerator';
 
 export function mergeSaveIntoCanvas(
   loadedNodes: Node<RecipeNodeData>[],
@@ -12,36 +12,36 @@ export function mergeSaveIntoCanvas(
   const mergedNodes = [...currentNodes];
 
   for (let i = 0; i < loadedNodes.length; i++) {
-    const n = loadedNodes[i];
+    const node = loadedNodes[i];
     const newId = nextNodeId();
 
-    if (!idMap.has(n.id)) {
-      idMap.set(n.id, newId);
+    if (!idMap.has(node.id)) {
+      idMap.set(node.id, newId);
     }
 
     mergedNodes.push({
-      ...n,
+      ...node,
       id: newId,
-      position: { x: n.position.x + 50, y: n.position.y + 50 },
+      position: { x: node.position.x + 50, y: node.position.y + 50 },
     });
   }
 
   const mergedEdges = [...currentEdges];
   for (let i = 0; i < loadedEdges.length; i++) {
-    const e = loadedEdges[i];
-    const newSource = idMap.get(e.source) ?? e.source;
-    const newTarget = idMap.get(e.target) ?? e.target;
+    const edge = loadedEdges[i];
+    const newSource = idMap.get(edge.source) ?? edge.source;
+    const newTarget = idMap.get(edge.target) ?? edge.target;
 
-    const sourceParsed = e.sourceHandle ? parseHandleId(e.sourceHandle) : null;
-    const targetParsed = e.targetHandle ? parseHandleId(e.targetHandle) : null;
+    const sourceParsed = edge.sourceHandle ? parseHandleId(edge.sourceHandle) : null;
+    const targetParsed = edge.targetHandle ? parseHandleId(edge.targetHandle) : null;
 
     if (!sourceParsed || !targetParsed) {
-      console.warn(`Skipping malformed edge during merge: ${e.id}`);
+      console.warn(`Skipping malformed edge during merge: ${edge.id}`);
       continue;
     }
 
     mergedEdges.push({
-      ...e,
+      ...edge,
       id: nextEdgeId(),
       source: newSource,
       target: newTarget,

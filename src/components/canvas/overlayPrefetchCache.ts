@@ -1,6 +1,6 @@
 import type React from 'react';
-import type { RecipeNodeType } from '../types/nodes';
-import type { Recipe } from '../types/data';
+import type { RecipeNodeType } from '../../types/nodes';
+import type { Recipe } from '../../types/data';
 
 export interface NodeEditorProps {
   recipe: Recipe;
@@ -9,7 +9,7 @@ export interface NodeEditorProps {
   onClose: () => void;
 }
 
-export const prefetchCache = {
+export const overlayPrefetchCache = {
   RecipeSelector: null as React.ComponentType<Record<string, never>> | null,
   NodeEditor: null as React.ComponentType<NodeEditorProps> | null,
   SavesOverlay: null as React.ComponentType<Record<string, never>> | null,

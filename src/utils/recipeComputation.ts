@@ -1,4 +1,4 @@
-import type { RateMode } from '../stores/useUIStore';
+import type { RateMode } from '../types/ui';
 import { cleanFlow, toPlainString, cleanMachineCount } from './precision';
 
 export { cleanMachineCount, cleanFlow, toPlainString } from './precision';

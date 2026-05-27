@@ -1,8 +1,7 @@
 import { create } from 'zustand';
+import type { RateMode } from '../types/ui';
 
 export type CanvasToggleId = 'delete_mode' | 'multi_select' | 'target';
-
-export type RateMode = 'second' | 'minute' | 'hour' | 'raw';
 
 export interface ConfirmOptions {
   title: string;

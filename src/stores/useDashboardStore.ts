@@ -4,7 +4,7 @@ import { useFlowResultStore } from './useFlowResultStore';
 import { useUIStore } from './useUIStore';
 import { useGlobalSettingsStore } from './useGlobalSettingsStore';
 import { resolveActiveRecipe, getMachine, getProduct, getProductName } from '../data/lookup';
-import { resolveHandleProduct, buildEdgeLookupMap } from '../utils/productResolver';
+import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 import { getSpecialRecipe } from '../data/registry';
 import { buildHandleId } from '../utils/idGenerator';
 
@@ -67,10 +67,11 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
     const flowStore = useFlowStore.getState();
     const nodes = flowStore.nodes;
-    const storeNodesMap = flowStore.nodesMap;
     const edges = flowStore.edges;
     const resolvedProducts = flowStore.resolvedProducts;
-    const results = useFlowResultStore.getState().results;
+    const flowResultState = useFlowResultStore.getState();
+    const results = flowResultState.results;
+    const edgeFlows = flowResultState.edgeFlows;
     const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
       string,
       unknown
@@ -87,16 +88,20 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     const excessesMap = new Map<string, ProductExcessGroup>();
 
     const rateModeFactor = rateMode === 'minute' ? 60 : rateMode === 'hour' ? 3600 : 1;
-    const edgeLookup = buildEdgeLookupMap(edges);
+    const resolutionContext = createGraphResolutionContext(nodes, edges);
 
     nodes.forEach((node) => {
-      const cache = new Map<string, string>();
+      const baseHelpers = resolutionContext.createHelpers(node.id);
       const helpers = {
-        resolveProduct: (s: 'input' | 'output', idx: number) =>
-          resolveHandleProduct(node.id, s, idx, storeNodesMap, edgeLookup, new Set(), cache),
-        hasConnection: (s: 'input' | 'output', idx: number) => {
-          const handleId = buildHandleId(node.id, s, idx);
-          return (edgeLookup.get(handleId)?.length ?? 0) > 0;
+        ...baseHelpers,
+        getFlowRate: (side: 'input' | 'output', index: number) => {
+          const handleId = buildHandleId(node.id, side, index);
+          const connectedEdges = resolutionContext.edgeLookup.get(handleId) ?? [];
+          let totalFlow = 0;
+          for (let i = 0; i < connectedEdges.length; i++) {
+            totalFlow += edgeFlows[connectedEdges[i].id] ?? 0;
+          }
+          return totalFlow;
         },
       };
       const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id, helpers);
@@ -183,7 +188,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             const handleId = buildHandleId(node.id, 'input', i);
             const productId =
               resolvedProducts[handleId] ||
-              resolveHandleProduct(node.id, 'input', i, storeNodesMap, edgeLookup, new Set(), cache);
+              helpers.resolveProduct('input', i);
             if (!productId) continue;
             const defRate = (inputFlow.rate - inputFlow.connected) * rateModeFactor;
             if (defRate > 0.0001) {
@@ -216,7 +221,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             const handleId = buildHandleId(node.id, 'output', i);
             const productId =
               resolvedProducts[handleId] ||
-              resolveHandleProduct(node.id, 'output', i, storeNodesMap, edgeLookup, new Set(), cache);
+              helpers.resolveProduct('output', i);
             if (!productId) continue;
             const excRate = (outputFlow.rate - outputFlow.connected) * rateModeFactor;
             if (excRate > 0.0001) {
@@ -263,19 +268,11 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
 export function initDashboardStore(): () => void {
   const unsubFlow = useFlowStore.subscribe(
-    (s) => s.solverVersion,
+    (s) => s.solutionVersion,
     () => {
       useDashboardStore.getState().recompute();
     },
   );
-
-  let lastResults = useFlowResultStore.getState().results;
-  const unsubFlowResult = useFlowResultStore.subscribe((state) => {
-    if (state.results !== lastResults) {
-      lastResults = state.results;
-      useDashboardStore.getState().recompute();
-    }
-  });
 
   let lastRateMode = useUIStore.getState().rateMode;
   let lastIsStatsMinimized = useUIStore.getState().isStatsMinimized;
@@ -306,7 +303,6 @@ export function initDashboardStore(): () => void {
 
   return () => {
     unsubFlow();
-    unsubFlowResult();
     unsubUI();
     unsubGlobalSettings();
   };

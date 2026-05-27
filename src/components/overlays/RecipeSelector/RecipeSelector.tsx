@@ -14,8 +14,7 @@ import type { NodeFlowResult } from '../../../types/solver';
 import type { Recipe } from '../../../types/data';
 import { RecipeSelectorProvider } from './RecipeSelectorProvider';
 import { useRecipeSelectorStore } from './RecipeSelectorContext';
-import { resolveHandleProduct, buildEdgeLookupMap } from '../../../utils/productResolver';
-import { buildHandleId } from '../../../utils/idGenerator';
+import { createGraphResolutionContext } from '../../../utils/graphResolutionContext';
 
 function getClickedPerSecondRate(
   sourceSide: 'input' | 'output' | null,
@@ -82,9 +81,9 @@ function RecipeSelectorModal() {
   });
 
   const preselectedNodeData = preselectedNode?.data || null;
-  const nodesMap = useFlowStore((s) => s.nodesMap);
+  const nodes = useFlowStore((s) => s.nodes);
   const edges = useFlowStore((s) => s.edges);
-  const edgeLookup = buildEdgeLookupMap(edges);
+  const resolutionContext = createGraphResolutionContext(nodes, edges);
 
   const preselectedNodeFlows = useFlowResultStore((s) => {
     if (!preselectedNodeId) return undefined;
@@ -112,14 +111,7 @@ function RecipeSelectorModal() {
           preselectedNodeData.recipeId,
           preselectedNodeData.settings,
           preselectedNodeId,
-          {
-            resolveProduct: (side: 'input' | 'output', index: number) =>
-              resolveHandleProduct(preselectedNodeId, side, index, nodesMap, edgeLookup, new Set(), new Map()),
-            hasConnection: (side: 'input' | 'output', index: number) => {
-              const handleId = buildHandleId(preselectedNodeId, side, index);
-              return (edgeLookup.get(handleId)?.length ?? 0) > 0;
-            },
-          },
+          resolutionContext.createHelpers(preselectedNodeId),
         )
       : undefined;
 
@@ -140,7 +132,6 @@ function RecipeSelectorModal() {
 
     const { nodes, edges } = useFlowStore.getState();
 
-    // Resolve settings for special recipes based on preselected product
     let resolvedSettings: Record<string, unknown> | undefined;
     if (effectiveProductId) {
       const sr = getSpecialRecipe(recipeId);

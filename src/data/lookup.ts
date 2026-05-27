@@ -7,8 +7,8 @@ import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { useFlowStore } from '../stores/useFlowStore';
 import { useFlowResultStore } from '../stores/useFlowResultStore';
 import { clearFlowCache } from '../solver/flowSolver';
-import { buildEdgeLookupMap } from '../utils/productResolver';
-import { buildVirtualModularMachines } from '../utils/machineTaxonomy';
+import { createGraphResolutionContext } from '../utils/graphResolutionContext';
+import { buildVirtualModularMachines } from '../utils/modularMachineFactory';
 import { buildHandleId } from '../utils/idGenerator';
 
 let recipes: Recipe[] = [];
@@ -391,23 +391,23 @@ export function resolveActiveRecipe(
       unknown
     >;
     const activeHelpers = helpers ?? (() => {
-      const edges = useFlowStore.getState().edges;
-      const edgeLookup = buildEdgeLookupMap(edges);
+      const flowState = useFlowStore.getState();
+      const resolutionContext = createGraphResolutionContext(flowState.nodes, flowState.edges);
+      const fallbackHelpers = nodeId ? resolutionContext.createHelpers(nodeId) : null;
       return {
         resolveProduct: (side: 'input' | 'output', index: number) => {
           if (!nodeId) return '';
           const handleId = buildHandleId(nodeId, side, index);
-          return useFlowStore.getState().resolvedProducts[handleId] ?? '';
+          return flowState.resolvedProducts[handleId] ?? fallbackHelpers?.resolveProduct(side, index) ?? '';
         },
         hasConnection: (side: 'input' | 'output', index: number) => {
-          if (!nodeId) return false;
-          const handleId = buildHandleId(nodeId, side, index);
-          return (edgeLookup.get(handleId)?.length ?? 0) > 0;
+          if (!fallbackHelpers) return false;
+          return fallbackHelpers.hasConnection(side, index);
         },
         getFlowRate: (side: 'input' | 'output', index: number) => {
           if (!nodeId) return 0;
           const handleId = buildHandleId(nodeId, side, index);
-          const connectedEdges = edgeLookup.get(handleId) ?? [];
+          const connectedEdges = resolutionContext.edgeLookup.get(handleId) ?? [];
           const edgeFlows = useFlowResultStore.getState().edgeFlows;
           let totalFlow = 0;
           for (const edge of connectedEdges) {

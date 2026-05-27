@@ -11,7 +11,7 @@ import '@xyflow/react/dist/style.css';
 import { RecipeNode } from './nodes/RecipeNode';
 import { RecipeEdge } from './edges/RecipeEdge';
 import { getProduct } from '../../data/lookup';
-import { resolveHandleProduct } from '../../utils/productResolver';
+import { createGraphResolutionContext } from '../../utils/graphResolutionContext';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { useFlowSolver } from '../../hooks/useFlowSolver';
@@ -61,28 +61,13 @@ const isValidConnection = (connection: Connection | Edge) => {
   }
 
   const store = useFlowStore.getState();
+  const resolutionContext = createGraphResolutionContext(store.nodes, store.edges);
+  const sourceHelpers = resolutionContext.createHelpers(connection.source);
+  const targetHelpers = resolutionContext.createHelpers(connection.target);
   const resolvedSourceProductId =
-    store.resolvedProducts[connection.sourceHandle] ??
-    resolveHandleProduct(
-      connection.source,
-      'output',
-      sourceParsed.index,
-      store.nodesMap,
-      store.edges,
-      new Set(),
-      new Map(),
-    );
+    store.resolvedProducts[connection.sourceHandle] ?? sourceHelpers.resolveProduct('output', sourceParsed.index);
   const resolvedTargetProductId =
-    store.resolvedProducts[connection.targetHandle] ??
-    resolveHandleProduct(
-      connection.target,
-      'input',
-      targetParsed.index,
-      store.nodesMap,
-      store.edges,
-      new Set(),
-      new Map(),
-    );
+    store.resolvedProducts[connection.targetHandle] ?? targetHelpers.resolveProduct('input', targetParsed.index);
 
   const sourceProdObj = getProduct(resolvedSourceProductId);
   const targetProdObj = getProduct(resolvedTargetProductId);

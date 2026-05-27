@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import {
   ChevronUp,
@@ -295,7 +295,7 @@ export function DashboardPanels() {
                         className={styles['diagnostic-row-node']}
                         onClick={() => handleNodeClick(item.nodeId)}
                       >
-                        <span className={styles['diagnostic-node-indent']}>└─ {item.nodeName}</span>
+                        <span className={styles['diagnostic-node-indent']}>|- {item.nodeName}</span>
                         <div className={styles['diagnostic-node-right']}>
                           <span
                             className={`${styles['diagnostic-rate-sub']} ${styles['deficiency']}`}
@@ -351,7 +351,7 @@ export function DashboardPanels() {
                         className={styles['diagnostic-row-node']}
                         onClick={() => handleNodeClick(item.nodeId)}
                       >
-                        <span className={styles['diagnostic-node-indent']}>└─ {item.nodeName}</span>
+                        <span className={styles['diagnostic-node-indent']}>|- {item.nodeName}</span>
                         <div className={styles['diagnostic-node-right']}>
                           <span className={`${styles['diagnostic-rate-sub']} ${styles['excess']}`}>
                             +{formatQuantity(item.rate)}
@@ -373,3 +373,4 @@ export function DashboardPanels() {
     </div>
   );
 }
+

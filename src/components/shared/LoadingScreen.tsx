@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import styles from './LoadingScreen.module.css';
-import { LOGO_SRC } from '../../utils/logoCache';
+import { LOGO_SRC } from '../../bootstrap/logoPreload';
 
 interface LoadingScreenProps {
   title: string;

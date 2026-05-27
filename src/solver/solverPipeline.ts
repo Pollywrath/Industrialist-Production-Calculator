@@ -164,7 +164,6 @@ function solveFlowsForPipeline(
     return firstPass;
   }
 
-  // Avoid stale cache interactions after flow-dependent corrections.
   return calculateFlows(correctedGraph, true);
 }
 

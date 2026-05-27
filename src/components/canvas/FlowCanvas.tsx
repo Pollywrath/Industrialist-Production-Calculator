@@ -6,7 +6,7 @@ import { DashboardPanels } from '../menu/DashboardPanels';
 import { FlowViewport } from './FlowViewport';
 import { LoadingScreen } from '../shared/LoadingScreen';
 import { useAutosave } from '../../persistence/useAutosave';
-import { prefetchCache } from '../../utils/prefetchCache';
+import { overlayPrefetchCache } from './overlayPrefetchCache';
 
 import styles from './FlowCanvas.module.css';
 
@@ -18,7 +18,7 @@ const LazyRecipeSelector = React.lazy(
   () =>
     import('../overlays/RecipeSelector')
       .then((m) => {
-        prefetchCache.RecipeSelector = m.RecipeSelector;
+        overlayPrefetchCache.RecipeSelector = m.RecipeSelector;
         return { default: m.RecipeSelector };
       })
       .catch((err) => {
@@ -35,7 +35,7 @@ const LazySavesOverlay = React.lazy(
   () =>
     import('../overlays/SavesOverlay/SavesOverlay')
       .then((m) => {
-        prefetchCache.SavesOverlay = m.SavesOverlay;
+        overlayPrefetchCache.SavesOverlay = m.SavesOverlay;
         return { default: m.SavesOverlay };
       })
       .catch((err) => {
@@ -48,7 +48,7 @@ const LazyDataOverlay = React.lazy(
   () =>
     import('../overlays/DataOverlay/DataOverlay')
       .then((m) => {
-        prefetchCache.DataOverlay = m.DataOverlay;
+        overlayPrefetchCache.DataOverlay = m.DataOverlay;
         return { default: m.DataOverlay };
       })
       .catch((err) => {
@@ -80,28 +80,28 @@ export function FlowCanvas() {
       Promise.all([
         import('../overlays/RecipeSelector')
           .then((m) => {
-            prefetchCache.RecipeSelector = m.RecipeSelector;
+            overlayPrefetchCache.RecipeSelector = m.RecipeSelector;
           })
           .catch((err) => {
             console.warn('Failed to prefetch RecipeSelector chunk on idle:', err);
           }),
         import('../overlays/NodeEditor')
           .then((m) => {
-            prefetchCache.NodeEditor = m.NodeEditor;
+            overlayPrefetchCache.NodeEditor = m.NodeEditor;
           })
           .catch((err) => {
             console.warn('Failed to prefetch NodeEditor chunk on idle:', err);
           }),
         import('../overlays/SavesOverlay/SavesOverlay')
           .then((m) => {
-            prefetchCache.SavesOverlay = m.SavesOverlay;
+            overlayPrefetchCache.SavesOverlay = m.SavesOverlay;
           })
           .catch((err) => {
             console.warn('Failed to prefetch SavesOverlay chunk on idle:', err);
           }),
         import('../overlays/DataOverlay/DataOverlay')
           .then((m) => {
-            prefetchCache.DataOverlay = m.DataOverlay;
+            overlayPrefetchCache.DataOverlay = m.DataOverlay;
           })
           .catch((err) => {
             console.warn('Failed to prefetch DataOverlay chunk on idle:', err);
@@ -124,9 +124,9 @@ export function FlowCanvas() {
     };
   }, []);
 
-  const RecipeSelector = prefetchCache.RecipeSelector;
-  const SavesOverlay = prefetchCache.SavesOverlay;
-  const DataOverlay = prefetchCache.DataOverlay;
+  const RecipeSelector = overlayPrefetchCache.RecipeSelector;
+  const SavesOverlay = overlayPrefetchCache.SavesOverlay;
+  const DataOverlay = overlayPrefetchCache.DataOverlay;
 
   if (!isAutosaveLoaded) {
     return (

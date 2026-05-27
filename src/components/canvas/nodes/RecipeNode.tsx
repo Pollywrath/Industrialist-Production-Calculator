@@ -8,7 +8,7 @@ import styles from './RecipeNode.module.css';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { LoadingScreen } from '../../shared/LoadingScreen';
-import { prefetchCache, type NodeEditorProps } from '../../../utils/prefetchCache';
+import { overlayPrefetchCache, type NodeEditorProps } from '../overlayPrefetchCache';
 import { buildHandleId } from '../../../utils/idGenerator';
 
 const FallbackNodeEditor: React.ComponentType<NodeEditorProps> = () => null;
@@ -17,7 +17,7 @@ const LazyNodeEditor = React.lazy(
   () =>
     import('../../overlays/NodeEditor')
       .then((m) => {
-        prefetchCache.NodeEditor = m.NodeEditor;
+        overlayPrefetchCache.NodeEditor = m.NodeEditor;
         return { default: m.NodeEditor };
       })
       .catch((err) => {
@@ -43,7 +43,7 @@ import { getSpecialRecipe } from '../../../data/registry';
 export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const updateNodeInternals = useUpdateNodeInternals();
-  const NodeEditor = prefetchCache.NodeEditor;
+  const NodeEditor = overlayPrefetchCache.NodeEditor;
 
   const dbVersion = useDataStore((s) => s.dbVersion);
 

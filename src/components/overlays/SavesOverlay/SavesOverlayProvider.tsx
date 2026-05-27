@@ -6,9 +6,9 @@ import { useFlowStore } from '../../../stores/useFlowStore';
 import { getSaves, saveSave, deleteSave, renameSave } from '../../../persistence/idb';
 import type { SaveRecord } from '../../../types/saves';
 import { serializeCanvas, deserializeCanvas } from '../../../persistence/transformer';
+import { mergeSaveIntoCanvas } from '../../../persistence/graphMerge';
 import { nextSaveId } from '../../../utils/idGenerator';
-import { mergeSaveIntoCanvas } from '../../../utils/graphMerge';
-import { exportCanvasAsPng, exportRecordAsJson } from '../../../utils/canvasExport';
+import { exportCanvasAsPng, exportRecordAsJson } from '../../../services/canvasExportService';
 import {
   SavesOverlayContext,
   type SavesOverlayState,

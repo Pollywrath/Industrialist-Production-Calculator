@@ -1,8 +1,9 @@
 import type { Recipe } from '../../../types/data';
+import type { RateMode } from '../../../types/ui';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { getProductName } from '../../../data/lookup';
 import { useFlowStore } from '../../../stores/useFlowStore';
-import { resolveHandleProduct, buildEdgeLookupMap } from '../../../utils/productResolver';
+import { createGraphResolutionContext } from '../../../utils/graphResolutionContext';
 import styles from './NodeEditor.module.css';
 import { useNodeEditorStore } from './NodeEditorContext';
 
@@ -14,10 +15,10 @@ interface HandleRowProps {
   listIdx: number;
   totalLength: number;
   multiplier: number;
-  rateMode: 'second' | 'minute' | 'hour' | 'raw';
+  rateMode: RateMode;
 }
 
-const getRateSuffix = (rateMode: 'second' | 'minute' | 'hour' | 'raw') => {
+const getRateSuffix = (rateMode: RateMode) => {
   switch (rateMode) {
     case 'second':
       return '/s';
@@ -62,9 +63,10 @@ export function HandleRow({
     );
   }
 
-  const { nodesMap, edges } = useFlowStore.getState();
-  const edgeLookup = buildEdgeLookupMap(edges);
-  const resolvedProductId = resolveHandleProduct(nodeId, side, index, nodesMap, edgeLookup, new Set(), new Map());
+  const { nodes, edges } = useFlowStore.getState();
+  const resolutionContext = createGraphResolutionContext(nodes, edges);
+  const helpers = resolutionContext.createHelpers(nodeId);
+  const resolvedProductId = helpers.resolveProduct(side, index);
   const name = getProductName(resolvedProductId);
   const baseQuantity = entry.quantity;
   const normalizedBaseQuantity = baseQuantity * multiplier;

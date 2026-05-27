@@ -1,4 +1,4 @@
-import { toPlainString } from './precision';
+﻿import { toPlainString } from './precision';
 
 function formatWithPrefix(
   value: number,
@@ -129,3 +129,4 @@ export function formatQuantity(value: number): string {
 export function formatMachineCount(value: number): string {
   return formatWithCommasAndCounting(value, (val) => toPlainString(val, 2), 100000);
 }
+

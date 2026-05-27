@@ -1,13 +1,17 @@
 import type {
   SolverGraph,
-  SolverProductData,
-  SolverPort,
   SolverConnection,
   FlowEdge,
   FlowNetwork,
   FlowResults,
 } from '../types/solver';
 import { clampFlow, EPSILON } from '../utils/precision';
+import {
+  findProductConnectedComponents,
+  getProductConnectionSourceKey,
+  getProductConnectionTargetKey,
+  type ProductComponent,
+} from './productComponents';
 
 class LRUCache<V> {
   cache = new Map<string, V>();
@@ -40,40 +44,6 @@ class LRUCache<V> {
 
   clear(): void {
     this.cache.clear();
-  }
-}
-
-class UnionFind {
-  parent: Int32Array;
-  rank: Int32Array;
-
-  constructor(size: number) {
-    this.parent = new Int32Array(size);
-    this.rank = new Int32Array(size);
-    for (let i = 0; i < size; i++) {
-      this.parent[i] = i;
-    }
-  }
-
-  find(x: number): number {
-    if (this.parent[x] !== x) {
-      this.parent[x] = this.find(this.parent[x]);
-    }
-    return this.parent[x];
-  }
-
-  union(x: number, y: number): void {
-    const rootX = this.find(x);
-    const rootY = this.find(y);
-    if (rootX === rootY) return;
-    if (this.rank[rootX] < this.rank[rootY]) {
-      this.parent[rootX] = rootY;
-    } else if (this.rank[rootX] > this.rank[rootY]) {
-      this.parent[rootY] = rootX;
-    } else {
-      this.parent[rootY] = rootX;
-      this.rank[rootX]++;
-    }
   }
 }
 
@@ -130,90 +100,7 @@ class CircularQueue {
   }
 }
 
-interface Component {
-  ports: SolverPort[];
-  connections: SolverConnection[];
-}
-
-function getPortKey(port: SolverPort): string {
-  const prefix = port.type === 'input' ? 'in' : 'out';
-  return `${prefix}:${port.nodeId}:${port.index}`;
-}
-
-function getSourceKey(conn: SolverConnection): string {
-  return `out:${conn.sourceNodeId}:${conn.sourceOutputIndex}`;
-}
-
-function getTargetKey(conn: SolverConnection): string {
-  return `in:${conn.targetNodeId}:${conn.targetInputIndex}`;
-}
-
-function findConnectedComponents(productData: SolverProductData) {
-  const ports: SolverPort[] = [];
-  const portToIndex = new Map<string, number>();
-
-  for (const producer of productData.producers) {
-    const portKey = getPortKey(producer);
-    if (!portToIndex.has(portKey)) {
-      portToIndex.set(portKey, ports.length);
-      ports.push(producer);
-    }
-  }
-
-  for (const consumer of productData.consumers) {
-    const portKey = getPortKey(consumer);
-    if (!portToIndex.has(portKey)) {
-      portToIndex.set(portKey, ports.length);
-      ports.push(consumer);
-    }
-  }
-
-  const uf = new UnionFind(ports.length);
-
-  for (const conn of productData.connections) {
-    const sourceKey = getSourceKey(conn);
-    const targetKey = getTargetKey(conn);
-    const sourceIdx = portToIndex.get(sourceKey);
-    const targetIdx = portToIndex.get(targetKey);
-    if (sourceIdx !== undefined && targetIdx !== undefined) {
-      uf.union(sourceIdx, targetIdx);
-    }
-  }
-
-  const componentMap = new Map<number, number[]>();
-  for (let i = 0; i < ports.length; i++) {
-    const root = uf.find(i);
-    if (!componentMap.has(root)) componentMap.set(root, []);
-    componentMap.get(root)!.push(i);
-  }
-
-  const componentsByRoot = new Map<number, Component>();
-  componentMap.forEach((portIndices, root) => {
-    const component: Component = {
-      ports: portIndices.map((idx) => ports[idx]),
-      connections: [],
-    };
-    componentsByRoot.set(root, component);
-  });
-
-  for (const conn of productData.connections) {
-    const sourceKey = getSourceKey(conn);
-    const sourceIdx = portToIndex.get(sourceKey);
-    if (sourceIdx !== undefined) {
-      const root = uf.find(sourceIdx);
-      const component = componentsByRoot.get(root);
-      if (component) {
-        component.connections.push(conn);
-      }
-    }
-  }
-
-  const components = Array.from(componentsByRoot.values());
-
-  return components;
-}
-
-function hashComponent(component: Component): string {
+function hashComponent(component: ProductComponent): string {
   const portHashes = component.ports
     .map((p) => `${p.type}:${p.nodeId}:${p.index}:${p.rate}`)
     .sort()
@@ -248,8 +135,8 @@ function buildFlowNetwork(connections: SolverConnection[], totalProduction: numb
   const targets = new Map<string, number>();
 
   for (const conn of connections) {
-    const sourceKey = getSourceKey(conn);
-    const targetKey = getTargetKey(conn);
+    const sourceKey = getProductConnectionSourceKey(conn);
+    const targetKey = getProductConnectionTargetKey(conn);
     getNodeIndex(sourceKey);
     getNodeIndex(targetKey);
     if (!sources.has(sourceKey)) {
@@ -282,8 +169,8 @@ function buildFlowNetwork(connections: SolverConnection[], totalProduction: numb
   });
 
   connections.forEach((conn, connIdx) => {
-    const sourceKey = getSourceKey(conn);
-    const targetKey = getTargetKey(conn);
+    const sourceKey = getProductConnectionSourceKey(conn);
+    const targetKey = getProductConnectionTargetKey(conn);
     addEdge(getNodeIndex(sourceKey), getNodeIndex(targetKey), maxCapacity, connIdx);
   });
 
@@ -413,7 +300,7 @@ function runFlowPass(
   for (const [, productData] of Object.entries(graph.products)) {
     if (productData.connections.length === 0) continue;
 
-    const components = findConnectedComponents(productData);
+    const components = findProductConnectedComponents(productData);
 
     for (const component of components) {
       if (component.connections.length === 0) continue;

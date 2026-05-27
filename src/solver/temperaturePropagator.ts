@@ -2,7 +2,7 @@ import type { ReactFlowNode, ReactFlowEdge } from '../types/solver';
 import { resolveActiveRecipe } from '../data/lookup';
 import { getSpecialRecipe } from '../data/registry';
 import { parseHandleId, buildHandleId } from '../utils/idGenerator';
-import { resolveHandleProduct, buildEdgeLookupMap } from '../utils/productResolver';
+import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 
 export interface TemperaturePropagationResult {
   edgeTemps: Record<string, number>;
@@ -15,21 +15,25 @@ export function propagateTemperatures(
   edges: ReactFlowEdge[],
   edgeFlows: Record<string, number>,
 ): TemperaturePropagationResult {
-  const nodesMap = new Map<string, ReactFlowNode>(nodes.map((n) => [n.id, n]));
-  const edgeLookup = buildEdgeLookupMap(edges);
-  const getHelpers = (nodeId: string, cache: Map<string, string>) => ({
-    resolveProduct: (side: 'input' | 'output', index: number) =>
-      resolveHandleProduct(nodeId, side, index, nodesMap, edgeLookup, new Set(), cache),
-    hasConnection: (side: 'input' | 'output', index: number) => {
-      const handleId = buildHandleId(nodeId, side, index);
-      return (edgeLookup.get(handleId)?.length ?? 0) > 0;
-    },
-  });
+  const resolutionContext = createGraphResolutionContext(nodes, edges);
+  const getHelpers = (nodeId: string) => resolutionContext.createHelpers(nodeId);
 
   const nodeOutputTemps: Record<string, number[]> = {};
   const inputTemps: Record<string, Record<number, number>> = {};
   const edgeTemps: Record<string, number> = {};
-  const cache = new Map<string, string>();
+
+  const resolveConfiguredInputTemp = (
+    node: ReactFlowNode,
+    inputIndex: number,
+    sr = getSpecialRecipe(node.data.recipeId),
+  ): number => {
+    const settingKey = sr?.inputTemperatureSettings?.[inputIndex];
+    if (!settingKey) return 18;
+    const settingVal = node.data.settings?.[settingKey];
+    if (typeof settingVal === 'number') return settingVal;
+    const def = sr.settings?.[settingKey]?.default;
+    return typeof def === 'number' ? def : 18;
+  };
 
   for (const node of nodes) {
     inputTemps[node.id] = {};
@@ -43,7 +47,7 @@ export function propagateTemperatures(
       node.data.recipeId,
       node.data.settings,
       node.id,
-      getHelpers(node.id, cache),
+      getHelpers(node.id),
       { suppressStoreTemperatureOverrides: true },
     );
     if (recipe) {
@@ -125,7 +129,7 @@ export function propagateTemperatures(
         node.data.recipeId,
         node.data.settings,
         nodeId,
-        getHelpers(nodeId, cache),
+        getHelpers(nodeId),
         { suppressStoreTemperatureOverrides: true },
       );
       if (!recipe) continue;
@@ -137,18 +141,7 @@ export function propagateTemperatures(
         const hasIncoming = connectedTargetHandles.has(handleId);
 
         if (!hasIncoming) {
-          const settingKey = sr?.inputTemperatureSettings?.[i];
-          if (settingKey) {
-            const settingVal = node.data.settings?.[settingKey];
-            if (typeof settingVal === 'number') {
-              inputTemps[nodeId][i] = settingVal;
-            } else {
-              const def = sr.settings?.[settingKey]?.default;
-              inputTemps[nodeId][i] = typeof def === 'number' ? def : 18;
-            }
-          } else {
-            inputTemps[nodeId][i] = 18;
-          }
+          inputTemps[nodeId][i] = resolveConfiguredInputTemp(node, i, sr);
         } else {
           const connected = incomingEdges[nodeId]?.[i] || [];
           let totalFlow = 0;
@@ -162,11 +155,7 @@ export function propagateTemperatures(
           if (totalFlow > 1e-8) {
             inputTemps[nodeId][i] = weightedSum / totalFlow;
           } else {
-            let sumTemp = 0;
-            for (const edge of connected) {
-              sumTemp += edgeTemps[edge.id];
-            }
-            inputTemps[nodeId][i] = connected.length > 0 ? sumTemp / connected.length : 18;
+            inputTemps[nodeId][i] = resolveConfiguredInputTemp(node, i, sr);
           }
         }
       }
@@ -188,7 +177,7 @@ export function propagateTemperatures(
             ...tempOverrides,
           },
           nodeId,
-          getHelpers(nodeId, cache),
+          getHelpers(nodeId),
           {
             temperatureInputOverrides: inputTemps[nodeId],
             suppressStoreTemperatureOverrides: true,
@@ -214,7 +203,7 @@ export function propagateTemperatures(
       node.data.recipeId,
       settings,
       node.id,
-      getHelpers(node.id, cache),
+      getHelpers(node.id),
       {
         temperatureInputOverrides: inputTemps[node.id],
         suppressStoreTemperatureOverrides: true,
