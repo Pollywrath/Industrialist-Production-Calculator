@@ -17,8 +17,16 @@ const ALIAS_MAP: Record<string, string> = {
   p_microchip_scrap: 'p_logic_plate',
 };
 
+const ASSET_VERSION = import.meta.env.VITE_ICON_VERSION || 'dev';
+
+function withAssetVersion(path: string): string {
+  return `${path}?v=${ASSET_VERSION}`;
+}
+
+export const INDUS_LOGO_SRC = withAssetVersion('/induslogo.webp');
+
 export function getProductIconPath(productId: string): string | null {
   const effectiveId = ALIAS_MAP[productId] || productId;
 
-  return `/icons/${effectiveId}.webp`;
+  return withAssetVersion(`/icons/${effectiveId}.webp`);
 }

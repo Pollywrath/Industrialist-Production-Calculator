@@ -3,7 +3,16 @@ import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import babel from '@rolldown/plugin-babel';
 
 // https://vite.dev/config/
+const iconVersion =
+  process.env.CF_PAGES_COMMIT_SHA ??
+  process.env.GITHUB_SHA ??
+  process.env.npm_package_version ??
+  'dev';
+
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_ICON_VERSION': JSON.stringify(iconVersion),
+  },
   plugins: [react(), babel({ presets: [reactCompilerPreset()] })],
   build: {
     rollupOptions: {
