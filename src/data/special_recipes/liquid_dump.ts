@@ -33,8 +33,8 @@ export const liquid_dump_01: SpecialRecipe = {
       fluid2 = helpers.resolveProduct('input', 1) || 'any_fluid';
     }
 
-    const flow1 = helpers?.getFlowRate?.('input', 0) ?? 15;
-    const flow2 = helpers?.getFlowRate?.('input', 1) ?? 15;
+    const flow1 = helpers?.getFlowRate?.('input', 0) ?? 30;
+    const flow2 = helpers?.getFlowRate?.('input', 1) ?? 30;
     const pollution = calculatePollution(fluid1, flow1) + calculatePollution(fluid2, flow2);
 
     const recipe: Recipe = {
@@ -46,8 +46,8 @@ export const liquid_dump_01: SpecialRecipe = {
       power_type: 'MV',
       pollution,
       inputs: [
-        { product_id: fluid1, quantity: 15, variable: true },
-        { product_id: fluid2, quantity: 15, variable: true },
+        { product_id: fluid1, quantity: 30, variable: true },
+        { product_id: fluid2, quantity: 30, variable: true },
       ],
       outputs: [],
     };

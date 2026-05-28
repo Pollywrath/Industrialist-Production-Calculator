@@ -1,4 +1,4 @@
-﻿import { toPlainString } from './precision';
+import { toPlainString } from './precision';
 
 function formatWithPrefix(
   value: number,
@@ -6,13 +6,14 @@ function formatWithPrefix(
   prefixes: string[],
   suffix: string,
   prefixUnit = '',
+  decimals = 2,
 ): string {
   const isNegative = value < 0;
   const absValue = Math.abs(value);
 
   if (absValue < conversionLimit) {
     if (absValue >= 1000) {
-      const parts = absValue.toFixed(2).split('.');
+      const parts = absValue.toFixed(decimals).split('.');
       const integerPart = parseInt(parts[0], 10).toLocaleString('en-US');
       const decimalValue = parseFloat('0.' + parts[1]);
       const decimalPart = decimalValue > 0 ? '.' + parts[1].replace(/0+$/, '') : '';
@@ -20,7 +21,7 @@ function formatWithPrefix(
       const formatted = `${prefixUnit}${integerPart}${cleanDecimalPart}${suffix}`;
       return isNegative ? `-${formatted}` : formatted;
     } else {
-      const formatted = `${prefixUnit}${Number(absValue.toFixed(2))}${suffix}`;
+      const formatted = `${prefixUnit}${Number(absValue.toFixed(decimals))}${suffix}`;
       return isNegative ? `-${formatted}` : formatted;
     }
   }
@@ -33,13 +34,13 @@ function formatWithPrefix(
     tier++;
   }
 
-  const formattedNum = Number(scaled.toFixed(2));
+  const formattedNum = Number(scaled.toFixed(decimals));
   const formatted = `${prefixUnit}${formattedNum}${prefixes[tier]}${suffix}`;
   return isNegative ? `-${formatted}` : formatted;
 }
 
 export function formatPollution(value: number): string {
-  return formatWithPrefix(value, 1000, ['', 'k', 'M', 'G', 'T'], '%/hr');
+  return formatWithPrefix(value, 1000, ['', 'k', 'M', 'G', 'T'], '%/hr', '', 3);
 }
 
 export function formatPower(value: number, isCapacity = false): string {

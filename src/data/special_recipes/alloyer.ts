@@ -2,10 +2,8 @@ import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
 
 const calculateCycleTime = (tempC: number): number => {
-  if (tempC <= 0) return 40;
-  if (tempC < 300) return 1500 / tempC + 5;
-  if (tempC >= 400) return 8;
-  return 4000 / (tempC + 100);
+  const t = Math.max(0, tempC);
+  return Math.max(2, 40 / (1 + t / 100));
 };
 
 const settingDefinitions = {

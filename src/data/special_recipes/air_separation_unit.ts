@@ -8,7 +8,7 @@ export const air_separation_unit: SpecialRecipe = {
   settings: {},
   compute: (_settings, globalSettings) => {
     const pollution = (globalSettings?.global_pollution as number) ?? 10;
-    const residueQuantity = Math.max(1, 0.1 * pollution);
+    const residueQuantity = Math.min(20, Math.max(1, pollution / 10));
 
     const recipe: Recipe = {
       id: 'r_air_separation_unit_01',

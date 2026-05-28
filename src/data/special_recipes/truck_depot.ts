@@ -19,7 +19,7 @@ export const m_truck_depot_01: SpecialRecipe = {
       cycle_time: 15,
       power_consumption: 0,
       power_type: 'MV',
-      pollution: 1.2,
+      pollution: 1.44,
       inputs: [{ product_id: resolvedItem, quantity: 10, variable: true }],
       outputs: [],
     };
