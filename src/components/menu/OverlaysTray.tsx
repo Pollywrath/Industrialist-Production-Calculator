@@ -22,6 +22,8 @@ export function OverlaysTray() {
   const setSavesOverlayOpen = useUIStore((s) => s.setSavesOverlayOpen);
   const isDataOverlayOpen = useUIStore((s) => s.isDataOverlayOpen);
   const setDataOverlayOpen = useUIStore((s) => s.setDataOverlayOpen);
+  const isThemeOverlayOpen = useUIStore((s) => s.isThemeOverlayOpen);
+  const setThemeOverlayOpen = useUIStore((s) => s.setThemeOverlayOpen);
   const isOverlaysMinimized = useUIStore((s) => s.isOverlaysMinimized);
   const toggleOverlaysMinimized = useUIStore((s) => s.toggleOverlaysMinimized);
 
@@ -30,6 +32,8 @@ export function OverlaysTray() {
       setSavesOverlayOpen(!isSavesOverlayOpen);
     } else if (id === 'data') {
       setDataOverlayOpen(!isDataOverlayOpen);
+    } else if (id === 'theme') {
+      setThemeOverlayOpen(!isThemeOverlayOpen);
     }
   };
 
@@ -38,10 +42,11 @@ export function OverlaysTray() {
       {!isOverlaysMinimized && (
         <div className={styles['overlays-tray-grid']}>
           {BUTTONS.map((btn) => {
-            const isDisabled = btn.id !== 'saves' && btn.id !== 'data';
+            const isDisabled = btn.id === 'help';
             const isActive =
               (btn.id === 'saves' && isSavesOverlayOpen) ||
-              (btn.id === 'data' && isDataOverlayOpen);
+              (btn.id === 'data' && isDataOverlayOpen) ||
+              (btn.id === 'theme' && isThemeOverlayOpen);
             const Icon = btn.Icon;
 
             return (

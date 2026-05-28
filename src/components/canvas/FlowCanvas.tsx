@@ -13,6 +13,7 @@ import styles from './FlowCanvas.module.css';
 const FallbackRecipeSelector: React.ComponentType<Record<string, never>> = () => null;
 const FallbackSavesOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackDataOverlay: React.ComponentType<Record<string, never>> = () => null;
+const FallbackThemeOverlay: React.ComponentType<Record<string, never>> = () => null;
 
 const LazyRecipeSelector = React.lazy(
   () =>
@@ -57,11 +58,25 @@ const LazyDataOverlay = React.lazy(
       }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
 );
 
+const LazyThemeOverlay = React.lazy(
+  () =>
+    import('../overlays/ThemeOverlay')
+      .then((m) => {
+        overlayPrefetchCache.ThemeOverlay = m.ThemeOverlay;
+        return { default: m.ThemeOverlay };
+      })
+      .catch((err) => {
+        console.warn('ThemeOverlay chunk load failed.', err);
+        return { default: FallbackThemeOverlay };
+      }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
+);
+
 export function FlowCanvas() {
   const isDeleteMode = useUIStore((s) => getEffectiveToggleId(s) === 'delete_mode');
   const isRecipeSelectorOpen = useUIStore((s) => s.isRecipeSelectorOpen);
   const isSavesOverlayOpen = useUIStore((s) => s.isSavesOverlayOpen);
   const isDataOverlayOpen = useUIStore((s) => s.isDataOverlayOpen);
+  const isThemeOverlayOpen = useUIStore((s) => s.isThemeOverlayOpen);
   const isTransformingStore = useUIStore((s) => s.isTransforming);
   const isZoomedOutStore = useUIStore((s) => s.isZoomedOut);
   const isExporting = useUIStore((s) => s.isExporting);
@@ -106,6 +121,13 @@ export function FlowCanvas() {
           .catch((err) => {
             console.warn('Failed to prefetch DataOverlay chunk on idle:', err);
           }),
+        import('../overlays/ThemeOverlay')
+          .then((m) => {
+            overlayPrefetchCache.ThemeOverlay = m.ThemeOverlay;
+          })
+          .catch((err) => {
+            console.warn('Failed to prefetch ThemeOverlay chunk on idle:', err);
+          }),
       ]);
     };
 
@@ -127,6 +149,7 @@ export function FlowCanvas() {
   const RecipeSelector = overlayPrefetchCache.RecipeSelector;
   const SavesOverlay = overlayPrefetchCache.SavesOverlay;
   const DataOverlay = overlayPrefetchCache.DataOverlay;
+  const ThemeOverlay = overlayPrefetchCache.ThemeOverlay;
 
   if (!isAutosaveLoaded) {
     return (
@@ -184,6 +207,16 @@ export function FlowCanvas() {
             fallback={<LoadingScreen title="DATA MANAGER" subtitle="Loading data editor..." />}
           >
             <LazyDataOverlay />
+          </Suspense>
+        ))}
+      {isThemeOverlayOpen &&
+        (ThemeOverlay ? (
+          React.createElement(ThemeOverlay)
+        ) : (
+          <Suspense
+            fallback={<LoadingScreen title="THEME EDITOR" subtitle="Loading theme variables..." />}
+          >
+            <LazyThemeOverlay />
           </Suspense>
         ))}
     </div>

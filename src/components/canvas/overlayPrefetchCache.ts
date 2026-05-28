@@ -14,4 +14,5 @@ export const overlayPrefetchCache = {
   NodeEditor: null as React.ComponentType<NodeEditorProps> | null,
   SavesOverlay: null as React.ComponentType<Record<string, never>> | null,
   DataOverlay: null as React.ComponentType<Record<string, never>> | null,
+  ThemeOverlay: null as React.ComponentType<Record<string, never>> | null,
 };

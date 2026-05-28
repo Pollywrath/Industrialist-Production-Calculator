@@ -13,7 +13,7 @@ import {
   buildVirtualModularMachines,
 } from '../../../utils/machineTaxonomy';
 import styles from './RecipeSelector.module.css';
-import { formatCurrency, formatRpMultiplier } from '../../../utils/unitFormatting';
+import { formatCurrency, formatRpMultiplier, toRomanNumeral } from '../../../utils/unitFormatting';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useDataStore } from '../../../stores/useDataStore';
 import { useRecipeSelectorStore } from './RecipeSelectorContext';
@@ -70,7 +70,7 @@ const MACHINE_COLUMNS: ColumnConfig<Machine, 'name' | 'cost'>[] = [
       const tierClass = styles[`tier-${m.tier}`] || '';
       return (
         <div className={`${styles['cell-flex-container']} ${tierClass}`}>
-          <span className={styles['tier-badge']}>T{m.tier}</span>
+          <span className={styles['tier-badge']}>{toRomanNumeral(m.tier)}</span>
           <SubIcon size={14} className={styles['machine-subicon']} />
           <span className={styles['machine-name-text']}>{m.name}</span>
         </div>
@@ -230,7 +230,7 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
                 <option value="All">All Tiers</option>
                 {uniqueTiers.map((t) => (
                   <option key={t} value={t}>
-                    Tier {t}
+                    Tier {toRomanNumeral(t)}
                   </option>
                 ))}
               </select>

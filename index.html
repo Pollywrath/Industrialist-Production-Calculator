@@ -8,6 +8,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>industrialist-calculator</title>
   <style>
+    :root {
+      --theme-color-canvas-bg: #0a0a0a;
+      --theme-color-bg-secondary: #1a1a1a;
+      --theme-color-border-light: #333333;
+      --theme-color-text-primary: #f5d56a;
+      --theme-color-text-secondary: #999999;
+      --theme-color-success: #22c55e;
+    }
+
     @keyframes startup-loading-spin {
       0% {
         transform: rotate(0deg);
@@ -27,36 +36,76 @@
       vertical-align: middle;
       flex-shrink: 0;
     }
+
+    .startup-root {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100vw;
+      height: 100dvh;
+      background: var(--theme-color-canvas-bg);
+      color: var(--theme-color-text-secondary);
+      font-family: monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+    }
+
+    .startup-modal {
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+      padding: 14px 20px;
+      background: var(--theme-color-bg-secondary);
+      border: 1px solid var(--theme-color-border-light);
+    }
+
+    .startup-title {
+      margin-bottom: 2px;
+      font-weight: bold;
+      color: var(--theme-color-text-primary);
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+
+    .startup-subtitle {
+      color: var(--theme-color-success);
+      white-space: nowrap;
+      line-height: 1.2;
+    }
   </style>
+  <script>
+    (() => {
+      const key = 'industrialist_theme_overrides_v1';
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return;
+
+        const rootStyle = document.documentElement.style;
+        for (const [name, value] of Object.entries(parsed)) {
+          if (!name.startsWith('--theme-')) continue;
+          if (typeof value !== 'string') continue;
+          const trimmed = value.trim();
+          if (!trimmed) continue;
+          rootStyle.setProperty(name, trimmed);
+        }
+      } catch {
+        // Keep startup rendering even if storage is blocked/unavailable.
+      }
+    })();
+  </script>
 </head>
 
-<body style="margin: 0; padding: 0; overflow: hidden; background: #0a0a0a;">
+<body style="margin: 0; padding: 0; overflow: hidden; background: var(--theme-color-canvas-bg);">
   <div id="root">
-    <div style="
-        display: flex; 
-        flex-direction: column; 
-        align-items: center; 
-        justify-content: center; 
-        height: 100vh; 
-        width: 100vw; 
-        background: #0a0a0a; 
-        color: #999999; 
-        font-family: monospace; 
-        font-size: 11px; 
-        letter-spacing: 0.1em;
-      ">
-      <div style="
-          border: 1px solid #333333; 
-          padding: 14px 20px; 
-          background: #1a1a1a; 
-          display: flex;
-          align-items: center;
-          box-sizing: border-box;
-        ">
+    <div class="startup-root">
+      <div class="startup-modal">
         <img src="/induslogo.webp" class="startup-spinner" alt="L" />
         <div>
-            <div style="font-weight: bold; color: #f5d56a; margin-bottom: 2px; white-space: nowrap; line-height: 1.2;">INDUSTRIALIST SYSTEM</div>
-            <div style="color: #22c55e; white-space: nowrap; line-height: 1.2;">Loading application data...</div>
+          <div class="startup-title">INDUSTRIALIST SYSTEM</div>
+          <div class="startup-subtitle">Loading application data...</div>
         </div>
       </div>
     </div>

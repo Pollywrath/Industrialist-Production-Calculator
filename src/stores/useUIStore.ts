@@ -21,6 +21,7 @@ interface UIState {
   isRecipeSelectorOpen: boolean;
   isSavesOverlayOpen: boolean;
   isDataOverlayOpen: boolean;
+  isThemeOverlayOpen: boolean;
   preselectedProductId: string | null;
   preselectedSourceSide: 'input' | 'output' | null;
   preselectedNodeId: string | null;
@@ -44,6 +45,7 @@ interface UIState {
   ) => void;
   setSavesOverlayOpen: (isOpen: boolean) => void;
   setDataOverlayOpen: (isOpen: boolean) => void;
+  setThemeOverlayOpen: (isOpen: boolean) => void;
   isAutosaveLoaded: boolean;
   setAutosaveLoaded: () => void;
   isTransforming: boolean;
@@ -74,6 +76,7 @@ const useUIStore = create<UIState>((set) => ({
   isRecipeSelectorOpen: false,
   isSavesOverlayOpen: false,
   isDataOverlayOpen: false,
+  isThemeOverlayOpen: false,
   preselectedProductId: null,
   preselectedSourceSide: null,
   preselectedNodeId: null,
@@ -132,6 +135,12 @@ const useUIStore = create<UIState>((set) => ({
   setDataOverlayOpen: (isOpen) =>
     set((state) => ({
       isDataOverlayOpen: isOpen,
+      activeToggleId: isOpen ? null : state.activeToggleId,
+      temporaryOverrides: isOpen ? [] : state.temporaryOverrides,
+    })),
+  setThemeOverlayOpen: (isOpen) =>
+    set((state) => ({
+      isThemeOverlayOpen: isOpen,
       activeToggleId: isOpen ? null : state.activeToggleId,
       temporaryOverrides: isOpen ? [] : state.temporaryOverrides,
     })),
