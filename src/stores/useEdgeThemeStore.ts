@@ -16,8 +16,8 @@ interface EdgeThemeState extends EdgeStyleSettings {
 
 const EDGE_THEME_STORAGE_KEY = 'industrialist_edge_theme_v1';
 
-export const DEFAULT_EDGE_LINE_STYLE: EdgeLineStyle = 'solid';
-export const DEFAULT_EDGE_PATH_STYLE: EdgePathStyle = 'bezier';
+export const DEFAULT_EDGE_LINE_STYLE: EdgeLineStyle = 'dashed';
+export const DEFAULT_EDGE_PATH_STYLE: EdgePathStyle = 'orthogonal';
 
 const DEFAULT_EDGE_STYLE_SETTINGS: EdgeStyleSettings = {
   lineStyle: DEFAULT_EDGE_LINE_STYLE,

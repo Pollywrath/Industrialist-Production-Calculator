@@ -10,7 +10,7 @@ import type { SavedNode, SavedEdge, SaveData, GlobalSettings } from '../types/sa
 
 export const CURRENT_SAVE_VERSION = 1;
 
-function sanitizeSavedControlPoints(raw: unknown): EdgeControlPoint[] | undefined {
+function sanitizeSavedPoints(raw: unknown): EdgeControlPoint[] | undefined {
   if (!Array.isArray(raw)) return undefined;
 
   const points: EdgeControlPoint[] = [];
@@ -140,7 +140,8 @@ export function migrateSaveData(rawData: unknown): SaveData {
       sourceIndex: sIdx >= 0 ? sIdx : 0,
       target: typeof e.target === 'string' ? e.target : '',
       targetIndex: tIdx >= 0 ? tIdx : 0,
-      controlPoints: sanitizeSavedControlPoints(e.controlPoints),
+      controlPoints: sanitizeSavedPoints(e.controlPoints),
+      orthogonalTurns: sanitizeSavedPoints(e.orthogonalTurns),
     };
   });
 
@@ -190,8 +191,11 @@ export function serializeCanvas(nodes: Node<RecipeNodeData>[], edges: Edge[]): S
       sourceIndex: sourceParsed.index,
       target: e.target,
       targetIndex: targetParsed.index,
-      controlPoints: sanitizeSavedControlPoints(
+      controlPoints: sanitizeSavedPoints(
         (e.data as { controlPoints?: unknown } | undefined)?.controlPoints,
+      ),
+      orthogonalTurns: sanitizeSavedPoints(
+        (e.data as { orthogonalTurns?: unknown } | undefined)?.orthogonalTurns,
       ),
     });
   }
@@ -286,9 +290,15 @@ export function deserializeCanvas(saveData: SaveData): {
     seenEdgeIds.add(finalEdgeId);
 
     const edgeData =
-      se.controlPoints && se.controlPoints.length > 0
+      (se.controlPoints && se.controlPoints.length > 0) ||
+      (se.orthogonalTurns && se.orthogonalTurns.length > 0)
         ? {
-            controlPoints: se.controlPoints,
+            ...(se.controlPoints && se.controlPoints.length > 0
+              ? { controlPoints: se.controlPoints }
+              : {}),
+            ...(se.orthogonalTurns && se.orthogonalTurns.length > 0
+              ? { orthogonalTurns: se.orthogonalTurns }
+              : {}),
           }
         : undefined;
 

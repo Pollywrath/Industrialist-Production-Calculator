@@ -14,6 +14,7 @@ export type RecipeEdgeData = {
   quantity: number;
   temperature: number;
   controlPoints?: EdgeControlPoint[];
+  orthogonalTurns?: EdgeControlPoint[];
 };
 
 export type RecipeEdgeType = Edge<RecipeEdgeData, 'recipe'>;

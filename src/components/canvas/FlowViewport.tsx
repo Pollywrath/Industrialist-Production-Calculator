@@ -181,6 +181,30 @@ function findNearestCatmullSegmentIndex(
   return bestSegmentIndex;
 }
 
+function findNearestPolylineSegmentIndex(
+  pathPoints: EdgeControlPoint[],
+  candidate: EdgeControlPoint,
+): number {
+  if (pathPoints.length < 2) return 0;
+
+  let bestSegmentIndex = 0;
+  let bestDistanceSquared = Number.POSITIVE_INFINITY;
+
+  for (let i = 0; i < pathPoints.length - 1; i++) {
+    const distanceSquared = distanceSquaredPointToSegment(
+      candidate,
+      pathPoints[i],
+      pathPoints[i + 1],
+    );
+    if (distanceSquared < bestDistanceSquared) {
+      bestDistanceSquared = distanceSquared;
+      bestSegmentIndex = i;
+    }
+  }
+
+  return bestSegmentIndex;
+}
+
 function resolveHandleCenter(
   node: InternalNode<Node> | undefined,
   handleType: 'source' | 'target',
@@ -353,7 +377,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   };
 
   const onEdgeDoubleClick = (event: React.MouseEvent, edge: Edge) => {
-    if (edgePathStyle !== 'bezier') return;
+    if (edgePathStyle !== 'bezier' && edgePathStyle !== 'straight') return;
     if (getEffectiveToggleId(useUIStore.getState()) === 'delete_mode') return;
 
     const clickPosition = screenToFlowPosition({
@@ -395,7 +419,10 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       }
 
       const pathPoints: EdgeControlPoint[] = [sourcePoint, ...existingPoints, targetPoint];
-      const nearestSegmentIndex = findNearestCatmullSegmentIndex(pathPoints, nextPoint);
+      const nearestSegmentIndex =
+        edgePathStyle === 'straight'
+          ? findNearestPolylineSegmentIndex(pathPoints, nextPoint)
+          : findNearestCatmullSegmentIndex(pathPoints, nextPoint);
       const insertIndex = Math.max(0, Math.min(existingPoints.length, nearestSegmentIndex));
       const nextControlPoints = existingPoints.slice();
       nextControlPoints.splice(insertIndex, 0, nextPoint);

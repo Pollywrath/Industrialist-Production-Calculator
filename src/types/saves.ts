@@ -15,6 +15,7 @@ export interface SavedEdge {
   target: string;
   targetIndex: number;
   controlPoints?: { x: number; y: number }[];
+  orthogonalTurns?: { x: number; y: number }[];
 }
 
 export interface GlobalSettings {

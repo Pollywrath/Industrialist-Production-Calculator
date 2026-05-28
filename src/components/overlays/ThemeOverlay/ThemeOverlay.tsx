@@ -300,9 +300,22 @@ function toColorInputValue(value: string): string | null {
   return null;
 }
 
-function sourceHostLabel(sourceUrl: string): string {
+function sourceAttributionLabel(sourceUrl: string): string {
   try {
-    return new URL(sourceUrl).host.replace(/^www\./, '');
+    const parsed = new URL(sourceUrl);
+    const host = parsed.host.replace(/^www\./, '');
+
+    if (host === 'github.com') {
+      const repoParts = parsed.pathname
+        .split('/')
+        .filter((part) => part.length > 0)
+        .slice(0, 2);
+      if (repoParts.length === 2) {
+        return `${host}/${repoParts[0]}/${repoParts[1]}`;
+      }
+    }
+
+    return host;
   } catch {
     return sourceUrl;
   }
@@ -383,8 +396,6 @@ function PresetCard({
   isActive: boolean;
   onApply: () => void;
 }) {
-  const isContrastPass = preset.contrastRatio >= 4.5;
-
   return (
     <button
       className={`${styles['preset-card']} ${isActive ? styles['is-active'] : ''}`}
@@ -393,13 +404,6 @@ function PresetCard({
     >
       <div className={styles['preset-card-top']}>
         <span className={styles['preset-mode']}>{preset.mode === 'dark' ? 'DARK' : 'LIGHT'}</span>
-        <span
-          className={`${styles['preset-contrast']} ${
-            isContrastPass ? styles['is-pass'] : styles['is-fail']
-          }`}
-        >
-          Text Contrast {preset.contrastRatio.toFixed(1)}:1
-        </span>
       </div>
       <div className={styles['preset-name']}>{preset.name}</div>
       <div className={styles['preset-description']}>{preset.description}</div>
@@ -412,7 +416,7 @@ function PresetCard({
           />
         ))}
       </div>
-      <div className={styles['preset-source']}>{sourceHostLabel(preset.sourceUrl)}</div>
+      <div className={styles['preset-source']}>{sourceAttributionLabel(preset.sourceUrl)}</div>
     </button>
   );
 }
@@ -431,7 +435,7 @@ function ThemeOverlayModal() {
   const [overrides, setOverrides] = useState(loadThemeOverrides);
   const [activeView, setActiveView] = useState<'presets' | 'advanced' | 'edges'>('presets');
   const [activePresetId, setActivePresetId] = useState<string | null>(() =>
-    hasStoredColorOverrides() ? null : 'default-industrialist',
+    hasStoredColorOverrides() ? null : 'default',
   );
   const lineStyle = useEdgeThemeStore((s) => s.lineStyle);
   const pathStyle = useEdgeThemeStore((s) => s.pathStyle);
@@ -546,7 +550,7 @@ function ThemeOverlayModal() {
     const nextOverrides = resetThemeVariableOverride('--theme-native-color-scheme');
     setOverrides(nextOverrides);
     resetEdgeStyles();
-    setActivePresetId('default-industrialist');
+    setActivePresetId('default');
   };
 
   return createPortal(
@@ -592,8 +596,7 @@ function ThemeOverlayModal() {
             ) : (
               <div className={styles['presets-view']}>
                 <div className={styles['presets-intro']}>
-                  Select a preset first. Available sets: {darkPresets.length} dark and {lightPresets.length} light,
-                  each with contrast scoring.
+                  Select a preset first. Available sets: {darkPresets.length} dark and {lightPresets.length} light.
                 </div>
                 <div className={styles['preset-mode-section']}>
                   <div className={styles['preset-mode-title']}>Dark Presets ({darkPresets.length})</div>

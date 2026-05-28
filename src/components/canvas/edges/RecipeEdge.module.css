@@ -2,6 +2,25 @@
   vector-effect: non-scaling-stroke;
 }
 
+.edge-orth-overlay {
+  pointer-events: none;
+}
+
+.edge-orth-segment-hitbox {
+  stroke: var(--theme-color-edge-stroke);
+  stroke-opacity: 0;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+.edge-orth-handle {
+  fill: var(--theme-color-edge-selected-stroke);
+  stroke: var(--theme-color-canvas-bg);
+  stroke-width: 1px;
+  pointer-events: all;
+  cursor: move;
+}
+
 .edge-control-point {
   fill: var(--theme-color-edge-stroke);
   stroke: var(--theme-color-canvas-bg);
