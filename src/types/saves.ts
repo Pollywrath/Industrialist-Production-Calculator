@@ -14,6 +14,7 @@ export interface SavedEdge {
   sourceIndex: number;
   target: string;
   targetIndex: number;
+  controlPoints?: { x: number; y: number }[];
 }
 
 export interface GlobalSettings {

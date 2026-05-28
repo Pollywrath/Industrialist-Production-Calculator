@@ -1,5 +1,10 @@
 import { type Edge } from '@xyflow/react';
 
+export interface EdgeControlPoint {
+  x: number;
+  y: number;
+}
+
 export type RecipeEdgeData = {
   sourceNodeId: string;
   sourceOutputIndex: number;
@@ -8,6 +13,7 @@ export type RecipeEdgeData = {
   productId: string;
   quantity: number;
   temperature: number;
+  controlPoints?: EdgeControlPoint[];
 };
 
 export type RecipeEdgeType = Edge<RecipeEdgeData, 'recipe'>;

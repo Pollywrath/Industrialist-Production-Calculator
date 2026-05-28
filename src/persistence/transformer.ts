@@ -1,5 +1,6 @@
 import type { Node, Edge } from '@xyflow/react';
 import type { RecipeNodeData } from '../types/nodes';
+import type { EdgeControlPoint } from '../types/edges';
 import { parseHandleId, buildHandleId, nextNodeId, nextEdgeId } from '../utils/idGenerator';
 import { getRecipe } from '../data/lookup';
 import { cleanMachineCount } from '../utils/precision';
@@ -8,6 +9,30 @@ import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import type { SavedNode, SavedEdge, SaveData, GlobalSettings } from '../types/saves';
 
 export const CURRENT_SAVE_VERSION = 1;
+
+function sanitizeSavedControlPoints(raw: unknown): EdgeControlPoint[] | undefined {
+  if (!Array.isArray(raw)) return undefined;
+
+  const points: EdgeControlPoint[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const item = raw[i];
+    if (!item || typeof item !== 'object') continue;
+
+    const point = item as { x?: number; y?: number };
+    if (
+      typeof point.x !== 'number' ||
+      !Number.isFinite(point.x) ||
+      typeof point.y !== 'number' ||
+      !Number.isFinite(point.y)
+    ) {
+      continue;
+    }
+
+    points.push({ x: point.x, y: point.y });
+  }
+
+  return points.length > 0 ? points : undefined;
+}
 
 export function migrateSaveData(rawData: unknown): SaveData {
   if (!rawData || typeof rawData !== 'object') {
@@ -115,6 +140,7 @@ export function migrateSaveData(rawData: unknown): SaveData {
       sourceIndex: sIdx >= 0 ? sIdx : 0,
       target: typeof e.target === 'string' ? e.target : '',
       targetIndex: tIdx >= 0 ? tIdx : 0,
+      controlPoints: sanitizeSavedControlPoints(e.controlPoints),
     };
   });
 
@@ -164,6 +190,9 @@ export function serializeCanvas(nodes: Node<RecipeNodeData>[], edges: Edge[]): S
       sourceIndex: sourceParsed.index,
       target: e.target,
       targetIndex: targetParsed.index,
+      controlPoints: sanitizeSavedControlPoints(
+        (e.data as { controlPoints?: unknown } | undefined)?.controlPoints,
+      ),
     });
   }
 
@@ -256,6 +285,13 @@ export function deserializeCanvas(saveData: SaveData): {
     }
     seenEdgeIds.add(finalEdgeId);
 
+    const edgeData =
+      se.controlPoints && se.controlPoints.length > 0
+        ? {
+            controlPoints: se.controlPoints,
+          }
+        : undefined;
+
     edges.push({
       id: finalEdgeId,
       type: 'recipe',
@@ -263,6 +299,7 @@ export function deserializeCanvas(saveData: SaveData): {
       target: targetId,
       sourceHandle: buildHandleId(sourceId, 'output', se.sourceIndex),
       targetHandle: buildHandleId(targetId, 'input', se.targetIndex),
+      data: edgeData,
     });
   }
 

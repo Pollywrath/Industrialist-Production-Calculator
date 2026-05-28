@@ -3,6 +3,14 @@ import { createPortal } from 'react-dom';
 import { Palette, RotateCcw, Undo2, X } from 'lucide-react';
 import { useUIStore } from '../../../stores/useUIStore';
 import {
+  DEFAULT_EDGE_LINE_STYLE,
+  DEFAULT_EDGE_PATH_STYLE,
+  hasCustomEdgeStyleSettings,
+  useEdgeThemeStore,
+  type EdgeLineStyle,
+  type EdgePathStyle,
+} from '../../../stores/useEdgeThemeStore';
+import {
   discoverThemeVariables,
   loadThemeOverrides,
   replaceThemeOverridesForVariables,
@@ -32,6 +40,12 @@ interface VariableGroupConfig {
   label: string;
   description: string;
   variables: VariableFieldMeta[];
+}
+
+interface EdgeOption<TValue extends string> {
+  value: TValue;
+  label: string;
+  description: string;
 }
 
 const ADVANCED_GROUPS: VariableGroupConfig[] = [
@@ -172,6 +186,42 @@ const ADVANCED_GROUPS: VariableGroupConfig[] = [
       { name: '--theme-color-white', label: 'White Constant' },
       { name: '--theme-color-black', label: 'Black Constant' },
     ],
+  },
+];
+
+const EDGE_LINE_OPTIONS: EdgeOption<EdgeLineStyle>[] = [
+  {
+    value: 'solid',
+    label: 'Solid',
+    description: 'Static line with no motion.',
+  },
+  {
+    value: 'dashed',
+    label: 'Dashed',
+    description: 'Animated dashes flowing from source to target.',
+  },
+  {
+    value: 'dotted',
+    label: 'Dotted',
+    description: 'Animated dots flowing from source to target.',
+  },
+];
+
+const EDGE_PATH_OPTIONS: EdgeOption<EdgePathStyle>[] = [
+  {
+    value: 'straight',
+    label: 'Straight Line',
+    description: 'Direct one-segment connection.',
+  },
+  {
+    value: 'bezier',
+    label: 'Bezier Curve',
+    description: 'Smooth curved edge between nodes.',
+  },
+  {
+    value: 'orthogonal',
+    label: 'Orthogonal',
+    description: 'Right-angle routing with horizontal and vertical segments.',
   },
 ];
 
@@ -379,10 +429,15 @@ function ThemeOverlayModal() {
   const setThemeOverlayOpen = useUIStore((s) => s.setThemeOverlayOpen);
   const variables = useMemo(() => discoverThemeVariables(), []);
   const [overrides, setOverrides] = useState(loadThemeOverrides);
-  const [activeView, setActiveView] = useState<'presets' | 'advanced'>('presets');
+  const [activeView, setActiveView] = useState<'presets' | 'advanced' | 'edges'>('presets');
   const [activePresetId, setActivePresetId] = useState<string | null>(() =>
     hasStoredColorOverrides() ? null : 'default-industrialist',
   );
+  const lineStyle = useEdgeThemeStore((s) => s.lineStyle);
+  const pathStyle = useEdgeThemeStore((s) => s.pathStyle);
+  const setLineStyle = useEdgeThemeStore((s) => s.setLineStyle);
+  const setPathStyle = useEdgeThemeStore((s) => s.setPathStyle);
+  const resetEdgeStyles = useEdgeThemeStore((s) => s.resetEdgeStyles);
 
   const colorVariables = useMemo(
     () => variables.filter((variable) => variable.category === 'color'),
@@ -390,6 +445,8 @@ function ThemeOverlayModal() {
   );
 
   const hasColorOverrides = colorVariables.some((variable) => variable.name in overrides);
+  const hasEdgeOverrides = hasCustomEdgeStyleSettings({ lineStyle, pathStyle });
+  const hasCustomizations = hasColorOverrides || hasEdgeOverrides;
   const colorVariableNames = useMemo(
     () => colorVariables.map((variable) => variable.name),
     [colorVariables],
@@ -476,7 +533,8 @@ function ThemeOverlayModal() {
   const resetAll = async () => {
     const confirmed = await useUIStore.getState().confirm({
       title: 'Reset Theme Editor',
-      message: 'Reset all color settings back to defaults? This will remove all current theme overrides.',
+      message:
+        'Reset all color settings and edge display settings back to defaults? This will remove current customizations.',
       confirmLabel: 'Reset Theme',
       cancelLabel: 'Keep Theme',
       intent: 'error',
@@ -487,6 +545,7 @@ function ThemeOverlayModal() {
     resetAllThemeOverrides(colorVariables);
     const nextOverrides = resetThemeVariableOverride('--theme-native-color-scheme');
     setOverrides(nextOverrides);
+    resetEdgeStyles();
     setActivePresetId('default-industrialist');
   };
 
@@ -515,6 +574,12 @@ function ThemeOverlayModal() {
             onClick={() => setActiveView('advanced')}
           >
             Advanced Editing
+          </button>
+          <button
+            className={`${styles['tab-btn']} ${activeView === 'edges' ? styles['is-active'] : ''}`}
+            onClick={() => setActiveView('edges')}
+          >
+            Edge Editing
           </button>
         </div>
 
@@ -558,47 +623,100 @@ function ThemeOverlayModal() {
                 </div>
               </div>
             )
-          ) : colorVariables.length === 0 ? (
-            <div className={styles['empty-state']}>
-              No color theme variables were discovered from `:root`. Confirm `src/index.css` is loaded.
-            </div>
+          ) : activeView === 'advanced' ? (
+            colorVariables.length === 0 ? (
+              <div className={styles['empty-state']}>
+                No color theme variables were discovered from `:root`. Confirm `src/index.css` is loaded.
+              </div>
+            ) : (
+              <div className={styles['advanced-groups']}>
+                <div className={styles['advanced-intro']}>
+                  Color variables are grouped by where they appear in the UI.
+                </div>
+                {groupedColorVariables.map((group) => (
+                  <section key={group.id} className={styles['section']}>
+                    <h3 className={styles['section-title']}>{group.label}</h3>
+                    <p className={styles['section-description']}>{group.description}</p>
+                    <div className={styles['variables-list']}>
+                      {group.variables.map((variable) => {
+                        const fieldMeta = VARIABLE_META_BY_NAME.get(variable.name);
+                        const label = fieldMeta?.label ?? fallbackVariableLabel(variable.name);
+                        return (
+                          <VariableRow
+                            key={variable.name}
+                            definition={variable}
+                            value={getValueFor(variable)}
+                            label={label}
+                            hint={fieldMeta?.hint}
+                            onValueChange={applyValue}
+                            onReset={resetOne}
+                          />
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )
           ) : (
             <div className={styles['advanced-groups']}>
               <div className={styles['advanced-intro']}>
-                Color variables are grouped by where they appear in the UI.
+                Choose how every edge is drawn on the canvas.
               </div>
-              {groupedColorVariables.map((group) => (
-                <section key={group.id} className={styles['section']}>
-                  <h3 className={styles['section-title']}>{group.label}</h3>
-                  <p className={styles['section-description']}>{group.description}</p>
-                  <div className={styles['variables-list']}>
-                    {group.variables.map((variable) => {
-                      const fieldMeta = VARIABLE_META_BY_NAME.get(variable.name);
-                      const label = fieldMeta?.label ?? fallbackVariableLabel(variable.name);
-                      return (
-                        <VariableRow
-                          key={variable.name}
-                          definition={variable}
-                          value={getValueFor(variable)}
-                          label={label}
-                          hint={fieldMeta?.hint}
-                          onValueChange={applyValue}
-                          onReset={resetOne}
-                        />
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
+              <section className={styles['section']}>
+                <h3 className={styles['section-title']}>Line Style</h3>
+                <p className={styles['section-description']}>
+                  Dashed and dotted lines are animated from source to target. Solid lines remain static.
+                </p>
+                <div className={styles['edge-option-list']}>
+                  {EDGE_LINE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      className={`${styles['edge-option-btn']} ${
+                        lineStyle === option.value ? styles['is-active'] : ''
+                      }`}
+                      onClick={() => setLineStyle(option.value)}
+                      aria-pressed={lineStyle === option.value}
+                    >
+                      <span className={styles['edge-option-label']}>{option.label}</span>
+                      <span className={styles['edge-option-description']}>{option.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+              <section className={styles['section']}>
+                <h3 className={styles['section-title']}>Path Style</h3>
+                <p className={styles['section-description']}>
+                  Control whether edges render as straight lines, curves, or orthogonal routes.
+                </p>
+                <div className={styles['edge-option-list']}>
+                  {EDGE_PATH_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      className={`${styles['edge-option-btn']} ${
+                        pathStyle === option.value ? styles['is-active'] : ''
+                      }`}
+                      onClick={() => setPathStyle(option.value)}
+                      aria-pressed={pathStyle === option.value}
+                    >
+                      <span className={styles['edge-option-label']}>{option.label}</span>
+                      <span className={styles['edge-option-description']}>{option.description}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className={styles['edge-auto-note']}>
+                  Default edge style: {DEFAULT_EDGE_LINE_STYLE} line + {DEFAULT_EDGE_PATH_STYLE} path.
+                </div>
+              </section>
             </div>
           )}
         </div>
 
         <div className={styles['theme-footer']}>
           <button
-            className={`${styles['reset-all-btn']} ${!hasColorOverrides ? styles['is-disabled'] : ''}`}
+            className={`${styles['reset-all-btn']} ${!hasCustomizations ? styles['is-disabled'] : ''}`}
             onClick={resetAll}
-            disabled={!hasColorOverrides}
+            disabled={!hasCustomizations}
           >
             <RotateCcw size={14} />
             <span>Reset All</span>

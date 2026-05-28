@@ -1,3 +1,11 @@
 .edge-path {
   vector-effect: non-scaling-stroke;
 }
+
+.edge-control-point {
+  fill: var(--theme-color-edge-stroke);
+  stroke: var(--theme-color-canvas-bg);
+  stroke-width: 1px;
+  pointer-events: all;
+  cursor: move;
+}

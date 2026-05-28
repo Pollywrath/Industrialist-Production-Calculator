@@ -100,6 +100,66 @@ function contrastRatio(foreground: string, background: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+function clampByte(value: number): number {
+  return Math.max(0, Math.min(255, Math.round(value)));
+}
+
+function rgbToHex(rgb: { r: number; g: number; b: number }): string {
+  const toHex = (channel: number) => clampByte(channel).toString(16).padStart(2, '0');
+  return `#${toHex(rgb.r)}${toHex(rgb.g)}${toHex(rgb.b)}`;
+}
+
+function mixHexColors(baseHex: string, targetHex: string, amount: number): string {
+  const base = hexToRgb(baseHex);
+  const target = hexToRgb(targetHex);
+  if (!base || !target) return baseHex;
+
+  const t = Math.max(0, Math.min(1, amount));
+  return rgbToHex({
+    r: base.r + (target.r - base.r) * t,
+    g: base.g + (target.g - base.g) * t,
+    b: base.b + (target.b - base.b) * t,
+  });
+}
+
+function resolvePerceivableEdgeStroke(colors: PresetColors): string {
+  const minimumContrast = 3;
+  const baseStroke = colors.edgeStroke;
+  const canvas = colors.canvasBg;
+
+  const baseContrast = contrastRatio(baseStroke, canvas);
+  if (baseContrast >= minimumContrast) return baseStroke;
+
+  const blendedVisibilityTarget =
+    colors.mode === 'dark'
+      ? mixHexColors(colors.textSecondary, colors.primaryHover, 0.25)
+      : mixHexColors(colors.textPrimary, colors.primary, 0.2);
+  const accentTarget = colors.mode === 'dark' ? colors.primaryHover : colors.primary;
+  const candidateTargets = [blendedVisibilityTarget, accentTarget, colors.textPrimary];
+  const blendSteps = [0.12, 0.24, 0.36, 0.48, 0.6, 0.72];
+
+  let bestColor = baseStroke;
+  let bestContrast = baseContrast;
+
+  for (let targetIndex = 0; targetIndex < candidateTargets.length; targetIndex++) {
+    const target = candidateTargets[targetIndex];
+    for (let stepIndex = 0; stepIndex < blendSteps.length; stepIndex++) {
+      const candidate = mixHexColors(baseStroke, target, blendSteps[stepIndex]);
+      const candidateContrast = contrastRatio(candidate, canvas);
+
+      if (candidateContrast > bestContrast) {
+        bestContrast = candidateContrast;
+        bestColor = candidate;
+      }
+      if (candidateContrast >= minimumContrast) {
+        return candidate;
+      }
+    }
+  }
+
+  return bestColor;
+}
+
 function buildOverrides(colors: PresetColors): ThemeOverrideMap {
   const overlayAlpha = colors.mode === 'dark' ? 0.86 : 0.72;
   const hoverOverlay =
@@ -113,6 +173,7 @@ function buildOverrides(colors: PresetColors): ThemeOverrideMap {
   const panelEmptyBg =
     colors.mode === 'dark' ? 'rgba(42, 42, 53, 0.5)' : 'rgba(255, 255, 255, 0.7)';
   const textNeutral = colors.textNeutral ?? colors.textSecondary;
+  const edgeStroke = resolvePerceivableEdgeStroke(colors);
 
   return {
     '--theme-native-color-scheme': colors.mode,
@@ -137,7 +198,7 @@ function buildOverrides(colors: PresetColors): ThemeOverrideMap {
     '--theme-color-border-light': colors.borderLight,
     '--theme-color-border-divider': rgba(colors.borderPrimary, 0.33),
     '--theme-color-grid-dots': colors.gridDots,
-    '--theme-color-edge-stroke': colors.edgeStroke,
+    '--theme-color-edge-stroke': edgeStroke,
 
     '--theme-color-input-bg': colors.inputBg,
     '--theme-color-input-border': colors.inputBorder,

@@ -40,6 +40,7 @@ const HISTORY_LIMIT = 50;
 interface SetGraphOptions {
   recordHistory?: boolean;
   resetHistory?: boolean;
+  visualOnly?: boolean;
 }
 
 interface FlowState {
@@ -502,7 +503,7 @@ const useFlowStore = create(
           }
         }
 
-        const newEdge = { ...connection, id: nextEdgeId() } as Edge;
+        const newEdge = { ...connection, id: nextEdgeId(), type: 'recipe' } as Edge;
         const nextEdges = addEdge(newEdge, currentEdges);
         set({
           edges: nextEdges,
@@ -538,14 +539,21 @@ const useFlowStore = create(
       },
 
       setEdges: (edges, options) => {
-        clearFlowCache();
         const state = get();
         const { edges: sanitizedEdges } = ensureGraphIntegrity(state.nodes, edges);
-        set({
-          edges: sanitizedEdges,
-          graphVersion: state.graphVersion + 1,
-          resolvedProducts: computeResolvedProducts(state.nodesMap, sanitizedEdges),
-        });
+
+        if (options?.visualOnly) {
+          set({
+            edges: sanitizedEdges,
+          });
+        } else {
+          clearFlowCache();
+          set({
+            edges: sanitizedEdges,
+            graphVersion: state.graphVersion + 1,
+            resolvedProducts: computeResolvedProducts(state.nodesMap, sanitizedEdges),
+          });
+        }
 
         if (options?.resetHistory) {
           resetHistoryState();

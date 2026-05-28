@@ -3,16 +3,20 @@ import {
   ReactFlow,
   Background,
   BackgroundVariant,
+  useReactFlow,
   type Edge,
   type Connection,
+  type InternalNode,
   type Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { RecipeNode } from './nodes/RecipeNode';
 import { RecipeEdge } from './edges/RecipeEdge';
 import { getProduct } from '../../data/lookup';
+import type { EdgeControlPoint } from '../../types/edges';
 import { createGraphResolutionContext } from '../../utils/graphResolutionContext';
 import { useFlowStore } from '../../stores/useFlowStore';
+import { useEdgeThemeStore } from '../../stores/useEdgeThemeStore';
 import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { useFlowSolver } from '../../hooks/useFlowSolver';
 import { parseHandleId } from '../../utils/idGenerator';
@@ -25,13 +29,181 @@ const edgeTypes = {
   recipe: RecipeEdge,
 };
 
-const onEdgeClick = (_event: React.MouseEvent, edge: Edge) => {
-  const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
-  if (isDeleteMode) {
-    const flowStore = useFlowStore.getState();
-    flowStore.setEdges(flowStore.edges.filter((e) => e.id !== edge.id));
+const CONTROL_POINT_MIN_DISTANCE = 10;
+const CONTROL_POINT_DELETE_HIT_RADIUS = 7;
+const CATMULL_SEGMENT_SAMPLES = 16;
+
+function isFiniteControlPoint(value: unknown): value is EdgeControlPoint {
+  if (!value || typeof value !== 'object') return false;
+  const point = value as { x?: number; y?: number };
+  return (
+    typeof point.x === 'number' &&
+    Number.isFinite(point.x) &&
+    typeof point.y === 'number' &&
+    Number.isFinite(point.y)
+  );
+}
+
+function toControlPoints(data: unknown): EdgeControlPoint[] {
+  if (!data || typeof data !== 'object') return [];
+  const raw = (data as { controlPoints?: unknown }).controlPoints;
+  if (!Array.isArray(raw)) return [];
+
+  const points: EdgeControlPoint[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const item = raw[i];
+    if (!isFiniteControlPoint(item)) continue;
+    points.push({ x: item.x, y: item.y });
   }
-};
+
+  return points;
+}
+
+function isNearExistingPoint(
+  controlPoints: EdgeControlPoint[],
+  candidate: EdgeControlPoint,
+  threshold: number,
+): boolean {
+  const thresholdSquared = threshold * threshold;
+  for (let i = 0; i < controlPoints.length; i++) {
+    const point = controlPoints[i];
+    const dx = point.x - candidate.x;
+    const dy = point.y - candidate.y;
+    if (dx * dx + dy * dy <= thresholdSquared) return true;
+  }
+  return false;
+}
+
+function findControlPointIndexNear(
+  controlPoints: EdgeControlPoint[],
+  candidate: EdgeControlPoint,
+  threshold: number,
+): number {
+  const thresholdSquared = threshold * threshold;
+  for (let i = 0; i < controlPoints.length; i++) {
+    const point = controlPoints[i];
+    const dx = point.x - candidate.x;
+    const dy = point.y - candidate.y;
+    if (dx * dx + dy * dy <= thresholdSquared) return i;
+  }
+  return -1;
+}
+
+function distanceSquaredBetweenPoints(a: EdgeControlPoint, b: EdgeControlPoint): number {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return dx * dx + dy * dy;
+}
+
+function distanceSquaredPointToSegment(
+  point: EdgeControlPoint,
+  segmentStart: EdgeControlPoint,
+  segmentEnd: EdgeControlPoint,
+): number {
+  const segmentX = segmentEnd.x - segmentStart.x;
+  const segmentY = segmentEnd.y - segmentStart.y;
+  const segmentLengthSquared = segmentX * segmentX + segmentY * segmentY;
+  if (segmentLengthSquared <= 0) {
+    return distanceSquaredBetweenPoints(point, segmentStart);
+  }
+
+  const t =
+    ((point.x - segmentStart.x) * segmentX + (point.y - segmentStart.y) * segmentY) /
+    segmentLengthSquared;
+  if (t <= 0) {
+    return distanceSquaredBetweenPoints(point, segmentStart);
+  }
+  if (t >= 1) {
+    return distanceSquaredBetweenPoints(point, segmentEnd);
+  }
+
+  const projection: EdgeControlPoint = {
+    x: segmentStart.x + segmentX * t,
+    y: segmentStart.y + segmentY * t,
+  };
+  return distanceSquaredBetweenPoints(point, projection);
+}
+
+function evaluateCatmullRomPoint(
+  p0: EdgeControlPoint,
+  p1: EdgeControlPoint,
+  p2: EdgeControlPoint,
+  p3: EdgeControlPoint,
+  t: number,
+): EdgeControlPoint {
+  const t2 = t * t;
+  const t3 = t2 * t;
+  return {
+    x:
+      0.5 *
+      ((2 * p1.x) +
+        (-p0.x + p2.x) * t +
+        (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
+        (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
+    y:
+      0.5 *
+      ((2 * p1.y) +
+        (-p0.y + p2.y) * t +
+        (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
+        (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
+  };
+}
+
+function findNearestCatmullSegmentIndex(
+  pathPoints: EdgeControlPoint[],
+  candidate: EdgeControlPoint,
+): number {
+  if (pathPoints.length < 2) return 0;
+  if (pathPoints.length === 2) return 0;
+
+  let bestSegmentIndex = 0;
+  let bestDistanceSquared = Number.POSITIVE_INFINITY;
+
+  for (let i = 0; i < pathPoints.length - 1; i++) {
+    const p0 = pathPoints[i - 1] ?? pathPoints[i];
+    const p1 = pathPoints[i];
+    const p2 = pathPoints[i + 1];
+    const p3 = pathPoints[i + 2] ?? p2;
+
+    let previous = p1;
+    for (let step = 1; step <= CATMULL_SEGMENT_SAMPLES; step++) {
+      const t = step / CATMULL_SEGMENT_SAMPLES;
+      const current = evaluateCatmullRomPoint(p0, p1, p2, p3, t);
+      const distanceSquared = distanceSquaredPointToSegment(candidate, previous, current);
+      if (distanceSquared < bestDistanceSquared) {
+        bestDistanceSquared = distanceSquared;
+        bestSegmentIndex = i;
+      }
+      previous = current;
+    }
+  }
+
+  return bestSegmentIndex;
+}
+
+function resolveHandleCenter(
+  node: InternalNode<Node> | undefined,
+  handleType: 'source' | 'target',
+  handleId: string | null | undefined,
+): EdgeControlPoint | null {
+  if (!node) return null;
+
+  const handles = node.internals.handleBounds?.[handleType];
+  if (!handles || handles.length === 0) return null;
+
+  let selectedHandle = handles[0];
+  if (handleId != null) {
+    const matched = handles.find((handle) => handle.id === handleId);
+    if (matched) {
+      selectedHandle = matched;
+    }
+  }
+
+  return {
+    x: node.internals.positionAbsolute.x + selectedHandle.x + selectedHandle.width / 2,
+    y: node.internals.positionAbsolute.y + selectedHandle.y + selectedHandle.height / 2,
+  };
+}
 
 const onNodeClick = (_event: React.MouseEvent, node: Node) => {
   const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
@@ -95,11 +267,13 @@ interface FlowViewportCanvasProps {
 function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const nodes = useFlowStore((s) => s.nodes);
   const edges = useFlowStore((s) => s.edges);
+  const edgePathStyle = useEdgeThemeStore((s) => s.pathStyle);
   const onNodesChange = useFlowStore((s) => s.onNodesChange);
   const onEdgesChange = useFlowStore((s) => s.onEdgesChange);
   const onConnect = useFlowStore((s) => s.onConnect);
   const captureDragStart = useFlowStore((s) => s.captureDragStart);
   const commitDragStop = useFlowStore((s) => s.commitDragStop);
+  const { screenToFlowPosition, getInternalNode } = useReactFlow();
 
   const handleNodeDragStart = (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
     captureDragStart(draggedNodes.map((draggedNode) => draggedNode.id));
@@ -117,10 +291,132 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
     commitDragStop(draggedNodes.map((draggedNode) => draggedNode.id));
   };
 
+  const normalizedEdges = edges.map((edge) =>
+    edge.type === 'recipe'
+      ? edge
+      : {
+          ...edge,
+          type: 'recipe',
+        },
+  );
+
+  const onEdgeClick = (event: React.MouseEvent, edge: Edge) => {
+    if (getEffectiveToggleId(useUIStore.getState()) !== 'delete_mode') {
+      return;
+    }
+
+    const flowStore = useFlowStore.getState();
+    const clickPosition = screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+
+    const currentEdge = flowStore.edges.find((existingEdge) => existingEdge.id === edge.id);
+    if (currentEdge) {
+      const existingPoints = toControlPoints(currentEdge.data);
+      const controlPointIndex = findControlPointIndexNear(
+        existingPoints,
+        clickPosition,
+        CONTROL_POINT_DELETE_HIT_RADIUS,
+      );
+
+      if (controlPointIndex !== -1) {
+        const nextEdges = flowStore.edges.map((existingEdge) => {
+          if (existingEdge.id !== edge.id) return existingEdge;
+
+          const points = toControlPoints(existingEdge.data);
+          if (controlPointIndex < 0 || controlPointIndex >= points.length) return existingEdge;
+          const nextPoints = points.filter((_, index) => index !== controlPointIndex);
+
+          const nextData: Record<string, unknown> = {
+            ...(existingEdge.data as Record<string, unknown> | undefined),
+          };
+          if (nextPoints.length > 0) {
+            nextData.controlPoints = nextPoints;
+          } else {
+            delete nextData.controlPoints;
+          }
+
+          return {
+            ...existingEdge,
+            type: 'recipe',
+            data: nextData,
+          };
+        });
+
+        flowStore.setEdges(nextEdges, { visualOnly: true });
+        return;
+      }
+    }
+
+    flowStore.setEdges(flowStore.edges.filter((existingEdge) => existingEdge.id !== edge.id));
+  };
+
+  const onEdgeDoubleClick = (event: React.MouseEvent, edge: Edge) => {
+    if (edgePathStyle !== 'bezier') return;
+    if (getEffectiveToggleId(useUIStore.getState()) === 'delete_mode') return;
+
+    const clickPosition = screenToFlowPosition({
+      x: event.clientX,
+      y: event.clientY,
+    });
+    const nextPoint: EdgeControlPoint = { x: clickPosition.x, y: clickPosition.y };
+
+    const flowStore = useFlowStore.getState();
+    const nextEdges = flowStore.edges.map((currentEdge) => {
+      if (currentEdge.id !== edge.id) return currentEdge;
+
+      const existingPoints = toControlPoints(currentEdge.data);
+      if (isNearExistingPoint(existingPoints, nextPoint, CONTROL_POINT_MIN_DISTANCE)) {
+        return currentEdge;
+      }
+
+      const sourcePoint = resolveHandleCenter(
+        getInternalNode(currentEdge.source),
+        'source',
+        currentEdge.sourceHandle,
+      );
+      const targetPoint = resolveHandleCenter(
+        getInternalNode(currentEdge.target),
+        'target',
+        currentEdge.targetHandle,
+      );
+
+      if (!sourcePoint || !targetPoint) {
+        const fallbackControlPoints = [...existingPoints, nextPoint];
+        return {
+          ...currentEdge,
+          type: 'recipe',
+          data: {
+            ...(currentEdge.data as Record<string, unknown> | undefined),
+            controlPoints: fallbackControlPoints,
+          },
+        };
+      }
+
+      const pathPoints: EdgeControlPoint[] = [sourcePoint, ...existingPoints, targetPoint];
+      const nearestSegmentIndex = findNearestCatmullSegmentIndex(pathPoints, nextPoint);
+      const insertIndex = Math.max(0, Math.min(existingPoints.length, nearestSegmentIndex));
+      const nextControlPoints = existingPoints.slice();
+      nextControlPoints.splice(insertIndex, 0, nextPoint);
+
+      return {
+        ...currentEdge,
+        type: 'recipe',
+        data: {
+          ...(currentEdge.data as Record<string, unknown> | undefined),
+          controlPoints: nextControlPoints,
+        },
+      };
+    });
+
+    flowStore.setEdges(nextEdges, { visualOnly: true });
+  };
+
   return (
     <ReactFlow
       nodes={nodes}
-      edges={edges}
+      edges={normalizedEdges}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}
@@ -131,6 +427,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       onSelectionDragStart={handleSelectionDragStart}
       onSelectionDragStop={handleSelectionDragStop}
       onEdgeClick={onEdgeClick}
+      onEdgeDoubleClick={onEdgeDoubleClick}
       onNodeClick={onNodeClick}
       isValidConnection={isValidConnection}
       snapToGrid={true}
