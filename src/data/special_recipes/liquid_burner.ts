@@ -13,7 +13,7 @@ const ZERO_POLLUTION_FLUIDS = [
 const calculatePollution = (fluidId: string, rate: number): number => {
   if (fluidId === 'any_fluid' || ZERO_POLLUTION_FLUIDS.includes(fluidId)) return 0;
   if (fluidId === 'p_residue') return 8.64 * rate;
-  return 0.02 * rate;
+  return 0.0216 * rate;
 };
 
 export const liquid_burner_01: SpecialRecipe = {

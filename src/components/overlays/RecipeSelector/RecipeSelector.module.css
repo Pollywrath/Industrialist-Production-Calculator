@@ -178,12 +178,28 @@
 .recipe-selector-table-header-wrapper {
   box-sizing: border-box;
   flex-shrink: 0;
-  padding-right: 6px;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
   background: var(--theme-color-secondary);
 }
 
+.recipe-selector-table-header-wrapper::-webkit-scrollbar {
+  width: 8px;
+}
+
+.recipe-selector-table-header-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.recipe-selector-table-header-wrapper::-webkit-scrollbar-thumb {
+  background: transparent;
+  border: none;
+}
+
 .recipe-selector-table-container ::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .recipe-selector-table-container ::-webkit-scrollbar-track {

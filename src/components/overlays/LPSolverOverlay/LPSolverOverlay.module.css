@@ -341,12 +341,12 @@
 
 .align-center {
   text-align: center;
-  color: var(--theme-color-text-secondary) !important;
+  color: var(--theme-color-text-secondary);
 }
 
 .align-left {
   text-align: left;
-  color: var(--theme-color-text-primary) !important;
+  color: var(--theme-color-text-primary);
   font-weight: 600;
 }
 

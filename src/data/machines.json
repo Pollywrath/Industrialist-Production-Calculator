@@ -10,7 +10,7 @@
     },
     "variant": "none",
     "limited": false,
-    "research": "",
+    "research": "s_production_advanced_assembler",
     "category": "Factory",
     "subcategory": "Assembler"
   },
@@ -1710,21 +1710,6 @@
     "subcategory": "Processor"
   },
   {
-    "id": "m_sand_excavator",
-    "name": "Sand Excavator",
-    "cost": 10000,
-    "tier": 3,
-    "size": {
-      "x": 9,
-      "y": 8
-    },
-    "variant": "none",
-    "limited": false,
-    "research": "",
-    "category": "Extractor",
-    "subcategory": "Item Extractor"
-  },
-  {
     "id": "m_satellite_dish",
     "name": "Satellite Dish",
     "cost": 30000,
@@ -1783,21 +1768,6 @@
     "research": "s_utility_scrubber",
     "category": "Miscellaneous",
     "subcategory": "Other"
-  },
-  {
-    "id": "m_soil_excavator",
-    "name": "Soil Excavator",
-    "cost": 250000,
-    "tier": 3,
-    "size": {
-      "x": 10,
-      "y": 5
-    },
-    "variant": "none",
-    "limited": false,
-    "research": "",
-    "category": "Extractor",
-    "subcategory": "Item Extractor"
   },
   {
     "id": "m_solar_farm1",

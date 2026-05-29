@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useFlowStore } from '../stores/useFlowStore';
 import { useUIStore } from '../stores/useUIStore';
+import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { getAutosave, saveAutosave } from './idb';
 import { serializeCanvas, deserializeCanvas } from './transformer';
 
@@ -60,6 +61,12 @@ export function useAutosave(): void {
       },
     );
 
+    const unsubGlobalSettings = useGlobalSettingsStore.subscribe(
+      () => {
+        dirtyVersion++;
+      }
+    );
+
     const intervalId = setInterval(() => {
       if (document.hidden) return;
       if (dirtyVersion === lastSavedVersion) return;
@@ -97,6 +104,7 @@ export function useAutosave(): void {
       isMounted = false;
       clearInterval(intervalId);
       unsub();
+      unsubGlobalSettings();
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);

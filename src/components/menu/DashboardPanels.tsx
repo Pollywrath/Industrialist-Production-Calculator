@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import {
   ChevronUp,
@@ -51,6 +51,7 @@ export function DashboardPanels() {
   const rateMode = useUIStore((s) => s.rateMode);
 
   const globalPollution = useGlobalSettingsStore((s) => s.settings.global_pollution);
+  const difficulty = useGlobalSettingsStore((s) => s.settings.difficulty);
   const setGlobalPollution = useGlobalSettingsStore((s) => s.setGlobalPollution);
 
   const {
@@ -60,6 +61,7 @@ export function DashboardPanels() {
     totalMachineCost,
     netPollution,
     totalProfit,
+    profitMultiplier,
     deficienciesMap,
     excessesMap,
   } = useDashboardStore();
@@ -200,17 +202,32 @@ export function DashboardPanels() {
               <span className={styles['stat-label']}>
                 <TrendingUp size={10} /> Profit
               </span>
-              <span
-                className={`${styles['stat-value']} ${
-                  totalProfit > 0.0001
-                    ? styles['success']
-                    : totalProfit < -0.0001
-                      ? styles['error']
-                      : styles['neutral']
-                }`}
-              >
-                {formatCurrency(totalProfit)}
-                {getProfitSuffix()}
+              <span className={styles['stat-value']}>
+                <span
+                  className={`${styles['stat-value']} ${
+                    profitMultiplier > 0.0001
+                      ? styles['success']
+                      : profitMultiplier < -0.0001
+                        ? styles['error']
+                        : styles['neutral']
+                  }`}
+                  style={{ marginRight: '8px' }}
+                >
+                  ({profitMultiplier >= 0 ? '+' : ''}
+                  {profitMultiplier.toFixed(2)}%)
+                </span>
+                <span
+                  className={`${styles['stat-value']} ${
+                    totalProfit > 0.0001
+                      ? styles['success']
+                      : totalProfit < -0.0001
+                        ? styles['error']
+                        : styles['neutral']
+                  }`}
+                >
+                  {formatCurrency(totalProfit)}
+                  {getProfitSuffix()}
+                </span>
               </span>
             </div>
 
@@ -219,13 +236,12 @@ export function DashboardPanels() {
                 <AlertTriangle size={10} /> Net Pollution
               </span>
               <span
-                className={`${styles['stat-value']} ${
-                  netPollution < -0.0001
-                    ? styles['success']
-                    : netPollution > 0.0001
-                      ? styles['error']
-                      : styles['neutral']
-                }`}
+                className={`${styles['stat-value']} ${netPollution < -0.0001
+                  ? styles['success']
+                  : netPollution > 0.0001
+                    ? styles['error']
+                    : styles['neutral']
+                  }`}
               >
                 {formatPollution(netPollution)}
               </span>
@@ -248,15 +264,21 @@ export function DashboardPanels() {
             <div className={styles['global-var-group']}>
               <span className={styles['global-var-label']}>Global Pollution</span>
               <div className={styles['global-var-control']}>
-                <ValidatedNumberInput
-                  value={globalPollution}
-                  onChange={setGlobalPollution}
-                  defaultValue={1}
-                  allowDecimals={true}
-                  allowNegatives={true}
-                  step="any"
-                  className={styles['global-var-input']}
-                />
+                {(() => {
+                  const isImpossible = difficulty === 'impossible' || difficulty === 'impossible2';
+                  return (
+                    <ValidatedNumberInput
+                      value={globalPollution}
+                      onChange={setGlobalPollution}
+                      defaultValue={1}
+                      allowDecimals={true}
+                      allowNegatives={!isImpossible}
+                      min={isImpossible ? 0 : undefined}
+                      step="any"
+                      className={styles['global-var-input']}
+                    />
+                  );
+                })()}
               </div>
             </div>
 

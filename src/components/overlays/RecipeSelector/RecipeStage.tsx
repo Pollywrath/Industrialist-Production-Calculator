@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
-import { getProductName, getMachineName, getAllRecipes } from '../../../data/lookup';
+import { getProductName, getMachineName, getAllRecipes, getMachine } from '../../../data/lookup';
 import { VirtualList } from '../../shared/VirtualList';
 import { RecipeCard } from './RecipeCard';
 import styles from './RecipeSelector.module.css';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useDataStore } from '../../../stores/useDataStore';
+import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { useRecipeSelectorFilters } from './RecipeSelectorContext';
 
 interface RecipeStageProps {
@@ -23,6 +24,32 @@ export function RecipeStage({
 }: RecipeStageProps) {
   const dbVersion = useDataStore((s) => s.dbVersion);
   const allRecipes = dbVersion !== -1 ? getAllRecipes() : [];
+  const unlockedResearchIdsArray = useGlobalSettingsStore((s) => s.settings.unlockedResearchIds);
+  const unlockedResearchIds = new Set(unlockedResearchIdsArray);
+  const oreNodesEnabled = useGlobalSettingsStore((s) => s.settings.oreNodesEnabled);
+  const showVariantLimited = useGlobalSettingsStore((s) => s.settings.showVariantLimited);
+
+  const unlockedRecipes = allRecipes.filter((r) => {
+    const machine = getMachine(r.machine_id);
+    if (!machine) return true;
+
+    // 1. Research lock check
+    if (machine.research && !unlockedResearchIds.has(machine.research)) {
+      return false;
+    }
+    // 2. Ore Nodes Mode check
+    if (machine.id === 'm_industrial_drill' && !oreNodesEnabled) {
+      return false;
+    }
+    // 3. Variant/Limited check
+    const isVariant = machine.variant && machine.variant !== 'none' && machine.variant !== '';
+    const isLimited = machine.limited;
+    if (!showVariantLimited && (isVariant || isLimited)) {
+      return false;
+    }
+
+    return true;
+  });
 
   const {
     activeTab,
@@ -37,7 +64,7 @@ export function RecipeStage({
     setFilterHeatPower,
     handleBack,
     matchingRecipes,
-  } = useRecipeSelectorFilters({ recipes: allRecipes });
+  } = useRecipeSelectorFilters({ recipes: unlockedRecipes });
 
   const effectivePreselectedProductId = activeTab === 'product' ? selectedId : preselectedProductId;
 

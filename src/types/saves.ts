@@ -21,6 +21,10 @@ export interface SavedEdge {
 
 export interface GlobalSettings {
   global_pollution: number;
+  difficulty?: string;
+  unlockedResearchIds?: string[];
+  oreNodesEnabled?: boolean;
+  showVariantLimited?: boolean;
 }
 
 export interface SaveData {

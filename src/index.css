@@ -58,6 +58,7 @@
   --theme-color-text-neutral: #888888;
 
   --theme-color-confirm-success: #22c55e;
+
   --theme-color-confirm-info: #d4a637;
   --theme-color-confirm-error: #ef4444;
 
@@ -91,6 +92,8 @@
   --theme-color-error: #ef4444;
   --theme-color-error-translucent: rgba(239, 68, 68, 0.1);
   --theme-color-warning-translucent: rgba(255, 170, 0, 0.1);
+  --theme-color-info: #60a5fa;
+  --theme-color-info-translucent: rgba(96, 165, 250, 0.1);
   --theme-color-success-translucent: rgba(34, 197, 94, 0.1);
   --theme-color-white: #ffffff;
   --theme-color-black: #000000;

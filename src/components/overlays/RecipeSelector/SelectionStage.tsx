@@ -16,6 +16,7 @@ import styles from './RecipeSelector.module.css';
 import { formatCurrency, formatRpMultiplier, toRomanNumeral } from '../../../utils/unitFormatting';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useDataStore } from '../../../stores/useDataStore';
+import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { useRecipeSelectorStore } from './RecipeSelectorContext';
 
 const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multiplier'>[] = [
@@ -359,6 +360,11 @@ function MachineList() {
     })),
   );
 
+  const unlockedResearchIdsArray = useGlobalSettingsStore((s) => s.settings.unlockedResearchIds);
+  const unlockedResearchIds = new Set(unlockedResearchIdsArray);
+  const oreNodesEnabled = useGlobalSettingsStore((s) => s.settings.oreNodesEnabled);
+  const showVariantLimited = useGlobalSettingsStore((s) => s.settings.showVariantLimited);
+
   let list = dbVersion !== -1 ? getAllMachines() : [];
 
   const allMachines = list;
@@ -366,6 +372,24 @@ function MachineList() {
 
   const virtualModularMachines = buildVirtualModularMachines(allMachines);
   list = [...list, ...virtualModularMachines];
+
+  list = list.filter((m) => {
+    // 1. Research lock check
+    if (m.research && !unlockedResearchIds.has(m.research)) {
+      return false;
+    }
+    // 2. Ore Nodes Mode check
+    if (m.id === 'm_industrial_drill' && !oreNodesEnabled) {
+      return false;
+    }
+    // 3. Variant/Limited check
+    const isVariant = m.variant && m.variant !== 'none' && m.variant !== '';
+    const isLimited = m.limited;
+    if (!showVariantLimited && (isVariant || isLimited)) {
+      return false;
+    }
+    return true;
+  });
 
   if (debouncedSearch.trim()) {
     const q = debouncedSearch.toLowerCase().trim();

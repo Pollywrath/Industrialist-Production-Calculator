@@ -151,6 +151,10 @@ export function migrateSaveData(rawData: unknown): SaveData {
     const gs = data.globalSettings as Record<string, unknown>;
     globalSettings = {
       global_pollution: typeof gs.global_pollution === 'number' ? gs.global_pollution : 10,
+      difficulty: typeof gs.difficulty === 'string' ? gs.difficulty : undefined,
+      unlockedResearchIds: Array.isArray(gs.unlockedResearchIds) ? gs.unlockedResearchIds.filter((x): x is string => typeof x === 'string') : undefined,
+      oreNodesEnabled: typeof gs.oreNodesEnabled === 'boolean' ? gs.oreNodesEnabled : undefined,
+      showVariantLimited: typeof gs.showVariantLimited === 'boolean' ? gs.showVariantLimited : undefined,
     };
   }
 
@@ -219,7 +223,7 @@ export function deserializeCanvas(saveData: SaveData): {
   const migrated = migrateSaveData(saveData);
 
   if (migrated.globalSettings) {
-    useGlobalSettingsStore.getState().setGlobalPollution(migrated.globalSettings.global_pollution);
+    useGlobalSettingsStore.getState().importSettings(migrated.globalSettings);
   }
 
   const idMap = new Map<string, string>();

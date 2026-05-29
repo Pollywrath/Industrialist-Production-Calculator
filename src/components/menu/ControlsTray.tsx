@@ -79,7 +79,7 @@ const BUTTONS: ButtonConfig[] = [
   { id: 'coming_soon', label: 'Coming Soon', type: 'switch', Icon: Sparkles },
   {
     id: 'machine_toggle',
-    label: 'Machine',
+    label: 'Machines',
     type: 'menu',
     Icon: Settings,
     dividerRight: true,
@@ -99,7 +99,6 @@ const BUTTONS: ButtonConfig[] = [
 const UNWIRED_IDS = new Set([
   'multi_select',
   'coming_soon',
-  'machine_toggle',
 ]);
 
 export function ControlsTray() {
@@ -107,9 +106,11 @@ export function ControlsTray() {
   const isMinimized = useUIStore((s) => s.isControlsMinimized);
   const activeToggleId = useUIStore(getEffectiveToggleId);
   const rateMode = useUIStore((s) => s.rateMode);
+  const isMachineOverlayOpen = useUIStore((s) => s.isMachineOverlayOpen);
   const edgePathStyle = useEdgeThemeStore((s) => s.pathStyle);
 
   const setRecipeSelectorOpen = useUIStore((s) => s.setRecipeSelectorOpen);
+  const setMachineOverlayOpen = useUIStore((s) => s.setMachineOverlayOpen);
   const toggleButton = useUIStore((s) => s.toggleButton);
   const cycleRateMode = useUIStore((s) => s.cycleRateMode);
   const toggleMinimized = useUIStore((s) => s.toggleControlsMinimized);
@@ -127,6 +128,8 @@ export function ControlsTray() {
       toggleButton('delete_mode');
     } else if (btn.id === 'target') {
       toggleButton('target');
+    } else if (btn.id === 'machine_toggle') {
+      setMachineOverlayOpen(!isMachineOverlayOpen);
     } else if (btn.id === 'compute') {
       if (isLPSolverRunning()) {
         void useUIStore.getState().confirm({
@@ -216,7 +219,10 @@ export function ControlsTray() {
               (btn.id === 'undo' && !canUndo) || (btn.id === 'redo' && !canRedo);
             const isLayoutDisabled = btn.id === 'layout' && (isLayouting || nodeCount === 0);
             const isDisabled = UNWIRED_IDS.has(btn.id) || isHistoryDisabled || isLayoutDisabled;
-            const isToggled = !isDisabled && btn.id === activeToggleId;
+            const isToggled =
+              !isDisabled &&
+              (btn.id === activeToggleId ||
+                (btn.id === 'machine_toggle' && isMachineOverlayOpen));
             const label =
               btn.id === 'rate_mode'
                 ? getRateButtonLabel()

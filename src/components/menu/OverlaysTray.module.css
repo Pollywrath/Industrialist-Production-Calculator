@@ -32,7 +32,7 @@
   align-items: center;
   justify-content: center;
   font-family: inherit;
-  color: var(--theme-color-text-dim);
+  color: var(--theme-color-text-secondary);
   cursor: pointer;
   user-select: none;
   background: transparent;
@@ -42,7 +42,7 @@
 }
 
 .overlays-tray-button-icon {
-  opacity: 0.8;
+  opacity: 0.95;
 }
 
 .overlays-tray-button-label {
@@ -51,7 +51,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   white-space: nowrap;
-  opacity: 0.8;
+  opacity: 1;
 }
 
 .overlays-tray-button.is-active {
@@ -92,7 +92,7 @@
   font-family: inherit;
   font-size: 10px;
   font-weight: bold;
-  color: var(--theme-color-text-dim);
+  color: var(--theme-color-text-secondary);
   letter-spacing: 1px;
   display: inline-flex;
   align-items: center;

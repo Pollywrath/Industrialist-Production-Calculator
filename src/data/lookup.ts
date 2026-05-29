@@ -325,6 +325,12 @@ export function initializeDatabase(): Promise<void> {
 
     rebuildActiveDatabase(overrides);
 
+    const settingsStore = useGlobalSettingsStore.getState();
+    const difficulty = settingsStore.settings.difficulty;
+    if ((difficulty === 'sandbox' || difficulty === 'sandbox_plus') && settingsStore.settings.unlockedResearchIds.length === 0) {
+      settingsStore.setUnlockedResearchIds(researches.map((r) => r.id));
+    }
+
     if (import.meta.env.DEV) {
       const { validateFullDatabase, getDatabaseChecksums } =
         await import('../utils/dataValidation');

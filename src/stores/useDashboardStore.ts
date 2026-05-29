@@ -30,6 +30,7 @@ interface DashboardState {
   totalMachineCost: number;
   netPollution: number;
   totalProfit: number;
+  profitMultiplier: number;
   deficienciesMap: Map<string, ProductDeficiencyGroup>;
   excessesMap: Map<string, ProductExcessGroup>;
   recompute: () => void;
@@ -42,6 +43,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   totalMachineCost: 0,
   netPollution: 0,
   totalProfit: 0,
+  profitMultiplier: 0,
   deficienciesMap: new Map(),
   excessesMap: new Map(),
 
@@ -59,6 +61,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         totalMachineCost: 0,
         netPollution: 0,
         totalProfit: 0,
+        profitMultiplier: 0,
         deficienciesMap: new Map(),
         excessesMap: new Map(),
       });
@@ -72,10 +75,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     const flowResultState = useFlowResultStore.getState();
     const results = flowResultState.results;
     const edgeFlows = flowResultState.edgeFlows;
-    const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
-      string,
-      unknown
-    >;
+    const globalSettings = useGlobalSettingsStore.getState().settings;
 
     let totalConsumption = 0;
     let totalProduction = 0;
@@ -118,7 +118,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       if (machine) {
         const baseCost =
           sr && sr.computeMachineCost
-            ? sr.computeMachineCost(node.data.settings ?? {}, globalSettings, node.id)
+            ? sr.computeMachineCost(node.data.settings ?? {}, globalSettings as unknown as Record<string, unknown>, node.id)
             : machine.cost;
         totalMachineCost += baseCost * roundedCount;
 
@@ -158,7 +158,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
       let baseModelCount: number;
       if (sr && sr.computeModelCount) {
-        baseModelCount = sr.computeModelCount(node.data.settings ?? {}, globalSettings, node.id);
+        baseModelCount = sr.computeModelCount(node.data.settings ?? {}, globalSettings as unknown as Record<string, unknown>, node.id);
       } else {
         baseModelCount = 1 + 2 * recipe.inputs.length + 2 * recipe.outputs.length;
 
@@ -253,13 +253,42 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       }
     });
 
+    const difficulty = globalSettings.difficulty || 'normal';
+    const x = globalSettings.global_pollution;
+    
+    let y: number;
+    if (difficulty === 'hard') {
+      const val = (-77 * x) / 290;
+      const lower = -2800 / 29;
+      const upper = 200 / 29;
+      y = Math.min(Math.max(val, lower), upper);
+    } else if (difficulty === 'impossible') {
+      const val = -(x * x) / 290;
+      const lower = -2800 / 29;
+      const upper = 0;
+      y = Math.min(Math.max(val, lower), upper);
+    } else if (difficulty === 'impossible2') {
+      const val = -x / 2;
+      const lower = -2850 / 29;
+      const upper = 200 / 29;
+      y = Math.min(Math.max(val, lower), upper);
+    } else {
+      const val = (-5 * x) / 29;
+      const lower = -2800 / 29;
+      const upper = 200 / 29;
+      y = Math.min(Math.max(val, lower), upper);
+    }
+
+    const finalProfit = totalProfit * (1 + y / 100);
+
     set({
       totalConsumption,
       totalProduction,
       totalModelCount,
       totalMachineCost,
       netPollution,
-      totalProfit,
+      totalProfit: finalProfit,
+      profitMultiplier: y,
       deficienciesMap,
       excessesMap,
     });
@@ -292,9 +321,14 @@ export function initDashboardStore(): () => void {
   });
 
   let lastGlobalPollution = useGlobalSettingsStore.getState().settings.global_pollution;
+  let lastDifficulty = useGlobalSettingsStore.getState().settings.difficulty;
   const unsubGlobalSettings = useGlobalSettingsStore.subscribe((state) => {
-    if (state.settings.global_pollution !== lastGlobalPollution) {
+    if (
+      state.settings.global_pollution !== lastGlobalPollution ||
+      state.settings.difficulty !== lastDifficulty
+    ) {
       lastGlobalPollution = state.settings.global_pollution;
+      lastDifficulty = state.settings.difficulty;
       useDashboardStore.getState().recompute();
     }
   });
