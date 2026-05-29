@@ -48,6 +48,11 @@ interface LayoutComponentResult {
     y: number;
     width: number;
     height: number;
+    ports?: Array<{
+      id: string;
+      x: number;
+      y: number;
+    }>;
   }>;
   layoutedEdges: Array<{
     id: string;
@@ -168,32 +173,6 @@ async function layoutComponent(
 }> {
   const elkRouting = edgePath === 'straight' ? 'POLYLINE' : 'ORTHOGONAL';
 
-  const elkNodes = componentNodes.map((node) => {
-    const { inputOrder, outputOrder, inputCount, outputCount } = getNodeHandlesMeta(node);
-
-    const inputPorts = inputOrder.map((handleIndex, displayIndex) => ({
-      id: buildHandleId(node.id, 'input', handleIndex),
-      properties: { 'port.side': 'WEST', 'port.index': String(displayIndex) },
-      x: 0,
-      y: getHandleY('left', displayIndex, inputCount, outputCount),
-    }));
-
-    const outputPorts = outputOrder.map((handleIndex, displayIndex) => ({
-      id: buildHandleId(node.id, 'output', handleIndex),
-      properties: { 'port.side': 'EAST', 'port.index': String(displayIndex) },
-      x: NODE_CSS_WIDTH,
-      y: getHandleY('right', displayIndex, inputCount, outputCount),
-    }));
-
-    return {
-      id: node.id,
-      width: NODE_CSS_WIDTH,
-      height: calculateNodeHeight(node),
-      ports: [...inputPorts, ...outputPorts],
-      properties: { portConstraints: 'FIXED_POS' },
-    };
-  });
-
   const nodeXMap = new Map<string, number>();
   const nodeOrderMap = new Map<string, number>();
   for (let i = 0; i < componentNodes.length; i++) {
@@ -229,33 +208,138 @@ async function layoutComponent(
     };
   });
 
-  const graph = {
+  const baseProperties = {
+    algorithm: 'layered',
+    'elk.direction': 'RIGHT',
+    'elk.edgeRouting': elkRouting,
+    'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+    'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
+    'elk.layered.nodePlacement.favorStraightEdges': 'true',
+    'elk.layered.nodePlacement.bk.edgeStraightening': 'IMPROVE_STRAIGHTNESS',
+    'elk.layered.nodePlacement.networkSimplex.nodeFlexibility.default': 'NONE',
+    'elk.layered.compaction.postCompaction.strategy': 'NONE',
+    'elk.layered.spacing.nodeNodeBetweenLayers': edgePath === 'straight' ? '152' : '114',
+    'elk.spacing.nodeNode': '39',
+    'elk.layered.spacing.edgeNodeBetweenLayers': '38',
+    'elk.layered.spacing.edgeEdgeBetweenLayers': edgePath === 'straight' ? '38' : '19',
+    'elk.spacing.edgeNode': edgePath === 'orthogonal' ? '38' : '19',
+    'elk.layered.feedbackEdges': 'true',
+    'elk.padding': '[top=57, left=57, bottom=57, right=57]',
+  };
+
+  // Pass 1: Crossing Minimization & Port Reordering (FIXED_SIDE)
+  const elkNodesPass1 = componentNodes.map((node) => {
+    const { inputCount, outputCount } = getNodeHandlesMeta(node);
+
+    const deterministicInputOrder = Array.from({ length: inputCount }, (_, i) => i);
+    const deterministicOutputOrder = Array.from({ length: outputCount }, (_, i) => i);
+
+    const inputPorts = deterministicInputOrder.map((handleIndex, displayIndex) => ({
+      id: buildHandleId(node.id, 'input', handleIndex),
+      properties: { 'port.side': 'WEST', 'port.index': String(displayIndex) },
+      x: 0,
+      y: getHandleY('left', displayIndex, inputCount, outputCount),
+    }));
+
+    const outputPorts = deterministicOutputOrder.map((handleIndex, displayIndex) => ({
+      id: buildHandleId(node.id, 'output', handleIndex),
+      properties: { 'port.side': 'EAST', 'port.index': String(displayIndex) },
+      x: NODE_CSS_WIDTH,
+      y: getHandleY('right', displayIndex, inputCount, outputCount),
+    }));
+
+    return {
+      id: node.id,
+      width: NODE_CSS_WIDTH,
+      height: calculateNodeHeight(node),
+      ports: [...inputPorts, ...outputPorts],
+      properties: {
+        portConstraints: 'FIXED_SIDE',
+        'org.eclipse.elk.portConstraints': 'FIXED_SIDE',
+      },
+    };
+  });
+
+  const graphPass1 = {
     id: 'root',
-    properties: {
-      algorithm: 'layered',
-      'elk.direction': 'RIGHT',
-      'elk.edgeRouting': elkRouting,
-      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
-      'elk.layered.nodePlacement.strategy': 'NETWORK_SIMPLEX',
-      'elk.layered.nodePlacement.favorStraightEdges': 'true',
-      'elk.layered.nodePlacement.bk.edgeStraightening': 'IMPROVE_STRAIGHTNESS',
-      'elk.layered.nodePlacement.networkSimplex.nodeFlexibility.default': 'NODE_HEIGHT',
-      'elk.layered.compaction.postCompaction.strategy': 'NONE',
-      'elk.layered.spacing.nodeNodeBetweenLayers': edgePath === 'straight' ? '152' : '114',
-      'elk.spacing.nodeNode': '39',
-      'elk.layered.spacing.edgeNodeBetweenLayers': '38',
-      'elk.layered.spacing.edgeEdgeBetweenLayers': edgePath === 'straight' ? '38' : '19',
-      'elk.spacing.edgeNode': edgePath === 'orthogonal' ? '38' : '19',
-      'elk.layered.feedbackEdges': 'true',
-      'elk.padding': '[top=57, left=57, bottom=57, right=57]',
-    },
-    children: elkNodes,
+    properties: baseProperties,
+    children: elkNodesPass1,
     edges: elkEdges,
   };
 
-  const layouted = await elk.layout(graph);
-  const children = (layouted.children ?? []) as LayoutComponentResult['layoutedChildren'];
-  const edges = (layouted.edges ?? []) as LayoutComponentResult['layoutedEdges'];
+  const layoutedPass1 = await elk.layout(graphPass1);
+
+  const nodePortOrders = new Map<string, { inputOrder: number[]; outputOrder: number[] }>();
+  (layoutedPass1.children ?? []).forEach((child) => {
+    const childPorts = child.ports ?? [];
+    const inputs: Array<{ index: number; y: number }> = [];
+    const outputs: Array<{ index: number; y: number }> = [];
+
+    for (let j = 0; j < childPorts.length; j++) {
+      const port = childPorts[j];
+      const parsed = parseHandleId(port.id);
+      if (!parsed) continue;
+
+      if (parsed.side === 'input') {
+        inputs.push({ index: parsed.index, y: port.y ?? 0 });
+      } else if (parsed.side === 'output') {
+        outputs.push({ index: parsed.index, y: port.y ?? 0 });
+      }
+    }
+
+    inputs.sort((a, b) => a.y - b.y);
+    outputs.sort((a, b) => a.y - b.y);
+
+    nodePortOrders.set(child.id, {
+      inputOrder: inputs.map((item) => item.index),
+      outputOrder: outputs.map((item) => item.index),
+    });
+  });
+
+  // Pass 2: Node Alignment & Edge Straightening (FIXED_POS)
+  const elkNodesPass2 = componentNodes.map((node) => {
+    const { inputCount, outputCount } = getNodeHandlesMeta(node);
+    const optimized = nodePortOrders.get(node.id) ?? {
+      inputOrder: Array.from({ length: inputCount }, (_, i) => i),
+      outputOrder: Array.from({ length: outputCount }, (_, i) => i),
+    };
+
+    const inputPorts = optimized.inputOrder.map((handleIndex, displayIndex) => ({
+      id: buildHandleId(node.id, 'input', handleIndex),
+      properties: { 'port.side': 'WEST', 'port.index': String(displayIndex) },
+      x: 0,
+      y: getHandleY('left', displayIndex, inputCount, outputCount),
+    }));
+
+    const outputPorts = optimized.outputOrder.map((handleIndex, displayIndex) => ({
+      id: buildHandleId(node.id, 'output', handleIndex),
+      properties: { 'port.side': 'EAST', 'port.index': String(displayIndex) },
+      x: NODE_CSS_WIDTH,
+      y: getHandleY('right', displayIndex, inputCount, outputCount),
+    }));
+
+    return {
+      id: node.id,
+      width: NODE_CSS_WIDTH,
+      height: calculateNodeHeight(node),
+      ports: [...inputPorts, ...outputPorts],
+      properties: {
+        portConstraints: 'FIXED_POS',
+        'org.eclipse.elk.portConstraints': 'FIXED_POS',
+      },
+    };
+  });
+
+  const graphPass2 = {
+    id: 'root',
+    properties: baseProperties,
+    children: elkNodesPass2,
+    edges: elkEdges,
+  };
+
+  const layoutedPass2 = await elk.layout(graphPass2);
+  const children = (layoutedPass2.children ?? []) as LayoutComponentResult['layoutedChildren'];
+  const edges = (layoutedPass2.edges ?? []) as LayoutComponentResult['layoutedEdges'];
 
   return {
     children,
@@ -288,6 +372,80 @@ function packComponents(componentResults: LayoutComponentResult[]) {
   return { sorted, positions };
 }
 
+function clampThreeSegmentX(x: number, sourceX: number, targetX: number): number {
+  const minX = Math.min(sourceX, targetX);
+  const maxX = Math.max(sourceX, targetX);
+  const gap = maxX - minX;
+
+  const margin = Math.min(12, gap / 2);
+  const lowerBound = minX + margin;
+  const upperBound = maxX - margin;
+
+  if (lowerBound >= upperBound) {
+    return (sourceX + targetX) / 2;
+  }
+
+  return Math.min(upperBound, Math.max(lowerBound, x));
+}
+
+function getSharedHandleComponents(
+  edges: Array<{
+    edgeId: string;
+    sourceHandle: string | undefined;
+    targetHandle: string | undefined;
+    bestX: number;
+  }>,
+): string[][] {
+  const adjacency = new Map<string, Set<string>>();
+
+  for (let i = 0; i < edges.length; i++) {
+    adjacency.set(edges[i].edgeId, new Set());
+  }
+
+  for (let i = 0; i < edges.length; i++) {
+    for (let j = i + 1; j < edges.length; j++) {
+      const e1 = edges[i];
+      const e2 = edges[j];
+      const shareSource = e1.sourceHandle && e1.sourceHandle === e2.sourceHandle;
+      const shareTarget = e1.targetHandle && e1.targetHandle === e2.targetHandle;
+      if (shareSource || shareTarget) {
+        adjacency.get(e1.edgeId)?.add(e2.edgeId);
+        adjacency.get(e2.edgeId)?.add(e1.edgeId);
+      }
+    }
+  }
+
+  const visited = new Set<string>();
+  const components: string[][] = [];
+
+  for (let i = 0; i < edges.length; i++) {
+    const startId = edges[i].edgeId;
+    if (visited.has(startId)) continue;
+
+    const component: string[] = [];
+    const stack = [startId];
+
+    while (stack.length > 0) {
+      const id = stack.pop();
+      if (!id || visited.has(id)) continue;
+      visited.add(id);
+      component.push(id);
+
+      const neighbors = adjacency.get(id);
+      if (neighbors) {
+        neighbors.forEach((neighborId) => {
+          if (!visited.has(neighborId)) {
+            stack.push(neighborId);
+          }
+        });
+      }
+    }
+    components.push(component);
+  }
+
+  return components;
+}
+
 export async function autoLayout(
   nodes: Node<RecipeNodeData>[],
   edges: Edge[],
@@ -307,10 +465,12 @@ export async function autoLayout(
       const componentNodes = [...componentNodeIds]
         .map((id) => nodeMap.get(id))
         .filter((node): node is Node<RecipeNodeData> => !!node);
+      componentNodes.sort((a, b) => a.id.localeCompare(b.id));
 
       const componentEdges = edges.filter(
         (edge) => componentNodeIds.has(edge.source) && componentNodeIds.has(edge.target),
       );
+      componentEdges.sort((a, b) => a.id.localeCompare(b.id));
 
       try {
         const { children: layoutedChildren, edges: layoutedEdges } = await layoutComponent(
@@ -366,6 +526,9 @@ export async function autoLayout(
   const { sorted, positions } = packComponents(componentResults);
 
   const finalPositions = new Map<string, { x: number; y: number }>();
+  const finalInputOrders = new Map<string, number[]>();
+  const finalOutputOrders = new Map<string, number[]>();
+
   sorted.forEach((comp, index) => {
     const position = positions.get(index);
     if (!position) return;
@@ -376,6 +539,28 @@ export async function autoLayout(
     for (let i = 0; i < comp.layoutedChildren.length; i++) {
       const elkNode = comp.layoutedChildren[i];
       finalPositions.set(elkNode.id, snapToGrid(tx(elkNode.x), ty(elkNode.y)));
+
+      const layoutedPorts = elkNode.ports ?? [];
+      const inputs: Array<{ index: number; y: number }> = [];
+      const outputs: Array<{ index: number; y: number }> = [];
+
+      for (let j = 0; j < layoutedPorts.length; j++) {
+        const port = layoutedPorts[j];
+        const parsed = parseHandleId(port.id);
+        if (!parsed) continue;
+
+        if (parsed.side === 'input') {
+          inputs.push({ index: parsed.index, y: port.y });
+        } else if (parsed.side === 'output') {
+          outputs.push({ index: parsed.index, y: port.y });
+        }
+      }
+
+      inputs.sort((a, b) => a.y - b.y);
+      outputs.sort((a, b) => a.y - b.y);
+
+      finalInputOrders.set(elkNode.id, inputs.map((item) => item.index));
+      finalOutputOrders.set(elkNode.id, outputs.map((item) => item.index));
     }
   });
 
@@ -387,6 +572,17 @@ export async function autoLayout(
 
     const tx = (x: number) => x - comp.bounds.x + position.offsetX;
     const ty = (y: number) => y - comp.bounds.y + position.offsetY;
+
+    const forwardEdgesToProcess: Array<{
+      edgeId: string;
+      sourceHandle: string;
+      targetHandle: string;
+      sourceX: number;
+      targetX: number;
+      sourceY: number;
+      targetY: number;
+      bestX: number;
+    }> = [];
 
     for (let i = 0; i < comp.layoutedEdges.length; i++) {
       const elkEdge = comp.layoutedEdges[i];
@@ -429,8 +625,8 @@ export async function autoLayout(
         const midY =
           middleBendPoints.reduce((sum, point) => sum + point.y, 0) / middleBendPoints.length;
 
-        const xA = snapX(sourceX + 12);
-        const xB = snapX(targetX - 12);
+        const xA = snapX(sourceX + 12 + sourceParsed.index * GRID_X);
+        const xB = snapX(targetX - 12 - targetParsed.index * GRID_X);
         const snappedMidY = snapY(midY);
 
         edgeUpdates.set(elkEdge.id, {
@@ -457,21 +653,103 @@ export async function autoLayout(
           bestX = current.x;
         }
 
-        const midX = snapX(bestX);
-        edgeUpdates.set(elkEdge.id, {
-          orthogonalTurns: [
-            { x: midX, y: sourcePos.y },
-            { x: midX, y: targetPos.y },
-          ],
+        forwardEdgesToProcess.push({
+          edgeId: elkEdge.id,
+          sourceHandle,
+          targetHandle,
+          sourceX,
+          targetX,
+          sourceY: sourcePos.y,
+          targetY: targetPos.y,
+          bestX,
         });
       }
     }
+
+    const gapGroups = new Map<string, typeof forwardEdgesToProcess>();
+    for (let i = 0; i < forwardEdgesToProcess.length; i++) {
+      const fe = forwardEdgesToProcess[i];
+      const key = `${fe.sourceX}_${fe.targetX}`;
+      let list = gapGroups.get(key);
+      if (!list) {
+        list = [];
+        gapGroups.set(key, list);
+      }
+      list.push(fe);
+    }
+
+    gapGroups.forEach((gapEdges, key) => {
+      const parts = key.split('_');
+      const sourceX = parseFloat(parts[0]);
+      const targetX = parseFloat(parts[1]);
+
+      const components = getSharedHandleComponents(gapEdges);
+
+      const edgeMapForGap = new Map(gapEdges.map((e) => [e.edgeId, e]));
+      const groups = components.map((component) => {
+        const avgBestX =
+          component.reduce((sum, id) => sum + (edgeMapForGap.get(id)?.bestX ?? 0), 0) /
+          component.length;
+        return {
+          component,
+          avgBestX,
+        };
+      });
+
+      groups.sort((a, b) => a.avgBestX - b.avgBestX);
+
+      const coords = groups.map((g) => clampThreeSegmentX(snapX(g.avgBestX), sourceX, targetX));
+
+      for (let pass = 0; pass < 10; pass++) {
+        let changed = false;
+        for (let i = 0; i < coords.length - 1; i++) {
+          if (coords[i + 1] < coords[i] + 15) {
+            coords[i + 1] = clampThreeSegmentX(coords[i] + 15, sourceX, targetX);
+            changed = true;
+          }
+        }
+        for (let i = coords.length - 1; i > 0; i--) {
+          if (coords[i] < coords[i - 1] + 15) {
+            coords[i - 1] = clampThreeSegmentX(coords[i] - 15, sourceX, targetX);
+            changed = true;
+          }
+        }
+        if (!changed) break;
+      }
+
+      groups.forEach((g, idx) => {
+        const assignedX = coords[idx];
+        g.component.forEach((edgeId) => {
+          const edgeData = edgeMapForGap.get(edgeId);
+          if (!edgeData) return;
+
+          edgeUpdates.set(edgeId, {
+            orthogonalTurns: [
+              { x: assignedX, y: edgeData.sourceY },
+              { x: assignedX, y: edgeData.targetY },
+            ],
+          });
+        });
+      });
+    });
   });
 
   const updatedNodes = nodes.map((node) => {
     const position = finalPositions.get(node.id);
     if (!position) return node;
-    return { ...node, position };
+
+    const inputOrder = finalInputOrders.get(node.id) ?? node.data.inputOrder;
+    const outputOrder = finalOutputOrders.get(node.id) ?? node.data.outputOrder;
+
+    return {
+      ...node,
+      position,
+      data: {
+        ...node.data,
+        inputOrder,
+        outputOrder,
+      },
+    };
   });
 
   const updatedEdges = edges.map((edge) => {

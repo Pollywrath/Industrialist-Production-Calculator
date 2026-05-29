@@ -16,5 +16,8 @@ export function clampFlow(flow: number): number {
 
 export function toPlainString(num: number, maxDecimals: number): string {
   const fixed = num.toFixed(maxDecimals);
+  if (num !== 0 && parseFloat(fixed) === 0) {
+    return fixed.startsWith('-') ? fixed.slice(1) : fixed;
+  }
   return fixed.replace(/\.?0+$/, '');
 }
