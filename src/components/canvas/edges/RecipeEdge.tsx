@@ -22,10 +22,7 @@ const ORTHOGONAL_SEGMENT_HITBOX_WIDTH = 14;
 const ORTHOGONAL_HANDLE_LENGTH = 18;
 const ORTHOGONAL_HANDLE_THICKNESS = 8;
 const ORTHOGONAL_MIN_SEGMENT_LENGTH = 12;
-const ORTHOGONAL_LEFTWARD_OFFSET = Math.max(
-  SNAP_GRID[0] * 4,
-  ORTHOGONAL_MIN_SEGMENT_LENGTH * 2,
-);
+
 const POSITION_EPSILON = 0.001;
 
 type OrthogonalLayout = 'three' | 'five';
@@ -105,6 +102,30 @@ function getOrthogonalLayout(sourceX: number, targetX: number): OrthogonalLayout
   return targetX < sourceX - POSITION_EPSILON ? 'five' : 'three';
 }
 
+function clampThreeSegmentX(x: number, sourceX: number, targetX: number): number {
+  const minX = Math.min(sourceX, targetX);
+  const maxX = Math.max(sourceX, targetX);
+  const gap = maxX - minX;
+
+  const margin = Math.min(ORTHOGONAL_MIN_SEGMENT_LENGTH, gap / 2);
+  const lowerBound = minX + margin;
+  const upperBound = maxX - margin;
+
+  if (lowerBound >= upperBound) {
+    return (sourceX + targetX) / 2;
+  }
+
+  return Math.min(upperBound, Math.max(lowerBound, x));
+}
+
+function clampFiveSegmentXA(xA: number, sourceX: number): number {
+  return Math.max(sourceX + ORTHOGONAL_MIN_SEGMENT_LENGTH, xA);
+}
+
+function clampFiveSegmentXB(xB: number, targetX: number): number {
+  return Math.min(targetX - ORTHOGONAL_MIN_SEGMENT_LENGTH, xB);
+}
+
 function buildDefaultOrthogonalTurns(
   layout: OrthogonalLayout,
   sourceX: number,
@@ -113,15 +134,15 @@ function buildDefaultOrthogonalTurns(
   targetY: number,
 ): EdgeControlPoint[] {
   if (layout === 'three') {
-    const midX = snapToGrid((sourceX + targetX) / 2, SNAP_GRID[0]);
+    const midX = clampThreeSegmentX(snapToGrid((sourceX + targetX) / 2, SNAP_GRID[0]), sourceX, targetX);
     return [
       { x: midX, y: sourceY },
       { x: midX, y: targetY },
     ];
   }
 
-  const xA = snapToGrid(sourceX + ORTHOGONAL_LEFTWARD_OFFSET, SNAP_GRID[0]);
-  const xB = snapToGrid(targetX - ORTHOGONAL_LEFTWARD_OFFSET, SNAP_GRID[0]);
+  const xA = clampFiveSegmentXA(sourceX + ORTHOGONAL_MIN_SEGMENT_LENGTH, sourceX);
+  const xB = clampFiveSegmentXB(targetX - ORTHOGONAL_MIN_SEGMENT_LENGTH, targetX);
   const midY = snapToGrid((sourceY + targetY) / 2, SNAP_GRID[1]);
 
   return [
@@ -144,26 +165,49 @@ function normalizeOrthogonalTurns(
   const finiteTurns = toFinitePoints(rawTurns);
 
   if (layout === 'three') {
-    if (finiteTurns.length < 2) return defaultTurns;
+    if (finiteTurns.length < 2) {
+      const defaultMidX = defaultTurns[0].x;
+      const clampedDefaultMidX = clampThreeSegmentX(defaultMidX, sourceX, targetX);
+      return [
+        { x: clampedDefaultMidX, y: sourceY },
+        { x: clampedDefaultMidX, y: targetY },
+      ];
+    }
 
     const midX = snapToGrid((finiteTurns[0].x + finiteTurns[1].x) / 2, SNAP_GRID[0]);
+    const clampedMidX = clampThreeSegmentX(midX, sourceX, targetX);
     return [
-      { x: midX, y: sourceY },
-      { x: midX, y: targetY },
+      { x: clampedMidX, y: sourceY },
+      { x: clampedMidX, y: targetY },
     ];
   }
 
-  if (finiteTurns.length < 4) return defaultTurns;
+  if (finiteTurns.length < 4) {
+    const defaultXA = defaultTurns[0].x;
+    const defaultXB = defaultTurns[2].x;
+    const clampedXA = clampFiveSegmentXA(defaultXA, sourceX);
+    const clampedXB = clampFiveSegmentXB(defaultXB, targetX);
+    const midY = defaultTurns[1].y;
+    return [
+      { x: clampedXA, y: sourceY },
+      { x: clampedXA, y: midY },
+      { x: clampedXB, y: midY },
+      { x: clampedXB, y: targetY },
+    ];
+  }
 
   const xA = snapToGrid((finiteTurns[0].x + finiteTurns[1].x) / 2, SNAP_GRID[0]);
   const xB = snapToGrid((finiteTurns[2].x + finiteTurns[3].x) / 2, SNAP_GRID[0]);
   const midY = snapToGrid((finiteTurns[1].y + finiteTurns[2].y) / 2, SNAP_GRID[1]);
 
+  const clampedXA = clampFiveSegmentXA(xA, sourceX);
+  const clampedXB = clampFiveSegmentXB(xB, targetX);
+
   return [
-    { x: xA, y: sourceY },
-    { x: xA, y: midY },
-    { x: xB, y: midY },
-    { x: xB, y: targetY },
+    { x: clampedXA, y: sourceY },
+    { x: clampedXA, y: midY },
+    { x: clampedXB, y: midY },
+    { x: clampedXB, y: targetY },
   ];
 }
 
@@ -480,7 +524,7 @@ export function RecipeEdge({
 
       if (orthogonalLayout === 'three') {
         const proposedX = snapToGrid(flowPosition.x, SNAP_GRID[0]);
-        const clampedX = clampMovedCoordinate(proposedX, sourceX, targetX, nextTurns[0].x);
+        const clampedX = clampThreeSegmentX(proposedX, sourceX, targetX);
 
         if (
           Math.abs(nextTurns[0].x - clampedX) < POSITION_EPSILON &&
@@ -493,7 +537,7 @@ export function RecipeEdge({
         nextTurns[1] = { x: clampedX, y: targetY };
       } else if (segment.index === 1) {
         const proposedX = snapToGrid(flowPosition.x, SNAP_GRID[0]);
-        const clampedX = clampMovedCoordinate(proposedX, sourceX, nextTurns[2].x, nextTurns[0].x);
+        const clampedX = clampFiveSegmentXA(proposedX, sourceX);
 
         if (
           Math.abs(nextTurns[0].x - clampedX) < POSITION_EPSILON &&
@@ -519,7 +563,7 @@ export function RecipeEdge({
         nextTurns[2] = { x: nextTurns[2].x, y: clampedY };
       } else if (segment.index === 3) {
         const proposedX = snapToGrid(flowPosition.x, SNAP_GRID[0]);
-        const clampedX = clampMovedCoordinate(proposedX, nextTurns[0].x, targetX, nextTurns[2].x);
+        const clampedX = clampFiveSegmentXB(proposedX, targetX);
 
         if (
           Math.abs(nextTurns[2].x - clampedX) < POSITION_EPSILON &&

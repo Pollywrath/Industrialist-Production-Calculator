@@ -14,8 +14,11 @@ import {
   ChevronUp,
   ChevronDown,
 } from 'lucide-react';
+import { useState } from 'react';
 import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { useFlowStore } from '../../stores/useFlowStore';
+import { useEdgeThemeStore } from '../../stores/useEdgeThemeStore';
+import { autoLayout } from '../../utils/autoLayout';
 import styles from './ControlsTray.module.css';
 
 interface ButtonConfig {
@@ -95,21 +98,23 @@ const BUTTONS: ButtonConfig[] = [
 const UNWIRED_IDS = new Set([
   'multi_select',
   'target',
-  'layout',
   'compute',
   'coming_soon',
   'machine_toggle',
 ]);
 
 export function ControlsTray() {
+  const [isLayouting, setIsLayouting] = useState(false);
   const isMinimized = useUIStore((s) => s.isControlsMinimized);
   const activeToggleId = useUIStore(getEffectiveToggleId);
   const rateMode = useUIStore((s) => s.rateMode);
+  const edgePathStyle = useEdgeThemeStore((s) => s.pathStyle);
 
   const setRecipeSelectorOpen = useUIStore((s) => s.setRecipeSelectorOpen);
   const toggleButton = useUIStore((s) => s.toggleButton);
   const cycleRateMode = useUIStore((s) => s.cycleRateMode);
   const toggleMinimized = useUIStore((s) => s.toggleControlsMinimized);
+  const nodeCount = useFlowStore((s) => s.nodes.length);
   const canUndo = useFlowStore((s) => s.canUndo);
   const canRedo = useFlowStore((s) => s.canRedo);
   const undo = useFlowStore((s) => s.undo);
@@ -123,6 +128,22 @@ export function ControlsTray() {
       toggleButton('delete_mode');
     } else if (btn.id === 'rate_mode') {
       cycleRateMode();
+    } else if (btn.id === 'layout') {
+      if (isLayouting) return;
+      const flowStore = useFlowStore.getState();
+      if (flowStore.nodes.length === 0) return;
+
+      setIsLayouting(true);
+      void autoLayout(flowStore.nodes, flowStore.edges, { edgePath: edgePathStyle })
+        .then(({ nodes, edges }) => {
+          setNodesAndEdges(nodes, edges);
+        })
+        .catch((error) => {
+          console.error('Auto-layout failed:', error);
+        })
+        .finally(() => {
+          setIsLayouting(false);
+        });
     } else if (btn.id === 'clear_canvas') {
       setNodesAndEdges([], []);
     } else if (btn.id === 'undo') {
@@ -168,9 +189,15 @@ export function ControlsTray() {
           {BUTTONS.map((btn) => {
             const isHistoryDisabled =
               (btn.id === 'undo' && !canUndo) || (btn.id === 'redo' && !canRedo);
-            const isDisabled = UNWIRED_IDS.has(btn.id) || isHistoryDisabled;
+            const isLayoutDisabled = btn.id === 'layout' && (isLayouting || nodeCount === 0);
+            const isDisabled = UNWIRED_IDS.has(btn.id) || isHistoryDisabled || isLayoutDisabled;
             const isToggled = !isDisabled && btn.id === activeToggleId;
-            const label = btn.id === 'rate_mode' ? getRateButtonLabel() : btn.label;
+            const label =
+              btn.id === 'rate_mode'
+                ? getRateButtonLabel()
+                : btn.id === 'layout' && isLayouting
+                  ? 'Layout...'
+                  : btn.label;
             const Icon = btn.Icon;
 
             return (

@@ -4,6 +4,7 @@ import {
   Background,
   BackgroundVariant,
   useReactFlow,
+  ConnectionLineType,
   type Edge,
   type Connection,
   type InternalNode,
@@ -472,6 +473,16 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       onMoveEnd={() => useUIStore.getState().setIsTransforming(false)}
       onlyRenderVisibleElements={nodes.length > 250 && !isZoomedOut}
       deleteKeyCode={null}
+      selectionKeyCode={null}
+      multiSelectionKeyCode={null}
+      panActivationKeyCode={null}
+      connectionLineType={
+        edgePathStyle === 'bezier'
+          ? ConnectionLineType.Bezier
+          : edgePathStyle === 'straight'
+            ? ConnectionLineType.Straight
+            : ConnectionLineType.SmoothStep
+      }
     >
       <Background
         variant={BackgroundVariant.Dots}
