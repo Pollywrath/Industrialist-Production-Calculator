@@ -122,7 +122,7 @@ function saveThemeOverrides(overrides: ThemeOverrideMap): void {
     }
     localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(overrides));
   } catch {
-    // Ignore storage failures (private mode/quota) and keep runtime state functional.
+    void 0;
   }
 }
 

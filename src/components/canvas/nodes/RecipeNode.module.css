@@ -22,6 +22,13 @@
   backface-visibility: hidden;
 }
 
+.recipe-node[data-target="true"] {
+  background: var(--theme-color-node-target-bg);
+  border: 2px solid var(--theme-color-node-target-border);
+  outline: 2px solid var(--theme-color-node-target-border);
+  outline-offset: 1px;
+}
+
 :global(.is-transforming) .recipe-node,
 :global(.is-zoomed-out) .recipe-node {
   will-change: transform;
@@ -57,10 +64,35 @@
   height: 14px;
 }
 
-.recipe-node-info__temp-badge {
+.recipe-node-info__badges {
+  position: absolute;
+  top: 10px;
+  right: 40px;
+  display: flex;
+  gap: 6px;
+}
+
+.recipe-node-info__temp-badge-anchor {
   position: absolute;
   top: 10px;
   left: 10px;
+}
+
+.recipe-node-info__target-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  padding: 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--theme-color-primary-dark);
+  background: var(--theme-color-primary);
+  border: 1px solid var(--theme-color-border-primary);
+  border-radius: 6px;
+}
+
+.recipe-node-info__temp-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -141,11 +173,25 @@
   white-space: normal;
 }
 
-.tier-1 { --tier-color: var(--theme-color-tier-1); }
-.tier-2 { --tier-color: var(--theme-color-tier-2); }
-.tier-3 { --tier-color: var(--theme-color-tier-3); }
-.tier-4 { --tier-color: var(--theme-color-tier-4); }
-.tier-5 { --tier-color: var(--theme-color-tier-5); }
+.tier-1 {
+  --tier-color: var(--theme-color-tier-1);
+}
+
+.tier-2 {
+  --tier-color: var(--theme-color-tier-2);
+}
+
+.tier-3 {
+  --tier-color: var(--theme-color-tier-3);
+}
+
+.tier-4 {
+  --tier-color: var(--theme-color-tier-4);
+}
+
+.tier-5 {
+  --tier-color: var(--theme-color-tier-5);
+}
 
 .recipe-node-info__machine-count {
   font-size: 20px;
@@ -157,7 +203,7 @@
 :global(.is-zoomed-out) .recipe-node-info__stats,
 :global(.is-zoomed-out) .recipe-node-info__machine-name,
 :global(.is-zoomed-out) .recipe-node-info__top-right-btn,
-:global(.is-zoomed-out) .recipe-node-info__temp-badge {
+:global(.is-zoomed-out) .recipe-node-info__badges {
   display: none;
 }
 

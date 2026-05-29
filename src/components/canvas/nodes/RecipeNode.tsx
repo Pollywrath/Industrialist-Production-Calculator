@@ -119,6 +119,7 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
       <div
         className={styles['recipe-node']}
         style={{ '--node-height': `${displayHeight}px` } as React.CSSProperties}
+        data-target={data.isTarget ? 'true' : undefined}
       >
         <RecipeNodeInfo
           recipe={recipe}
@@ -130,6 +131,7 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
             setIsEditorOpen(true);
           }}
           receivedTemp={receivedTemp}
+          isTarget={!!data.isTarget}
         />
         <RecipeNodeIO
           leftHandles={leftHandles}

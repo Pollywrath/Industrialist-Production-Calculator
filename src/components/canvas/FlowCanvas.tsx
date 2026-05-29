@@ -7,6 +7,8 @@ import { FlowViewport } from './FlowViewport';
 import { LoadingScreen } from '../shared/LoadingScreen';
 import { useAutosave } from '../../persistence/useAutosave';
 import { overlayPrefetchCache } from './overlayPrefetchCache';
+import { initLPSolverWorker } from '../../solver/lpSolverService';
+import { ASSET_VERSION } from '../../data/productIcons';
 
 import styles from './FlowCanvas.module.css';
 
@@ -14,6 +16,7 @@ const FallbackRecipeSelector: React.ComponentType<Record<string, never>> = () =>
 const FallbackSavesOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackDataOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackThemeOverlay: React.ComponentType<Record<string, never>> = () => null;
+const FallbackLPSolverOverlay: React.ComponentType<Record<string, never>> = () => null;
 
 const LazyRecipeSelector = React.lazy(
   () =>
@@ -71,12 +74,26 @@ const LazyThemeOverlay = React.lazy(
       }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
 );
 
+const LazyLPSolverOverlay = React.lazy(
+  () =>
+    import('../overlays/LPSolverOverlay/LPSolverOverlay')
+      .then((m) => {
+        overlayPrefetchCache.LPSolverOverlay = m.LPSolverOverlay;
+        return { default: m.LPSolverOverlay };
+      })
+      .catch((err) => {
+        console.warn('LPSolverOverlay chunk load failed.', err);
+        return { default: FallbackLPSolverOverlay };
+      }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
+);
+
 export function FlowCanvas() {
   const isDeleteMode = useUIStore((s) => getEffectiveToggleId(s) === 'delete_mode');
   const isRecipeSelectorOpen = useUIStore((s) => s.isRecipeSelectorOpen);
   const isSavesOverlayOpen = useUIStore((s) => s.isSavesOverlayOpen);
   const isDataOverlayOpen = useUIStore((s) => s.isDataOverlayOpen);
   const isThemeOverlayOpen = useUIStore((s) => s.isThemeOverlayOpen);
+  const isLPSolverOpen = useUIStore((s) => s.isLPSolverOpen);
   const isTransformingStore = useUIStore((s) => s.isTransforming);
   const isZoomedOutStore = useUIStore((s) => s.isZoomedOut);
   const isExporting = useUIStore((s) => s.isExporting);
@@ -128,7 +145,18 @@ export function FlowCanvas() {
           .catch((err) => {
             console.warn('Failed to prefetch ThemeOverlay chunk on idle:', err);
           }),
+        import('../overlays/LPSolverOverlay/LPSolverOverlay')
+          .then((m) => {
+            overlayPrefetchCache.LPSolverOverlay = m.LPSolverOverlay;
+          })
+          .catch((err) => {
+            console.warn('Failed to prefetch LPSolverOverlay chunk on idle:', err);
+          }),
       ]);
+
+      const versionSuffix = ASSET_VERSION ? `?v=${ASSET_VERSION}` : '';
+      fetch(`/scip/scip.js${versionSuffix}`).catch(() => { });
+      fetch(`/scip/scip.wasm${versionSuffix}`).catch(() => { });
     };
 
     if (hasIdle) {
@@ -146,10 +174,15 @@ export function FlowCanvas() {
     };
   }, []);
 
+  useEffect(() => {
+    initLPSolverWorker();
+  }, []);
+
   const RecipeSelector = overlayPrefetchCache.RecipeSelector;
   const SavesOverlay = overlayPrefetchCache.SavesOverlay;
   const DataOverlay = overlayPrefetchCache.DataOverlay;
   const ThemeOverlay = overlayPrefetchCache.ThemeOverlay;
+  const LPSolverOverlay = overlayPrefetchCache.LPSolverOverlay;
 
   if (!isAutosaveLoaded) {
     return (
@@ -217,6 +250,14 @@ export function FlowCanvas() {
             fallback={<LoadingScreen title="THEME EDITOR" subtitle="Loading theme variables..." />}
           >
             <LazyThemeOverlay />
+          </Suspense>
+        ))}
+      {isLPSolverOpen &&
+        (LPSolverOverlay ? (
+          React.createElement(LPSolverOverlay)
+        ) : (
+          <Suspense fallback={null}>
+            <LazyLPSolverOverlay />
           </Suspense>
         ))}
     </div>

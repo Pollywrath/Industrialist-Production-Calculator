@@ -62,7 +62,7 @@ function persistEdgeStyleSettings(settings: EdgeStyleSettings): void {
   try {
     localStorage.setItem(EDGE_THEME_STORAGE_KEY, JSON.stringify(settings));
   } catch {
-    // Ignore storage failures and keep runtime state functional.
+    void 0;
   }
 }
 

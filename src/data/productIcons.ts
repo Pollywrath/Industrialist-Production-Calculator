@@ -17,7 +17,7 @@ const ALIAS_MAP: Record<string, string> = {
   p_microchip_scrap: 'p_logic_plate',
 };
 
-const ASSET_VERSION = import.meta.env.VITE_ICON_VERSION || 'dev';
+export const ASSET_VERSION = import.meta.env.VITE_ICON_VERSION || 'dev';
 
 function withAssetVersion(path: string): string {
   return `${path}?v=${ASSET_VERSION}`;

@@ -6,7 +6,7 @@ import {
   type Edge,
   type EdgeProps,
 } from '@xyflow/react';
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { SNAP_GRID } from '../../shared/layoutConstants';
 import { type EdgeControlPoint, type RecipeEdgeData } from '../../../types/edges';
@@ -34,6 +34,11 @@ interface OrthogonalSegment {
   orientation: 'horizontal' | 'vertical';
   midpoint: EdgeControlPoint;
   editable: boolean;
+}
+
+interface DragListeners {
+  onMouseMove: (event: MouseEvent) => void;
+  onMouseUp: () => void;
 }
 
 function toSvgPathNumber(value: number): string {
@@ -334,6 +339,31 @@ export function RecipeEdge({
   const [hoveredOrthSegmentIndex, setHoveredOrthSegmentIndex] = useState<number | null>(null);
   const [hoveredOrthHandlePoint, setHoveredOrthHandlePoint] = useState<EdgeControlPoint | null>(null);
   const [draggingOrthSegmentIndex, setDraggingOrthSegmentIndex] = useState<number | null>(null);
+  const controlDragListenersRef = useRef<DragListeners | null>(null);
+  const orthDragListenersRef = useRef<DragListeners | null>(null);
+
+  const clearControlDragListeners = () => {
+    const listeners = controlDragListenersRef.current;
+    if (!listeners) return;
+    window.removeEventListener('mousemove', listeners.onMouseMove);
+    window.removeEventListener('mouseup', listeners.onMouseUp);
+    controlDragListenersRef.current = null;
+  };
+
+  const clearOrthDragListeners = () => {
+    const listeners = orthDragListenersRef.current;
+    if (!listeners) return;
+    window.removeEventListener('mousemove', listeners.onMouseMove);
+    window.removeEventListener('mouseup', listeners.onMouseUp);
+    orthDragListenersRef.current = null;
+  };
+
+  useEffect(() => {
+    return () => {
+      clearControlDragListeners();
+      clearOrthDragListeners();
+    };
+  }, []);
 
   const controlPoints = previewControlPoints ?? toFinitePoints(data?.controlPoints);
 
@@ -442,14 +472,15 @@ export function RecipeEdge({
     const finishDrag = () => {
       if (!isDragging) return;
       isDragging = false;
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', finishDrag);
+      clearControlDragListeners();
       setPreviewControlPoints(null);
 
       if (!didMove) return;
       setEdgePointArray(id, 'controlPoints', draggedPoints, { visualOnly: true });
     };
 
+    clearControlDragListeners();
+    controlDragListenersRef.current = { onMouseMove, onMouseUp: finishDrag };
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', finishDrag);
   };
@@ -619,8 +650,7 @@ export function RecipeEdge({
     const finishDrag = () => {
       if (!isDragging) return;
       isDragging = false;
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', finishDrag);
+      clearOrthDragListeners();
 
       setDraggingOrthSegmentIndex(null);
       setPreviewOrthogonalTurns(null);
@@ -631,6 +661,8 @@ export function RecipeEdge({
 
     setDraggingOrthSegmentIndex(segmentIndex);
     setHoveredOrthSegmentIndex(segmentIndex);
+    clearOrthDragListeners();
+    orthDragListenersRef.current = { onMouseMove, onMouseUp: finishDrag };
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', finishDrag);
   };

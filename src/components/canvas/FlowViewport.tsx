@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import {
   ReactFlow,
   Background,
@@ -231,58 +231,13 @@ function resolveHandleCenter(
 }
 
 const onNodeClick = (_event: React.MouseEvent, node: Node) => {
-  const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
-  if (isDeleteMode) {
+  const toggleId = getEffectiveToggleId(useUIStore.getState());
+  if (toggleId === 'delete_mode') {
     useFlowStore.getState().deleteNode(node.id);
+  } else if (toggleId === 'target') {
+    const isTarget = !!node.data?.isTarget;
+    useFlowStore.getState().updateNodeData(node.id, { isTarget: !isTarget });
   }
-};
-
-const isValidConnection = (connection: Connection | Edge) => {
-  if (
-    !connection.source ||
-    !connection.target ||
-    !connection.sourceHandle ||
-    !connection.targetHandle
-  )
-    return false;
-
-  const sourceParsed = parseHandleId(connection.sourceHandle);
-  const targetParsed = parseHandleId(connection.targetHandle);
-
-  if (!sourceParsed || !targetParsed) {
-    return false;
-  }
-
-  if (sourceParsed.side !== 'output' || targetParsed.side !== 'input') {
-    return false;
-  }
-
-  const store = useFlowStore.getState();
-  const resolutionContext = createGraphResolutionContext(store.nodes, store.edges);
-  const sourceHelpers = resolutionContext.createHelpers(connection.source);
-  const targetHelpers = resolutionContext.createHelpers(connection.target);
-  const resolvedSourceProductId =
-    store.resolvedProducts[connection.sourceHandle] ?? sourceHelpers.resolveProduct('output', sourceParsed.index);
-  const resolvedTargetProductId =
-    store.resolvedProducts[connection.targetHandle] ?? targetHelpers.resolveProduct('input', targetParsed.index);
-
-  const sourceProdObj = getProduct(resolvedSourceProductId);
-  const targetProdObj = getProduct(resolvedTargetProductId);
-
-  if (!sourceProdObj || !targetProdObj) return false;
-
-  if (resolvedSourceProductId === resolvedTargetProductId) return true;
-
-  const isSourceAny =
-    resolvedSourceProductId === 'any_fluid' || resolvedSourceProductId === 'any_item';
-  const isTargetAny =
-    resolvedTargetProductId === 'any_fluid' || resolvedTargetProductId === 'any_item';
-
-  if (isSourceAny || isTargetAny) {
-    return sourceProdObj.type === targetProdObj.type;
-  }
-
-  return false;
 };
 
 interface FlowViewportCanvasProps {
@@ -298,7 +253,60 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const onConnect = useFlowStore((s) => s.onConnect);
   const captureDragStart = useFlowStore((s) => s.captureDragStart);
   const commitDragStop = useFlowStore((s) => s.commitDragStop);
+  const resolvedProducts = useFlowStore((s) => s.resolvedProducts);
   const { screenToFlowPosition, getInternalNode } = useReactFlow();
+  const resolutionContext = useMemo(() => createGraphResolutionContext(nodes, edges), [nodes, edges]);
+
+  const isValidConnection = useCallback(
+    (connection: Connection | Edge) => {
+      if (
+        !connection.source ||
+        !connection.target ||
+        !connection.sourceHandle ||
+        !connection.targetHandle
+      )
+        return false;
+
+      const sourceParsed = parseHandleId(connection.sourceHandle);
+      const targetParsed = parseHandleId(connection.targetHandle);
+
+      if (!sourceParsed || !targetParsed) {
+        return false;
+      }
+
+      if (sourceParsed.side !== 'output' || targetParsed.side !== 'input') {
+        return false;
+      }
+
+      const sourceHelpers = resolutionContext.createHelpers(connection.source);
+      const targetHelpers = resolutionContext.createHelpers(connection.target);
+      const resolvedSourceProductId =
+        resolvedProducts[connection.sourceHandle] ??
+        sourceHelpers.resolveProduct('output', sourceParsed.index);
+      const resolvedTargetProductId =
+        resolvedProducts[connection.targetHandle] ??
+        targetHelpers.resolveProduct('input', targetParsed.index);
+
+      const sourceProdObj = getProduct(resolvedSourceProductId);
+      const targetProdObj = getProduct(resolvedTargetProductId);
+
+      if (!sourceProdObj || !targetProdObj) return false;
+
+      if (resolvedSourceProductId === resolvedTargetProductId) return true;
+
+      const isSourceAny =
+        resolvedSourceProductId === 'any_fluid' || resolvedSourceProductId === 'any_item';
+      const isTargetAny =
+        resolvedTargetProductId === 'any_fluid' || resolvedTargetProductId === 'any_item';
+
+      if (isSourceAny || isTargetAny) {
+        return sourceProdObj.type === targetProdObj.type;
+      }
+
+      return false;
+    },
+    [resolutionContext, resolvedProducts],
+  );
 
   const handleNodeDragStart = (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
     captureDragStart(draggedNodes.map((draggedNode) => draggedNode.id));
@@ -570,5 +578,7 @@ export function FlowViewport() {
     };
   }, []);
 
-  return <FlowViewportCanvas isZoomedOut={isZoomedOut} />;
+  return (
+    <FlowViewportCanvas isZoomedOut={isZoomedOut} />
+  );
 }

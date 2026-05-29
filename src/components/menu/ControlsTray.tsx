@@ -19,6 +19,7 @@ import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useEdgeThemeStore } from '../../stores/useEdgeThemeStore';
 import { autoLayout } from '../../utils/autoLayout';
+import { isLPSolverRunning } from '../../solver/lpSolverService';
 import styles from './ControlsTray.module.css';
 
 interface ButtonConfig {
@@ -70,7 +71,7 @@ const BUTTONS: ButtonConfig[] = [
   {
     id: 'compute',
     label: 'Compute',
-    type: 'menu',
+    type: 'action',
     Icon: Cpu,
     dividerBottom: true,
   },
@@ -97,8 +98,6 @@ const BUTTONS: ButtonConfig[] = [
 
 const UNWIRED_IDS = new Set([
   'multi_select',
-  'target',
-  'compute',
   'coming_soon',
   'machine_toggle',
 ]);
@@ -126,6 +125,32 @@ export function ControlsTray() {
       setRecipeSelectorOpen(true);
     } else if (btn.id === 'delete_mode') {
       toggleButton('delete_mode');
+    } else if (btn.id === 'target') {
+      toggleButton('target');
+    } else if (btn.id === 'compute') {
+      if (isLPSolverRunning()) {
+        void useUIStore.getState().confirm({
+          title: 'Solver Busy',
+          message: 'An optimization run is already in progress. Please wait for it to finish or cancel it first.',
+          confirmLabel: 'OK',
+          cancelLabel: 'CLOSE',
+          intent: 'info',
+        });
+        return;
+      }
+      const flowStore = useFlowStore.getState();
+      const hasTargetNode = flowStore.nodes.some((n) => !!n.data.isTarget);
+      if (!hasTargetNode) {
+        void useUIStore.getState().confirm({
+          title: 'No Target Nodes Selected',
+          message: 'Please set at least one node as a target to anchor the LP optimization. You can toggle the Target tool (Shift key or Target button) and click on a node.',
+          confirmLabel: 'OK',
+          cancelLabel: 'CLOSE',
+          intent: 'info',
+        });
+        return;
+      }
+      useUIStore.getState().setIsLPSolverOpen(true);
     } else if (btn.id === 'rate_mode') {
       cycleRateMode();
     } else if (btn.id === 'layout') {

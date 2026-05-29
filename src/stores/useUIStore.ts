@@ -54,6 +54,8 @@ interface UIState {
   setIsZoomedOut: (isZoomedOut: boolean) => void;
   isExporting: boolean;
   setIsExporting: (isExporting: boolean) => void;
+  isLPSolverOpen: boolean;
+  setIsLPSolverOpen: (isOpen: boolean) => void;
   confirmQueue: {
     options: ConfirmOptions;
     resolve: (confirmed: boolean) => void;
@@ -152,6 +154,8 @@ const useUIStore = create<UIState>((set) => ({
   setIsZoomedOut: (isZoomedOut) => set({ isZoomedOut }),
   isExporting: false,
   setIsExporting: (isExporting) => set({ isExporting }),
+  isLPSolverOpen: false,
+  setIsLPSolverOpen: (isOpen) => set({ isLPSolverOpen: isOpen }),
   confirmQueue: [],
   confirmDialog: null,
   confirm: (options) => {

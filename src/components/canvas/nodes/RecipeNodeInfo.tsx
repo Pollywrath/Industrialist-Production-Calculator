@@ -18,6 +18,7 @@ interface RecipeNodeInfoProps {
   onOpenEditor: () => void;
   receivedTemp?: number | null;
   machineTier?: number;
+  isTarget?: boolean;
 }
 
 export function RecipeNodeInfo({
@@ -27,6 +28,7 @@ export function RecipeNodeInfo({
   onOpenEditor,
   receivedTemp,
   machineTier = 1,
+  isTarget = false,
 }: RecipeNodeInfoProps) {
   const rateMode = useUIStore((s) => s.rateMode);
   const displayCycleTime = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 0;
@@ -46,9 +48,18 @@ export function RecipeNodeInfo({
 
   return (
     <div className={styles['recipe-node-info']}>
+      <div className={styles['recipe-node-info__badges']}>
+        {isTarget && (
+          <div className={styles['recipe-node-info__target-badge']}>
+            TARGET
+          </div>
+        )}
+      </div>
       {receivedTemp !== undefined && receivedTemp !== null && (
-        <div className={styles['recipe-node-info__temp-badge']}>
-          {formatTemperature(receivedTemp)}
+        <div className={styles['recipe-node-info__temp-badge-anchor']}>
+          <div className={styles['recipe-node-info__temp-badge']}>
+            {formatTemperature(receivedTemp)}
+          </div>
         </div>
       )}
       <button className={styles['recipe-node-info__top-right-btn']} onClick={handleBtnClick}>

@@ -6,6 +6,7 @@ export interface SavedNode {
   outputOrder?: number[];
   position: { x: number; y: number };
   settings?: Record<string, unknown>;
+  isTarget?: boolean;
 }
 
 export interface SavedEdge {

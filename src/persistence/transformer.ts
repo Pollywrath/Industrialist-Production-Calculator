@@ -91,6 +91,7 @@ export function migrateSaveData(rawData: unknown): SaveData {
         y: typeof pos.y === 'number' && Number.isFinite(pos.y) ? pos.y : 0,
       },
       settings,
+      isTarget: typeof n.isTarget === 'boolean' ? n.isTarget : undefined,
     };
 
     if (Array.isArray(n.inputOrder)) {
@@ -170,6 +171,7 @@ export function serializeCanvas(nodes: Node<RecipeNodeData>[], edges: Edge[]): S
     outputOrder: n.data.outputOrder,
     position: { x: n.position.x, y: n.position.y },
     settings: (n.data as { settings?: Record<string, unknown> }).settings ?? {},
+    isTarget: n.data.isTarget,
   }));
 
   const savedEdges: SavedEdge[] = [];
@@ -244,6 +246,7 @@ export function deserializeCanvas(saveData: SaveData): {
         inputOrder: sn.inputOrder,
         outputOrder: sn.outputOrder,
         settings: sn.settings,
+        isTarget: sn.isTarget,
       } as RecipeNodeData,
     });
   }

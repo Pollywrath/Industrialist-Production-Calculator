@@ -95,9 +95,6 @@ function calculateNodeHeight(node: Node<RecipeNodeData>): number {
   return BASE_INFO_HEIGHT + ioAreaHeight + BOTTOM_PADDING;
 }
 
-/**
- * Handle Y relative to a node's top edge. Mirrors RecipeNodeIO handle placement.
- */
 function getHandleY(
   side: 'left' | 'right',
   displayIndex: number,
@@ -227,7 +224,6 @@ async function layoutComponent(
     'elk.padding': '[top=57, left=57, bottom=57, right=57]',
   };
 
-  // Pass 1: Crossing Minimization & Port Reordering (FIXED_SIDE)
   const elkNodesPass1 = componentNodes.map((node) => {
     const { inputCount, outputCount } = getNodeHandlesMeta(node);
 
@@ -296,7 +292,6 @@ async function layoutComponent(
     });
   });
 
-  // Pass 2: Node Alignment & Edge Straightening (FIXED_POS)
   const elkNodesPass2 = componentNodes.map((node) => {
     const { inputCount, outputCount } = getNodeHandlesMeta(node);
     const optimized = nodePortOrders.get(node.id) ?? {
@@ -396,50 +391,69 @@ function getSharedHandleComponents(
     bestX: number;
   }>,
 ): string[][] {
-  const adjacency = new Map<string, Set<string>>();
+  const edgesById = new Map<string, (typeof edges)[number]>();
+  const handleToEdgeIds = new Map<string, string[]>();
 
   for (let i = 0; i < edges.length; i++) {
-    adjacency.set(edges[i].edgeId, new Set());
-  }
+    const edge = edges[i];
+    edgesById.set(edge.edgeId, edge);
 
-  for (let i = 0; i < edges.length; i++) {
-    for (let j = i + 1; j < edges.length; j++) {
-      const e1 = edges[i];
-      const e2 = edges[j];
-      const shareSource = e1.sourceHandle && e1.sourceHandle === e2.sourceHandle;
-      const shareTarget = e1.targetHandle && e1.targetHandle === e2.targetHandle;
-      if (shareSource || shareTarget) {
-        adjacency.get(e1.edgeId)?.add(e2.edgeId);
-        adjacency.get(e2.edgeId)?.add(e1.edgeId);
+    if (edge.sourceHandle) {
+      const sourceList = handleToEdgeIds.get(edge.sourceHandle);
+      if (sourceList) {
+        sourceList.push(edge.edgeId);
+      } else {
+        handleToEdgeIds.set(edge.sourceHandle, [edge.edgeId]);
+      }
+    }
+
+    if (edge.targetHandle) {
+      const targetList = handleToEdgeIds.get(edge.targetHandle);
+      if (targetList) {
+        targetList.push(edge.edgeId);
+      } else {
+        handleToEdgeIds.set(edge.targetHandle, [edge.edgeId]);
       }
     }
   }
 
-  const visited = new Set<string>();
+  const visitedEdges = new Set<string>();
+  const visitedHandles = new Set<string>();
   const components: string[][] = [];
 
   for (let i = 0; i < edges.length; i++) {
     const startId = edges[i].edgeId;
-    if (visited.has(startId)) continue;
+    if (visitedEdges.has(startId)) continue;
 
     const component: string[] = [];
     const stack = [startId];
 
     while (stack.length > 0) {
       const id = stack.pop();
-      if (!id || visited.has(id)) continue;
-      visited.add(id);
+      if (!id || visitedEdges.has(id)) continue;
+      visitedEdges.add(id);
       component.push(id);
 
-      const neighbors = adjacency.get(id);
-      if (neighbors) {
-        neighbors.forEach((neighborId) => {
-          if (!visited.has(neighborId)) {
-            stack.push(neighborId);
+      const edge = edgesById.get(id);
+      if (!edge) continue;
+
+      const handles = [edge.sourceHandle, edge.targetHandle];
+      for (let handleIndex = 0; handleIndex < handles.length; handleIndex++) {
+        const handleId = handles[handleIndex];
+        if (!handleId || visitedHandles.has(handleId)) continue;
+        visitedHandles.add(handleId);
+
+        const connectedEdgeIds = handleToEdgeIds.get(handleId);
+        if (!connectedEdgeIds) continue;
+        for (let j = 0; j < connectedEdgeIds.length; j++) {
+          const neighborEdgeId = connectedEdgeIds[j];
+          if (!visitedEdges.has(neighborEdgeId)) {
+            stack.push(neighborEdgeId);
           }
-        });
+        }
       }
     }
+
     components.push(component);
   }
 
@@ -606,8 +620,8 @@ export async function autoLayout(
         y: ty(point.y),
       }));
 
-      const sourceHandle = originalEdge.sourceHandle;
-      const targetHandle = originalEdge.targetHandle;
+      const sourceHandle = originalEdge.sourceHandle ?? buildHandleId(originalEdge.source, 'output', 0);
+      const targetHandle = originalEdge.targetHandle ?? buildHandleId(originalEdge.target, 'input', 0);
       const sourceParsed = sourceHandle ? parseHandleId(sourceHandle) : null;
       const targetParsed = targetHandle ? parseHandleId(targetHandle) : null;
       const sourcePos = finalPositions.get(originalEdge.source);

@@ -11,6 +11,7 @@ export type RecipeNodeData = {
   inputOrder?: number[];
   outputOrder?: number[];
   settings?: Record<string, unknown>;
+  isTarget?: boolean;
 };
 
 export type RecipeNodeType = Node<RecipeNodeData, 'recipe'>;
