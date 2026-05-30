@@ -31,20 +31,6 @@ export function calculateSinkSteadyState(inputs: SteadyStateInputs): SteadyState
   };
 }
 
-export function calculatePreheatSteadyState(inputs: SteadyStateInputs): SteadyStateOutputs {
-  const { coolantSourceTemp: Tc } = inputs;
-
-  const predictedHx = Tc * (1 - 1.25 * Kc) / (1.25 - 1.25 * Kc);
-  const hxPrime = predictedHx + (Tc - predictedHx) * Kc;
-  const predictedCoolantOut = Tc - (Tc - predictedHx) * 2.2 - hxPrime * 0.25;
-
-  return {
-    hx: Math.max(18, predictedHx),
-    coolantOut: Math.max(18, predictedCoolantOut),
-    steam: Math.max(18, hxPrime),
-    isBoiling: Math.max(18, predictedHx) >= 100
-  };
-}
 
 const round = (v: number, d = 2) => Math.round(v * 10 ** d) / 10 ** d;
 
@@ -136,59 +122,3 @@ export const vertical_heat_exchanger_standard: SpecialRecipe = {
   },
 };
 
-export const vertical_heat_exchanger_preheat: SpecialRecipe = {
-  id: 'r_vertical_heat_exchanger_02',
-  name: 'Preheat',
-  machine_id: 'm_vertical_heat_exchanger',
-  description: 'Connect coolant output to water input. Only distilled water works as coolant - it heats itself to produce high pressure steam.',
-  settings: {
-    coolant_temp: {
-      type: 'number',
-      label: 'Coolant Temperature (°C)',
-      default: 330,
-    },
-    heat_loss: {
-      type: 'number',
-      label: 'Heat Loss (°C) (output clamped to 18°C)',
-      default: 1,
-      min: 0,
-    },
-  },
-  inputTemperatureSettings: {
-    0: 'coolant_temp',
-  },
-  compute: (settings, _globalSettings, _nodeId, _helpers) => {
-    const coolantTemp = (settings.coolant_temp as number) ?? 330;
-    const heatLoss = (settings.heat_loss as number) ?? 1;
-
-    const { hx, steam, isBoiling } = calculatePreheatSteadyState({
-      coolantSourceTemp: coolantTemp,
-      waterSourceTemp: 18,
-    });
-
-    const steamQty = isBoiling ? 12000 : _helpers ? 0 : 12000;
-
-    const recipe: Recipe = {
-      id: 'r_vertical_heat_exchanger_02',
-      name: 'Preheat',
-      machine_id: 'm_vertical_heat_exchanger',
-      cycle_time: 1,
-      power_consumption: 0,
-      power_type: 'HV',
-      pollution: 0,
-      inputs: [{ product_id: 'p_distilled_water', quantity: 400 }],
-      outputs: [
-        {
-          product_id: 'p_high_pressure_steam',
-          quantity: steamQty,
-          temperature: Math.max(18, round(steam - heatLoss)),
-        },
-      ],
-      runtime: {
-        hxTemp: round(hx, 1),
-      },
-    };
-
-    return recipe;
-  },
-};

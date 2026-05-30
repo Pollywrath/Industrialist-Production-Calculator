@@ -734,11 +734,11 @@ function MachineOverlayModal() {
   const setMachineOverlayOpen = useUIStore((state) => state.setMachineOverlayOpen);
   const [activeCategory, setActiveCategory] = useState<ResearchCategory>('Production');
   const [selectedResearchId, setSelectedResearchId] = useState<string | null>(null);
-  const settings = useGlobalSettingsStore((s) => s.settings);
-  const difficulty = settings.difficulty as GameDifficulty;
-  const oreNodesEnabled = settings.oreNodesEnabled;
-  const showVariantLimited = settings.showVariantLimited;
-  const unlockedResearchIds = new Set(settings.unlockedResearchIds);
+  const difficulty = useGlobalSettingsStore((s) => s.settings.difficulty) as GameDifficulty;
+  const oreNodesEnabled = useGlobalSettingsStore((s) => s.settings.oreNodesEnabled);
+  const showVariantLimited = useGlobalSettingsStore((s) => s.settings.showVariantLimited);
+  const unlockedResearchIdsArray = useGlobalSettingsStore((s) => s.settings.unlockedResearchIds);
+  const unlockedResearchIds = new Set(unlockedResearchIdsArray);
 
   const setDifficultyInStore = useGlobalSettingsStore((s) => s.setDifficulty);
   const setUnlockedResearchIdsInStore = useGlobalSettingsStore((s) => s.setUnlockedResearchIds);

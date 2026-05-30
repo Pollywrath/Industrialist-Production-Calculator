@@ -8932,37 +8932,6 @@
     ]
   },
   {
-    "id": "r_steam_condenser_01",
-    "name": "Makes Distilled Water, Condensate",
-    "machine_id": "m_steam_condenser",
-    "cycle_time": 1,
-    "power_consumption": 500000,
-    "power_type": "MV",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_distilled_water",
-        "quantity": 800
-      },
-      {
-        "product_id": "p_low_pressure_steam",
-        "quantity": 24000
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_distilled_water",
-        "quantity": 800,
-        "temperature": 18
-      },
-      {
-        "product_id": "p_condensate",
-        "quantity": 800,
-        "temperature": 21
-      }
-    ]
-  },
-  {
     "id": "r_coal_generator_01",
     "name": "Makes Steam",
     "machine_id": "m_coal_generator",

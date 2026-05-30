@@ -14,6 +14,7 @@ export interface SolverPipelineResult {
   edgeFlows: Record<string, number>;
   edgeTemps: Record<string, number>;
   inputTemps: Record<string, Record<number, number>>;
+  iterationsRun?: number;
 }
 
 function areValuesEquivalent(a: unknown, b: unknown): boolean {
@@ -179,6 +180,7 @@ export function solveFlowPipeline(
     edgeFlows: {},
     edgeTemps: {},
     inputTemps: {},
+    iterationsRun: 0,
   };
 
   for (let pass = 0; pass < MAX_TEMPERATURE_COUPLED_PASSES; pass++) {
@@ -188,7 +190,7 @@ export function solveFlowPipeline(
       activeOverrides,
       includesFlowDependentRecipes,
     );
-    const { edgeTemps, inputTemps, settingsOverrides } = propagateTemperatures(
+    const { edgeTemps, inputTemps, settingsOverrides, iterationsRun } = propagateTemperatures(
       nodes,
       edges,
       edgeFlows,
@@ -199,6 +201,7 @@ export function solveFlowPipeline(
       edgeFlows,
       edgeTemps,
       inputTemps,
+      iterationsRun,
     };
 
     if (!hasMeaningfulOverrides(nodesById, settingsOverrides)) {

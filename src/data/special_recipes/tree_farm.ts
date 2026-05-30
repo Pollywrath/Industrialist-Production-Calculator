@@ -154,4 +154,30 @@ export const tree_farm_01: SpecialRecipe = {
 
     return totalCost;
   },
+  computeModelCount: (settings, globalSettings) => {
+    const treeCount = (settings.tree_count as number) ?? 600;
+    const harvesterCount = (settings.harvester_count as number) ?? 20;
+    const sprinklerCount = (settings.sprinkler_count as number) ?? 24;
+    const outputsCount = (settings.outputs_count as number) ?? 8;
+    const pollution = (globalSettings?.global_pollution as number) ?? 10;
+
+    const growthTime = calculateGrowthTime(pollution);
+    const treesPerSecond = treeCount / growthTime;
+    const maxHarvestRate = harvesterCount / 11;
+    const actualHarvestRate = Math.min(treesPerSecond, maxHarvestRate);
+    const powerConsumption = actualHarvestRate * (200000 / 11);
+
+    const waterTanks = Math.ceil(sprinklerCount / 3);
+    const additionalPowerModels = Math.ceil(powerConsumption / 1500000);
+
+    return (
+      treeCount +
+      harvesterCount +
+      1 + // controller
+      sprinklerCount +
+      waterTanks * 2 +
+      outputsCount * 2 +
+      additionalPowerModels
+    );
+  },
 };

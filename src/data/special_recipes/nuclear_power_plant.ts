@@ -1,5 +1,5 @@
 // SKIPPED - TODO: Convert to createSpecialRecipe factory pattern
-import { presets } from './modular_turbine';
+// import { presets } from './modular_turbine';
 
 // ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
 
@@ -34,8 +34,9 @@ const MAINTENANCE_STARTUP_TIME = 60;
 const BORIC_ACID_PPM = 50; // Results in 0.5 boric acid /s
 const FLOW_RATE: 800 | 1600 | 2400 | 3200 = 3200;
 
-const ACTIVE_POWER_DEMAND = 1.32; // GMF/s
-const TURBINE_FLOW = 24000; // 24000, 12000, or 6000
+// TODO: Re-enable when modular_turbine presets are exported
+// const ACTIVE_POWER_DEMAND = 1.32; // GMF/s
+// const TURBINE_FLOW = 24000; // 24000, 12000, or 6000
 
 // ─── DATA TABLES ─────────────────────────────────────────────────────
 
@@ -73,25 +74,30 @@ for (let i = 0; i < RODS.length; i++) {
 const rodPenalty = NO_RODS >= 276 ? 0.995 : 1;
 
 // Interpolate presets linearly without filter/allocating arrays
-const numTurbines = Math.floor(Math.min(FLOW_RATE, 3200) / (TURBINE_FLOW === 24000 ? 800 : 200));
-const targetPower = (ACTIVE_POWER_DEMAND / numTurbines) * 1e9;
+// TODO: Re-enable when modular_turbine presets are exported
+// const numTurbines = Math.floor(Math.min(FLOW_RATE, 3200) / (TURBINE_FLOW === 24000 ? 800 : 200));
+// const targetPower = (ACTIVE_POWER_DEMAND / numTurbines) * 1e9;
+//
+// let selectedPreset = presets[0];
+// for (let i = 0; i < presets.length; i++) {
+//   const p = presets[i];
+//   if (p.flow === TURBINE_FLOW) {
+//     selectedPreset = p;
+//     if (p.powerMax >= targetPower) break;
+//   }
+// }
+//
+// const interpRatio =
+//   (targetPower - selectedPreset.powerMin) / (selectedPreset.powerMax - selectedPreset.powerMin);
+// const hpsTemp = Math.max(
+//   160,
+//   selectedPreset.tempMin +
+//     Math.min(1, Math.max(0, interpRatio)) * (selectedPreset.tempMax - selectedPreset.tempMin),
+// );
+// const waterTemp = hpsTemp / 0.8;
 
-let selectedPreset = presets[0];
-for (let i = 0; i < presets.length; i++) {
-  const p = presets[i];
-  if (p.flow === TURBINE_FLOW) {
-    selectedPreset = p;
-    if (p.powerMax >= targetPower) break;
-  }
-}
-
-const interpRatio =
-  (targetPower - selectedPreset.powerMin) / (selectedPreset.powerMax - selectedPreset.powerMin);
-const hpsTemp = Math.max(
-  160,
-  selectedPreset.tempMin +
-    Math.min(1, Math.max(0, interpRatio)) * (selectedPreset.tempMax - selectedPreset.tempMin),
-);
+// Fallback values while presets are unavailable
+const hpsTemp = 160;
 const waterTemp = hpsTemp / 0.8;
 
 // Thermal generation → shared depletion base

@@ -3,6 +3,7 @@ import { createStore } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { SEARCH_DEBOUNCE_MS } from '../../shared/layoutConstants';
 import { RecipeSelectorContext, type RecipeSelectorState } from './RecipeSelectorContext';
+import { getProduct } from '../../../data/lookup';
 
 interface RecipeSelectorProviderProps {
   children: React.ReactNode;
@@ -35,7 +36,8 @@ export function RecipeSelectorProvider({
           preselectedProductId && preselectedSourceSide ? preselectedSourceSide === 'input' : true,
         filterConsumers:
           preselectedProductId && preselectedSourceSide ? preselectedSourceSide === 'output' : true,
-        filterSellTrash: false,
+        filterSellTrash:
+          preselectedProductId ? (getProduct(preselectedProductId)?.sell_price ?? 0) < 0 : false,
         filterHeatPower: false,
 
         setActiveTab: (activeTab) => set({ activeTab }),
@@ -72,7 +74,7 @@ export function RecipeSelectorProvider({
             stage: 'recipes',
             filterProducers: true,
             filterConsumers: true,
-            filterSellTrash: false,
+            filterSellTrash: (getProduct(id)?.sell_price ?? 0) < 0,
             filterHeatPower: false,
           }),
         handleBack: () =>

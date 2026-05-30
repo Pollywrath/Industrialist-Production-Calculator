@@ -5,6 +5,7 @@ import { getSpecialRecipe } from '../../../data/registry';
 import { useNodeEditorStore } from './NodeEditorContext';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
+import { useFlowStore } from '../../../stores/useFlowStore';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { getAllProducts } from '../../../data/lookup';
@@ -22,7 +23,7 @@ interface SettingItemProps {
   inputIndex: number | undefined;
   value: unknown;
   updateSetting: (key: string, val: unknown) => void;
-  allSettings: Record<string, unknown>;
+  resolvedSettings: Record<string, unknown>;
   globalSettings: Record<string, unknown>;
 }
 
@@ -33,7 +34,7 @@ function SettingItem({
   inputIndex,
   value,
   updateSetting,
-  allSettings,
+  resolvedSettings,
   globalSettings,
 }: SettingItemProps) {
   const handleId =
@@ -52,7 +53,7 @@ function SettingItem({
   const displayValue = isConnected && propagatedTemp !== undefined ? propagatedTemp : value;
 
   const labelText = def.dynamicLabel
-    ? def.dynamicLabel(allSettings, globalSettings)
+    ? def.dynamicLabel(resolvedSettings, globalSettings)
     : def.label;
 
   return (
@@ -114,6 +115,8 @@ export function SettingsEditor({ recipe, nodeId }: SettingsEditorProps) {
   const settings = useNodeEditorStore((s) => s.settings);
   const updateSetting = useNodeEditorStore((s) => s.updateSetting);
   const globalSettings = useGlobalSettingsStore((s) => s.settings);
+  const edges = useFlowStore((s) => s.edges);
+  const inputTempsMap = useFlowResultStore((s) => s.inputTemps[nodeId]);
 
   if (!sr) {
     return (
@@ -125,6 +128,19 @@ export function SettingsEditor({ recipe, nodeId }: SettingsEditorProps) {
   const settingKeyToInputIndex: Record<string, number> = {};
   for (const [inpIdxStr, settingK] of Object.entries(inputToSettingKey)) {
     settingKeyToInputIndex[settingK] = Number(inpIdxStr);
+  }
+
+  const resolvedSettings = { ...settings };
+  if (sr.inputTemperatureSettings && inputTempsMap) {
+    for (const [inpIdxStr, settingK] of Object.entries(sr.inputTemperatureSettings)) {
+      const inpIdx = Number(inpIdxStr);
+      const handleId = buildHandleId(nodeId, 'input', inpIdx);
+      const isConnected = edges.some((e) => e.targetHandle === handleId);
+      const tempVal = inputTempsMap[inpIdx];
+      if (isConnected && tempVal !== undefined) {
+        resolvedSettings[settingK] = tempVal;
+      }
+    }
   }
 
   return (
@@ -145,7 +161,7 @@ export function SettingsEditor({ recipe, nodeId }: SettingsEditorProps) {
             inputIndex={inputIndex}
             value={value}
             updateSetting={updateSetting}
-            allSettings={settings}
+            resolvedSettings={resolvedSettings}
             globalSettings={globalSettings as unknown as Record<string, unknown>}
           />
         );

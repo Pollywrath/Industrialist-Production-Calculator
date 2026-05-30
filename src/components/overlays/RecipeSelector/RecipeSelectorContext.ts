@@ -112,7 +112,9 @@ export function useRecipeSelectorFilters({ recipes }: UseRecipeSelectorFiltersPa
 
         const isPowerGenerator = (r.power_consumption ?? 0) < 0;
         const producesHeat = r.outputs.some((out) => (out.temperature ?? 0) > 21);
-        const isHeatLoopForSelected = hasSelectedInput && hasSelectedOutput && producesHeat;
+        const hasSelectedExplicitInput = r.inputs.some((inp) => inp.product_id === selectedProductId);
+        const hasSelectedExplicitOutput = r.outputs.some((out) => out.product_id === selectedProductId);
+        const isHeatLoopForSelected = hasSelectedExplicitInput && hasSelectedExplicitOutput && producesHeat;
         const isHeatPower = (isPowerGenerator || isHeatLoopForSelected) && (producesProduct || consumesProduct);
 
         const isProducerConsumerClutterCase = isHeatLoopForSelected;

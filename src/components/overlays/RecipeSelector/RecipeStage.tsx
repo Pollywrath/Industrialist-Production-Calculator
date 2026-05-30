@@ -175,14 +175,14 @@ export function RecipeStage({
             onClick={() => setFilterSellTrash(!filterSellTrash)}
           >
             <span className={`${styles['filter-btn-dot']} ${styles['sell']}`} />
-            Sell/RP/Trash
+            Outlet
           </button>
           <button
             className={`${styles['recipe-selector-filter-btn']} ${filterHeatPower ? styles['is-active'] : ''}`}
             onClick={() => setFilterHeatPower(!filterHeatPower)}
           >
             <span className={`${styles['filter-btn-dot']} ${styles['heat']}`} />
-            Heat/Power
+            Power & Heat
           </button>
         </div>
       )}

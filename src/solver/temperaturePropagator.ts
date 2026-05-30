@@ -8,6 +8,7 @@ export interface TemperaturePropagationResult {
   edgeTemps: Record<string, number>;
   inputTemps: Record<string, Record<number, number>>;
   settingsOverrides: Record<string, Record<string, unknown>>;
+  iterationsRun: number;
 }
 
 export function propagateTemperatures(
@@ -109,7 +110,12 @@ export function propagateTemperatures(
     incomingEdges[edge.target][targetParsed.index].push(edge);
   }
 
-  for (let iter = 0; iter < 5; iter++) {
+  let prevEdgeTemps: Record<string, number> = {};
+  let iterationsRun = 0;
+
+  for (let iter = 0; iter < 80; iter++) {
+    iterationsRun = iter + 1;
+
     for (const edge of edges) {
       if (!edge.sourceHandle) continue;
       const sourceParsed = parseHandleId(edge.sourceHandle);
@@ -121,6 +127,27 @@ export function propagateTemperatures(
       } else {
         edgeTemps[edge.id] = 18;
       }
+    }
+
+    // Check convergence
+    if (iter > 0) {
+      let maxDiff = 0;
+      for (const edge of edges) {
+        const prev = prevEdgeTemps[edge.id] ?? 18;
+        const curr = edgeTemps[edge.id];
+        const diff = Math.abs(curr - prev);
+        if (diff > maxDiff) {
+          maxDiff = diff;
+        }
+      }
+      if (maxDiff < 0.01) {
+        break;
+      }
+    }
+
+    // Save for next convergence check
+    for (const edge of edges) {
+      prevEdgeTemps[edge.id] = edgeTemps[edge.id];
     }
 
     for (const node of nodes) {
@@ -233,5 +260,6 @@ export function propagateTemperatures(
     edgeTemps,
     inputTemps,
     settingsOverrides: finalSettingsOverrides,
+    iterationsRun,
   };
 }

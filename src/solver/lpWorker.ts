@@ -199,7 +199,7 @@ function buildMPS(nodes: LPSolverNode[], connections: LPSolverConnection[]) {
     const mVar = registerVar(`m_${node.id}`);
     nodeMachineVars.set(node.id, mVar);
 
-    const machineWeight = 1e-3 + 1e-8 * (node.power ?? 0) + 1e-5 * (node.pollution ?? 0);
+    const machineWeight = Math.max(1e-6, 1e-3 + 1e-8 * (node.power ?? 0) + 1e-5 * (node.pollution ?? 0));
     addObjCoeff(mVar, machineWeight);
   }
 
@@ -247,7 +247,7 @@ function buildMPS(nodes: LPSolverNode[], connections: LPSolverConnection[]) {
 
       if (incomingVarNames.length === 0) return;
 
-      if (inp.isSink) {
+      if (inp.isSink && !node.isTarget) {
         const rowName = registerRow(`sink_cap_${node.id}_${inputIndex}`, 'L', 0);
         incomingVarNames.forEach(fVar => addRowTerm(rowName, fVar, 1));
         addRowTerm(rowName, mVar, -inp.quantity);
@@ -344,6 +344,15 @@ function parseSCIPSolution(
     solutionText.includes('infeasible')
   ) {
     return { feasible: false, error: 'Model is infeasible given the current constraints.' };
+  }
+
+  if (solutionText.includes('unbounded')) {
+    return {
+      feasible: false,
+      error:
+        'The model is unbounded. This usually means a power-producing machine ' +
+        'has an unexpectedly large negative cost coefficient. Please report this issue.',
+    };
   }
 
   if (

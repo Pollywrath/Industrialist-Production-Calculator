@@ -1,6 +1,7 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
 import { getMachine } from '../lookup';
+import { formatPower, formatQuantity } from '../../utils/unitFormatting';
 
 const FUEL_MAP: Record<string, { product_id: string; rate: number }> = {
   'Refined Diesel': { product_id: 'p_refined_diesel', rate: 690 },
@@ -102,7 +103,7 @@ export const modular_diesel_engine_01: SpecialRecipe = {
 
         const fuelUsage =
           (cylinders * loadRatio * sinFactor * loadFactor * 13.5) / FUEL_MAP[fuelType].rate;
-        return `Cylinders - Fuel: ${round(fuelUsage, 2)}/s`;
+        return `Cylinders - Fuel: ${formatQuantity(fuelUsage)}/s`;
       },
     },
     generators: {
@@ -121,7 +122,7 @@ export const modular_diesel_engine_01: SpecialRecipe = {
         const torque = cylMap * (throttle / 100) * (14 / afr);
         const bestG = getBestGenerators(torque);
         const currentPower = clamp(Math.floor(getTorqueMapSum(Math.ceil(torque / generators)) * 2.6), 0, Infinity) * 30 * generators;
-        return `Generators (Optimal: ${bestG}) - Power: ${round(currentPower / 1000000, 2)} MW`;
+        return `Generators (Optimal: ${bestG}) - Power: ${formatPower(currentPower)}`;
       },
     },
     air_inputs: {
@@ -309,11 +310,11 @@ export const modular_diesel_engine_01: SpecialRecipe = {
     const fuelInputsSetting = (settings.fuel_inputs as number) ?? 1;
 
     return (
-      1 +
+      1 + // controller
       cylinders +
-      generators +
+      generators * 2 +
       exhaustsSetting +
-      fuelInputsSetting +
+      fuelInputsSetting * 2 +
       airInputsSetting +
       crankshafts +
       sidewaysCrankshafts +

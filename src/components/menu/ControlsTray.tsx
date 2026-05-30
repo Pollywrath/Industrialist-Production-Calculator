@@ -75,8 +75,12 @@ const BUTTONS: ButtonConfig[] = [
     Icon: Cpu,
     dividerBottom: true,
   },
-
-  { id: 'coming_soon', label: 'Coming Soon', type: 'switch', Icon: Sparkles },
+  {
+    id: 'coming_soon',
+    label: 'Coming Soon',
+    type: 'action',
+    Icon: Sparkles,
+  },
   {
     id: 'machine_toggle',
     label: 'Machines',
@@ -154,6 +158,14 @@ export function ControlsTray() {
         return;
       }
       useUIStore.getState().setIsLPSolverOpen(true);
+    } else if (btn.id === 'coming_soon') {
+      void useUIStore.getState().confirm({
+        title: 'Coming Soon',
+        message: 'This feature is under development. Stay tuned!',
+        confirmLabel: 'OK',
+        cancelLabel: 'CLOSE',
+        intent: 'info',
+      });
     } else if (btn.id === 'rate_mode') {
       cycleRateMode();
     } else if (btn.id === 'layout') {

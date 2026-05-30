@@ -115,10 +115,24 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       const machine = getMachine(recipe.machine_id);
       const machineName = machine?.name ?? 'Machine';
 
+      const defaultSettings = sr
+        ? Object.entries(sr.settings).reduce(
+            (acc, [key, def]) => {
+              acc[key] = def.default;
+              return acc;
+            },
+            {} as Record<string, unknown>,
+          )
+        : {};
+      const resolvedSettings = {
+        ...defaultSettings,
+        ...(node.data.settings ?? {}),
+      };
+
       if (machine) {
         const baseCost =
           sr && sr.computeMachineCost
-            ? sr.computeMachineCost(node.data.settings ?? {}, globalSettings as unknown as Record<string, unknown>, node.id)
+            ? sr.computeMachineCost(resolvedSettings, globalSettings as unknown as Record<string, unknown>, node.id)
             : machine.cost;
         totalMachineCost += baseCost * roundedCount;
 
@@ -158,7 +172,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
       let baseModelCount: number;
       if (sr && sr.computeModelCount) {
-        baseModelCount = sr.computeModelCount(node.data.settings ?? {}, globalSettings as unknown as Record<string, unknown>, node.id);
+        baseModelCount = sr.computeModelCount(resolvedSettings, globalSettings as unknown as Record<string, unknown>, node.id);
       } else {
         baseModelCount = 1 + 2 * recipe.inputs.length + 2 * recipe.outputs.length;
 
