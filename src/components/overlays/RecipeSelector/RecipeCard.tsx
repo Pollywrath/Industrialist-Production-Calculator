@@ -125,19 +125,15 @@ export function RecipeCard({
               color={isFavorite ? 'var(--theme-color-primary)' : 'currentColor'}
             />
           </button>
-          <span className={styles['recipe-card-title']}>{recipe.name}</span>
+          <span className={styles['recipe-card-machine-name']}>
+            {formatMachineCount(neededMachineCount)}x <span className={styles[`tier-${machineTier}`]}>{getMachineName(recipe.machine_id)}</span>
+          </span>
         </div>
         <div className={styles['recipe-card-top-right']}>
-          <span className={`${styles['recipe-card-machine-name']} ${styles[`tier-${machineTier}`]}`}>
-            {getMachineName(recipe.machine_id)}
-          </span>
           <span
             className={`${styles['recipe-card-pollution']} ${recipe.pollution < 0 ? styles['success'] : ''}`.trim()}
           >
             {formatPollution(recipe.pollution * pollutionMultiplier)}
-          </span>
-          <span className={styles['recipe-card-machine-count']}>
-            {formatMachineCount(neededMachineCount)}
           </span>
         </div>
       </div>

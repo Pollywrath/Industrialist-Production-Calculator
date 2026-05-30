@@ -338,7 +338,7 @@
   flex-direction: column;
   width: 100%;
   height: 126px;
-  padding: 8px 16px;
+  padding: 4px 16px;
   overflow: hidden;
   cursor: pointer;
   background: var(--theme-color-secondary);
@@ -352,8 +352,8 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding-bottom: 4px;
-  margin-bottom: 6px;
+  padding-bottom: 2px;
+  margin-bottom: 2px;
   border-bottom: 1px solid var(--theme-color-border-light);
 }
 
@@ -402,13 +402,13 @@
 }
 
 .recipe-card-machine-name {
-  padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--tier-color, var(--theme-color-text-secondary));
-  background: var(--theme-color-canvas-bg);
-  border: 1px solid var(--theme-color-border-light);
-  border-radius: 4px;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--theme-color-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 0;
 }
 
 .recipe-card-pollution {
@@ -445,8 +445,8 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding-top: 14px;
-  padding-bottom: 8px;
+  padding-top: 8px;
+  padding-bottom: 4px;
   overflow-x: auto;
   overflow-y: hidden;
 }
@@ -778,22 +778,27 @@
 
 .tier-1 {
   --tier-color: var(--theme-color-tier-1);
+  color: var(--theme-color-tier-1);
 }
 
 .tier-2 {
   --tier-color: var(--theme-color-tier-2);
+  color: var(--theme-color-tier-2);
 }
 
 .tier-3 {
   --tier-color: var(--theme-color-tier-3);
+  color: var(--theme-color-tier-3);
 }
 
 .tier-4 {
   --tier-color: var(--theme-color-tier-4);
+  color: var(--theme-color-tier-4);
 }
 
 .tier-5 {
   --tier-color: var(--theme-color-tier-5);
+  color: var(--theme-color-tier-5);
 }
 
 .tier-badge {
