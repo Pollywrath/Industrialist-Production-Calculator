@@ -14,7 +14,6 @@ import type { RecipeNodeData } from '../types/nodes';
 import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { getRecipe } from '../data/lookup';
 import { clearFlowCache } from '../solver/flowSolver';
-import { computeResolvedProducts } from '../utils/productResolver';
 import {
   RECT_HEIGHT,
   RECT_GAP,
@@ -49,7 +48,6 @@ interface FlowState {
   edges: Edge[];
   graphVersion: number;
   solutionVersion: number;
-  resolvedProducts: Record<string, string>;
   markSolutionCommitted: () => void;
 
   historyPast: HistoryEntry<Node<RecipeNodeData>, Edge>[];
@@ -80,6 +78,12 @@ interface FlowState {
   updateNodeData: (nodeId: string, data: Partial<RecipeNodeData>) => void;
   deleteNode: (nodeId: string) => void;
   deleteEdgesConnectedToHandle: (handleId: string) => void;
+  deleteEdgesForHandles: (handleIds: string[]) => void;
+  updateNodeDataAndDeleteEdges: (
+    nodeId: string,
+    data: Partial<RecipeNodeData>,
+    handleIds: string[],
+  ) => void;
 }
 
 const enrichNodeDimensions = (node: Node<RecipeNodeData>): Node<RecipeNodeData> => {
@@ -145,7 +149,7 @@ const ensureGraphIntegrity = (
     const newTarget = nodeIdMap.get(edge.target);
 
     if (!newSource && !newTarget && finalEdgeId === edge.id) {
-      sanitizedEdges.push(edge);
+      sanitizedEdges.push({ ...edge, type: 'recipe' });
       continue;
     }
 
@@ -160,6 +164,7 @@ const ensureGraphIntegrity = (
       id: finalEdgeId,
       source: sourceId,
       target: targetId,
+      type: 'recipe',
       sourceHandle:
         sourceParsed && newSource
           ? buildHandleId(sourceId, sourceParsed.side, sourceParsed.index)
@@ -221,7 +226,6 @@ const useFlowStore = create(
       edges: [],
       graphVersion: 0,
       solutionVersion: 0,
-      resolvedProducts: {},
       historyPast: [],
       historyFuture: [],
       canUndo: false,
@@ -259,7 +263,6 @@ const useFlowStore = create(
               nodesMap: nextNodesMap,
               edges: applied.edges,
               graphVersion: state.graphVersion + 1,
-              resolvedProducts: computeResolvedProducts(nextNodesMap, applied.edges),
               historyPast: nextPast,
               historyFuture: nextFuture,
               canUndo: nextPast.length > 0,
@@ -302,7 +305,6 @@ const useFlowStore = create(
               nodesMap: nextNodesMap,
               edges: applied.edges,
               graphVersion: state.graphVersion + 1,
-              resolvedProducts: computeResolvedProducts(nextNodesMap, applied.edges),
               historyPast: nextPast,
               historyFuture: nextFuture,
               canUndo: nextPast.length > 0,
@@ -448,7 +450,6 @@ const useFlowStore = create(
           nodes: finalNodes,
           nodesMap: nextNodesMap,
           graphVersion: state.graphVersion + 1,
-          resolvedProducts: computeResolvedProducts(nextNodesMap, state.edges),
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
@@ -478,7 +479,6 @@ const useFlowStore = create(
         set({
           edges: nextEdges,
           graphVersion: state.graphVersion + 1,
-          resolvedProducts: computeResolvedProducts(state.nodesMap, nextEdges),
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
@@ -508,7 +508,6 @@ const useFlowStore = create(
         set({
           edges: nextEdges,
           graphVersion: state.graphVersion + 1,
-          resolvedProducts: computeResolvedProducts(state.nodesMap, nextEdges),
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
@@ -519,14 +518,14 @@ const useFlowStore = create(
       setNodes: (nodes, options) => {
         clearFlowCache();
         const state = get();
-        const { nodes: sanitizedNodes } = ensureGraphIntegrity(nodes, state.edges);
+        const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(nodes, state.edges);
         const enriched = sanitizedNodes.map(enrichNodeDimensions);
         const nextNodesMap = createNodesMap(enriched);
         set({
           nodes: enriched,
           nodesMap: nextNodesMap,
+          edges: sanitizedEdges,
           graphVersion: state.graphVersion + 1,
-          resolvedProducts: computeResolvedProducts(nextNodesMap, state.edges),
         });
 
         if (options?.resetHistory) {
@@ -534,7 +533,7 @@ const useFlowStore = create(
           return;
         }
         if (shouldRecordHistory(options)) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, enriched, state.edges));
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, enriched, sanitizedEdges));
         }
       },
 
@@ -551,7 +550,6 @@ const useFlowStore = create(
           set({
             edges: sanitizedEdges,
             graphVersion: state.graphVersion + 1,
-            resolvedProducts: computeResolvedProducts(state.nodesMap, sanitizedEdges),
           });
         }
 
@@ -583,7 +581,6 @@ const useFlowStore = create(
           nodesMap: map,
           edges: sanitizedEdges,
           graphVersion: state.graphVersion + 1,
-          resolvedProducts: computeResolvedProducts(map, sanitizedEdges),
         });
 
         if (options?.resetHistory) {
@@ -620,7 +617,6 @@ const useFlowStore = create(
           nodes: nextNodes,
           nodesMap: nextNodesMap,
           graphVersion: state.graphVersion + 1,
-          resolvedProducts: computeResolvedProducts(nextNodesMap, state.edges),
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
@@ -652,7 +648,6 @@ const useFlowStore = create(
           nodesMap: nextNodesMap,
           edges: nextEdges,
           graphVersion: state.graphVersion + 1,
-          resolvedProducts: computeResolvedProducts(nextNodesMap, nextEdges),
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
@@ -673,11 +668,79 @@ const useFlowStore = create(
         set({
           edges: nextEdges,
           graphVersion: state.graphVersion + 1,
-          resolvedProducts: computeResolvedProducts(state.nodesMap, nextEdges),
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
           pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges));
+        }
+      },
+
+      deleteEdgesForHandles: (handleIds) => {
+        if (handleIds.length === 0) return;
+        const state = get();
+        const oldEdges = state.edges;
+        const handleIdSet = new Set(handleIds);
+        const nextEdges = oldEdges.filter(
+          (edge) =>
+            !handleIdSet.has(edge.sourceHandle ?? '') &&
+            !handleIdSet.has(edge.targetHandle ?? ''),
+        );
+        if (nextEdges.length === oldEdges.length) {
+          return;
+        }
+
+        set({
+          edges: nextEdges,
+          graphVersion: state.graphVersion + 1,
+        });
+
+        if (!isApplyingHistory && transactionDepth === 0) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges));
+        }
+      },
+
+      updateNodeDataAndDeleteEdges: (nodeId, data, handleIds) => {
+        const state = get();
+        const oldNodes = state.nodes;
+        const oldEdges = state.edges;
+
+        const nextEdges =
+          handleIds.length === 0
+            ? oldEdges
+            : oldEdges.filter(
+                (edge) =>
+                  !handleIds.includes(edge.sourceHandle ?? '') &&
+                  !handleIds.includes(edge.targetHandle ?? ''),
+              );
+
+        const nextNodes = new Array<Node<RecipeNodeData>>(oldNodes.length);
+        let updatedNode: Node<RecipeNodeData> | null = null;
+
+        for (let i = 0; i < oldNodes.length; i++) {
+          const node = oldNodes[i];
+          if (node.id === nodeId) {
+            updatedNode = enrichNodeDimensions({ ...node, data: { ...node.data, ...data } });
+            nextNodes[i] = updatedNode;
+          } else {
+            nextNodes[i] = node;
+          }
+        }
+
+        if (!updatedNode) return;
+
+        const nextNodesMap = new Map(state.nodesMap);
+        nextNodesMap.set(nodeId, updatedNode);
+
+        const edgesChanged = nextEdges.length !== oldEdges.length;
+        set({
+          nodes: nextNodes,
+          nodesMap: nextNodesMap,
+          ...(edgesChanged ? { edges: nextEdges } : {}),
+          graphVersion: state.graphVersion + 1,
+        });
+
+        if (!isApplyingHistory && transactionDepth === 0) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, nextNodes, nextEdges));
         }
       },
     };

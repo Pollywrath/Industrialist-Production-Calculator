@@ -6,7 +6,8 @@ import type {
   LPSolverResponse,
   LPFailureDiagnostics,
 } from './lpWorker';
-import { useFlowStore } from '../stores/useFlowStore';
+import { useFlowResultStore } from '../stores/useFlowResultStore';
+import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { resolveActiveRecipe } from '../data/lookup';
 import { solveFlowPipeline } from './solverPipeline';
 import { getRateMultiplier } from '../utils/recipeComputation';
@@ -97,12 +98,12 @@ export function solveLP(
   }
   activeSolveInFlight = true;
 
-  const { inputTemps, edgeFlows } = solveFlowPipeline(nodes, edges);
+  const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+  const { inputTemps, edgeFlows } = solveFlowPipeline(nodes, edges, globalSettings);
 
   const resolutionContext = createGraphResolutionContext(nodes, edges);
   const { edgeLookup } = resolutionContext;
-
-  const flowStore = useFlowStore.getState();
+  const nodesById = new Map(nodes.map((n) => [n.id, n]));
 
   const makeHelpers = (nodeId: string) => {
     const baseHelpers = resolutionContext.createHelpers(nodeId);
@@ -110,7 +111,7 @@ export function solveLP(
       ...baseHelpers,
       resolveProduct: (side: 'input' | 'output', index: number): string => {
         const handleId = buildHandleId(nodeId, side, index);
-        return flowStore.resolvedProducts[handleId] ?? baseHelpers.resolveProduct(side, index);
+        return useFlowResultStore.getState().resolvedProducts[handleId] ?? baseHelpers.resolveProduct(side, index);
       },
       getFlowRate: (side: 'input' | 'output', index: number): number => {
         const handleId = buildHandleId(nodeId, side, index);
@@ -132,7 +133,7 @@ export function solveLP(
       node.data.settings,
       node.id,
       helpers,
-      { temperatureInputOverrides: inputTemps[node.id] }
+      { temperatureInputOverrides: inputTemps[node.id], suppressStoreTemperatureOverrides: true, globalSettings }
     );
     if (!recipe) continue;
 
@@ -164,7 +165,7 @@ export function solveLP(
         if (!edge.targetHandle) return false;
         const targetParsed = parseHandleId(edge.targetHandle);
         if (!targetParsed) return false;
-        const targetNode = nodes.find((n) => n.id === edge.target);
+        const targetNode = nodesById.get(edge.target);
         if (!targetNode) return false;
         const targetHelpers = makeHelpers(targetNode.id);
         const targetRecipe = resolveActiveRecipe(
@@ -172,7 +173,7 @@ export function solveLP(
           targetNode.data.settings,
           targetNode.id,
           targetHelpers,
-          { temperatureInputOverrides: inputTemps[targetNode.id] }
+          { temperatureInputOverrides: inputTemps[targetNode.id], suppressStoreTemperatureOverrides: true, globalSettings }
         );
         if (!targetRecipe) return false;
         const targetInput = targetRecipe.inputs[targetParsed.index];

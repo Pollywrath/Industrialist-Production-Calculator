@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Palette, RotateCcw, Undo2, X } from 'lucide-react';
 import { useUIStore } from '../../../stores/useUIStore';
@@ -326,22 +326,21 @@ function hasStoredColorOverrides(): boolean {
   return Object.keys(overrides).some((name) => name.startsWith('--theme-color-'));
 }
 
-const VariableRow = memo(
-  function VariableRow({
-    definition,
-    value,
-    label,
-    hint,
-    onValueChange,
-    onReset,
-  }: {
-    definition: ThemeVariableDefinition;
-    value: string;
-    label: string;
-    hint?: string;
-    onValueChange: (name: string, nextValue: string) => void;
-    onReset: (name: string) => void;
-  }) {
+function VariableRow({
+  definition,
+  value,
+  label,
+  hint,
+  onValueChange,
+  onReset,
+}: {
+  definition: ThemeVariableDefinition;
+  value: string;
+  label: string;
+  hint?: string;
+  onValueChange: (name: string, nextValue: string) => void;
+  onReset: (name: string) => void;
+}) {
     const colorValue = definition.category === 'color' ? toColorInputValue(value) : null;
 
     return (
@@ -353,7 +352,7 @@ const VariableRow = memo(
         </div>
         <div className={styles['variable-controls']}>
           {definition.category === 'color' && (
-            <span className={styles['color-swatch']} style={{ background: value }} />
+            <span className={styles['color-swatch']} style={{ '--swatch-bg': value } as React.CSSProperties} />
           )}
           {colorValue && (
             <input
@@ -379,13 +378,7 @@ const VariableRow = memo(
         </div>
       </div>
     );
-  },
-  (prev, next) =>
-    prev.definition.name === next.definition.name &&
-    prev.value === next.value &&
-    prev.label === next.label &&
-    prev.hint === next.hint,
-);
+}
 
 function PresetCard({
   preset,
@@ -431,7 +424,7 @@ export function ThemeOverlay() {
 
 function ThemeOverlayModal() {
   const setThemeOverlayOpen = useUIStore((s) => s.setThemeOverlayOpen);
-  const variables = useMemo(() => discoverThemeVariables(), []);
+  const variables = discoverThemeVariables();
   const [overrides, setOverrides] = useState(loadThemeOverrides);
   const [activeView, setActiveView] = useState<'presets' | 'advanced' | 'edges'>('presets');
   const [activePresetId, setActivePresetId] = useState<string | null>(() =>
@@ -443,20 +436,14 @@ function ThemeOverlayModal() {
   const setPathStyle = useEdgeThemeStore((s) => s.setPathStyle);
   const resetEdgeStyles = useEdgeThemeStore((s) => s.resetEdgeStyles);
 
-  const colorVariables = useMemo(
-    () => variables.filter((variable) => variable.category === 'color'),
-    [variables],
-  );
+  const colorVariables = variables.filter((variable) => variable.category === 'color');
 
   const hasColorOverrides = colorVariables.some((variable) => variable.name in overrides);
   const hasEdgeOverrides = hasCustomEdgeStyleSettings({ lineStyle, pathStyle });
   const hasCustomizations = hasColorOverrides || hasEdgeOverrides;
-  const colorVariableNames = useMemo(
-    () => colorVariables.map((variable) => variable.name),
-    [colorVariables],
-  );
+  const colorVariableNames = colorVariables.map((variable) => variable.name);
 
-  const groupedColorVariables = useMemo<VariableGroup[]>(() => {
+  const groupedColorVariables: VariableGroup[] = (() => {
     const groups = new Map<string, VariableGroup>();
 
     for (let i = 0; i < colorVariables.length; i++) {
@@ -508,25 +495,25 @@ function ThemeOverlayModal() {
     }
 
     return ordered;
-  }, [colorVariables]);
+  })();
 
-  const darkPresets = useMemo(() => THEME_PRESETS.filter((preset) => preset.mode === 'dark'), []);
-  const lightPresets = useMemo(() => THEME_PRESETS.filter((preset) => preset.mode === 'light'), []);
+  const darkPresets = THEME_PRESETS.filter((preset) => preset.mode === 'dark');
+  const lightPresets = THEME_PRESETS.filter((preset) => preset.mode === 'light');
 
   const getValueFor = (variable: ThemeVariableDefinition): string =>
     overrides[variable.name] ?? variable.defaultValue;
 
-  const applyValue = useCallback((name: string, nextValue: string) => {
+  const applyValue = (name: string, nextValue: string) => {
     const nextOverrides = setThemeVariableOverride(name, nextValue);
     setOverrides(nextOverrides);
     setActivePresetId(null);
-  }, []);
+  };
 
-  const resetOne = useCallback((name: string) => {
+  const resetOne = (name: string) => {
     const nextOverrides = resetThemeVariableOverride(name);
     setOverrides(nextOverrides);
     setActivePresetId(null);
-  }, []);
+  };
 
   const applyPreset = (preset: ThemePreset) => {
     const nextOverrides = replaceThemeOverridesForVariables(colorVariableNames, preset.overrides);

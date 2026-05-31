@@ -446,6 +446,7 @@
   flex-shrink: 0;
   border: 1px solid var(--theme-color-border-light);
   border-radius: 4px;
+  background: var(--swatch-bg);
 }
 
 .color-input {

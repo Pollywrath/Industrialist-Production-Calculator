@@ -15,7 +15,6 @@ import { useFlowStore } from '../../../stores/useFlowStore';
 import { getEffectiveToggleId, useUIStore } from '../../../stores/useUIStore';
 import styles from './RecipeEdge.module.css';
 
-const EDGE_STROKE_WIDTH = 2;
 const EDGE_INTERACTION_WIDTH = 8;
 const EDGE_CONTROL_POINT_RADIUS = 4;
 const ORTHOGONAL_SEGMENT_HITBOX_WIDTH = 14;
@@ -701,18 +700,6 @@ export function RecipeEdge({
           targetPosition,
         });
 
-  const edgeStyle: CSSProperties = {
-    stroke: selected ? 'var(--theme-color-edge-selected-stroke)' : 'var(--theme-color-edge-stroke)',
-    strokeWidth: EDGE_STROKE_WIDTH,
-    strokeDasharray: lineStyle === 'dashed' ? '10 8' : lineStyle === 'dotted' ? '1 8' : undefined,
-    strokeLinecap: lineStyle === 'dotted' ? 'round' : undefined,
-    animation:
-      lineStyle === 'dashed'
-        ? 'recipe-edge-dash-flow 1.1s linear infinite'
-        : lineStyle === 'dotted'
-          ? 'recipe-edge-dot-flow 0.85s linear infinite'
-          : undefined,
-  };
 
   const activeOrthSegmentIndex =
     draggingOrthSegmentIndex !== null ? draggingOrthSegmentIndex : hoveredOrthSegmentIndex;
@@ -744,8 +731,16 @@ export function RecipeEdge({
         id={id}
         path={edgePath}
         markerEnd={markerEnd}
-        className={styles['edge-path']}
-        style={edgeStyle}
+        className={`${styles['edge-path']} ${styles[`line-style-${lineStyle}`]}`}
+        style={{
+          stroke: selected
+            ? 'var(--theme-color-edge-selected-stroke)'
+            : 'var(--theme-color-edge-stroke)',
+          strokeWidth: 2,
+          strokeDasharray:
+            lineStyle === 'dashed' ? '10 8' : lineStyle === 'dotted' ? '1 8' : undefined,
+          strokeLinecap: lineStyle === 'dotted' ? 'round' : undefined,
+        } as CSSProperties}
         interactionWidth={EDGE_INTERACTION_WIDTH}
       />
 

@@ -1,15 +1,13 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import type { RecipeNodeType } from '../../../types/nodes';
-import { resolveActiveRecipe, getMachineName, getMachine } from '../../../data/lookup';
+import { getMachineName, getMachine, resolveActiveRecipe } from '../../../data/lookup';
 import { RecipeNodeInfo } from './RecipeNodeInfo';
 import { RecipeNodeIO } from './RecipeNodeIO';
 import styles from './RecipeNode.module.css';
 import { useUIStore } from '../../../stores/useUIStore';
-import { useFlowStore } from '../../../stores/useFlowStore';
 import { LoadingScreen } from '../../shared/LoadingScreen';
 import { overlayPrefetchCache, type NodeEditorProps } from '../overlayPrefetchCache';
-import { buildHandleId } from '../../../utils/idGenerator';
 
 const FallbackNodeEditor: React.ComponentType<NodeEditorProps> = () => null;
 
@@ -35,7 +33,6 @@ import {
   IO_COLUMN_PADDING,
 } from '../../shared/layoutConstants';
 
-import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { useDataStore } from '../../../stores/useDataStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { getSpecialRecipe } from '../../../data/registry';
@@ -47,29 +44,13 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
 
   const dbVersion = useDataStore((s) => s.dbVersion);
 
-  useFlowStore((s) => {
-    const sr = getSpecialRecipe(data.recipeId);
-    if (!sr?.inputTemperatureSettings) return '';
-    const inputIndices = Object.keys(sr.inputTemperatureSettings).map(Number);
-    let signature = '';
-    for (let i = 0; i < inputIndices.length; i++) {
-      const handleId = buildHandleId(id, 'input', inputIndices[i]);
-      signature += `|${s.resolvedProducts[handleId] ?? ''}`;
-    }
-    return signature;
-  });
-
-  useGlobalSettingsStore((s) => {
-    const isSpecial = !!getSpecialRecipe(data.recipeId);
-    return isSpecial ? s.settings.global_pollution : null;
-  });
-
   useEffect(() => {
     updateNodeInternals(id);
   }, [id, data.inputOrder, data.outputOrder, updateNodeInternals]);
 
-  const recipe =
-    dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings, id) : undefined;
+  const committedRecipe = useFlowResultStore((s) => s.nodeRecipes[id]);
+  const fallbackRecipe = dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings, id) : undefined;
+  const recipe = committedRecipe ?? fallbackRecipe;
 
   const inputTempsMap = useFlowResultStore((s) => s.inputTemps[id]);
   let receivedTemp: number | null = null;

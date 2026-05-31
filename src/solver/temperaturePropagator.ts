@@ -15,6 +15,7 @@ export function propagateTemperatures(
   nodes: ReactFlowNode[],
   edges: ReactFlowEdge[],
   edgeFlows: Record<string, number>,
+  globalSettings?: Record<string, unknown>,
 ): TemperaturePropagationResult {
   const resolutionContext = createGraphResolutionContext(nodes, edges);
   const getHelpers = (nodeId: string) => resolutionContext.createHelpers(nodeId);
@@ -49,7 +50,7 @@ export function propagateTemperatures(
       node.data.settings,
       node.id,
       getHelpers(node.id),
-      { suppressStoreTemperatureOverrides: true },
+      { suppressStoreTemperatureOverrides: true, globalSettings },
     );
     if (recipe) {
       nodeOutputTemps[node.id] = recipe.outputs.map((out) => out.temperature ?? 18);
@@ -110,7 +111,7 @@ export function propagateTemperatures(
     incomingEdges[edge.target][targetParsed.index].push(edge);
   }
 
-  let prevEdgeTemps: Record<string, number> = {};
+  const prevEdgeTemps: Record<string, number> = {};
   let iterationsRun = 0;
 
   for (let iter = 0; iter < 80; iter++) {
@@ -208,6 +209,7 @@ export function propagateTemperatures(
           {
             temperatureInputOverrides: inputTemps[nodeId],
             suppressStoreTemperatureOverrides: true,
+            globalSettings,
           },
         );
         if (updatedRecipe) {
@@ -234,6 +236,7 @@ export function propagateTemperatures(
       {
         temperatureInputOverrides: inputTemps[node.id],
         suppressStoreTemperatureOverrides: true,
+        globalSettings,
       },
     );
     if (recipe) {

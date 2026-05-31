@@ -373,6 +373,7 @@ export function resolveActiveRecipe(
   options?: {
     temperatureInputOverrides?: Record<number, number>;
     suppressStoreTemperatureOverrides?: boolean;
+    globalSettings?: Record<string, unknown>;
   },
 ): Recipe | undefined {
   const recipe = recipeMap.get(recipeId);
@@ -392,10 +393,9 @@ export function resolveActiveRecipe(
       ...(nodeSettings || {}),
     };
     nodeSettings = normalizeSettings(nodeSettings, sr.settings, productMap);
-    const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
-      string,
-      unknown
-    >;
+    const globalSettings =
+      (options?.globalSettings as Record<string, unknown> | undefined) ??
+      (useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>);
     const activeHelpers = helpers ?? (() => {
       const flowState = useFlowStore.getState();
       const resolutionContext = createGraphResolutionContext(flowState.nodes, flowState.edges);
@@ -404,7 +404,7 @@ export function resolveActiveRecipe(
         resolveProduct: (side: 'input' | 'output', index: number) => {
           if (!nodeId) return '';
           const handleId = buildHandleId(nodeId, side, index);
-          return flowState.resolvedProducts[handleId] ?? fallbackHelpers?.resolveProduct(side, index) ?? '';
+          return useFlowResultStore.getState().resolvedProducts[handleId] ?? fallbackHelpers?.resolveProduct(side, index) ?? '';
         },
         hasConnection: (side: 'input' | 'output', index: number) => {
           if (!fallbackHelpers) return false;

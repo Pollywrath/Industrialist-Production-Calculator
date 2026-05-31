@@ -474,16 +474,32 @@ export async function autoLayout(
   const nodeMap = new Map(nodes.map((node) => [node.id, node]));
   const edgeMap = new Map(edges.map((edge) => [edge.id, edge]));
 
+  const nodeIdToComponentIndex = new Map<string, number>();
+  for (let i = 0; i < components.length; i++) {
+    const componentNodeIds = components[i];
+    componentNodeIds.forEach((id) => {
+      nodeIdToComponentIndex.set(id, i);
+    });
+  }
+
+  const componentEdgeLists: Edge[][] = Array.from({ length: components.length }, () => []);
+  for (let i = 0; i < edges.length; i++) {
+    const edge = edges[i];
+    const sourceComponent = nodeIdToComponentIndex.get(edge.source);
+    const targetComponent = nodeIdToComponentIndex.get(edge.target);
+    if (sourceComponent !== undefined && sourceComponent === targetComponent) {
+      componentEdgeLists[sourceComponent].push(edge);
+    }
+  }
+
   const componentResults: LayoutComponentResult[] = await Promise.all(
-    components.map(async (componentNodeIds) => {
+    components.map(async (componentNodeIds, componentIndex) => {
       const componentNodes = [...componentNodeIds]
         .map((id) => nodeMap.get(id))
         .filter((node): node is Node<RecipeNodeData> => !!node);
       componentNodes.sort((a, b) => a.id.localeCompare(b.id));
 
-      const componentEdges = edges.filter(
-        (edge) => componentNodeIds.has(edge.source) && componentNodeIds.has(edge.target),
-      );
+      const componentEdges = componentEdgeLists[componentIndex];
       componentEdges.sort((a, b) => a.id.localeCompare(b.id));
 
       try {

@@ -9,6 +9,7 @@ export function buildSolverGraph(
   edges: ReactFlowEdge[],
   settingsOverrides?: Record<string, Record<string, unknown>>,
   resolvedEdgeFlows?: Record<string, number>,
+  globalSettings?: Record<string, unknown>,
 ): SolverGraph {
   const graph: SolverGraph = { nodes: {}, products: {} };
   const resolutionContext = createGraphResolutionContext(nodes, edges);
@@ -43,7 +44,7 @@ export function buildSolverGraph(
               sourceNode.data.settings,
               sourceNode.id,
               sourceHelpers,
-              { suppressStoreTemperatureOverrides: true },
+              { suppressStoreTemperatureOverrides: true, globalSettings },
             );
             if (!sourceRecipe) continue;
             const sourceOutput = sourceRecipe.outputs[sourceParsed.index];
@@ -63,7 +64,7 @@ export function buildSolverGraph(
               targetNode.data.settings,
               targetNode.id,
               targetHelpers,
-              { suppressStoreTemperatureOverrides: true },
+              { suppressStoreTemperatureOverrides: true, globalSettings },
             );
             if (!targetRecipe) continue;
             const targetInput = targetRecipe.inputs[targetParsed.index];
@@ -87,6 +88,7 @@ export function buildSolverGraph(
     const helpers = makeHelpers(node.id);
     const recipe = resolveActiveRecipe(data.recipeId, settings, node.id, helpers, {
       suppressStoreTemperatureOverrides: true,
+      globalSettings,
     });
     if (!recipe) continue;
 

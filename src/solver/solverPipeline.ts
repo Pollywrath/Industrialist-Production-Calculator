@@ -1,8 +1,13 @@
 import type { FlowResults, ReactFlowEdge, ReactFlowNode, SolverGraph } from '../types/solver';
+import type { Recipe } from '../types/data';
 import { getSpecialRecipe } from '../data/registry';
+import { resolveActiveRecipe } from '../data/lookup';
 import { buildSolverGraph } from './graphBuilder';
 import { calculateFlows } from './flowSolver';
 import { propagateTemperatures } from './temperaturePropagator';
+import { computeResolvedProducts } from '../utils/productResolver';
+import { createGraphResolutionContext } from '../utils/graphResolutionContext';
+import { buildHandleId } from '../utils/idGenerator';
 
 const MAX_TEMPERATURE_COUPLED_PASSES = 8;
 const NUMERIC_EQUALITY_EPSILON = 1e-6;
@@ -14,6 +19,8 @@ export interface SolverPipelineResult {
   edgeFlows: Record<string, number>;
   edgeTemps: Record<string, number>;
   inputTemps: Record<string, Record<number, number>>;
+  resolvedProducts: Record<string, string>;
+  nodeRecipes: Record<string, Recipe>;
   iterationsRun?: number;
 }
 
@@ -144,11 +151,12 @@ function solveFlowsForPipeline(
   edges: ReactFlowEdge[],
   settingsOverrides: SettingsOverrides | undefined,
   includesFlowDependentRecipes: boolean,
+  globalSettings?: Record<string, unknown>,
 ): {
   results: FlowResults;
   edgeFlows: Record<string, number>;
 } {
-  const initialGraph = buildSolverGraph(nodes, edges, settingsOverrides);
+  const initialGraph = buildSolverGraph(nodes, edges, settingsOverrides, undefined, globalSettings);
   const firstPass = calculateFlows(initialGraph);
 
   if (!includesFlowDependentRecipes) {
@@ -160,6 +168,7 @@ function solveFlowsForPipeline(
     edges,
     settingsOverrides,
     firstPass.edgeFlows,
+    globalSettings,
   );
   if (areGraphNodesEquivalent(initialGraph.nodes, correctedGraph.nodes)) {
     return firstPass;
@@ -171,6 +180,7 @@ function solveFlowsForPipeline(
 export function solveFlowPipeline(
   nodes: ReactFlowNode[],
   edges: ReactFlowEdge[],
+  globalSettings?: Record<string, unknown>,
 ): SolverPipelineResult {
   const nodesById = new Map<string, ReactFlowNode>(nodes.map((node) => [node.id, node]));
   const includesFlowDependentRecipes = hasFlowDependentRecipes(nodes);
@@ -180,6 +190,8 @@ export function solveFlowPipeline(
     edgeFlows: {},
     edgeTemps: {},
     inputTemps: {},
+    resolvedProducts: {},
+    nodeRecipes: {},
     iterationsRun: 0,
   };
 
@@ -189,11 +201,13 @@ export function solveFlowPipeline(
       edges,
       activeOverrides,
       includesFlowDependentRecipes,
+      globalSettings,
     );
     const { edgeTemps, inputTemps, settingsOverrides, iterationsRun } = propagateTemperatures(
       nodes,
       edges,
       edgeFlows,
+      globalSettings,
     );
 
     finalResult = {
@@ -201,6 +215,8 @@ export function solveFlowPipeline(
       edgeFlows,
       edgeTemps,
       inputTemps,
+      resolvedProducts: {},
+      nodeRecipes: {},
       iterationsRun,
     };
 
@@ -215,5 +231,54 @@ export function solveFlowPipeline(
     activeOverrides = settingsOverrides;
   }
 
+  finalResult.resolvedProducts = computeResolvedProducts(nodesById, edges, globalSettings);
+
+  const resolutionContext = createGraphResolutionContext(nodes, edges);
+  const nodeRecipes: Record<string, Recipe> = {};
+
+  for (const node of nodes) {
+    const nodeId = node.id;
+    const nodeOverrides = activeOverrides?.[nodeId];
+    const settings =
+      nodeOverrides || node.data.settings ? { ...node.data.settings, ...nodeOverrides } : undefined;
+
+    const helpers = {
+      resolveProduct: (side: 'input' | 'output', index: number): string => {
+        const handleId = buildHandleId(nodeId, side, index);
+        return finalResult.resolvedProducts[handleId] ?? '';
+      },
+      hasConnection: (side: 'input' | 'output', index: number): boolean => {
+        const handleId = buildHandleId(nodeId, side, index);
+        return (resolutionContext.edgeLookup.get(handleId)?.length ?? 0) > 0;
+      },
+      getFlowRate: (side: 'input' | 'output', index: number): number => {
+        const handleId = buildHandleId(nodeId, side, index);
+        const connectedEdges = resolutionContext.edgeLookup.get(handleId) ?? [];
+        let totalFlow = 0;
+        for (const edge of connectedEdges) {
+          totalFlow += finalResult.edgeFlows[edge.id] ?? 0;
+        }
+        return totalFlow;
+      },
+    };
+
+    const recipe = resolveActiveRecipe(
+      node.data.recipeId,
+      settings,
+      nodeId,
+      helpers,
+      {
+        temperatureInputOverrides: finalResult.inputTemps[nodeId],
+        suppressStoreTemperatureOverrides: true,
+        globalSettings,
+      },
+    );
+
+    if (recipe) {
+      nodeRecipes[nodeId] = recipe;
+    }
+  }
+
+  finalResult.nodeRecipes = nodeRecipes;
   return finalResult;
 }

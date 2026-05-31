@@ -1,16 +1,23 @@
 import { create } from 'zustand';
 import type { FlowResults, NodeFlowResult } from '../types/solver';
+import type { Recipe } from '../types/data';
 
 interface FlowResultState {
   results: FlowResults;
   edgeFlows: Record<string, number>;
   edgeTemps: Record<string, number>;
   inputTemps: Record<string, Record<number, number>>;
+  resolvedProducts: Record<string, string>;
+  nodeRecipes: Record<string, Recipe>;
+  graphVersion: number;
   setResults: (
     results: FlowResults,
     edgeFlows: Record<string, number>,
     edgeTemps: Record<string, number>,
     inputTemps: Record<string, Record<number, number>>,
+    resolvedProducts: Record<string, string>,
+    nodeRecipes: Record<string, Recipe>,
+    graphVersion: number,
   ) => void;
 }
 
@@ -47,7 +54,7 @@ function areFlowResultsEqual(a: NodeFlowResult, b: NodeFlowResult): boolean {
   return true;
 }
 
-function areRecordsEqual(a: Record<string, number>, b: Record<string, number>): boolean {
+function areRecordsEqual(a: Record<string, unknown>, b: Record<string, unknown>): boolean {
   const keysA = Object.keys(a);
   const keysB = Object.keys(b);
   if (keysA.length !== keysB.length) return false;
@@ -87,7 +94,10 @@ const useFlowResultStore = create<FlowResultState>((set, get) => ({
   edgeFlows: {},
   edgeTemps: {},
   inputTemps: {},
-  setResults: (newResults, newEdgeFlows, newEdgeTemps, newInputTemps) => {
+  resolvedProducts: {},
+  nodeRecipes: {},
+  graphVersion: 0,
+  setResults: (newResults, newEdgeFlows, newEdgeTemps, newInputTemps, newResolvedProducts, newNodeRecipes, newGraphVersion) => {
     const oldState = get();
     const oldResults = oldState.results;
     let hasChanged = oldResults.size !== newResults.size;
@@ -106,13 +116,19 @@ const useFlowResultStore = create<FlowResultState>((set, get) => ({
     const edgeFlowsChanged = !areRecordsEqual(oldState.edgeFlows, newEdgeFlows);
     const edgeTempsChanged = !areRecordsEqual(oldState.edgeTemps, newEdgeTemps);
     const inputTempsChanged = !areInputTempsEqual(oldState.inputTemps, newInputTemps);
+    const resolvedProductsChanged = !areRecordsEqual(oldState.resolvedProducts, newResolvedProducts);
+    const nodeRecipesChanged = !areRecordsEqual(oldState.nodeRecipes, newNodeRecipes);
+    const graphVersionChanged = oldState.graphVersion !== newGraphVersion;
 
-    if (hasChanged || edgeFlowsChanged || edgeTempsChanged || inputTempsChanged) {
+    if (hasChanged || edgeFlowsChanged || edgeTempsChanged || inputTempsChanged || resolvedProductsChanged || nodeRecipesChanged || graphVersionChanged) {
       set({
         results: updatedResults,
         edgeFlows: newEdgeFlows,
         edgeTemps: newEdgeTemps,
         inputTemps: newInputTemps,
+        resolvedProducts: newResolvedProducts,
+        nodeRecipes: newNodeRecipes,
+        graphVersion: newGraphVersion,
       });
     }
   },

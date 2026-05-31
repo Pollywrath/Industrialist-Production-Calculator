@@ -146,7 +146,7 @@ export function RecipeNodeIO({
   const multiplier = recipe ? getRateMultiplier(recipe.cycle_time, rateMode) : 1;
   const scaleFactor = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 1;
   const flowResult = useFlowResultStore((s) => s.results.get(nodeId));
-  const resolvedProducts = useFlowStore(
+  const resolvedProducts = useFlowResultStore(
     useShallow((s) => {
       const all = s.resolvedProducts;
       const allHandles = [...leftHandles, ...rightHandles];
@@ -234,7 +234,8 @@ export function RecipeNodeIO({
     const entry = list[ref.index];
     if (!entry) return;
     const handleId = buildHandleId(nodeId, ref.side, ref.index);
-    const { nodes, edges, resolvedProducts: allResolvedProducts } = useFlowStore.getState();
+    const { nodes, edges } = useFlowStore.getState();
+    const allResolvedProducts = useFlowResultStore.getState().resolvedProducts;
     const hasEdges = edges.some(
       (edge) => edge.sourceHandle === handleId || edge.targetHandle === handleId,
     );

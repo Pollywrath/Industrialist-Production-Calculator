@@ -12,19 +12,24 @@ export function useFlowSolver(): void {
 
   useEffect(() => {
     function recompute(runToken: number) {
-      const { nodes, edges } = useFlowStore.getState();
+      const { nodes, edges, graphVersion } = useFlowStore.getState();
+      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
       if (runToken !== runTokenRef.current) return;
 
       if (nodes.length === 0) {
         if (runToken !== runTokenRef.current) return;
-        useFlowResultStore.getState().setResults(new Map(), {}, {}, {});
+        useFlowResultStore.getState().setResults(new Map(), {}, {}, {}, {}, {}, graphVersion);
         useFlowStore.getState().markSolutionCommitted();
         return;
       }
 
-      const { results, edgeFlows, edgeTemps, inputTemps } = solveFlowPipeline(nodes, edges);
+      const { results, edgeFlows, edgeTemps, inputTemps, resolvedProducts, nodeRecipes } = solveFlowPipeline(
+        nodes,
+        edges,
+        globalSettings,
+      );
       if (runToken !== runTokenRef.current) return;
-      useFlowResultStore.getState().setResults(results, edgeFlows, edgeTemps, inputTemps);
+      useFlowResultStore.getState().setResults(results, edgeFlows, edgeTemps, inputTemps, resolvedProducts, nodeRecipes, graphVersion);
       useFlowStore.getState().markSolutionCommitted();
     }
 

@@ -362,6 +362,11 @@
   height: 100%;
 }
 
+.machine-edge-path {
+  stroke: var(--theme-color-edge-stroke);
+  stroke-width: 2;
+}
+
 .graph-status {
   position: absolute;
   top: 16px;

@@ -1,4 +1,4 @@
-import { toPng } from 'html-to-image';
+import { toBlob } from 'html-to-image';
 import { getNodesBounds, type Node } from '@xyflow/react';
 import type { SaveRecord } from '../types/saves';
 import { useUIStore } from '../stores/useUIStore';
@@ -6,11 +6,13 @@ import { useUIStore } from '../stores/useUIStore';
 const MAX_CANVAS_DIMENSION = 16384;
 
 export function exportRecordAsJson(record: SaveRecord): void {
-  const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(record, null, 2));
+  const blob = new Blob([JSON.stringify(record, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.download = `${record.name.replace(/\s+/g, '_')}_save.json`;
-  link.href = dataStr;
+  link.href = url;
   link.click();
+  URL.revokeObjectURL(url);
 }
 
 export async function exportCanvasAsPng(nodes: Node[]): Promise<void> {
@@ -55,7 +57,7 @@ export async function exportCanvasAsPng(nodes: Node[]): Promise<void> {
     await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
     await new Promise<void>((resolve) => setTimeout(resolve, 50));
 
-    const dataUrl = await toPng(viewportElement, {
+    const blob = await toBlob(viewportElement, {
       backgroundColor: themeBg,
       width: exportWidth,
       height: exportHeight,
@@ -67,11 +69,16 @@ export async function exportCanvasAsPng(nodes: Node[]): Promise<void> {
         transformOrigin: 'top left',
       },
     });
+    if (!blob) {
+      throw new Error('PNG export failed: toBlob returned null');
+    }
 
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.download = `industrialist-canvas-${Date.now()}.png`;
-    link.href = dataUrl;
+    link.href = url;
     link.click();
+    URL.revokeObjectURL(url);
   } finally {
     uiStore.setIsExporting(false);
   }

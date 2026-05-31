@@ -18,7 +18,6 @@ import { useState } from 'react';
 import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useEdgeThemeStore } from '../../stores/useEdgeThemeStore';
-import { autoLayout } from '../../utils/autoLayout';
 import { isLPSolverRunning } from '../../solver/lpSolverService';
 import styles from './ControlsTray.module.css';
 
@@ -174,16 +173,18 @@ export function ControlsTray() {
       if (flowStore.nodes.length === 0) return;
 
       setIsLayouting(true);
-      void autoLayout(flowStore.nodes, flowStore.edges, { edgePath: edgePathStyle })
-        .then(({ nodes, edges }) => {
-          setNodesAndEdges(nodes, edges);
-        })
-        .catch((error) => {
-          console.error('Auto-layout failed:', error);
-        })
-        .finally(() => {
-          setIsLayouting(false);
-        });
+      void import('../../utils/autoLayout').then(({ autoLayout }) => {
+        void autoLayout(flowStore.nodes, flowStore.edges, { edgePath: edgePathStyle })
+          .then(({ nodes, edges }) => {
+            setNodesAndEdges(nodes, edges);
+          })
+          .catch((error) => {
+            console.error('Auto-layout failed:', error);
+          })
+          .finally(() => {
+            setIsLayouting(false);
+          });
+      });
     } else if (btn.id === 'clear_canvas') {
       setNodesAndEdges([], []);
     } else if (btn.id === 'undo') {

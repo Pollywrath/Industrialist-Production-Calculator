@@ -69,8 +69,8 @@ function NodeEditorModal({
   initialData,
 }: NodeEditorModalProps) {
   const store = useContext(NodeEditorContext);
-  const updateNodeData = useFlowStore((s) => s.updateNodeData);
-  const setNodes = useFlowStore((s) => s.setNodes);
+  const updateNodeDataAndDeleteEdges = useFlowStore((s) => s.updateNodeDataAndDeleteEdges);
+  const setNodesAndEdges = useFlowStore((s) => s.setNodesAndEdges);
   const runTransaction = useFlowStore((s) => s.runTransaction);
 
   const {
@@ -128,29 +128,26 @@ function NodeEditorModal({
     return { settings, clampedInputs, clampedOutputs, staleInputIndices, staleOutputIndices };
   };
 
-  const deleteStaleHandleEdges = (staleInputIndices: number[], staleOutputIndices: number[]) => {
-    const { deleteEdgesConnectedToHandle } = useFlowStore.getState();
-    for (const handleId of buildStaleHandleIds(nodeId, 'input', staleInputIndices)) {
-      deleteEdgesConnectedToHandle(handleId);
-    }
-    for (const handleId of buildStaleHandleIds(nodeId, 'output', staleOutputIndices)) {
-      deleteEdgesConnectedToHandle(handleId);
-    }
-  };
-
   const handleSaveLocal = () => {
     const { settings, clampedInputs, clampedOutputs, staleInputIndices, staleOutputIndices } =
       prepareHandleSave();
 
-    runTransaction(() => {
-      deleteStaleHandleEdges(staleInputIndices, staleOutputIndices);
+    const staleHandleIds = [
+      ...buildStaleHandleIds(nodeId, 'input', staleInputIndices),
+      ...buildStaleHandleIds(nodeId, 'output', staleOutputIndices),
+    ];
 
-      updateNodeData(nodeId, {
-        machineCount: cleanMachineCount(machineCount),
-        inputOrder: clampedInputs,
-        outputOrder: clampedOutputs,
-        settings: settings,
-      });
+    runTransaction(() => {
+      updateNodeDataAndDeleteEdges(
+        nodeId,
+        {
+          machineCount: cleanMachineCount(machineCount),
+          inputOrder: clampedInputs,
+          outputOrder: clampedOutputs,
+          settings: settings,
+        },
+        staleHandleIds,
+      );
     });
     onClose();
   };
@@ -169,6 +166,17 @@ function NodeEditorModal({
 
     const factor = machineCount / initialMachineCount;
     const connectedIds = getConnectedNodes(nodeId, edges);
+
+    const staleHandleIds = [
+      ...buildStaleHandleIds(nodeId, 'input', staleInputIndices),
+      ...buildStaleHandleIds(nodeId, 'output', staleOutputIndices),
+    ];
+    const staleHandleIdSet = new Set(staleHandleIds);
+    const nextEdges = edges.filter(
+      (edge) =>
+        !staleHandleIdSet.has(edge.sourceHandle ?? '') &&
+        !staleHandleIdSet.has(edge.targetHandle ?? ''),
+    );
 
     const updatedNodes = nodes.map((node) => {
       if (connectedIds.has(node.id)) {
@@ -199,8 +207,7 @@ function NodeEditorModal({
     });
 
     runTransaction(() => {
-      deleteStaleHandleEdges(staleInputIndices, staleOutputIndices);
-      setNodes(updatedNodes);
+      setNodesAndEdges(updatedNodes, nextEdges);
     });
     onClose();
   };

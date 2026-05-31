@@ -2,6 +2,37 @@
   vector-effect: non-scaling-stroke;
 }
 
+@keyframes recipe-edge-dash-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+
+@keyframes recipe-edge-dot-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    stroke-dashoffset: -9;
+  }
+}
+
+.line-style-dashed {
+  stroke-dasharray: 10 8;
+  animation: recipe-edge-dash-flow 1.1s linear infinite;
+}
+
+.line-style-dotted {
+  stroke-dasharray: 1 8;
+  stroke-linecap: round;
+  animation: recipe-edge-dot-flow 0.85s linear infinite;
+}
+
 .edge-orth-overlay {
   pointer-events: none;
 }

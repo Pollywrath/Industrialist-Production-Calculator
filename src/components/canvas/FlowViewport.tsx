@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -17,6 +17,7 @@ import { getProduct } from '../../data/lookup';
 import type { EdgeControlPoint } from '../../types/edges';
 import { createGraphResolutionContext } from '../../utils/graphResolutionContext';
 import { useFlowStore } from '../../stores/useFlowStore';
+import { useFlowResultStore } from '../../stores/useFlowResultStore';
 import { useEdgeThemeStore } from '../../stores/useEdgeThemeStore';
 import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { useFlowSolver } from '../../hooks/useFlowSolver';
@@ -253,12 +254,10 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const onConnect = useFlowStore((s) => s.onConnect);
   const captureDragStart = useFlowStore((s) => s.captureDragStart);
   const commitDragStop = useFlowStore((s) => s.commitDragStop);
-  const resolvedProducts = useFlowStore((s) => s.resolvedProducts);
   const { screenToFlowPosition, getInternalNode } = useReactFlow();
-  const resolutionContext = useMemo(() => createGraphResolutionContext(nodes, edges), [nodes, edges]);
+  const resolutionContext = createGraphResolutionContext(nodes, edges);
 
-  const isValidConnection = useCallback(
-    (connection: Connection | Edge) => {
+  const isValidConnection = (connection: Connection | Edge) => {
       if (
         !connection.source ||
         !connection.target ||
@@ -280,11 +279,12 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
 
       const sourceHelpers = resolutionContext.createHelpers(connection.source);
       const targetHelpers = resolutionContext.createHelpers(connection.target);
+      const committedResolvedProducts = useFlowResultStore.getState().resolvedProducts;
       const resolvedSourceProductId =
-        resolvedProducts[connection.sourceHandle] ??
+        committedResolvedProducts[connection.sourceHandle] ??
         sourceHelpers.resolveProduct('output', sourceParsed.index);
       const resolvedTargetProductId =
-        resolvedProducts[connection.targetHandle] ??
+        committedResolvedProducts[connection.targetHandle] ??
         targetHelpers.resolveProduct('input', targetParsed.index);
 
       const sourceProdObj = getProduct(resolvedSourceProductId);
@@ -304,9 +304,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       }
 
       return false;
-    },
-    [resolutionContext, resolvedProducts],
-  );
+    };
 
   const handleNodeDragStart = (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
     captureDragStart(draggedNodes.map((draggedNode) => draggedNode.id));
@@ -323,15 +321,6 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const handleSelectionDragStop = (_event: React.MouseEvent, draggedNodes: Node[]) => {
     commitDragStop(draggedNodes.map((draggedNode) => draggedNode.id));
   };
-
-  const normalizedEdges = edges.map((edge) =>
-    edge.type === 'recipe'
-      ? edge
-      : {
-          ...edge,
-          type: 'recipe',
-        },
-  );
 
   const onEdgeClick = (event: React.MouseEvent, edge: Edge) => {
     if (getEffectiveToggleId(useUIStore.getState()) !== 'delete_mode') {
@@ -452,7 +441,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   return (
     <ReactFlow
       nodes={nodes}
-      edges={normalizedEdges}
+      edges={edges}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       onNodesChange={onNodesChange}

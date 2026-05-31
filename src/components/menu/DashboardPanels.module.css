@@ -108,6 +108,10 @@
   color: var(--theme-color-text-neutral);
 }
 
+.profit-pct {
+  margin-right: 8px;
+}
+
 .global-var-group {
   display: flex;
   flex-direction: column;

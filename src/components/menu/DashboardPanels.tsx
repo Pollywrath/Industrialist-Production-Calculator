@@ -204,14 +204,13 @@ export function DashboardPanels() {
               </span>
               <span className={styles['stat-value']}>
                 <span
-                  className={`${styles['stat-value']} ${
+                  className={`${styles['stat-value']} ${styles['profit-pct']} ${
                     profitMultiplier > 0.0001
                       ? styles['success']
                       : profitMultiplier < -0.0001
                         ? styles['error']
                         : styles['neutral']
                   }`}
-                  style={{ marginRight: '8px' }}
                 >
                   ({profitMultiplier >= 0 ? '+' : ''}
                   {profitMultiplier.toFixed(2)}%)

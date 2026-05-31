@@ -71,8 +71,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     const flowStore = useFlowStore.getState();
     const nodes = flowStore.nodes;
     const edges = flowStore.edges;
-    const resolvedProducts = flowStore.resolvedProducts;
     const flowResultState = useFlowResultStore.getState();
+    const resolvedProducts = flowResultState.resolvedProducts;
     const results = flowResultState.results;
     const edgeFlows = flowResultState.edgeFlows;
     const globalSettings = useGlobalSettingsStore.getState().settings;
@@ -104,7 +104,13 @@ export const useDashboardStore = create<DashboardState>((set) => ({
           return totalFlow;
         },
       };
-      const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id, helpers);
+      const recipe = resolveActiveRecipe(
+        node.data.recipeId,
+        node.data.settings,
+        node.id,
+        helpers,
+        { globalSettings: globalSettings as unknown as Record<string, unknown> },
+      );
       if (!recipe) return;
 
       const sr = getSpecialRecipe(recipe.id);

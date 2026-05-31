@@ -264,7 +264,6 @@ function MachineResearchEdge({
   targetX,
   targetY,
   markerEnd,
-  selected,
   data,
 }: EdgeProps<Edge<ResearchGraphEdgeData>>) {
   const bendPoints = data?.bendPoints ?? [];
@@ -286,12 +285,7 @@ function MachineResearchEdge({
       id={id}
       path={path}
       markerEnd={markerEnd}
-      style={{
-        stroke: selected
-          ? 'var(--theme-color-edge-selected-stroke)'
-          : 'var(--theme-color-edge-stroke)',
-        strokeWidth: 2,
-      }}
+      className={styles['machine-edge-path']}
       interactionWidth={8}
     />
   );

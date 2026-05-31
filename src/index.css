@@ -191,26 +191,6 @@ input[type='number']::-webkit-outer-spin-button {
   transition: none;
 }
 
-@keyframes recipe-edge-dash-flow {
-  from {
-    stroke-dashoffset: 0;
-  }
-
-  to {
-    stroke-dashoffset: -18;
-  }
-}
-
-@keyframes recipe-edge-dot-flow {
-  from {
-    stroke-dashoffset: 0;
-  }
-
-  to {
-    stroke-dashoffset: -9;
-  }
-}
-
 .react-flow .react-flow__edge.selected .react-flow__edge-path {
   stroke: var(--theme-color-edge-selected-stroke);
 }
