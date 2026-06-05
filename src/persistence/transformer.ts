@@ -1,14 +1,21 @@
-import type { Node, Edge } from '@xyflow/react';
-import type { RecipeNodeData } from '../types/nodes';
+import type { Edge } from '@xyflow/react';
+import { isGroupNode, isRecipeNode } from '../types/nodes';
+import type { CanvasNode } from '../types/nodes';
 import type { EdgeControlPoint } from '../types/edges';
 import { parseHandleId, buildHandleId, nextNodeId, nextEdgeId } from '../utils/idGenerator';
 import { getRecipe } from '../data/lookup';
 import { cleanMachineCount } from '../utils/precision';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 
-import type { SavedNode, SavedEdge, SaveData, GlobalSettings } from '../types/saves';
+import type {
+  SavedNode,
+  SavedRecipeNode,
+  SavedEdge,
+  SaveData,
+  GlobalSettings,
+} from '../types/saves';
 
-export const CURRENT_SAVE_VERSION = 1;
+export const CURRENT_SAVE_VERSION = 2;
 
 function sanitizeSavedPoints(raw: unknown): EdgeControlPoint[] | undefined {
   if (!Array.isArray(raw)) return undefined;
@@ -34,6 +41,51 @@ function sanitizeSavedPoints(raw: unknown): EdgeControlPoint[] | undefined {
   return points.length > 0 ? points : undefined;
 }
 
+function sanitizeStringArray(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+
+  const items: string[] = [];
+  for (let i = 0; i < raw.length; i++) {
+    const item = raw[i];
+    if (typeof item === 'string' && item) {
+      items.push(item);
+    }
+  }
+
+  return items;
+}
+
+function remapProxyHandleIds(
+  handleIds: string[],
+  idMap: Map<string, string>,
+  recipeNodeIds: Set<string>,
+  side: 'input' | 'output',
+): string[] {
+  let changed = false;
+  const nextHandleIds: string[] = [];
+
+  for (let i = 0; i < handleIds.length; i++) {
+    const handleId = handleIds[i];
+    const parsed = parseHandleId(handleId);
+    const nextNodeId = parsed ? idMap.get(parsed.nodeId) : undefined;
+    const nextHandleId =
+      parsed && nextNodeId ? buildHandleId(nextNodeId, parsed.side, parsed.index) : handleId;
+    const nextParsed = parseHandleId(nextHandleId);
+
+    if (!nextParsed || nextParsed.side !== side || !recipeNodeIds.has(nextParsed.nodeId)) {
+      changed = true;
+      continue;
+    }
+
+    nextHandleIds.push(nextHandleId);
+    if (parsed && nextNodeId) {
+      changed = true;
+    }
+  }
+
+  return changed ? nextHandleIds : handleIds;
+}
+
 export function migrateSaveData(rawData: unknown): SaveData {
   if (!rawData || typeof rawData !== 'object') {
     return { version: CURRENT_SAVE_VERSION, nodes: [], edges: [] };
@@ -49,6 +101,7 @@ export function migrateSaveData(rawData: unknown): SaveData {
     if (!rawN || typeof rawN !== 'object') {
       return {
         id: `n-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+        type: 'recipe',
         recipeId: '',
         machineCount: 1,
         position: { x: 0, y: 0 },
@@ -57,10 +110,30 @@ export function migrateSaveData(rawData: unknown): SaveData {
     }
 
     const n = rawN as Record<string, unknown>;
+    const id =
+      typeof n.id === 'string'
+        ? n.id
+        : `n-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     const pos =
       n.position && typeof n.position === 'object'
         ? (n.position as { x?: number; y?: number })
         : { x: 0, y: 0 };
+    const position = {
+      x: typeof pos.x === 'number' && Number.isFinite(pos.x) ? pos.x : 0,
+      y: typeof pos.y === 'number' && Number.isFinite(pos.y) ? pos.y : 0,
+    };
+
+    if (n.type === 'group') {
+      return {
+        id,
+        type: 'group',
+        label: typeof n.label === 'string' ? n.label : 'Group',
+        collapsed: typeof n.collapsed === 'boolean' ? n.collapsed : false,
+        inputProxyHandleIds: sanitizeStringArray(n.inputProxyHandleIds),
+        outputProxyHandleIds: sanitizeStringArray(n.outputProxyHandleIds),
+        position,
+      };
+    }
 
     let settings: Record<string, unknown> = {};
     if (n.settings && typeof n.settings === 'object') {
@@ -79,19 +152,15 @@ export function migrateSaveData(rawData: unknown): SaveData {
       machineCount = cleanMachineCount(machineCount);
     }
 
-    const savedNode: SavedNode = {
-      id:
-        typeof n.id === 'string'
-          ? n.id
-          : `n-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+    const savedNode: SavedRecipeNode = {
+      id,
+      type: 'recipe',
       recipeId,
       machineCount,
-      position: {
-        x: typeof pos.x === 'number' && Number.isFinite(pos.x) ? pos.x : 0,
-        y: typeof pos.y === 'number' && Number.isFinite(pos.y) ? pos.y : 0,
-      },
+      position,
       settings,
       isTarget: typeof n.isTarget === 'boolean' ? n.isTarget : undefined,
+      groupId: typeof n.groupId === 'string' ? n.groupId : undefined,
     };
 
     if (Array.isArray(n.inputOrder)) {
@@ -166,17 +235,35 @@ export function migrateSaveData(rawData: unknown): SaveData {
   };
 }
 
-export function serializeCanvas(nodes: Node<RecipeNodeData>[], edges: Edge[]): SaveData {
-  const savedNodes: SavedNode[] = nodes.map((n) => ({
-    id: n.id,
-    recipeId: n.data.recipeId,
-    machineCount: n.data.machineCount,
-    inputOrder: n.data.inputOrder,
-    outputOrder: n.data.outputOrder,
-    position: { x: n.position.x, y: n.position.y },
-    settings: (n.data as { settings?: Record<string, unknown> }).settings ?? {},
-    isTarget: n.data.isTarget,
-  }));
+export function serializeCanvas(nodes: CanvasNode[], edges: Edge[]): SaveData {
+  const savedNodes: SavedNode[] = [];
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    if (isRecipeNode(n)) {
+      savedNodes.push({
+        id: n.id,
+        type: 'recipe',
+        recipeId: n.data.recipeId,
+        machineCount: n.data.machineCount,
+        inputOrder: n.data.inputOrder,
+        outputOrder: n.data.outputOrder,
+        position: { x: n.position.x, y: n.position.y },
+        settings: n.data.settings ?? {},
+        isTarget: n.data.isTarget,
+        groupId: n.data.groupId,
+      });
+    } else if (isGroupNode(n)) {
+      savedNodes.push({
+        id: n.id,
+        type: 'group',
+        label: n.data.label,
+        collapsed: n.data.collapsed,
+        inputProxyHandleIds: n.data.inputProxyHandleIds,
+        outputProxyHandleIds: n.data.outputProxyHandleIds,
+        position: { x: n.position.x, y: n.position.y },
+      });
+    }
+  }
 
   const savedEdges: SavedEdge[] = [];
   for (let i = 0; i < edges.length; i++) {
@@ -217,7 +304,7 @@ export function serializeCanvas(nodes: Node<RecipeNodeData>[], edges: Edge[]): S
 }
 
 export function deserializeCanvas(saveData: SaveData): {
-  nodes: Node<RecipeNodeData>[];
+  nodes: CanvasNode[];
   edges: Edge[];
 } {
   const migrated = migrateSaveData(saveData);
@@ -228,8 +315,10 @@ export function deserializeCanvas(saveData: SaveData): {
 
   const idMap = new Map<string, string>();
   const seenNodeIds = new Set<string>();
+  const finalNodeIds = new Array<string>(migrated.nodes.length);
+  const finalGroupIds = new Set<string>();
+  const finalRecipeIds = new Set<string>();
 
-  const nodes: Node<RecipeNodeData>[] = [];
   for (let i = 0; i < migrated.nodes.length; i++) {
     const sn = migrated.nodes[i];
     let finalId = sn.id;
@@ -239,26 +328,63 @@ export function deserializeCanvas(saveData: SaveData): {
       idMap.set(sn.id, finalId);
     }
     seenNodeIds.add(finalId);
-
-    nodes.push({
-      id: finalId,
-      type: 'recipe',
-      position: sn.position,
-      data: {
-        recipeId: sn.recipeId,
-        machineCount: sn.machineCount,
-        inputOrder: sn.inputOrder,
-        outputOrder: sn.outputOrder,
-        settings: sn.settings,
-        isTarget: sn.isTarget,
-      } as RecipeNodeData,
-    });
+    finalNodeIds[i] = finalId;
+    if (sn.type === 'group') {
+      finalGroupIds.add(finalId);
+    } else {
+      finalRecipeIds.add(finalId);
+    }
   }
 
-  const nodeLookup = new Map<string, SavedNode>();
+  const nodes: CanvasNode[] = [];
+  for (let i = 0; i < migrated.nodes.length; i++) {
+    const sn = migrated.nodes[i];
+    const finalId = finalNodeIds[i];
+    if (sn.type === 'group') {
+      nodes.push({
+        id: finalId,
+        type: 'group',
+        position: sn.position,
+        data: {
+          label: sn.label,
+          collapsed: sn.collapsed,
+          inputProxyHandleIds: remapProxyHandleIds(
+            sn.inputProxyHandleIds,
+            idMap,
+            finalRecipeIds,
+            'input',
+          ),
+          outputProxyHandleIds: remapProxyHandleIds(
+            sn.outputProxyHandleIds,
+            idMap,
+            finalRecipeIds,
+            'output',
+          ),
+        },
+      });
+    } else {
+      const groupId = sn.groupId ? idMap.get(sn.groupId) ?? sn.groupId : undefined;
+      nodes.push({
+        id: finalId,
+        type: 'recipe',
+        position: sn.position,
+        data: {
+          recipeId: sn.recipeId,
+          machineCount: sn.machineCount,
+          inputOrder: sn.inputOrder,
+          outputOrder: sn.outputOrder,
+          settings: sn.settings,
+          isTarget: sn.isTarget,
+          groupId: groupId && finalGroupIds.has(groupId) ? groupId : undefined,
+        },
+      });
+    }
+  }
+
+  const nodeLookup = new Map<string, SavedRecipeNode>();
   for (let i = 0; i < migrated.nodes.length; i++) {
     const n = migrated.nodes[i];
-    if (!nodeLookup.has(n.id)) {
+    if (n.type !== 'group' && !nodeLookup.has(n.id)) {
       nodeLookup.set(n.id, n);
     }
   }

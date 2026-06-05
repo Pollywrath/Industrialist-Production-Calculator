@@ -1,29 +1,107 @@
-import type { Node, Edge } from '@xyflow/react';
-import type { RecipeNodeData } from '../types/nodes';
+import type { Edge } from '@xyflow/react';
+import { isGroupNode, isRecipeNode } from '../types/nodes';
+import type { CanvasNode } from '../types/nodes';
 import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/idGenerator';
 
+function remapProxyHandleIds(
+  handleIds: string[],
+  idMap: Map<string, string>,
+  recipeNodeIds: Set<string>,
+  side: 'input' | 'output',
+): string[] {
+  let changed = false;
+  const nextHandleIds: string[] = [];
+
+  for (let i = 0; i < handleIds.length; i++) {
+    const handleId = handleIds[i];
+    const parsed = parseHandleId(handleId);
+    const nextNodeId = parsed ? idMap.get(parsed.nodeId) : undefined;
+    const nextHandleId =
+      parsed && nextNodeId ? buildHandleId(nextNodeId, parsed.side, parsed.index) : handleId;
+    const nextParsed = parseHandleId(nextHandleId);
+
+    if (!nextParsed || nextParsed.side !== side || !recipeNodeIds.has(nextParsed.nodeId)) {
+      changed = true;
+      continue;
+    }
+
+    nextHandleIds.push(nextHandleId);
+    if (parsed && nextNodeId) {
+      changed = true;
+    }
+  }
+
+  return changed ? nextHandleIds : handleIds;
+}
+
 export function mergeSaveIntoCanvas(
-  loadedNodes: Node<RecipeNodeData>[],
+  loadedNodes: CanvasNode[],
   loadedEdges: Edge[],
-  currentNodes: Node<RecipeNodeData>[],
+  currentNodes: CanvasNode[],
   currentEdges: Edge[],
-): { nodes: Node<RecipeNodeData>[]; edges: Edge[] } {
+): { nodes: CanvasNode[]; edges: Edge[] } {
   const idMap = new Map<string, string>();
+  const newNodeIds = new Array<string>(loadedNodes.length);
+  const loadedGroupIds = new Set<string>();
+  const loadedRecipeIds = new Set<string>();
   const mergedNodes = [...currentNodes];
 
   for (let i = 0; i < loadedNodes.length; i++) {
     const node = loadedNodes[i];
     const newId = nextNodeId();
+    newNodeIds[i] = newId;
+    if (isGroupNode(node)) {
+      loadedGroupIds.add(newId);
+    } else if (isRecipeNode(node)) {
+      loadedRecipeIds.add(newId);
+    }
 
     if (!idMap.has(node.id)) {
       idMap.set(node.id, newId);
     }
+  }
 
-    mergedNodes.push({
+  for (let i = 0; i < loadedNodes.length; i++) {
+    const node = loadedNodes[i];
+    const newId = newNodeIds[i];
+
+    const mergedNode: CanvasNode = {
       ...node,
       id: newId,
       position: { x: node.position.x + 50, y: node.position.y + 50 },
-    });
+    };
+
+    if (isGroupNode(mergedNode)) {
+      mergedNodes.push({
+        ...mergedNode,
+        data: {
+          ...mergedNode.data,
+          inputProxyHandleIds: remapProxyHandleIds(
+            mergedNode.data.inputProxyHandleIds,
+            idMap,
+            loadedRecipeIds,
+            'input',
+          ),
+          outputProxyHandleIds: remapProxyHandleIds(
+            mergedNode.data.outputProxyHandleIds,
+            idMap,
+            loadedRecipeIds,
+            'output',
+          ),
+        },
+      });
+    } else if (isRecipeNode(mergedNode)) {
+      const groupId = mergedNode.data.groupId
+        ? idMap.get(mergedNode.data.groupId)
+        : undefined;
+      mergedNodes.push({
+        ...mergedNode,
+        data: {
+          ...mergedNode.data,
+          groupId: groupId && loadedGroupIds.has(groupId) ? groupId : undefined,
+        },
+      });
+    }
   }
 
   const mergedEdges = [...currentEdges];

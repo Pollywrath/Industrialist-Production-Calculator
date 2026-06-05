@@ -1,5 +1,5 @@
-import type { Node, Edge } from '@xyflow/react';
-import type { RecipeNodeData } from '../types/nodes';
+import type { Edge } from '@xyflow/react';
+import type { RecipeNodeType } from '../types/nodes';
 import type {
   LPSolverNode,
   LPSolverConnection,
@@ -85,7 +85,7 @@ if (typeof window !== 'undefined') {
 }
 
 export function solveLP(
-  nodes: Node<RecipeNodeData>[],
+  nodes: RecipeNodeType[],
   edges: Edge[]
 ): LPSolverSession {
   if (activeSolveInFlight) {

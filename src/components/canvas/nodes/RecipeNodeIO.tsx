@@ -1,4 +1,5 @@
 import { Handle, Position } from '@xyflow/react';
+import { isRecipeNode } from '../../../types/nodes';
 import type { HandleRef } from '../../../types/nodes';
 import type { Recipe } from '../../../types/data';
 import { getProductName } from '../../../data/lookup';
@@ -235,8 +236,13 @@ export function RecipeNodeIO({
     if (!entry) return;
     const handleId = buildHandleId(nodeId, ref.side, ref.index);
     const { nodes, edges } = useFlowStore.getState();
+    const recipeNodes = nodes.filter(isRecipeNode);
+    const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
+    const recipeEdges = edges.filter(
+      (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
+    );
     const allResolvedProducts = useFlowResultStore.getState().resolvedProducts;
-    const hasEdges = edges.some(
+    const hasEdges = recipeEdges.some(
       (edge) => edge.sourceHandle === handleId || edge.targetHandle === handleId,
     );
     if (!hasEdges) return;
@@ -247,8 +253,8 @@ export function RecipeNodeIO({
       nodeId,
       ref,
       recipe,
-      nodes,
-      edges,
+      recipeNodes,
+      recipeEdges,
       flowResults,
       allResolvedProducts,
     );

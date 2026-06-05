@@ -4,6 +4,7 @@ import { ChevronUp, ChevronDown } from 'lucide-react';
 import { getProductName } from '../../../data/lookup';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { createGraphResolutionContext } from '../../../utils/graphResolutionContext';
+import { isRecipeNode } from '../../../types/nodes';
 import styles from './NodeEditor.module.css';
 import { useNodeEditorStore } from './NodeEditorContext';
 
@@ -64,7 +65,12 @@ export function HandleRow({
   }
 
   const { nodes, edges } = useFlowStore.getState();
-  const resolutionContext = createGraphResolutionContext(nodes, edges);
+  const recipeNodes = nodes.filter(isRecipeNode);
+  const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
+  const recipeEdges = edges.filter(
+    (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
+  );
+  const resolutionContext = createGraphResolutionContext(recipeNodes, recipeEdges);
   const helpers = resolutionContext.createHelpers(nodeId);
   const resolvedProductId = helpers.resolveProduct(side, index);
   const name = getProductName(resolvedProductId);

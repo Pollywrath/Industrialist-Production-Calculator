@@ -12,6 +12,7 @@ import { getProductName, resolveActiveRecipe } from '../../../data/lookup';
 import { INDUS_LOGO_SRC } from '../../../data/productIcons';
 import { getSpecialRecipe } from '../../../data/registry';
 import { formatPower, formatPollution } from '../../../utils/unitFormatting';
+import { isRecipeNode } from '../../../types/nodes';
 import styles from './LPSolverOverlay.module.css';
 
 const TIPS = [
@@ -62,8 +63,13 @@ export function LPSolverOverlay() {
       setTipIndex((prev) => (prev + 1) % TIPS.length);
     }, 5000);
 
-    const { nodes, edges } = useFlowStore.getState();
-    const session = solveLP(nodes, edges);
+    const { nodes: canvasNodes, edges } = useFlowStore.getState();
+    const nodes = canvasNodes.filter(isRecipeNode);
+    const recipeNodeIds = new Set(nodes.map((node) => node.id));
+    const recipeEdges = edges.filter(
+      (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
+    );
+    const session = solveLP(nodes, recipeEdges);
     sessionRef.current = session;
 
     session.promise
@@ -201,7 +207,7 @@ export function LPSolverOverlay() {
 
   const formatNodeLabel = (nodeId: string): string => {
     const node = useFlowStore.getState().nodes.find((candidate) => candidate.id === nodeId);
-    if (!node) return nodeId;
+    if (!isRecipeNode(node)) return nodeId;
     const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id);
     const label = recipe?.name || 'Unknown';
     return label;

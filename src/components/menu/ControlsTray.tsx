@@ -19,6 +19,7 @@ import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useEdgeThemeStore } from '../../stores/useEdgeThemeStore';
 import { isLPSolverRunning } from '../../solver/lpSolverService';
+import { isRecipeNode } from '../../types/nodes';
 import styles from './ControlsTray.module.css';
 
 interface ButtonConfig {
@@ -146,7 +147,7 @@ export function ControlsTray() {
         return;
       }
       const flowStore = useFlowStore.getState();
-      const hasTargetNode = flowStore.nodes.some((n) => !!n.data.isTarget);
+      const hasTargetNode = flowStore.nodes.some((n) => isRecipeNode(n) && !!n.data.isTarget);
       if (!hasTargetNode) {
         void useUIStore.getState().confirm({
           title: 'No Target Nodes Selected',

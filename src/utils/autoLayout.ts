@@ -1,9 +1,10 @@
-import type { Edge, Node } from '@xyflow/react';
+import type { Edge } from '@xyflow/react';
 import ELK from 'elkjs/lib/elk-api.js';
 import elkWorkerUrl from 'elkjs/lib/elk-worker.min.js?url';
 import type { EdgePathStyle } from '../stores/useEdgeThemeStore';
 import { getRecipe } from '../data/lookup';
-import type { RecipeNodeData } from '../types/nodes';
+import { isRecipeNode } from '../types/nodes';
+import type { CanvasNode, RecipeNodeType } from '../types/nodes';
 import {
   BASE_INFO_HEIGHT,
   BOTTOM_PADDING,
@@ -72,7 +73,7 @@ interface EdgeUpdate {
   orthogonalTurns?: Array<{ x: number; y: number }>;
 }
 
-function getNodeHandlesMeta(node: Node<RecipeNodeData>): NodeHandlesMeta {
+function getNodeHandlesMeta(node: RecipeNodeType): NodeHandlesMeta {
   const recipe = getRecipe(node.data.recipeId);
   const fallbackInputCount = recipe?.inputs.length ?? 0;
   const fallbackOutputCount = recipe?.outputs.length ?? 0;
@@ -92,7 +93,7 @@ function getNodeHandlesMeta(node: Node<RecipeNodeData>): NodeHandlesMeta {
   };
 }
 
-function calculateNodeHeight(node: Node<RecipeNodeData>): number {
+function calculateNodeHeight(node: RecipeNodeType): number {
   const { inputCount, outputCount } = getNodeHandlesMeta(node);
   const maxCount = Math.max(inputCount, outputCount, 1);
   const ioAreaHeight = maxCount * RECT_HEIGHT + (maxCount - 1) * RECT_GAP + IO_COLUMN_PADDING;
@@ -118,7 +119,7 @@ function getHandleY(
 }
 
 function findConnectedComponents(
-  nodes: Node<RecipeNodeData>[],
+  nodes: RecipeNodeType[],
   edges: Edge[],
 ): Array<Set<string>> {
   const adjacency = new Map<string, Set<string>>();
@@ -165,7 +166,7 @@ function findConnectedComponents(
 }
 
 async function layoutComponent(
-  componentNodes: Node<RecipeNodeData>[],
+  componentNodes: RecipeNodeType[],
   componentEdges: Edge[],
   edgePath: EdgePathStyle,
 ): Promise<{
@@ -465,18 +466,28 @@ function getSharedHandleComponents(
 }
 
 export async function autoLayout(
-  nodes: Node<RecipeNodeData>[],
+  nodes: CanvasNode[],
   edges: Edge[],
   options: AutoLayoutOptions = {},
-): Promise<{ nodes: Node<RecipeNodeData>[]; edges: Edge[] }> {
+): Promise<{ nodes: CanvasNode[]; edges: Edge[] }> {
   if (!nodes || nodes.length === 0) {
     return { nodes, edges };
   }
 
+  const recipeNodes = nodes.filter(isRecipeNode);
+  if (recipeNodes.length === 0) {
+    return { nodes, edges };
+  }
+
+  const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
+  const recipeEdges = edges.filter(
+    (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
+  );
+
   const edgePath = options.edgePath ?? 'orthogonal';
-  const components = findConnectedComponents(nodes, edges);
-  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
-  const edgeMap = new Map(edges.map((edge) => [edge.id, edge]));
+  const components = findConnectedComponents(recipeNodes, recipeEdges);
+  const nodeMap = new Map(recipeNodes.map((node) => [node.id, node]));
+  const edgeMap = new Map(recipeEdges.map((edge) => [edge.id, edge]));
 
   const nodeIdToComponentIndex = new Map<string, number>();
   for (let i = 0; i < components.length; i++) {
@@ -487,8 +498,8 @@ export async function autoLayout(
   }
 
   const componentEdgeLists: Edge[][] = Array.from({ length: components.length }, () => []);
-  for (let i = 0; i < edges.length; i++) {
-    const edge = edges[i];
+  for (let i = 0; i < recipeEdges.length; i++) {
+    const edge = recipeEdges[i];
     const sourceComponent = nodeIdToComponentIndex.get(edge.source);
     const targetComponent = nodeIdToComponentIndex.get(edge.target);
     if (sourceComponent !== undefined && sourceComponent === targetComponent) {
@@ -500,7 +511,7 @@ export async function autoLayout(
     components.map(async (componentNodeIds, componentIndex) => {
       const componentNodes = [...componentNodeIds]
         .map((id) => nodeMap.get(id))
-        .filter((node): node is Node<RecipeNodeData> => !!node);
+        .filter((node): node is RecipeNodeType => !!node);
       componentNodes.sort((a, b) => a.id.localeCompare(b.id));
 
       const componentEdges = componentEdgeLists[componentIndex];
@@ -769,6 +780,8 @@ export async function autoLayout(
   });
 
   const updatedNodes = nodes.map((node) => {
+    if (!isRecipeNode(node)) return node;
+
     const position = finalPositions.get(node.id);
     if (!position) return node;
 

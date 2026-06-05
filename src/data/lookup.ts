@@ -10,6 +10,7 @@ import { clearFlowCache } from '../solver/flowSolver';
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 import { buildVirtualModularMachines } from '../utils/modularMachineFactory';
 import { buildHandleId } from '../utils/idGenerator';
+import { isRecipeNode } from '../types/nodes';
 
 let recipes: Recipe[] = [];
 let machines: Machine[] = [];
@@ -398,7 +399,12 @@ export function resolveActiveRecipe(
       (useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>);
     const activeHelpers = helpers ?? (() => {
       const flowState = useFlowStore.getState();
-      const resolutionContext = createGraphResolutionContext(flowState.nodes, flowState.edges);
+      const recipeNodes = flowState.nodes.filter(isRecipeNode);
+      const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
+      const recipeEdges = flowState.edges.filter(
+        (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
+      );
+      const resolutionContext = createGraphResolutionContext(recipeNodes, recipeEdges);
       const fallbackHelpers = nodeId ? resolutionContext.createHelpers(nodeId) : null;
       return {
         resolveProduct: (side: 'input' | 'output', index: number) => {

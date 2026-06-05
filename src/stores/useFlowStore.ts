@@ -3,14 +3,14 @@ import { subscribeWithSelector } from 'zustand/middleware';
 import {
   applyNodeChanges,
   applyEdgeChanges,
-  type Node,
   type Edge,
   type OnNodesChange,
   type OnEdgesChange,
   addEdge,
   type Connection,
 } from '@xyflow/react';
-import type { RecipeNodeData } from '../types/nodes';
+import { isGroupNode, isRecipeNode } from '../types/nodes';
+import type { CanvasNode, RecipeNodeData, RecipeNodeType } from '../types/nodes';
 import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { getRecipe } from '../data/lookup';
 import { clearFlowCache } from '../solver/flowSolver';
@@ -43,15 +43,15 @@ interface SetGraphOptions {
 }
 
 interface FlowState {
-  nodes: Node<RecipeNodeData>[];
-  nodesMap: Map<string, Node<RecipeNodeData>>;
+  nodes: CanvasNode[];
+  nodesMap: Map<string, CanvasNode>;
   edges: Edge[];
   graphVersion: number;
   solutionVersion: number;
   markSolutionCommitted: () => void;
 
-  historyPast: HistoryEntry<Node<RecipeNodeData>, Edge>[];
-  historyFuture: HistoryEntry<Node<RecipeNodeData>, Edge>[];
+  historyPast: HistoryEntry<CanvasNode, Edge>[];
+  historyFuture: HistoryEntry<CanvasNode, Edge>[];
   canUndo: boolean;
   canRedo: boolean;
   undo: () => void;
@@ -70,14 +70,14 @@ interface FlowState {
   toggleNodeSelection: (nodeId: string) => void;
   clearNodeSelection: () => void;
 
-  onNodesChange: OnNodesChange<Node<RecipeNodeData>>;
+  onNodesChange: OnNodesChange<CanvasNode>;
   onEdgesChange: OnEdgesChange;
   onConnect: (connection: Connection) => void;
 
-  setNodes: (nodes: Node<RecipeNodeData>[], options?: SetGraphOptions) => void;
+  setNodes: (nodes: CanvasNode[], options?: SetGraphOptions) => void;
   setEdges: (edges: Edge[], options?: SetGraphOptions) => void;
   setNodesAndEdges: (
-    nodes: Node<RecipeNodeData>[],
+    nodes: CanvasNode[],
     edges: Edge[],
     options?: SetGraphOptions,
   ) => void;
@@ -93,7 +93,7 @@ interface FlowState {
   ) => void;
 }
 
-const enrichNodeDimensions = (node: Node<RecipeNodeData>): Node<RecipeNodeData> => {
+const enrichRecipeNodeDimensions = (node: RecipeNodeType): RecipeNodeType => {
   const recipe = getRecipe(node.data.recipeId);
   const leftCount = node.data.inputOrder ? node.data.inputOrder.length : recipe?.inputs.length || 0;
   const rightCount = node.data.outputOrder
@@ -115,17 +115,21 @@ const enrichNodeDimensions = (node: Node<RecipeNodeData>): Node<RecipeNodeData> 
   };
 };
 
-const createNodesMap = (nodes: Node<RecipeNodeData>[]): Map<string, Node<RecipeNodeData>> => {
+const enrichNodeDimensions = (node: CanvasNode): CanvasNode => {
+  return isRecipeNode(node) ? enrichRecipeNodeDimensions(node) : node;
+};
+
+const createNodesMap = (nodes: CanvasNode[]): Map<string, CanvasNode> => {
   return createNodeMap(nodes);
 };
 
 const ensureGraphIntegrity = (
-  nodes: Node<RecipeNodeData>[],
+  nodes: CanvasNode[],
   edges: Edge[],
-): { nodes: Node<RecipeNodeData>[]; edges: Edge[] } => {
+): { nodes: CanvasNode[]; edges: Edge[] } => {
   const seenNodeIds = new Set<string>();
   const nodeIdMap = new Map<string, string>();
-  const sanitizedNodes: Node<RecipeNodeData>[] = [];
+  const sanitizedNodes: CanvasNode[] = [];
 
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
@@ -186,14 +190,31 @@ const ensureGraphIntegrity = (
   return { nodes: sanitizedNodes, edges: sanitizedEdges };
 };
 
+const removeProxyHandleIdsForNode = (handleIds: string[], nodeId: string): string[] => {
+  let changed = false;
+  const nextHandleIds: string[] = [];
+
+  for (let i = 0; i < handleIds.length; i++) {
+    const handleId = handleIds[i];
+    const parsed = parseHandleId(handleId);
+    if (parsed?.nodeId === nodeId) {
+      changed = true;
+      continue;
+    }
+    nextHandleIds.push(handleId);
+  }
+
+  return changed ? nextHandleIds : handleIds;
+};
+
 const useFlowStore = create(
   subscribeWithSelector<FlowState>((set, get) => {
     let isApplyingHistory = false;
     let transactionDepth = 0;
-    let transactionStart: { nodes: Node<RecipeNodeData>[]; edges: Edge[] } | null = null;
+    let transactionStart: { nodes: CanvasNode[]; edges: Edge[] } | null = null;
     let dragStartPositions: Map<string, PositionSnapshot> | null = null;
 
-    const pushHistoryEntry = (entry: HistoryEntry<Node<RecipeNodeData>, Edge> | null) => {
+    const pushHistoryEntry = (entry: HistoryEntry<CanvasNode, Edge> | null) => {
       if (!entry) return;
 
       set((state) => {
@@ -433,7 +454,7 @@ const useFlowStore = create(
 
         const state = get();
         let changed = false;
-        const nextNodes = new Array<Node<RecipeNodeData>>(state.nodes.length);
+        const nextNodes = new Array<CanvasNode>(state.nodes.length);
 
         for (let i = 0; i < state.nodes.length; i++) {
           const node = state.nodes[i];
@@ -467,11 +488,11 @@ const useFlowStore = create(
       toggleNodeSelection: (nodeId) => {
         const state = get();
         let changed = false;
-        const nextNodes = new Array<Node<RecipeNodeData>>(state.nodes.length);
+        const nextNodes = new Array<CanvasNode>(state.nodes.length);
 
         for (let i = 0; i < state.nodes.length; i++) {
           const node = state.nodes[i];
-          if (node.id === nodeId) {
+          if (node.id === nodeId && isRecipeNode(node) && !node.data.groupId) {
             changed = true;
             nextNodes[i] = {
               ...node,
@@ -492,11 +513,11 @@ const useFlowStore = create(
       clearNodeSelection: () => {
         const state = get();
         let changed = false;
-        const nextNodes = new Array<Node<RecipeNodeData>>(state.nodes.length);
+        const nextNodes = new Array<CanvasNode>(state.nodes.length);
 
         for (let i = 0; i < state.nodes.length; i++) {
           const node = state.nodes[i];
-          if (node.data.isMultiSelected) {
+          if (isRecipeNode(node) && node.data.isMultiSelected) {
             changed = true;
             nextNodes[i] = {
               ...node,
@@ -585,6 +606,10 @@ const useFlowStore = create(
           return;
 
         const state = get();
+        const sourceNode = connection.source ? state.nodesMap.get(connection.source) : undefined;
+        const targetNode = connection.target ? state.nodesMap.get(connection.target) : undefined;
+        if (!isRecipeNode(sourceNode) || !isRecipeNode(targetNode)) return;
+
         const currentEdges = state.edges;
         for (let i = 0; i < currentEdges.length; i++) {
           const e = currentEdges[i];
@@ -661,8 +686,8 @@ const useFlowStore = create(
         const state = get();
         const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(nodes, edges);
         const len = sanitizedNodes.length;
-        const enriched = new Array<Node<RecipeNodeData>>(len);
-        const map = new Map<string, Node<RecipeNodeData>>();
+        const enriched = new Array<CanvasNode>(len);
+        const map = new Map<string, CanvasNode>();
         for (let i = 0; i < len; i++) {
           const node = enrichNodeDimensions(sanitizedNodes[i]);
           enriched[i] = node;
@@ -696,13 +721,16 @@ const useFlowStore = create(
       updateNodeData: (nodeId, data) => {
         const state = get();
         const oldNodes = state.nodes;
-        const nextNodes = new Array<Node<RecipeNodeData>>(oldNodes.length);
-        let updatedNode: Node<RecipeNodeData> | null = null;
+        const nextNodes = new Array<CanvasNode>(oldNodes.length);
+        let updatedNode: RecipeNodeType | null = null;
 
         for (let i = 0; i < oldNodes.length; i++) {
           const node = oldNodes[i];
-          if (node.id === nodeId) {
-            updatedNode = enrichNodeDimensions({ ...node, data: { ...node.data, ...data } });
+          if (node.id === nodeId && isRecipeNode(node)) {
+            updatedNode = enrichRecipeNodeDimensions({
+              ...node,
+              data: { ...node.data, ...data },
+            });
             nextNodes[i] = updatedNode;
           } else {
             nextNodes[i] = node;
@@ -729,19 +757,52 @@ const useFlowStore = create(
         const state = get();
         const oldNodes = state.nodes;
         const oldNodesMap = state.nodesMap;
+        const deletedNode = oldNodesMap.get(nodeId);
+        if (!deletedNode) return;
+        const shouldClearGroupMembership = isGroupNode(deletedNode);
 
-        const nextNodesMap = new Map(oldNodesMap);
-        nextNodesMap.delete(nodeId);
-
-        const nextNodes = new Array<Node<RecipeNodeData>>(Math.max(0, oldNodes.length - 1));
+        const nextNodes = new Array<CanvasNode>(Math.max(0, oldNodes.length - 1));
         let idx = 0;
         for (let i = 0; i < oldNodes.length; i++) {
           const node = oldNodes[i];
           if (node.id !== nodeId) {
-            nextNodes[idx++] = node;
+            let nextNode = node;
+            if (shouldClearGroupMembership && isRecipeNode(node) && node.data.groupId === nodeId) {
+              nextNode = {
+                ...node,
+                data: {
+                  ...node.data,
+                  groupId: undefined,
+                },
+              };
+            } else if (isGroupNode(node)) {
+              const inputProxyHandleIds = removeProxyHandleIdsForNode(
+                node.data.inputProxyHandleIds,
+                nodeId,
+              );
+              const outputProxyHandleIds = removeProxyHandleIdsForNode(
+                node.data.outputProxyHandleIds,
+                nodeId,
+              );
+              if (
+                inputProxyHandleIds !== node.data.inputProxyHandleIds ||
+                outputProxyHandleIds !== node.data.outputProxyHandleIds
+              ) {
+                nextNode = {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    inputProxyHandleIds,
+                    outputProxyHandleIds,
+                  },
+                };
+              }
+            }
+            nextNodes[idx++] = nextNode;
           }
         }
 
+        const nextNodesMap = createNodesMap(nextNodes);
         const nextEdges = state.edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
 
         set({
@@ -814,13 +875,16 @@ const useFlowStore = create(
                   !handleIds.includes(edge.targetHandle ?? ''),
               );
 
-        const nextNodes = new Array<Node<RecipeNodeData>>(oldNodes.length);
-        let updatedNode: Node<RecipeNodeData> | null = null;
+        const nextNodes = new Array<CanvasNode>(oldNodes.length);
+        let updatedNode: RecipeNodeType | null = null;
 
         for (let i = 0; i < oldNodes.length; i++) {
           const node = oldNodes[i];
-          if (node.id === nodeId) {
-            updatedNode = enrichNodeDimensions({ ...node, data: { ...node.data, ...data } });
+          if (node.id === nodeId && isRecipeNode(node)) {
+            updatedNode = enrichRecipeNodeDimensions({
+              ...node,
+              data: { ...node.data, ...data },
+            });
             nextNodes[i] = updatedNode;
           } else {
             nextNodes[i] = node;

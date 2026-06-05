@@ -1,5 +1,5 @@
-import type { Node, Edge } from '@xyflow/react';
-import type { RecipeNodeData } from './nodes';
+import type { Edge } from '@xyflow/react';
+import type { RecipeNodeType } from './nodes';
 
 export interface HandleFlowStatus {
   rate: number;
@@ -64,5 +64,5 @@ export interface FlowNetwork {
   SINK: number;
 }
 
-export type ReactFlowNode = Node<RecipeNodeData>;
+export type ReactFlowNode = RecipeNodeType;
 export type ReactFlowEdge = Edge;

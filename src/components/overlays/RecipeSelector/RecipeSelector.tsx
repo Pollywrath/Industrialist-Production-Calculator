@@ -15,6 +15,7 @@ import type { Recipe } from '../../../types/data';
 import { RecipeSelectorProvider } from './RecipeSelectorProvider';
 import { useRecipeSelectorStore } from './RecipeSelectorContext';
 import { createGraphResolutionContext } from '../../../utils/graphResolutionContext';
+import { isRecipeNode } from '../../../types/nodes';
 
 function getClickedPerSecondRate(
   sourceSide: 'input' | 'output' | null,
@@ -80,10 +81,16 @@ function RecipeSelectorModal() {
     return s.nodesMap.get(preselectedNodeId) || null;
   });
 
-  const preselectedNodeData = preselectedNode?.data || null;
+  const preselectedRecipeNode = isRecipeNode(preselectedNode) ? preselectedNode : null;
+  const preselectedNodeData = preselectedRecipeNode?.data || null;
   const nodes = useFlowStore((s) => s.nodes);
   const edges = useFlowStore((s) => s.edges);
-  const resolutionContext = createGraphResolutionContext(nodes, edges);
+  const recipeNodes = nodes.filter(isRecipeNode);
+  const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
+  const recipeEdges = edges.filter(
+    (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
+  );
+  const resolutionContext = createGraphResolutionContext(recipeNodes, recipeEdges);
 
   const preselectedNodeFlows = useFlowResultStore((s) => {
     if (!preselectedNodeId) return undefined;

@@ -23,6 +23,8 @@ import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { useFlowSolver } from '../../hooks/useFlowSolver';
 import { parseHandleId } from '../../utils/idGenerator';
 import { SNAP_GRID, GRID_DOT_SIZE } from '../shared/layoutConstants';
+import { isRecipeNode } from '../../types/nodes';
+import type { CanvasNode } from '../../types/nodes';
 
 const nodeTypes = {
   recipe: RecipeNode,
@@ -231,13 +233,13 @@ function resolveHandleCenter(
   };
 }
 
-const onNodeClick = (_event: React.MouseEvent, node: Node) => {
+const onNodeClick = (_event: React.MouseEvent, node: CanvasNode) => {
   const toggleId = getEffectiveToggleId(useUIStore.getState());
   if (toggleId === 'delete_mode') {
     useFlowStore.getState().deleteNode(node.id);
   } else if (toggleId === 'multi_select') {
     useFlowStore.getState().toggleNodeSelection(node.id);
-  } else if (toggleId === 'target') {
+  } else if (toggleId === 'target' && isRecipeNode(node)) {
     const isTarget = !!node.data?.isTarget;
     useFlowStore.getState().updateNodeData(node.id, { isTarget: !isTarget });
   }
@@ -266,7 +268,12 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const moveNodesFromSnapshots = useFlowStore((s) => s.moveNodesFromSnapshots);
   const fitViewRequestId = useUIStore((s) => s.fitViewRequestId);
   const { screenToFlowPosition, getInternalNode, fitView } = useReactFlow();
-  const resolutionContext = createGraphResolutionContext(nodes, edges);
+  const recipeNodes = nodes.filter(isRecipeNode);
+  const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
+  const recipeEdges = edges.filter(
+    (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
+  );
+  const resolutionContext = createGraphResolutionContext(recipeNodes, recipeEdges);
   const batchDragRef = useRef<BatchDragState | null>(null);
 
   useEffect(() => {
@@ -313,6 +320,13 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
         return false;
       }
 
+      const flowStore = useFlowStore.getState();
+      const sourceNode = flowStore.nodesMap.get(connection.source);
+      const targetNode = flowStore.nodesMap.get(connection.target);
+      if (!isRecipeNode(sourceNode) || !isRecipeNode(targetNode)) {
+        return false;
+      }
+
       const sourceHelpers = resolutionContext.createHelpers(connection.source);
       const targetHelpers = resolutionContext.createHelpers(connection.target);
       const committedResolvedProducts = useFlowResultStore.getState().resolvedProducts;
@@ -344,13 +358,17 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
 
   const handleNodeDragStart = (_event: React.MouseEvent, node: Node) => {
     const isMultiSelectMode = getEffectiveToggleId(useUIStore.getState()) === 'multi_select';
-    const shouldBatchDrag = node.data?.isMultiSelected && isMultiSelectMode;
+    const shouldBatchDrag = isRecipeNode(node) && node.data.isMultiSelected && isMultiSelectMode;
     const nodeIds: string[] = [];
     const startPositions = new Map<string, { x: number; y: number }>();
 
     for (let i = 0; i < nodes.length; i++) {
       const currentNode = nodes[i];
-      if (shouldBatchDrag ? !currentNode.data.isMultiSelected : currentNode.id !== node.id) {
+      if (
+        shouldBatchDrag
+          ? !isRecipeNode(currentNode) || !currentNode.data.isMultiSelected
+          : currentNode.id !== node.id
+      ) {
         continue;
       }
 

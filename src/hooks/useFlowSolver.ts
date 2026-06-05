@@ -5,6 +5,7 @@ import { useDataStore } from '../stores/useDataStore';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { solveFlowPipeline } from '../solver/solverPipeline';
 import { SOLVER_DEBOUNCE_MS } from '../components/shared/layoutConstants';
+import { isRecipeNode } from '../types/nodes';
 
 export function useFlowSolver(): void {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -16,7 +17,13 @@ export function useFlowSolver(): void {
       const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
       if (runToken !== runTokenRef.current) return;
 
-      if (nodes.length === 0) {
+      const recipeNodes = nodes.filter(isRecipeNode);
+      const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
+      const recipeEdges = edges.filter(
+        (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
+      );
+
+      if (recipeNodes.length === 0) {
         if (runToken !== runTokenRef.current) return;
         useFlowResultStore.getState().setResults(new Map(), {}, {}, {}, {}, {}, graphVersion);
         useFlowStore.getState().markSolutionCommitted();
@@ -24,8 +31,8 @@ export function useFlowSolver(): void {
       }
 
       const { results, edgeFlows, edgeTemps, inputTemps, resolvedProducts, nodeRecipes } = solveFlowPipeline(
-        nodes,
-        edges,
+        recipeNodes,
+        recipeEdges,
         globalSettings,
       );
       if (runToken !== runTokenRef.current) return;

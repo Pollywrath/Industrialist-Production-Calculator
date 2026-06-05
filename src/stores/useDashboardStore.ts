@@ -7,6 +7,7 @@ import { resolveActiveRecipe, getMachine, getProduct, getProductName } from '../
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 import { getSpecialRecipe } from '../data/registry';
 import { buildHandleId } from '../utils/idGenerator';
+import { isRecipeNode } from '../types/nodes';
 
 export interface ProductDeficiencyGroup {
   productId: string;
@@ -69,8 +70,11 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     }
 
     const flowStore = useFlowStore.getState();
-    const nodes = flowStore.nodes;
-    const edges = flowStore.edges;
+    const nodes = flowStore.nodes.filter(isRecipeNode);
+    const recipeNodeIds = new Set(nodes.map((node) => node.id));
+    const edges = flowStore.edges.filter(
+      (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
+    );
     const flowResultState = useFlowResultStore.getState();
     const resolvedProducts = flowResultState.resolvedProducts;
     const results = flowResultState.results;

@@ -18,6 +18,7 @@ import { NodeEditorProvider } from './NodeEditorProvider';
 import { useNodeEditorStore, NodeEditorContext } from './NodeEditorContext';
 import { SettingsEditor } from './SettingsEditor';
 import { getSpecialRecipe } from '../../../data/registry';
+import { isRecipeNode } from '../../../types/nodes';
 
 interface NodeEditorProps {
   recipe: Recipe;
@@ -179,6 +180,8 @@ function NodeEditorModal({
     );
 
     const updatedNodes = nodes.map((node) => {
+      if (!isRecipeNode(node)) return node;
+
       if (connectedIds.has(node.id)) {
         if (node.id === nodeId) {
           return {

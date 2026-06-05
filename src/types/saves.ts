@@ -1,5 +1,6 @@
-export interface SavedNode {
+export interface SavedRecipeNode {
   id: string;
+  type?: 'recipe';
   recipeId: string;
   machineCount: number;
   inputOrder?: number[];
@@ -7,7 +8,20 @@ export interface SavedNode {
   position: { x: number; y: number };
   settings?: Record<string, unknown>;
   isTarget?: boolean;
+  groupId?: string;
 }
+
+export interface SavedGroupNode {
+  id: string;
+  type: 'group';
+  label: string;
+  collapsed: boolean;
+  inputProxyHandleIds: string[];
+  outputProxyHandleIds: string[];
+  position: { x: number; y: number };
+}
+
+export type SavedNode = SavedRecipeNode | SavedGroupNode;
 
 export interface SavedEdge {
   id: string;
