@@ -374,15 +374,12 @@ function MachineList() {
   list = [...list, ...virtualModularMachines];
 
   list = list.filter((m) => {
-    // 1. Research lock check
     if (m.research && !unlockedResearchIds.has(m.research)) {
       return false;
     }
-    // 2. Ore Nodes Mode check
     if (m.id === 'm_industrial_drill' && !oreNodesEnabled) {
       return false;
     }
-    // 3. Variant/Limited check
     const isVariant = m.variant && m.variant !== 'none' && m.variant !== '';
     const isLimited = m.limited;
     if (!showVariantLimited && (isVariant || isLimited)) {

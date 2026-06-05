@@ -173,7 +173,7 @@ export const tree_farm_01: SpecialRecipe = {
     return (
       treeCount +
       harvesterCount +
-      1 + // controller
+      1 +
       sprinklerCount +
       waterTanks * 2 +
       outputsCount * 2 +

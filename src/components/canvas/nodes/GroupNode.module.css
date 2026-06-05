@@ -79,6 +79,33 @@
   transform: translateY(-50%);
 }
 
+.group-node__expand-trigger {
+  cursor: pointer;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--theme-color-secondary);
+  border: 1px solid var(--theme-color-border-light);
+  border-radius: 6px;
+  padding: 6px 10px;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.group-node__expand-label {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--theme-color-text-secondary);
+  text-transform: uppercase;
+}
+
+.group-node__expand-icon {
+  color: var(--theme-color-text-secondary);
+}
+
 .group-node__label {
   min-width: 0;
   overflow: hidden;

@@ -6,7 +6,6 @@ import {
   type Edge,
   type OnNodesChange,
   type OnEdgesChange,
-  addEdge,
   type Connection,
 } from '@xyflow/react';
 import { isGroupNode, isRecipeNode } from '../types/nodes';
@@ -34,6 +33,7 @@ import {
   computeGroupBoundsByGroupId,
   computeBoundsFromMembers,
   getRecipeMemberBounds,
+  getCollapsedGroupHeight,
 } from '../utils/groupBounds';
 import type { GroupMemberBounds } from '../utils/groupBounds';
 import {
@@ -98,7 +98,13 @@ interface FlowState {
   ) => void;
 
   updateNodeData: (nodeId: string, data: Partial<RecipeNodeData>) => void;
-  updateGroupNodeData: (nodeId: string, data: Partial<GroupNodeData>) => void;
+  updateGroupNodeData: (
+    nodeId: string,
+    data: Partial<GroupNodeData>,
+    options?: { recordHistory?: boolean },
+  ) => void;
+  collapseGroup: (groupId: string) => void;
+  expandGroup: (groupId: string) => void;
   deleteNode: (nodeId: string) => void;
   deleteEdgesConnectedToHandle: (handleId: string) => void;
   deleteEdgesForHandles: (handleIds: string[]) => void;
@@ -132,11 +138,17 @@ const enrichRecipeNodeDimensions = (node: RecipeNodeType): RecipeNodeType => {
 };
 
 const prepareGroupNode = (node: GroupNodeType): GroupNodeType => {
-  const width = node.width ?? EMPTY_GROUP_WIDTH;
-  const height = node.height ?? EMPTY_GROUP_HEIGHT;
+  const isCollapsed = !!node.data.collapsed;
+  const width = isCollapsed ? NODE_CSS_WIDTH : (node.width ?? EMPTY_GROUP_WIDTH);
+  const height = isCollapsed
+    ? getCollapsedGroupHeight(
+      node.data.inputProxyHandleIds.length,
+      node.data.outputProxyHandleIds.length,
+    )
+    : (node.height ?? EMPTY_GROUP_HEIGHT);
 
   if (
-    node.connectable === false &&
+    node.connectable === isCollapsed &&
     node.draggable === true &&
     node.selectable === false &&
     node.zIndex === 0 &&
@@ -148,13 +160,105 @@ const prepareGroupNode = (node: GroupNodeType): GroupNodeType => {
 
   return {
     ...node,
-    connectable: false,
+    connectable: isCollapsed,
     draggable: true,
     height,
     selectable: false,
     width,
     zIndex: 0,
   };
+};
+
+const syncProxyEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[] => {
+  const recipeNodes = nodes.filter(isRecipeNode);
+  const recipeNodeMap = new Map(recipeNodes.map((rn) => [rn.id, rn]));
+  const groupNodes = nodes.filter(isGroupNode);
+  const groupNodeMap = new Map(groupNodes.map((gn) => [gn.id, gn]));
+
+  const realEdges: Edge[] = edges
+    .filter((e) => !e.id.startsWith('proxy-'))
+    .filter((e) => recipeNodeMap.has(e.source) && recipeNodeMap.has(e.target))
+    .map((e) => {
+      const sourceNode = recipeNodeMap.get(e.source);
+      const targetNode = recipeNodeMap.get(e.target);
+      const isHidden = !!(sourceNode?.hidden || targetNode?.hidden);
+      return {
+        ...e,
+        hidden: isHidden ? true : undefined,
+      };
+    });
+
+  const nextEdges = [...realEdges];
+  const proxyEdges: Edge[] = [];
+
+  for (let i = 0; i < realEdges.length; i++) {
+    const edge = realEdges[i];
+    if (!edge.hidden) continue;
+
+    const sourceNode = recipeNodeMap.get(edge.source);
+    const targetNode = recipeNodeMap.get(edge.target);
+    if (!sourceNode || !targetNode) continue;
+
+    const sourceGroupId = sourceNode.data.groupId;
+    const targetGroupId = targetNode.data.groupId;
+    if (sourceGroupId && sourceGroupId === targetGroupId) continue;
+
+    const sourceGroup = sourceGroupId ? groupNodeMap.get(sourceGroupId) : null;
+    const targetGroup = targetGroupId ? groupNodeMap.get(targetGroupId) : null;
+
+    const isSourceCollapsed = !!sourceGroup?.data.collapsed;
+    const isTargetCollapsed = !!targetGroup?.data.collapsed;
+
+    if (isSourceCollapsed || isTargetCollapsed) {
+      const isSourceReady = !isSourceCollapsed || !!sourceGroup?.data.handlesReady;
+      const isTargetReady = !isTargetCollapsed || !!targetGroup?.data.handlesReady;
+
+      if (!isSourceReady || !isTargetReady) {
+        continue;
+      }
+
+      let finalSource = edge.source;
+      let finalSourceHandle = edge.sourceHandle;
+      let finalTarget = edge.target;
+      let finalTargetHandle = edge.targetHandle;
+
+      let sourceMapped = !isSourceCollapsed;
+      let targetMapped = !isTargetCollapsed;
+
+      if (isSourceCollapsed && sourceGroupId && sourceGroup) {
+        const index = sourceGroup.data.outputProxyHandleIds.indexOf(edge.sourceHandle!);
+        if (index !== -1) {
+          finalSource = sourceGroupId;
+          finalSourceHandle = buildHandleId(sourceGroupId, 'output', index);
+          sourceMapped = true;
+        }
+      }
+
+      if (isTargetCollapsed && targetGroupId && targetGroup) {
+        const index = targetGroup.data.inputProxyHandleIds.indexOf(edge.targetHandle!);
+        if (index !== -1) {
+          finalTarget = targetGroupId;
+          finalTargetHandle = buildHandleId(targetGroupId, 'input', index);
+          targetMapped = true;
+        }
+      }
+
+      if (sourceMapped && targetMapped && (finalSource !== edge.source || finalTarget !== edge.target)) {
+        proxyEdges.push({
+          id: `proxy-${edge.id}`,
+          type: 'recipe',
+          source: finalSource,
+          sourceHandle: finalSourceHandle,
+          target: finalTarget,
+          targetHandle: finalTargetHandle,
+          data: edge.data,
+        });
+      }
+    }
+  }
+
+  nextEdges.push(...proxyEdges);
+  return nextEdges;
 };
 
 const enrichNodeDimensions = (node: CanvasNode): CanvasNode => {
@@ -249,8 +353,10 @@ const applyGroupBoundsForGroups = (
     const nextWidth = bounds?.width ?? node.width ?? EMPTY_GROUP_WIDTH;
     const nextHeight = bounds?.height ?? node.height ?? EMPTY_GROUP_HEIGHT;
 
+    const isCollapsed = !!node.data.collapsed;
+
     if (
-      node.connectable === false &&
+      node.connectable === isCollapsed &&
       node.draggable === true &&
       node.selectable === false &&
       node.zIndex === 0 &&
@@ -265,7 +371,7 @@ const applyGroupBoundsForGroups = (
     changed = true;
     nextNodes[i] = {
       ...node,
-      connectable: false,
+      connectable: isCollapsed,
       draggable: true,
       height: nextHeight,
       position: nextPosition,
@@ -784,6 +890,7 @@ const useFlowStore = create(
           data: {
             label: 'Group',
             collapsed: false,
+            handlesReady: false,
             inputProxyHandleIds,
             outputProxyHandleIds,
           },
@@ -857,6 +964,7 @@ const useFlowStore = create(
           return;
         }
 
+
         const nextNodesMap = createNodesMap(finalNodes);
         set({
           nodes: finalNodes,
@@ -871,7 +979,27 @@ const useFlowStore = create(
 
       onEdgesChange: (changes) => {
         const state = get();
-        const nextEdges = applyEdgeChanges(changes, state.edges);
+        let modifiedChanges = [...changes];
+        const extraRemovals: typeof changes = [];
+
+        for (let i = 0; i < changes.length; i++) {
+          const change = changes[i];
+          if (change.type === 'remove') {
+            if (change.id.startsWith('proxy-')) {
+              const realEdgeId = change.id.substring(6);
+              extraRemovals.push({ type: 'remove', id: realEdgeId });
+            } else {
+              const proxyEdgeId = `proxy-${change.id}`;
+              extraRemovals.push({ type: 'remove', id: proxyEdgeId });
+            }
+          }
+        }
+
+        if (extraRemovals.length > 0) {
+          modifiedChanges = [...changes, ...extraRemovals];
+        }
+
+        const nextEdges = applyEdgeChanges(modifiedChanges, state.edges);
         let hasStructuralChange = false;
         for (let i = 0; i < changes.length; i++) {
           const type = changes[i].type;
@@ -899,28 +1027,103 @@ const useFlowStore = create(
       },
 
       onConnect: (connection) => {
-        if (!connection.sourceHandle || !connection.targetHandle) return;
-        if (!parseHandleId(connection.sourceHandle) || !parseHandleId(connection.targetHandle))
-          return;
+        if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) return;
+
+        let sourceHandle = connection.sourceHandle;
+        let targetHandle = connection.targetHandle;
+        let sourceNodeId = connection.source;
+        let targetNodeId = connection.target;
+
+        let sourceParsed = parseHandleId(sourceHandle);
+        let targetParsed = parseHandleId(targetHandle);
+        if (!sourceParsed || !targetParsed) return;
+
+        if (sourceParsed.side === 'input' && targetParsed.side === 'output') {
+          const tempHandle = sourceHandle;
+          sourceHandle = targetHandle;
+          targetHandle = tempHandle;
+
+          const tempNodeId = sourceNodeId;
+          sourceNodeId = targetNodeId;
+          targetNodeId = tempNodeId;
+
+          const tempParsed = sourceParsed;
+          sourceParsed = targetParsed;
+          targetParsed = tempParsed;
+        }
 
         const state = get();
-        const sourceNode = connection.source ? state.nodesMap.get(connection.source) : undefined;
-        const targetNode = connection.target ? state.nodesMap.get(connection.target) : undefined;
-        if (!isRecipeNode(sourceNode) || !isRecipeNode(targetNode)) return;
+        const sourceNode = state.nodesMap.get(sourceNodeId);
+        const targetNode = state.nodesMap.get(targetNodeId);
+        if (!sourceNode || !targetNode) return;
+
+        let realSourceNodeId = sourceNodeId;
+        let realSourceHandle = sourceHandle;
+        let realTargetNodeId = targetNodeId;
+        let realTargetHandle = targetHandle;
+
+        if (isGroupNode(sourceNode)) {
+          if (!sourceNode.data.collapsed) return;
+          const original = sourceNode.data.outputProxyHandleIds[sourceParsed.index];
+          if (!original) return;
+          const parsed = parseHandleId(original);
+          if (!parsed) return;
+          realSourceNodeId = parsed.nodeId;
+          realSourceHandle = original;
+        }
+
+        if (isGroupNode(targetNode)) {
+          if (!targetNode.data.collapsed) return;
+          const original = targetNode.data.inputProxyHandleIds[targetParsed.index];
+          if (!original) return;
+          const parsed = parseHandleId(original);
+          if (!parsed) return;
+          realTargetNodeId = parsed.nodeId;
+          realTargetHandle = original;
+        }
+
+        const resolvedSource = state.nodesMap.get(realSourceNodeId);
+        const resolvedTarget = state.nodesMap.get(realTargetNodeId);
+        if (!isRecipeNode(resolvedSource) || !isRecipeNode(resolvedTarget)) return;
 
         const currentEdges = state.edges;
         for (let i = 0; i < currentEdges.length; i++) {
           const e = currentEdges[i];
           if (
-            e.sourceHandle === connection.sourceHandle &&
-            e.targetHandle === connection.targetHandle
+            e.sourceHandle === realSourceHandle &&
+            e.targetHandle === realTargetHandle
           ) {
             return;
           }
         }
 
-        const newEdge = { ...connection, id: nextEdgeId(), type: 'recipe' } as Edge;
-        const nextEdges = addEdge(newEdge, currentEdges);
+        const edgeId = nextEdgeId();
+        const isCollapsedGroupConnection = isGroupNode(sourceNode) || isGroupNode(targetNode);
+
+        const realEdge = {
+          id: edgeId,
+          type: 'recipe',
+          source: realSourceNodeId,
+          sourceHandle: realSourceHandle,
+          target: realTargetNodeId,
+          targetHandle: realTargetHandle,
+          hidden: isCollapsedGroupConnection ? true : undefined,
+        } as Edge;
+
+        const nextEdges = [...currentEdges, realEdge];
+
+        if (isCollapsedGroupConnection) {
+          const proxyEdge = {
+            id: `proxy-${edgeId}`,
+            type: 'recipe',
+            source: sourceNodeId,
+            sourceHandle: sourceHandle,
+            target: targetNodeId,
+            targetHandle: targetHandle,
+          } as Edge;
+          nextEdges.push(proxyEdge);
+        }
+
         set({
           edges: nextEdges,
           graphVersion: state.graphVersion + 1,
@@ -1055,8 +1258,36 @@ const useFlowStore = create(
         }
       },
 
-      updateGroupNodeData: (nodeId, data) => {
+      updateGroupNodeData: (nodeId, data, options) => {
         const state = get();
+        const oldNode = state.nodes.find((n) => n.id === nodeId && isGroupNode(n)) as GroupNodeType | undefined;
+        if (!oldNode) return;
+
+        if (data.collapsed !== undefined && data.collapsed !== oldNode.data.collapsed) {
+          if (data.collapsed) {
+            get().collapseGroup(nodeId);
+          } else {
+            get().expandGroup(nodeId);
+          }
+          if (data.label !== undefined && data.label !== oldNode.data.label) {
+            set((s) => ({
+              nodes: s.nodes.map((node) =>
+                node.id === nodeId && isGroupNode(node)
+                  ? { ...node, data: { ...node.data, label: data.label! } }
+                  : node
+              ),
+              nodesMap: createNodesMap(
+                s.nodes.map((node) =>
+                  node.id === nodeId && isGroupNode(node)
+                    ? { ...node, data: { ...node.data, label: data.label! } }
+                    : node
+                )
+              ),
+            }));
+          }
+          return;
+        }
+
         const oldNodes = state.nodes;
         const nextNodes = new Array<CanvasNode>(oldNodes.length);
         let updatedNode: GroupNodeType | null = null;
@@ -1077,15 +1308,128 @@ const useFlowStore = create(
         if (!updatedNode) return;
 
         const nextNodesMap = createNodesMap(nextNodes);
+        const nextEdges = syncProxyEdges(nextNodes, state.edges);
         set({
           nodes: nextNodes,
           nodesMap: nextNodesMap,
+          edges: nextEdges,
           graphVersion: state.graphVersion + 1,
         });
 
-        if (!isApplyingHistory && transactionDepth === 0) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, nextNodes, state.edges));
+        if (!isApplyingHistory && transactionDepth === 0 && options?.recordHistory !== false) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, nextNodes, nextEdges));
         }
+      },
+
+      collapseGroup: (groupId: string) => {
+        const state = get();
+        const groupNode = state.nodes.find((n) => n.id === groupId && isGroupNode(n)) as GroupNodeType | undefined;
+        if (!groupNode || groupNode.data.collapsed) return;
+
+        get().runTransaction(() => {
+          const nodes = get().nodes;
+          const edges = get().edges;
+
+          const recipeNodeIdsInGroup = new Set(
+            nodes.filter((n) => isRecipeNode(n) && n.data.groupId === groupId).map((n) => n.id)
+          );
+
+          const inputProxyHandleIds: string[] = [];
+          const outputProxyHandleIds: string[] = [];
+
+          for (let i = 0; i < edges.length; i++) {
+            const edge = edges[i];
+            if (edge.id.startsWith('proxy-')) continue;
+
+            const isSourceInGroup = recipeNodeIdsInGroup.has(edge.source);
+            const isTargetInGroup = recipeNodeIdsInGroup.has(edge.target);
+
+            if (isSourceInGroup && !isTargetInGroup) {
+              if (edge.sourceHandle && !outputProxyHandleIds.includes(edge.sourceHandle)) {
+                outputProxyHandleIds.push(edge.sourceHandle);
+              }
+            } else if (!isSourceInGroup && isTargetInGroup) {
+              if (edge.targetHandle && !inputProxyHandleIds.includes(edge.targetHandle)) {
+                inputProxyHandleIds.push(edge.targetHandle);
+              }
+            }
+          }
+
+          const nextNodes = nodes.map((node) => {
+            if (isRecipeNode(node) && node.data.groupId === groupId) {
+              return { ...node, hidden: true };
+            }
+            if (node.id === groupId && isGroupNode(node)) {
+              const inputCount = inputProxyHandleIds.length;
+              const outputCount = outputProxyHandleIds.length;
+              const maxCount = Math.max(inputCount, outputCount, 1);
+              const ioAreaHeight = maxCount * RECT_HEIGHT + (maxCount - 1) * RECT_GAP + IO_COLUMN_PADDING;
+              const collapsedHeight = BASE_INFO_HEIGHT + ioAreaHeight + BOTTOM_PADDING;
+
+              return {
+                ...node,
+                width: NODE_CSS_WIDTH,
+                height: collapsedHeight,
+                data: {
+                  ...node.data,
+                  collapsed: true,
+                  handlesReady: false,
+                  inputProxyHandleIds,
+                  outputProxyHandleIds,
+                },
+              };
+            }
+            return node;
+          });
+
+          const nextEdges = syncProxyEdges(nextNodes, edges);
+          const boundedNodes = syncAllGroupBounds(nextNodes);
+
+          set({
+            nodes: boundedNodes,
+            nodesMap: createNodesMap(boundedNodes),
+            edges: nextEdges,
+            graphVersion: get().graphVersion + 1,
+          });
+        });
+      },
+
+      expandGroup: (groupId: string) => {
+        const state = get();
+        const groupNode = state.nodes.find((n) => n.id === groupId && isGroupNode(n)) as GroupNodeType | undefined;
+        if (!groupNode || !groupNode.data.collapsed) return;
+
+        get().runTransaction(() => {
+          const nodes = get().nodes;
+          const edges = get().edges;
+
+          const nextNodes = nodes.map((node) => {
+            if (isRecipeNode(node) && node.data.groupId === groupId) {
+              return { ...node, hidden: false };
+            }
+            if (node.id === groupId && isGroupNode(node)) {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  collapsed: false,
+                  handlesReady: false,
+                },
+              };
+            }
+            return node;
+          });
+
+          const nextEdges = syncProxyEdges(nextNodes, edges);
+          const boundedNodes = syncAllGroupBounds(nextNodes);
+
+          set({
+            nodes: boundedNodes,
+            nodesMap: createNodesMap(boundedNodes),
+            edges: nextEdges,
+            graphVersion: get().graphVersion + 1,
+          });
+        });
       },
 
       deleteNode: (nodeId) => {
@@ -1095,55 +1439,106 @@ const useFlowStore = create(
         const deletedNode = oldNodesMap.get(nodeId);
         if (!deletedNode) return;
         const shouldClearGroupMembership = isGroupNode(deletedNode);
+        const isCollapsedGroupDelete = isGroupNode(deletedNode) && deletedNode.data.collapsed;
 
-        const nextNodes = new Array<CanvasNode>(Math.max(0, oldNodes.length - 1));
-        let idx = 0;
+        const nextNodes: CanvasNode[] = [];
+        const deletedMemberIds = new Set<string>();
+
+        if (isCollapsedGroupDelete) {
+          for (let i = 0; i < oldNodes.length; i++) {
+            const n = oldNodes[i];
+            if (isRecipeNode(n) && n.data.groupId === nodeId) {
+              deletedMemberIds.add(n.id);
+            }
+          }
+        }
+
         for (let i = 0; i < oldNodes.length; i++) {
           const node = oldNodes[i];
-          if (node.id !== nodeId) {
-            let nextNode = node;
-            if (shouldClearGroupMembership && isRecipeNode(node) && node.data.groupId === nodeId) {
+          if (node.id === nodeId || deletedMemberIds.has(node.id)) {
+            continue;
+          }
+
+          let nextNode = node;
+          if (shouldClearGroupMembership && !isCollapsedGroupDelete && isRecipeNode(node) && node.data.groupId === nodeId) {
+            nextNode = {
+              ...node,
+              hidden: false,
+              data: {
+                ...node.data,
+                groupId: undefined,
+              },
+            };
+          } else if (isGroupNode(node)) {
+            const inputProxyHandleIds = removeProxyHandleIdsForNode(
+              node.data.inputProxyHandleIds,
+              nodeId,
+            );
+            const outputProxyHandleIds = removeProxyHandleIdsForNode(
+              node.data.outputProxyHandleIds,
+              nodeId,
+            );
+
+            let finalInputProxy = inputProxyHandleIds;
+            let finalOutputProxy = outputProxyHandleIds;
+            if (isCollapsedGroupDelete) {
+              for (const memberId of deletedMemberIds) {
+                finalInputProxy = removeProxyHandleIdsForNode(finalInputProxy, memberId);
+                finalOutputProxy = removeProxyHandleIdsForNode(finalOutputProxy, memberId);
+              }
+            }
+
+            if (
+              finalInputProxy !== node.data.inputProxyHandleIds ||
+              finalOutputProxy !== node.data.outputProxyHandleIds
+            ) {
               nextNode = {
                 ...node,
                 data: {
                   ...node.data,
-                  groupId: undefined,
+                  inputProxyHandleIds: finalInputProxy,
+                  outputProxyHandleIds: finalOutputProxy,
                 },
               };
-            } else if (isGroupNode(node)) {
-              const inputProxyHandleIds = removeProxyHandleIdsForNode(
-                node.data.inputProxyHandleIds,
-                nodeId,
-              );
-              const outputProxyHandleIds = removeProxyHandleIdsForNode(
-                node.data.outputProxyHandleIds,
-                nodeId,
-              );
-              if (
-                inputProxyHandleIds !== node.data.inputProxyHandleIds ||
-                outputProxyHandleIds !== node.data.outputProxyHandleIds
-              ) {
-                nextNode = {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    inputProxyHandleIds,
-                    outputProxyHandleIds,
-                  },
-                };
-              }
             }
-            nextNodes[idx++] = nextNode;
           }
+          nextNodes.push(nextNode);
         }
 
-        const affectedGroupIds = new Set<string>();
-        if (isRecipeNode(deletedNode) && deletedNode.data.groupId) {
-          affectedGroupIds.add(deletedNode.data.groupId);
-        }
+        const affectedGroupIds = collectGroupNodeIds(nextNodes);
         const finalNodes = applyGroupBoundsForGroups(nextNodes, affectedGroupIds);
         const nextNodesMap = createNodesMap(finalNodes);
-        const nextEdges = state.edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
+
+        const filteredEdges = state.edges
+          .filter((e) => {
+            if (e.source === nodeId || e.target === nodeId) return false;
+            if (isCollapsedGroupDelete && (deletedMemberIds.has(e.source) || deletedMemberIds.has(e.target))) {
+              return false;
+            }
+            if (e.id.startsWith('proxy-')) {
+              const realId = e.id.substring(6);
+              const realEdge = state.edges.find((re) => re.id === realId);
+              if (realEdge) {
+                if (realEdge.source === nodeId || realEdge.target === nodeId) return false;
+                if (isCollapsedGroupDelete && (deletedMemberIds.has(realEdge.source) || deletedMemberIds.has(realEdge.target))) {
+                  return false;
+                }
+              }
+            }
+            return true;
+          })
+          .map((e) => {
+            const srcNode = state.nodesMap.get(e.source);
+            const tgtNode = state.nodesMap.get(e.target);
+            const isSourceMember = isRecipeNode(srcNode) && srcNode.data.groupId === nodeId;
+            const isTargetMember = isRecipeNode(tgtNode) && tgtNode.data.groupId === nodeId;
+            if (!isCollapsedGroupDelete && (isSourceMember || isTargetMember)) {
+              return { ...e, hidden: false };
+            }
+            return e;
+          });
+
+        const nextEdges = syncProxyEdges(finalNodes, filteredEdges);
 
         set({
           nodes: finalNodes,
@@ -1160,12 +1555,23 @@ const useFlowStore = create(
       deleteEdgesConnectedToHandle: (handleId) => {
         const state = get();
         const oldEdges = state.edges;
-        const nextEdges = oldEdges.filter(
-          (edge) => edge.sourceHandle !== handleId && edge.targetHandle !== handleId,
-        );
-        if (nextEdges.length === oldEdges.length) {
-          return;
+
+        const removedEdgeIds = new Set<string>();
+        for (let i = 0; i < oldEdges.length; i++) {
+          const edge = oldEdges[i];
+          if (edge.sourceHandle === handleId || edge.targetHandle === handleId) {
+            removedEdgeIds.add(edge.id);
+            if (edge.id.startsWith('proxy-')) {
+              removedEdgeIds.add(edge.id.substring(6));
+            } else {
+              removedEdgeIds.add(`proxy-${edge.id}`);
+            }
+          }
         }
+
+        if (removedEdgeIds.size === 0) return;
+
+        const nextEdges = oldEdges.filter((edge) => !removedEdgeIds.has(edge.id));
 
         set({
           edges: nextEdges,
@@ -1182,14 +1588,26 @@ const useFlowStore = create(
         const state = get();
         const oldEdges = state.edges;
         const handleIdSet = new Set(handleIds);
-        const nextEdges = oldEdges.filter(
-          (edge) =>
-            !handleIdSet.has(edge.sourceHandle ?? '') &&
-            !handleIdSet.has(edge.targetHandle ?? ''),
-        );
-        if (nextEdges.length === oldEdges.length) {
-          return;
+
+        const removedEdgeIds = new Set<string>();
+        for (let i = 0; i < oldEdges.length; i++) {
+          const edge = oldEdges[i];
+          if (
+            handleIdSet.has(edge.sourceHandle ?? '') ||
+            handleIdSet.has(edge.targetHandle ?? '')
+          ) {
+            removedEdgeIds.add(edge.id);
+            if (edge.id.startsWith('proxy-')) {
+              removedEdgeIds.add(edge.id.substring(6));
+            } else {
+              removedEdgeIds.add(`proxy-${edge.id}`);
+            }
+          }
         }
+
+        if (removedEdgeIds.size === 0) return;
+
+        const nextEdges = oldEdges.filter((edge) => !removedEdgeIds.has(edge.id));
 
         set({
           edges: nextEdges,
@@ -1206,14 +1624,28 @@ const useFlowStore = create(
         const oldNodes = state.nodes;
         const oldEdges = state.edges;
 
+        const removedEdgeIds = new Set<string>();
+        if (handleIds.length > 0) {
+          for (let i = 0; i < oldEdges.length; i++) {
+            const edge = oldEdges[i];
+            if (
+              handleIds.includes(edge.sourceHandle ?? '') ||
+              handleIds.includes(edge.targetHandle ?? '')
+            ) {
+              removedEdgeIds.add(edge.id);
+              if (edge.id.startsWith('proxy-')) {
+                removedEdgeIds.add(edge.id.substring(6));
+              } else {
+                removedEdgeIds.add(`proxy-${edge.id}`);
+              }
+            }
+          }
+        }
+
         const nextEdges =
-          handleIds.length === 0
+          removedEdgeIds.size === 0
             ? oldEdges
-            : oldEdges.filter(
-                (edge) =>
-                  !handleIds.includes(edge.sourceHandle ?? '') &&
-                  !handleIds.includes(edge.targetHandle ?? ''),
-              );
+            : oldEdges.filter((edge) => !removedEdgeIds.has(edge.id));
 
         const nextNodes = new Array<CanvasNode>(oldNodes.length);
         let updatedNode: RecipeNodeType | null = null;

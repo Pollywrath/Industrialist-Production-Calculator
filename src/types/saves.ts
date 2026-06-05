@@ -9,6 +9,7 @@ export interface SavedRecipeNode {
   settings?: Record<string, unknown>;
   isTarget?: boolean;
   groupId?: string;
+  hidden?: boolean;
 }
 
 export interface SavedGroupNode {
@@ -16,6 +17,7 @@ export interface SavedGroupNode {
   type: 'group';
   label: string;
   collapsed: boolean;
+  handlesReady?: boolean;
   inputProxyHandleIds: string[];
   outputProxyHandleIds: string[];
   position: { x: number; y: number };
@@ -31,6 +33,7 @@ export interface SavedEdge {
   targetIndex: number;
   controlPoints?: { x: number; y: number }[];
   orthogonalTurns?: { x: number; y: number }[];
+  hidden?: boolean;
 }
 
 export interface GlobalSettings {

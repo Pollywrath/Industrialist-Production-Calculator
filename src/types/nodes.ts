@@ -19,6 +19,7 @@ export type RecipeNodeData = {
 export type GroupNodeData = {
   label: string;
   collapsed: boolean;
+  handlesReady?: boolean;
   inputProxyHandleIds: string[];
   outputProxyHandleIds: string[];
 };

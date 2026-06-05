@@ -385,8 +385,12 @@ export function RecipeEdge({
     const flowStore = useFlowStore.getState();
     const normalizedPoints = toFinitePoints(nextPoints);
 
+    const isProxy = edgeId.startsWith('proxy-');
+    const realId = isProxy ? edgeId.substring(6) : edgeId;
+    const proxyId = isProxy ? edgeId : `proxy-${edgeId}`;
+
     const nextEdges = flowStore.edges.map((edge) => {
-      if (edge.id !== edgeId) return edge;
+      if (edge.id !== realId && edge.id !== proxyId) return edge;
 
       const nextData: Record<string, unknown> = {
         ...(edge.data as Record<string, unknown> | undefined),

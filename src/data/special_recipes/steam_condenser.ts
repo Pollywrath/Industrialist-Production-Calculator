@@ -19,7 +19,7 @@ export function computeSteadyState(
   steamTemp: number,
   steamFlow: number,
 ): CondenserSteadyStateResult {
-  const f = 800; // coolant flow fixed at 800
+  const f = 800;
   const q = steamFlow;
 
   const a = f / 3000;
@@ -120,7 +120,7 @@ export const steam_condenser_01: SpecialRecipe = {
       name: 'Makes Distilled Water, Condensate',
       machine_id: 'm_steam_condenser',
       cycle_time: 1,
-      power_consumption: 500000, // 500k MV fixed
+      power_consumption: 500000,
       power_type: 'MV',
       pollution: 0,
       inputs: [

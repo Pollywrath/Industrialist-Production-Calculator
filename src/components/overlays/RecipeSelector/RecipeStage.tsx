@@ -33,15 +33,12 @@ export function RecipeStage({
     const machine = getMachine(r.machine_id);
     if (!machine) return true;
 
-    // 1. Research lock check
     if (machine.research && !unlockedResearchIds.has(machine.research)) {
       return false;
     }
-    // 2. Ore Nodes Mode check
     if (machine.id === 'm_industrial_drill' && !oreNodesEnabled) {
       return false;
     }
-    // 3. Variant/Limited check
     const isVariant = machine.variant && machine.variant !== 'none' && machine.variant !== '';
     const isLimited = machine.limited;
     if (!showVariantLimited && (isVariant || isLimited)) {

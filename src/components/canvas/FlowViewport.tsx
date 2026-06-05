@@ -38,12 +38,11 @@ const nodeTypes = {
   recipe: RecipeNode,
   group: GroupNode,
 };
+
 const edgeTypes = {
   recipe: RecipeEdge,
 };
 
-const CONTROL_POINT_MIN_DISTANCE = 10;
-const CONTROL_POINT_DELETE_HIT_RADIUS = 7;
 const CATMULL_SEGMENT_SAMPLES = 16;
 
 function isFiniteControlPoint(value: unknown): value is EdgeControlPoint {
@@ -70,36 +69,6 @@ function toControlPoints(data: unknown): EdgeControlPoint[] {
   }
 
   return points;
-}
-
-function isNearExistingPoint(
-  controlPoints: EdgeControlPoint[],
-  candidate: EdgeControlPoint,
-  threshold: number,
-): boolean {
-  const thresholdSquared = threshold * threshold;
-  for (let i = 0; i < controlPoints.length; i++) {
-    const point = controlPoints[i];
-    const dx = point.x - candidate.x;
-    const dy = point.y - candidate.y;
-    if (dx * dx + dy * dy <= thresholdSquared) return true;
-  }
-  return false;
-}
-
-function findControlPointIndexNear(
-  controlPoints: EdgeControlPoint[],
-  candidate: EdgeControlPoint,
-  threshold: number,
-): number {
-  const thresholdSquared = threshold * threshold;
-  for (let i = 0; i < controlPoints.length; i++) {
-    const point = controlPoints[i];
-    const dx = point.x - candidate.x;
-    const dy = point.y - candidate.y;
-    if (dx * dx + dy * dy <= thresholdSquared) return i;
-  }
-  return -1;
 }
 
 function distanceSquaredBetweenPoints(a: EdgeControlPoint, b: EdgeControlPoint): number {
@@ -356,33 +325,59 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       )
         return false;
 
-      const sourceParsed = parseHandleId(connection.sourceHandle);
-      const targetParsed = parseHandleId(connection.targetHandle);
-
-      if (!sourceParsed || !targetParsed) {
-        return false;
-      }
-
-      if (sourceParsed.side !== 'output' || targetParsed.side !== 'input') {
-        return false;
-      }
-
       const flowStore = useFlowStore.getState();
-      const sourceNode = flowStore.nodesMap.get(connection.source);
-      const targetNode = flowStore.nodesMap.get(connection.target);
+
+      const resolveEndpoint = (nodeId: string, handleId: string) => {
+        const node = flowStore.nodesMap.get(nodeId);
+        if (!node) return null;
+        if (isGroupNode(node)) {
+          if (!node.data.collapsed) return null;
+          const parsed = parseHandleId(handleId);
+          if (!parsed) return null;
+          const original =
+            parsed.side === 'input'
+              ? node.data.inputProxyHandleIds[parsed.index]
+              : node.data.outputProxyHandleIds[parsed.index];
+          if (!original) return null;
+          const parsedOriginal = parseHandleId(original);
+          if (!parsedOriginal) return null;
+          return { nodeId: parsedOriginal.nodeId, handleId: original, parsed: parsedOriginal };
+        }
+        const parsed = parseHandleId(handleId);
+        if (!parsed) return null;
+        return { nodeId, handleId, parsed };
+      };
+
+      const sourceRes = resolveEndpoint(connection.source, connection.sourceHandle);
+      const targetRes = resolveEndpoint(connection.target, connection.targetHandle);
+
+      if (!sourceRes || !targetRes) return false;
+
+      let outRes = sourceRes;
+      let inRes = targetRes;
+
+      if (sourceRes.parsed.side === 'input' && targetRes.parsed.side === 'output') {
+        outRes = targetRes;
+        inRes = sourceRes;
+      } else if (sourceRes.parsed.side !== 'output' || targetRes.parsed.side !== 'input') {
+        return false;
+      }
+
+      const sourceNode = flowStore.nodesMap.get(outRes.nodeId);
+      const targetNode = flowStore.nodesMap.get(inRes.nodeId);
       if (!isRecipeNode(sourceNode) || !isRecipeNode(targetNode)) {
         return false;
       }
 
-      const sourceHelpers = resolutionContext.createHelpers(connection.source);
-      const targetHelpers = resolutionContext.createHelpers(connection.target);
+      const sourceHelpers = resolutionContext.createHelpers(outRes.nodeId);
+      const targetHelpers = resolutionContext.createHelpers(inRes.nodeId);
       const committedResolvedProducts = useFlowResultStore.getState().resolvedProducts;
       const resolvedSourceProductId =
-        committedResolvedProducts[connection.sourceHandle] ??
-        sourceHelpers.resolveProduct('output', sourceParsed.index);
+        committedResolvedProducts[outRes.handleId] ??
+        sourceHelpers.resolveProduct('output', outRes.parsed.index);
       const resolvedTargetProductId =
-        committedResolvedProducts[connection.targetHandle] ??
-        targetHelpers.resolveProduct('input', targetParsed.index);
+        committedResolvedProducts[inRes.handleId] ??
+        targetHelpers.resolveProduct('input', inRes.parsed.index);
 
       const sourceProdObj = getProduct(resolvedSourceProductId);
       const targetProdObj = getProduct(resolvedTargetProductId);
@@ -528,107 +523,52 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   };
 
   const onEdgeClick = (event: React.MouseEvent, edge: Edge) => {
-    if (getEffectiveToggleId(useUIStore.getState()) !== 'delete_mode') {
-      return;
+    const toggleId = getEffectiveToggleId(useUIStore.getState());
+    if (toggleId === 'delete_mode') {
+      event.stopPropagation();
+      onEdgesChange([{ type: 'remove', id: edge.id }]);
     }
-
-    const flowStore = useFlowStore.getState();
-    const clickPosition = screenToFlowPosition({
-      x: event.clientX,
-      y: event.clientY,
-    });
-
-    const currentEdge = flowStore.edges.find((existingEdge) => existingEdge.id === edge.id);
-    if (currentEdge) {
-      const existingPoints = toControlPoints(currentEdge.data);
-      const controlPointIndex = findControlPointIndexNear(
-        existingPoints,
-        clickPosition,
-        CONTROL_POINT_DELETE_HIT_RADIUS,
-      );
-
-      if (controlPointIndex !== -1) {
-        const nextEdges = flowStore.edges.map((existingEdge) => {
-          if (existingEdge.id !== edge.id) return existingEdge;
-
-          const points = toControlPoints(existingEdge.data);
-          if (controlPointIndex < 0 || controlPointIndex >= points.length) return existingEdge;
-          const nextPoints = points.filter((_, index) => index !== controlPointIndex);
-
-          const nextData: Record<string, unknown> = {
-            ...(existingEdge.data as Record<string, unknown> | undefined),
-          };
-          if (nextPoints.length > 0) {
-            nextData.controlPoints = nextPoints;
-          } else {
-            delete nextData.controlPoints;
-          }
-
-          return {
-            ...existingEdge,
-            type: 'recipe',
-            data: nextData,
-          };
-        });
-
-        flowStore.setEdges(nextEdges, { visualOnly: true });
-        return;
-      }
-    }
-
-    flowStore.setEdges(flowStore.edges.filter((existingEdge) => existingEdge.id !== edge.id));
   };
 
-  const onEdgeDoubleClick = (event: React.MouseEvent, edge: Edge) => {
-    if (edgePathStyle !== 'bezier' && edgePathStyle !== 'straight') return;
-    if (getEffectiveToggleId(useUIStore.getState()) === 'delete_mode') return;
-
-    const clickPosition = screenToFlowPosition({
+  const onEdgeDoubleClick = (event: React.MouseEvent, clickedEdge: Edge) => {
+    event.stopPropagation();
+    const flowStore = useFlowStore.getState();
+    const nextPoint = screenToFlowPosition({
       x: event.clientX,
       y: event.clientY,
     });
-    const nextPoint: EdgeControlPoint = { x: clickPosition.x, y: clickPosition.y };
 
-    const flowStore = useFlowStore.getState();
-    const nextEdges = flowStore.edges.map((currentEdge) => {
-      if (currentEdge.id !== edge.id) return currentEdge;
+    const existingPoints = toControlPoints(clickedEdge.data);
+    const sourcePoint = resolveHandleCenter(
+      getInternalNode(clickedEdge.source),
+      'source',
+      clickedEdge.sourceHandle,
+    );
+    const targetPoint = resolveHandleCenter(
+      getInternalNode(clickedEdge.target),
+      'target',
+      clickedEdge.targetHandle,
+    );
 
-      const existingPoints = toControlPoints(currentEdge.data);
-      if (isNearExistingPoint(existingPoints, nextPoint, CONTROL_POINT_MIN_DISTANCE)) {
-        return currentEdge;
-      }
+    let nextControlPoints = [...existingPoints, nextPoint];
 
-      const sourcePoint = resolveHandleCenter(
-        getInternalNode(currentEdge.source),
-        'source',
-        currentEdge.sourceHandle,
-      );
-      const targetPoint = resolveHandleCenter(
-        getInternalNode(currentEdge.target),
-        'target',
-        currentEdge.targetHandle,
-      );
-
-      if (!sourcePoint || !targetPoint) {
-        const fallbackControlPoints = [...existingPoints, nextPoint];
-        return {
-          ...currentEdge,
-          type: 'recipe',
-          data: {
-            ...(currentEdge.data as Record<string, unknown> | undefined),
-            controlPoints: fallbackControlPoints,
-          },
-        };
-      }
-
+    if (sourcePoint && targetPoint) {
       const pathPoints: EdgeControlPoint[] = [sourcePoint, ...existingPoints, targetPoint];
       const nearestSegmentIndex =
         edgePathStyle === 'straight'
           ? findNearestPolylineSegmentIndex(pathPoints, nextPoint)
           : findNearestCatmullSegmentIndex(pathPoints, nextPoint);
       const insertIndex = Math.max(0, Math.min(existingPoints.length, nearestSegmentIndex));
-      const nextControlPoints = existingPoints.slice();
+      nextControlPoints = existingPoints.slice();
       nextControlPoints.splice(insertIndex, 0, nextPoint);
+    }
+
+    const isProxy = clickedEdge.id.startsWith('proxy-');
+    const realId = isProxy ? clickedEdge.id.substring(6) : clickedEdge.id;
+    const proxyId = isProxy ? clickedEdge.id : `proxy-${clickedEdge.id}`;
+
+    const nextEdges = edges.map((currentEdge) => {
+      if (currentEdge.id !== realId && currentEdge.id !== proxyId) return currentEdge;
 
       return {
         ...currentEdge,
@@ -643,10 +583,35 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
     flowStore.setEdges(nextEdges, { visualOnly: true });
   };
 
+  const groupCollapsedMap = new Map<string, { collapsed: boolean; handlesReady: boolean }>();
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (isGroupNode(node)) {
+      groupCollapsedMap.set(node.id, {
+        collapsed: !!node.data.collapsed,
+        handlesReady: !!node.data.handlesReady,
+      });
+    }
+  }
+
+  const safeEdges = edges.filter((edge) => {
+    if (edge.id.startsWith('proxy-')) {
+      const sourceGroup = groupCollapsedMap.get(edge.source);
+      if (sourceGroup && (!sourceGroup.collapsed || !sourceGroup.handlesReady)) {
+        return false;
+      }
+      const targetGroup = groupCollapsedMap.get(edge.target);
+      if (targetGroup && (!targetGroup.collapsed || !targetGroup.handlesReady)) {
+        return false;
+      }
+    }
+    return true;
+  });
+
   return (
     <ReactFlow
       nodes={renderNodes}
-      edges={edges}
+      edges={safeEdges}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       onNodesChange={handleNodesChange}

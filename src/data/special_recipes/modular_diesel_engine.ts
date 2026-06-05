@@ -310,7 +310,7 @@ export const modular_diesel_engine_01: SpecialRecipe = {
     const fuelInputsSetting = (settings.fuel_inputs as number) ?? 1;
 
     return (
-      1 + // controller
+      1 +
       cylinders +
       generators * 2 +
       exhaustsSetting +

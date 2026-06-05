@@ -4,6 +4,10 @@ import {
   BASE_INFO_HEIGHT,
   NODE_CSS_WIDTH,
   SNAP_GRID,
+  RECT_HEIGHT,
+  RECT_GAP,
+  IO_COLUMN_PADDING,
+  BOTTOM_PADDING,
 } from '../components/shared/layoutConstants';
 
 export const GROUP_PADDING_X = SNAP_GRID[0];
@@ -11,6 +15,12 @@ export const GROUP_PADDING_Y = SNAP_GRID[1];
 export const GROUP_HEADER_HEIGHT = SNAP_GRID[1] * 2;
 export const EMPTY_GROUP_WIDTH = 260;
 export const EMPTY_GROUP_HEIGHT = 140;
+
+export function getCollapsedGroupHeight(inputCount: number, outputCount: number): number {
+  const maxCount = Math.max(inputCount, outputCount, 1);
+  const ioAreaHeight = maxCount * RECT_HEIGHT + (maxCount - 1) * RECT_GAP + IO_COLUMN_PADDING;
+  return BASE_INFO_HEIGHT + ioAreaHeight + BOTTOM_PADDING;
+}
 
 export interface GroupMemberBounds {
   id: string;
@@ -130,7 +140,7 @@ export function computeGroupBoundsByGroupId(
 
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
-    if (!isRecipeNode(node) || !node.data.groupId) continue;
+    if (!isRecipeNode(node) || !node.data.groupId || node.hidden) continue;
     if (groupIds && !groupIds.has(node.data.groupId)) continue;
 
     let extents = extentsByGroupId.get(node.data.groupId);

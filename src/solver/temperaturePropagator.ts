@@ -130,7 +130,6 @@ export function propagateTemperatures(
       }
     }
 
-    // Check convergence
     if (iter > 0) {
       let maxDiff = 0;
       for (const edge of edges) {
@@ -146,7 +145,6 @@ export function propagateTemperatures(
       }
     }
 
-    // Save for next convergence check
     for (const edge of edges) {
       prevEdgeTemps[edge.id] = edgeTemps[edge.id];
     }

@@ -71,22 +71,39 @@ export function arePositionsEqual(a: PositionSnapshot, b: PositionSnapshot): boo
   return a.x === b.x && a.y === b.y;
 }
 
+function sanitizeNodesForHistory<NodeType extends Node>(nodes: NodeType[]): NodeType[] {
+  return nodes.map((node) => {
+    if (node.type === 'group' && node.data) {
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          handlesReady: false,
+        },
+      };
+    }
+    return node;
+  });
+}
+
 export function buildGraphHistoryEntry<NodeType extends Node, EdgeType extends Edge>(
   beforeNodes: NodeType[],
   beforeEdges: EdgeType[],
   afterNodes: NodeType[],
   afterEdges: EdgeType[],
 ): GraphHistoryEntry<NodeType, EdgeType> | null {
-  const beforeNodesById = createNodeMap(beforeNodes);
+  const sanitizedBeforeNodes = sanitizeNodesForHistory(beforeNodes);
+  const sanitizedAfterNodes = sanitizeNodesForHistory(afterNodes);
+  const beforeNodesById = createNodeMap(sanitizedBeforeNodes);
   const beforeEdgesById = createEdgeMap(beforeEdges);
-  const afterNodesById = createNodeMap(afterNodes);
+  const afterNodesById = createNodeMap(sanitizedAfterNodes);
   const afterEdgesById = createEdgeMap(afterEdges);
 
   const nodeDiffs: NodeHistoryDiff<NodeType>[] = [];
   const edgeDiffs: EdgeHistoryDiff<EdgeType>[] = [];
 
-  for (let i = 0; i < beforeNodes.length; i++) {
-    const beforeNode = beforeNodes[i];
+  for (let i = 0; i < sanitizedBeforeNodes.length; i++) {
+    const beforeNode = sanitizedBeforeNodes[i];
     const afterNode = afterNodesById.get(beforeNode.id);
     if (!afterNode) {
       nodeDiffs.push({ type: 'remove', id: beforeNode.id, before: beforeNode });
@@ -95,8 +112,8 @@ export function buildGraphHistoryEntry<NodeType extends Node, EdgeType extends E
     }
   }
 
-  for (let i = 0; i < afterNodes.length; i++) {
-    const afterNode = afterNodes[i];
+  for (let i = 0; i < sanitizedAfterNodes.length; i++) {
+    const afterNode = sanitizedAfterNodes[i];
     if (!beforeNodesById.has(afterNode.id)) {
       nodeDiffs.push({ type: 'add', id: afterNode.id, after: afterNode });
     }
@@ -127,8 +144,8 @@ export function buildGraphHistoryEntry<NodeType extends Node, EdgeType extends E
     kind: 'graph',
     nodeDiffs,
     edgeDiffs,
-    nodeOrderBefore: beforeNodes.map((node) => node.id),
-    nodeOrderAfter: afterNodes.map((node) => node.id),
+    nodeOrderBefore: sanitizedBeforeNodes.map((node) => node.id),
+    nodeOrderAfter: sanitizedAfterNodes.map((node) => node.id),
     edgeOrderBefore: beforeEdges.map((edge) => edge.id),
     edgeOrderAfter: afterEdges.map((edge) => edge.id),
   };

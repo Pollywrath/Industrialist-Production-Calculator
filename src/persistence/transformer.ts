@@ -161,6 +161,7 @@ export function migrateSaveData(rawData: unknown): SaveData {
       settings,
       isTarget: typeof n.isTarget === 'boolean' ? n.isTarget : undefined,
       groupId: typeof n.groupId === 'string' ? n.groupId : undefined,
+      hidden: typeof n.hidden === 'boolean' ? n.hidden : undefined,
     };
 
     if (Array.isArray(n.inputOrder)) {
@@ -212,6 +213,7 @@ export function migrateSaveData(rawData: unknown): SaveData {
       targetIndex: tIdx >= 0 ? tIdx : 0,
       controlPoints: sanitizeSavedPoints(e.controlPoints),
       orthogonalTurns: sanitizeSavedPoints(e.orthogonalTurns),
+      hidden: typeof e.hidden === 'boolean' ? e.hidden : undefined,
     };
   });
 
@@ -251,6 +253,7 @@ export function serializeCanvas(nodes: CanvasNode[], edges: Edge[]): SaveData {
         settings: n.data.settings ?? {},
         isTarget: n.data.isTarget,
         groupId: n.data.groupId,
+        hidden: n.hidden || undefined,
       });
     } else if (isGroupNode(n)) {
       savedNodes.push({
@@ -268,6 +271,7 @@ export function serializeCanvas(nodes: CanvasNode[], edges: Edge[]): SaveData {
   const savedEdges: SavedEdge[] = [];
   for (let i = 0; i < edges.length; i++) {
     const e = edges[i];
+    if (e.id.startsWith('proxy-')) continue;
     if (!e.sourceHandle || !e.targetHandle) continue;
 
     const sourceParsed = parseHandleId(e.sourceHandle);
@@ -290,6 +294,7 @@ export function serializeCanvas(nodes: CanvasNode[], edges: Edge[]): SaveData {
       orthogonalTurns: sanitizeSavedPoints(
         (e.data as { orthogonalTurns?: unknown } | undefined)?.orthogonalTurns,
       ),
+      hidden: e.hidden || undefined,
     });
   }
 
@@ -348,6 +353,7 @@ export function deserializeCanvas(saveData: SaveData): {
         data: {
           label: sn.label,
           collapsed: sn.collapsed,
+          handlesReady: false,
           inputProxyHandleIds: remapProxyHandleIds(
             sn.inputProxyHandleIds,
             idMap,
@@ -368,6 +374,7 @@ export function deserializeCanvas(saveData: SaveData): {
         id: finalId,
         type: 'recipe',
         position: sn.position,
+        hidden: sn.hidden || undefined,
         data: {
           recipeId: sn.recipeId,
           machineCount: sn.machineCount,
@@ -443,6 +450,7 @@ export function deserializeCanvas(saveData: SaveData): {
       sourceHandle: buildHandleId(sourceId, 'output', se.sourceIndex),
       targetHandle: buildHandleId(targetId, 'input', se.targetIndex),
       data: edgeData,
+      hidden: se.hidden || undefined,
     });
   }
 
