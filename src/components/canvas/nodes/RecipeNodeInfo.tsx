@@ -1,3 +1,4 @@
+import { Ellipsis } from 'lucide-react';
 import type { Recipe } from '../../../types/data';
 import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
 import { getSpecialRecipe } from '../../../data/registry';
@@ -63,18 +64,7 @@ export function RecipeNodeInfo({
         </div>
       )}
       <button className={styles['recipe-node-info__top-right-btn']} onClick={handleBtnClick}>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="1"></circle>
-          <circle cx="19" cy="12" r="1"></circle>
-          <circle cx="5" cy="12" r="1"></circle>
-        </svg>
+        <Ellipsis size={14} />
       </button>
       <div className={styles['recipe-node-info__title']}>{displayName}</div>
 

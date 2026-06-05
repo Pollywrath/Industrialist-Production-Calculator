@@ -3,6 +3,7 @@ import {
   ReactFlow,
   Background,
   BackgroundVariant,
+  ViewportPortal,
   useReactFlow,
   ConnectionLineType,
   type Edge,
@@ -12,6 +13,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { RecipeNode } from './nodes/RecipeNode';
+import { GroupNode } from './nodes/GroupNode';
 import { RecipeEdge } from './edges/RecipeEdge';
 import { getProduct } from '../../data/lookup';
 import type { EdgeControlPoint } from '../../types/edges';
@@ -23,11 +25,18 @@ import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { useFlowSolver } from '../../hooks/useFlowSolver';
 import { parseHandleId } from '../../utils/idGenerator';
 import { SNAP_GRID, GRID_DOT_SIZE } from '../shared/layoutConstants';
-import { isRecipeNode } from '../../types/nodes';
-import type { CanvasNode } from '../../types/nodes';
+import { isGroupNode, isRecipeNode } from '../../types/nodes';
+import type { CanvasNode, RecipeNodeType } from '../../types/nodes';
+import {
+  computeBoundsFromMembersWithMovedMember,
+  getRecipeMemberBounds,
+} from '../../utils/groupBounds';
+import type { GroupBounds, GroupMemberBounds } from '../../utils/groupBounds';
+import previewStyles from './GroupBoundsPreview.module.css';
 
 const nodeTypes = {
   recipe: RecipeNode,
+  group: GroupNode,
 };
 const edgeTypes = {
   recipe: RecipeEdge,
@@ -254,6 +263,30 @@ interface BatchDragState {
   startPositions: Map<string, { x: number; y: number }>;
   draggedNodeId: string;
   draggedStartPosition: { x: number; y: number };
+  groupPreview: GroupBoundsPreviewState | null;
+}
+
+interface GroupBoundsPreviewState {
+  draggedNodeId: string;
+  members: GroupMemberBounds[];
+}
+
+function applyGroupBoundsPreview(
+  element: HTMLDivElement | null,
+  bounds: GroupBounds | null,
+): void {
+  if (!element || !bounds) return;
+
+  element.style.setProperty('--group-preview-x', `${bounds.x}px`);
+  element.style.setProperty('--group-preview-y', `${bounds.y}px`);
+  element.style.setProperty('--group-preview-width', `${bounds.width}px`);
+  element.style.setProperty('--group-preview-height', `${bounds.height}px`);
+  element.dataset.visible = 'true';
+}
+
+function hideGroupBoundsPreview(element: HTMLDivElement | null): void {
+  if (!element) return;
+  delete element.dataset.visible;
 }
 
 function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
@@ -268,13 +301,27 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const moveNodesFromSnapshots = useFlowStore((s) => s.moveNodesFromSnapshots);
   const fitViewRequestId = useUIStore((s) => s.fitViewRequestId);
   const { screenToFlowPosition, getInternalNode, fitView } = useReactFlow();
-  const recipeNodes = nodes.filter(isRecipeNode);
-  const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
+  const recipeNodes: RecipeNodeType[] = [];
+  const renderNodes: CanvasNode[] = [];
+  const recipeNodeIds = new Set<string>();
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (isRecipeNode(node)) {
+      recipeNodes.push(node);
+      recipeNodeIds.add(node.id);
+    } else if (isGroupNode(node)) {
+      renderNodes.push(node);
+    }
+  }
+  for (let i = 0; i < recipeNodes.length; i++) {
+    renderNodes.push(recipeNodes[i]);
+  }
   const recipeEdges = edges.filter(
     (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
   );
   const resolutionContext = createGraphResolutionContext(recipeNodes, recipeEdges);
   const batchDragRef = useRef<BatchDragState | null>(null);
+  const groupBoundsPreviewRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let wasMultiSelectMode = getEffectiveToggleId(useUIStore.getState()) === 'multi_select';
@@ -359,16 +406,34 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const handleNodeDragStart = (_event: React.MouseEvent, node: Node) => {
     const isMultiSelectMode = getEffectiveToggleId(useUIStore.getState()) === 'multi_select';
     const shouldBatchDrag = isRecipeNode(node) && node.data.isMultiSelected && isMultiSelectMode;
+    const shouldDragGroup = isGroupNode(node);
     const nodeIds: string[] = [];
     const startPositions = new Map<string, { x: number; y: number }>();
+    let groupPreview: GroupBoundsPreviewState | null = null;
+
+    if (isRecipeNode(node) && node.data.groupId) {
+      const members: GroupMemberBounds[] = [];
+      for (let i = 0; i < nodes.length; i++) {
+        const currentNode = nodes[i];
+        if (isRecipeNode(currentNode) && currentNode.data.groupId === node.data.groupId) {
+          members.push(getRecipeMemberBounds(currentNode));
+        }
+      }
+      groupPreview = members.length > 0 ? { draggedNodeId: node.id, members } : null;
+    }
 
     for (let i = 0; i < nodes.length; i++) {
       const currentNode = nodes[i];
-      if (
-        shouldBatchDrag
-          ? !isRecipeNode(currentNode) || !currentNode.data.isMultiSelected
-          : currentNode.id !== node.id
-      ) {
+      let shouldIncludeNode = currentNode.id === node.id;
+      if (shouldDragGroup) {
+        shouldIncludeNode =
+          currentNode.id === node.id ||
+          (isRecipeNode(currentNode) && currentNode.data.groupId === node.id);
+      } else if (shouldBatchDrag) {
+        shouldIncludeNode = isRecipeNode(currentNode) && !!currentNode.data.isMultiSelected;
+      }
+
+      if (!shouldIncludeNode) {
         continue;
       }
 
@@ -388,6 +453,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       startPositions,
       draggedNodeId: node.id,
       draggedStartPosition,
+      groupPreview,
     };
 
     captureDragStart(nodeIds);
@@ -395,11 +461,26 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
 
   const handleNodeDrag = (_event: React.MouseEvent, node: Node) => {
     const batchDrag = batchDragRef.current;
-    if (!batchDrag || batchDrag.draggedNodeId !== node.id || batchDrag.nodeIds.length <= 1) return;
+    if (!batchDrag || batchDrag.draggedNodeId !== node.id) return;
 
     const deltaX = node.position.x - batchDrag.draggedStartPosition.x;
     const deltaY = node.position.y - batchDrag.draggedStartPosition.y;
-    moveNodesFromSnapshots(batchDrag.startPositions, deltaX, deltaY);
+
+    if (batchDrag.groupPreview) {
+      applyGroupBoundsPreview(
+        groupBoundsPreviewRef.current,
+        computeBoundsFromMembersWithMovedMember(
+          batchDrag.groupPreview.members,
+          batchDrag.groupPreview.draggedNodeId,
+          deltaX,
+          deltaY,
+        ),
+      );
+    }
+
+    if (batchDrag.nodeIds.length > 1) {
+      moveNodesFromSnapshots(batchDrag.startPositions, deltaX, deltaY);
+    }
   };
 
   const handleNodeDragStop = (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
@@ -407,6 +488,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       batchDragRef.current?.nodeIds ??
       draggedNodes.map((draggedNode) => draggedNode.id);
     batchDragRef.current = null;
+    hideGroupBoundsPreview(groupBoundsPreviewRef.current);
     commitDragStop(nodeIds);
   };
 
@@ -563,7 +645,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
 
   return (
     <ReactFlow
-      nodes={nodes}
+      nodes={renderNodes}
       edges={edges}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
@@ -592,7 +674,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       }}
       onMoveStart={() => useUIStore.getState().setIsTransforming(true)}
       onMoveEnd={() => useUIStore.getState().setIsTransforming(false)}
-      onlyRenderVisibleElements={nodes.length > 250 && !isZoomedOut}
+      onlyRenderVisibleElements={renderNodes.length > 250 && !isZoomedOut}
       deleteKeyCode={null}
       selectionKeyCode={null}
       multiSelectionKeyCode={null}
@@ -605,6 +687,13 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
             : ConnectionLineType.SmoothStep
       }
     >
+      <ViewportPortal>
+        <div
+          ref={groupBoundsPreviewRef}
+          className={previewStyles['group-bounds-preview']}
+          aria-hidden="true"
+        />
+      </ViewportPortal>
       <Background
         variant={BackgroundVariant.Dots}
         gap={SNAP_GRID}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Recipe } from '../../../types/data';
 import { getProductIconPath } from '../../../data/productIcons';
-import { getMachineName, getProductName, getProduct, getMachine, resolveActiveRecipe } from '../../../data/lookup';
+import { getMachineName, getProductName, getMachine, resolveActiveRecipe } from '../../../data/lookup';
 import { getSpecialRecipe } from '../../../data/registry';
 import {
   getRateMultiplier,
@@ -17,6 +17,7 @@ import {
 } from '../../../utils/unitFormatting';
 import { Star } from 'lucide-react';
 import styles from './RecipeSelector.module.css';
+import { findBestProductMatch } from './productMatch';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -79,20 +80,7 @@ export function RecipeCard({
     const { clickedPerSecondRate } = clickedRateInfo;
     const targetList = preselectedSourceSide === 'input' ? recipe.outputs : recipe.inputs;
 
-    const preselectedProd = preselectedProductId ? getProduct(preselectedProductId) : null;
-    const preselectedType = preselectedProd?.type;
-
-    const isCompatible = (recipeProductId: string) => {
-      if (!preselectedProductId) return false;
-      if (recipeProductId === preselectedProductId) return true;
-      if (recipeProductId === 'any_fluid' || recipeProductId === 'any_item') {
-        const recipeProd = getProduct(recipeProductId);
-        return recipeProd?.type === preselectedType;
-      }
-      return false;
-    };
-
-    const targetEntry = targetList.find((e) => isCompatible(e.product_id));
+    const targetEntry = findBestProductMatch(targetList, preselectedProductId);
     if (targetEntry) {
       const candidateBaseQty = targetEntry.quantity;
       if (candidateBaseQty > 0) {

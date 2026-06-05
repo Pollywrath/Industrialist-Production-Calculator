@@ -1,5 +1,6 @@
 import {
   Plus,
+  Group,
   Trash2,
   MousePointerSquareDashed,
   Target,
@@ -123,9 +124,33 @@ export function ControlsTray() {
   const undo = useFlowStore((s) => s.undo);
   const redo = useFlowStore((s) => s.redo);
   const setNodesAndEdges = useFlowStore((s) => s.setNodesAndEdges);
+  const createGroupFromSelection = useFlowStore((s) => s.createGroupFromSelection);
+  const selectedGroupableNodeCount = useFlowStore((s) => {
+    let count = 0;
+    for (let i = 0; i < s.nodes.length; i++) {
+      const node = s.nodes[i];
+      if (isRecipeNode(node) && node.data.isMultiSelected && !node.data.groupId) {
+        count += 1;
+      }
+    }
+    return count;
+  });
+  const hasGroupableSelection = selectedGroupableNodeCount > 0;
+  const isMultiSelectMode = activeToggleId === 'multi_select';
+  const isAddGroupMode = isMultiSelectMode;
 
   const handleButtonClick = (btn: ButtonConfig) => {
     if (btn.id === 'add_recipe') {
+      if (isAddGroupMode) {
+        if (!hasGroupableSelection) return;
+        createGroupFromSelection();
+        const uiState = useUIStore.getState();
+        useUIStore.setState({
+          activeToggleId: uiState.activeToggleId === 'multi_select' ? null : uiState.activeToggleId,
+          temporaryOverrides: uiState.temporaryOverrides.filter((id) => id !== 'multi_select'),
+        });
+        return;
+      }
       setRecipeSelectorOpen(true);
     } else if (btn.id === 'delete_mode') {
       toggleButton('delete_mode');
@@ -235,18 +260,27 @@ export function ControlsTray() {
             const isHistoryDisabled =
               (btn.id === 'undo' && !canUndo) || (btn.id === 'redo' && !canRedo);
             const isLayoutDisabled = btn.id === 'layout' && (isLayouting || nodeCount === 0);
-            const isDisabled = UNWIRED_IDS.has(btn.id) || isHistoryDisabled || isLayoutDisabled;
+            const isAddGroupDisabled =
+              btn.id === 'add_recipe' && isAddGroupMode && !hasGroupableSelection;
+            const isDisabled =
+              UNWIRED_IDS.has(btn.id) ||
+              isHistoryDisabled ||
+              isLayoutDisabled ||
+              isAddGroupDisabled;
             const isToggled =
               !isDisabled &&
               (btn.id === activeToggleId ||
+                (btn.id === 'add_recipe' && isAddGroupMode && hasGroupableSelection) ||
                 (btn.id === 'machine_toggle' && isMachineOverlayOpen));
             const label =
               btn.id === 'rate_mode'
                 ? getRateButtonLabel()
                 : btn.id === 'layout' && isLayouting
                   ? 'Layout...'
+                  : btn.id === 'add_recipe' && isAddGroupMode
+                    ? 'Add Group'
                   : btn.label;
-            const Icon = btn.Icon;
+            const Icon = btn.id === 'add_recipe' && isAddGroupMode ? Group : btn.Icon;
 
             return (
               <button

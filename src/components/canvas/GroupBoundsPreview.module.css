@@ -1,0 +1,16 @@
+.group-bounds-preview {
+  position: absolute;
+  box-sizing: border-box;
+  display: none;
+  width: var(--group-preview-width);
+  height: var(--group-preview-height);
+  pointer-events: none;
+  background: var(--theme-color-group-preview-bg);
+  border: 2px dashed var(--theme-color-group-preview-border);
+  border-radius: 8px;
+  transform: translate(var(--group-preview-x), var(--group-preview-y));
+}
+
+.group-bounds-preview[data-visible='true'] {
+  display: block;
+}

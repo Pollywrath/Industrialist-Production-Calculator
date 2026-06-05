@@ -10,7 +10,13 @@ import {
   type Connection,
 } from '@xyflow/react';
 import { isGroupNode, isRecipeNode } from '../types/nodes';
-import type { CanvasNode, RecipeNodeData, RecipeNodeType } from '../types/nodes';
+import type {
+  CanvasNode,
+  GroupNodeData,
+  GroupNodeType,
+  RecipeNodeData,
+  RecipeNodeType,
+} from '../types/nodes';
 import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { getRecipe } from '../data/lookup';
 import { clearFlowCache } from '../solver/flowSolver';
@@ -22,6 +28,14 @@ import {
   IO_COLUMN_PADDING,
   NODE_CSS_WIDTH,
 } from '../components/shared/layoutConstants';
+import {
+  EMPTY_GROUP_HEIGHT,
+  EMPTY_GROUP_WIDTH,
+  computeGroupBoundsByGroupId,
+  computeBoundsFromMembers,
+  getRecipeMemberBounds,
+} from '../utils/groupBounds';
+import type { GroupMemberBounds } from '../utils/groupBounds';
 import {
   type HistoryEntry,
   type PositionHistoryEntry,
@@ -69,6 +83,7 @@ interface FlowState {
   ) => void;
   toggleNodeSelection: (nodeId: string) => void;
   clearNodeSelection: () => void;
+  createGroupFromSelection: () => void;
 
   onNodesChange: OnNodesChange<CanvasNode>;
   onEdgesChange: OnEdgesChange;
@@ -83,6 +98,7 @@ interface FlowState {
   ) => void;
 
   updateNodeData: (nodeId: string, data: Partial<RecipeNodeData>) => void;
+  updateGroupNodeData: (nodeId: string, data: Partial<GroupNodeData>) => void;
   deleteNode: (nodeId: string) => void;
   deleteEdgesConnectedToHandle: (handleId: string) => void;
   deleteEdgesForHandles: (handleIds: string[]) => void;
@@ -115,12 +131,155 @@ const enrichRecipeNodeDimensions = (node: RecipeNodeType): RecipeNodeType => {
   };
 };
 
+const prepareGroupNode = (node: GroupNodeType): GroupNodeType => {
+  const width = node.width ?? EMPTY_GROUP_WIDTH;
+  const height = node.height ?? EMPTY_GROUP_HEIGHT;
+
+  if (
+    node.connectable === false &&
+    node.draggable === true &&
+    node.selectable === false &&
+    node.zIndex === 0 &&
+    node.width === width &&
+    node.height === height
+  ) {
+    return node;
+  }
+
+  return {
+    ...node,
+    connectable: false,
+    draggable: true,
+    height,
+    selectable: false,
+    width,
+    zIndex: 0,
+  };
+};
+
 const enrichNodeDimensions = (node: CanvasNode): CanvasNode => {
-  return isRecipeNode(node) ? enrichRecipeNodeDimensions(node) : node;
+  return isRecipeNode(node) ? enrichRecipeNodeDimensions(node) : prepareGroupNode(node);
 };
 
 const createNodesMap = (nodes: CanvasNode[]): Map<string, CanvasNode> => {
   return createNodeMap(nodes);
+};
+
+const clearTransientNodeSelectionState = (nodes: CanvasNode[]): CanvasNode[] => {
+  let changed = false;
+  const nextNodes = new Array<CanvasNode>(nodes.length);
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    const hasFlowSelection = node.selected === true;
+    const hasMultiSelection = isRecipeNode(node) && node.data.isMultiSelected === true;
+
+    if (!hasFlowSelection && !hasMultiSelection) {
+      nextNodes[i] = node;
+      continue;
+    }
+
+    changed = true;
+    if (isRecipeNode(node)) {
+      nextNodes[i] = {
+        ...node,
+        selected: false,
+        data: {
+          ...node.data,
+          isMultiSelected: false,
+        },
+      };
+    } else {
+      nextNodes[i] = {
+        ...node,
+        selected: false,
+      };
+    }
+  }
+
+  return changed ? nextNodes : nodes;
+};
+
+const collectGroupNodeIds = (nodes: readonly CanvasNode[]): Set<string> => {
+  const groupIds = new Set<string>();
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (isGroupNode(node)) {
+      groupIds.add(node.id);
+    }
+  }
+  return groupIds;
+};
+
+const collectRecipeGroupIdsForNodeIds = (
+  nodes: readonly CanvasNode[],
+  nodeIds: ReadonlySet<string>,
+): Set<string> => {
+  const groupIds = new Set<string>();
+  if (nodeIds.size === 0) return groupIds;
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (!nodeIds.has(node.id) || !isRecipeNode(node) || !node.data.groupId) continue;
+    groupIds.add(node.data.groupId);
+  }
+
+  return groupIds;
+};
+
+const applyGroupBoundsForGroups = (
+  nodes: readonly CanvasNode[],
+  groupIds: ReadonlySet<string>,
+): CanvasNode[] => {
+  if (groupIds.size === 0) return nodes as CanvasNode[];
+
+  const boundsByGroupId = computeGroupBoundsByGroupId(nodes, groupIds);
+  let changed = false;
+  const nextNodes = new Array<CanvasNode>(nodes.length);
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (!isGroupNode(node) || !groupIds.has(node.id)) {
+      nextNodes[i] = node;
+      continue;
+    }
+
+    const bounds = boundsByGroupId.get(node.id);
+    const nextPosition = bounds ? { x: bounds.x, y: bounds.y } : node.position;
+    const nextWidth = bounds?.width ?? node.width ?? EMPTY_GROUP_WIDTH;
+    const nextHeight = bounds?.height ?? node.height ?? EMPTY_GROUP_HEIGHT;
+
+    if (
+      node.connectable === false &&
+      node.draggable === true &&
+      node.selectable === false &&
+      node.zIndex === 0 &&
+      node.width === nextWidth &&
+      node.height === nextHeight &&
+      arePositionsEqual(toPositionSnapshot(node.position), nextPosition)
+    ) {
+      nextNodes[i] = node;
+      continue;
+    }
+
+    changed = true;
+    nextNodes[i] = {
+      ...node,
+      connectable: false,
+      draggable: true,
+      height: nextHeight,
+      position: nextPosition,
+      selectable: false,
+      width: nextWidth,
+      zIndex: 0,
+    };
+  }
+
+  return changed ? nextNodes : (nodes as CanvasNode[]);
+};
+
+const syncAllGroupBounds = (nodes: CanvasNode[]): CanvasNode[] => {
+  return applyGroupBoundsForGroups(nodes, collectGroupNodeIds(nodes));
 };
 
 const ensureGraphIntegrity = (
@@ -207,6 +366,11 @@ const removeProxyHandleIdsForNode = (handleIds: string[], nodeId: string): strin
   return changed ? nextHandleIds : handleIds;
 };
 
+const addUniqueHandleId = (handleIds: string[], handleId: string | null | undefined): void => {
+  if (!handleId || handleIds.includes(handleId)) return;
+  handleIds.push(handleId);
+};
+
 const useFlowStore = create(
   subscribeWithSelector<FlowState>((set, get) => {
     let isApplyingHistory = false;
@@ -274,9 +438,15 @@ const useFlowStore = create(
             const nextFuture = [...state.historyFuture, entry];
 
             if (entry.kind === 'position') {
-              const nextNodes = applyPositionHistoryEntry(entry, 'undo', state.nodes);
+              const nextNodes = syncAllGroupBounds(
+                clearTransientNodeSelectionState(
+                  applyPositionHistoryEntry(entry, 'undo', state.nodes),
+                ),
+              );
+              const nextNodesMap = createNodesMap(nextNodes);
               return {
                 nodes: nextNodes,
+                nodesMap: nextNodesMap,
                 historyPast: nextPast,
                 historyFuture: nextFuture,
                 canUndo: nextPast.length > 0,
@@ -285,9 +455,10 @@ const useFlowStore = create(
             }
 
             const applied = applyGraphHistoryEntry(entry, 'undo', state.nodes, state.edges);
-            const nextNodesMap = createNodesMap(applied.nodes);
+            const nextNodes = syncAllGroupBounds(clearTransientNodeSelectionState(applied.nodes));
+            const nextNodesMap = createNodesMap(nextNodes);
             return {
-              nodes: applied.nodes,
+              nodes: nextNodes,
               nodesMap: nextNodesMap,
               edges: applied.edges,
               graphVersion: state.graphVersion + 1,
@@ -316,9 +487,15 @@ const useFlowStore = create(
             const nextPast = [...trimmedPast, entry];
 
             if (entry.kind === 'position') {
-              const nextNodes = applyPositionHistoryEntry(entry, 'redo', state.nodes);
+              const nextNodes = syncAllGroupBounds(
+                clearTransientNodeSelectionState(
+                  applyPositionHistoryEntry(entry, 'redo', state.nodes),
+                ),
+              );
+              const nextNodesMap = createNodesMap(nextNodes);
               return {
                 nodes: nextNodes,
+                nodesMap: nextNodesMap,
                 historyPast: nextPast,
                 historyFuture: nextFuture,
                 canUndo: nextPast.length > 0,
@@ -327,9 +504,10 @@ const useFlowStore = create(
             }
 
             const applied = applyGraphHistoryEntry(entry, 'redo', state.nodes, state.edges);
-            const nextNodesMap = createNodesMap(applied.nodes);
+            const nextNodes = syncAllGroupBounds(clearTransientNodeSelectionState(applied.nodes));
+            const nextNodesMap = createNodesMap(nextNodes);
             return {
-              nodes: applied.nodes,
+              nodes: nextNodes,
               nodesMap: nextNodesMap,
               edges: applied.edges,
               graphVersion: state.graphVersion + 1,
@@ -422,6 +600,24 @@ const useFlowStore = create(
         if (ids.size === 0) {
           for (const id of startPositions.keys()) {
             ids.add(id);
+          }
+        }
+
+        const stateBeforeBoundsCommit = get();
+        const affectedGroupIds = collectRecipeGroupIdsForNodeIds(
+          stateBeforeBoundsCommit.nodes,
+          ids,
+        );
+        if (affectedGroupIds.size > 0) {
+          const boundedNodes = applyGroupBoundsForGroups(
+            stateBeforeBoundsCommit.nodes,
+            affectedGroupIds,
+          );
+          if (boundedNodes !== stateBeforeBoundsCommit.nodes) {
+            set({
+              nodes: boundedNodes,
+              nodesMap: createNodesMap(boundedNodes),
+            });
           }
         }
 
@@ -535,14 +731,110 @@ const useFlowStore = create(
         set({ nodes: nextNodes });
       },
 
+      createGroupFromSelection: () => {
+        const state = get();
+        const selectedNodes: RecipeNodeType[] = [];
+        const selectedIds = new Set<string>();
+
+        for (let i = 0; i < state.nodes.length; i++) {
+          const node = state.nodes[i];
+          if (isRecipeNode(node) && node.data.isMultiSelected && !node.data.groupId) {
+            selectedNodes.push(node);
+            selectedIds.add(node.id);
+          }
+        }
+
+        if (selectedNodes.length === 0) return;
+
+        const groupId = nextNodeId();
+        const inputProxyHandleIds: string[] = [];
+        const outputProxyHandleIds: string[] = [];
+
+        for (let i = 0; i < state.edges.length; i++) {
+          const edge = state.edges[i];
+          const sourceSelected = selectedIds.has(edge.source);
+          const targetSelected = selectedIds.has(edge.target);
+
+          if (sourceSelected && !targetSelected) {
+            addUniqueHandleId(outputProxyHandleIds, edge.sourceHandle);
+          } else if (!sourceSelected && targetSelected) {
+            addUniqueHandleId(inputProxyHandleIds, edge.targetHandle);
+          }
+        }
+
+        const selectedMemberBounds = new Array<GroupMemberBounds>(selectedNodes.length);
+        for (let i = 0; i < selectedNodes.length; i++) {
+          selectedMemberBounds[i] = getRecipeMemberBounds(selectedNodes[i]);
+        }
+
+        const bounds = computeBoundsFromMembers(selectedMemberBounds);
+        if (!bounds) return;
+
+        const groupNode: GroupNodeType = {
+          id: groupId,
+          type: 'group',
+          connectable: false,
+          draggable: true,
+          position: { x: bounds.x, y: bounds.y },
+          selectable: false,
+          selected: false,
+          width: bounds.width,
+          height: bounds.height,
+          zIndex: 0,
+          data: {
+            label: 'Group',
+            collapsed: false,
+            inputProxyHandleIds,
+            outputProxyHandleIds,
+          },
+        };
+
+        const nextNodes = new Array<CanvasNode>(state.nodes.length + 1);
+        for (let i = 0; i < state.nodes.length; i++) {
+          const node = state.nodes[i];
+          if (selectedIds.has(node.id) && isRecipeNode(node)) {
+            nextNodes[i] = {
+              ...node,
+              selected: false,
+              zIndex: Math.max(node.zIndex ?? 1, 1),
+              data: {
+                ...node.data,
+                groupId,
+                isMultiSelected: false,
+              },
+            };
+          } else {
+            nextNodes[i] = node;
+          }
+        }
+        nextNodes[state.nodes.length] = groupNode;
+
+        const nextNodesMap = createNodesMap(nextNodes);
+        clearFlowCache();
+        set({
+          nodes: nextNodes,
+          nodesMap: nextNodesMap,
+          graphVersion: state.graphVersion + 1,
+        });
+
+        if (!isApplyingHistory && transactionDepth === 0) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, nextNodes, state.edges));
+        }
+      },
+
       onNodesChange: (changes) => {
         const state = get();
         const nextNodes = applyNodeChanges(changes, state.nodes);
         let needsEnrichment = false;
         let hasStructuralChange = false;
+        const dimensionChangedNodeIds = new Set<string>();
 
         for (let i = 0; i < changes.length; i++) {
-          const type = changes[i].type;
+          const change = changes[i];
+          const type = change.type;
+          if (type === 'dimensions' && 'id' in change) {
+            dimensionChangedNodeIds.add(change.id);
+          }
           if (type !== 'position' && type !== 'select') {
             needsEnrichment = true;
             if (type !== 'dimensions') {
@@ -551,10 +843,16 @@ const useFlowStore = create(
           }
         }
 
-        const finalNodes = needsEnrichment ? nextNodes.map(enrichNodeDimensions) : nextNodes;
+        let finalNodes = needsEnrichment ? nextNodes.map(enrichNodeDimensions) : nextNodes;
+        const affectedGroupIds = hasStructuralChange
+          ? collectGroupNodeIds(finalNodes)
+          : collectRecipeGroupIdsForNodeIds(finalNodes, dimensionChangedNodeIds);
+        finalNodes = applyGroupBoundsForGroups(finalNodes, affectedGroupIds);
+
         if (!hasStructuralChange) {
           set({
             nodes: finalNodes,
+            ...(affectedGroupIds.size > 0 ? { nodesMap: createNodesMap(finalNodes) } : {}),
           });
           return;
         }
@@ -637,7 +935,7 @@ const useFlowStore = create(
         clearFlowCache();
         const state = get();
         const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(nodes, state.edges);
-        const enriched = sanitizedNodes.map(enrichNodeDimensions);
+        const enriched = syncAllGroupBounds(sanitizedNodes.map(enrichNodeDimensions));
         const nextNodesMap = createNodesMap(enriched);
         set({
           nodes: enriched,
@@ -686,13 +984,12 @@ const useFlowStore = create(
         const state = get();
         const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(nodes, edges);
         const len = sanitizedNodes.length;
-        const enriched = new Array<CanvasNode>(len);
-        const map = new Map<string, CanvasNode>();
+        const enrichedNodes = new Array<CanvasNode>(len);
         for (let i = 0; i < len; i++) {
-          const node = enrichNodeDimensions(sanitizedNodes[i]);
-          enriched[i] = node;
-          map.set(node.id, node);
+          enrichedNodes[i] = enrichNodeDimensions(sanitizedNodes[i]);
         }
+        const enriched = syncAllGroupBounds(enrichedNodes);
+        const map = createNodesMap(enriched);
         if (options?.visualOnly) {
           set({
             nodes: enriched,
@@ -723,10 +1020,12 @@ const useFlowStore = create(
         const oldNodes = state.nodes;
         const nextNodes = new Array<CanvasNode>(oldNodes.length);
         let updatedNode: RecipeNodeType | null = null;
+        let previousGroupId: string | undefined;
 
         for (let i = 0; i < oldNodes.length; i++) {
           const node = oldNodes[i];
           if (node.id === nodeId && isRecipeNode(node)) {
+            previousGroupId = node.data.groupId;
             updatedNode = enrichRecipeNodeDimensions({
               ...node,
               data: { ...node.data, ...data },
@@ -739,9 +1038,45 @@ const useFlowStore = create(
 
         if (!updatedNode) return;
 
-        const nextNodesMap = new Map(state.nodesMap);
-        nextNodesMap.set(nodeId, updatedNode);
+        const affectedGroupIds = new Set<string>();
+        if (previousGroupId) affectedGroupIds.add(previousGroupId);
+        if (updatedNode.data.groupId) affectedGroupIds.add(updatedNode.data.groupId);
+        const finalNodes = applyGroupBoundsForGroups(nextNodes, affectedGroupIds);
+        const nextNodesMap = createNodesMap(finalNodes);
 
+        set({
+          nodes: finalNodes,
+          nodesMap: nextNodesMap,
+          graphVersion: state.graphVersion + 1,
+        });
+
+        if (!isApplyingHistory && transactionDepth === 0) {
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, finalNodes, state.edges));
+        }
+      },
+
+      updateGroupNodeData: (nodeId, data) => {
+        const state = get();
+        const oldNodes = state.nodes;
+        const nextNodes = new Array<CanvasNode>(oldNodes.length);
+        let updatedNode: GroupNodeType | null = null;
+
+        for (let i = 0; i < oldNodes.length; i++) {
+          const node = oldNodes[i];
+          if (node.id === nodeId && isGroupNode(node)) {
+            updatedNode = prepareGroupNode({
+              ...node,
+              data: { ...node.data, ...data },
+            });
+            nextNodes[i] = updatedNode;
+          } else {
+            nextNodes[i] = node;
+          }
+        }
+
+        if (!updatedNode) return;
+
+        const nextNodesMap = createNodesMap(nextNodes);
         set({
           nodes: nextNodes,
           nodesMap: nextNodesMap,
@@ -802,18 +1137,23 @@ const useFlowStore = create(
           }
         }
 
-        const nextNodesMap = createNodesMap(nextNodes);
+        const affectedGroupIds = new Set<string>();
+        if (isRecipeNode(deletedNode) && deletedNode.data.groupId) {
+          affectedGroupIds.add(deletedNode.data.groupId);
+        }
+        const finalNodes = applyGroupBoundsForGroups(nextNodes, affectedGroupIds);
+        const nextNodesMap = createNodesMap(finalNodes);
         const nextEdges = state.edges.filter((e) => e.source !== nodeId && e.target !== nodeId);
 
         set({
-          nodes: nextNodes,
+          nodes: finalNodes,
           nodesMap: nextNodesMap,
           edges: nextEdges,
           graphVersion: state.graphVersion + 1,
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, nextNodes, nextEdges));
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, finalNodes, nextEdges));
         }
       },
 
@@ -877,10 +1217,12 @@ const useFlowStore = create(
 
         const nextNodes = new Array<CanvasNode>(oldNodes.length);
         let updatedNode: RecipeNodeType | null = null;
+        let previousGroupId: string | undefined;
 
         for (let i = 0; i < oldNodes.length; i++) {
           const node = oldNodes[i];
           if (node.id === nodeId && isRecipeNode(node)) {
+            previousGroupId = node.data.groupId;
             updatedNode = enrichRecipeNodeDimensions({
               ...node,
               data: { ...node.data, ...data },
@@ -893,19 +1235,22 @@ const useFlowStore = create(
 
         if (!updatedNode) return;
 
-        const nextNodesMap = new Map(state.nodesMap);
-        nextNodesMap.set(nodeId, updatedNode);
+        const affectedGroupIds = new Set<string>();
+        if (previousGroupId) affectedGroupIds.add(previousGroupId);
+        if (updatedNode.data.groupId) affectedGroupIds.add(updatedNode.data.groupId);
+        const finalNodes = applyGroupBoundsForGroups(nextNodes, affectedGroupIds);
+        const nextNodesMap = createNodesMap(finalNodes);
 
         const edgesChanged = nextEdges.length !== oldEdges.length;
         set({
-          nodes: nextNodes,
+          nodes: finalNodes,
           nodesMap: nextNodesMap,
           ...(edgesChanged ? { edges: nextEdges } : {}),
           graphVersion: state.graphVersion + 1,
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, nextNodes, nextEdges));
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, finalNodes, nextEdges));
         }
       },
     };

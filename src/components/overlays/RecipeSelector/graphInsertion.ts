@@ -5,7 +5,7 @@ import type { CanvasNode, RecipeNodeType } from '../../../types/nodes';
 import { SNAP_GRID, NODE_WIDTH } from '../../shared/layoutConstants';
 import { calculateMachineCountFromRate } from '../../../utils/recipeComputation';
 import { nextNodeId, nextEdgeId, buildHandleId } from '../../../utils/idGenerator';
-import { getProduct } from '../../../data/lookup';
+import { findBestProductMatchIndex } from './productMatch';
 
 interface InsertionParams {
   recipe: Recipe;
@@ -41,21 +41,8 @@ export function computeRecipeInsertion({
   const inputOrder = recipe.inputs.map((_, i) => i);
   const outputOrder = recipe.outputs.map((_, i) => i);
 
-  const preselectedProd = preselectedProductId ? getProduct(preselectedProductId) : null;
-  const preselectedType = preselectedProd?.type;
-
-  const isCompatible = (recipeProductId: string) => {
-    if (!preselectedProductId) return false;
-    if (recipeProductId === preselectedProductId) return true;
-    if (recipeProductId === 'any_fluid' || recipeProductId === 'any_item') {
-      const recipeProd = getProduct(recipeProductId);
-      return recipeProd?.type === preselectedType;
-    }
-    return false;
-  };
-
-  const matchingInputIndex = recipe.inputs.findIndex((inp) => isCompatible(inp.product_id));
-  const matchingOutputIndex = recipe.outputs.findIndex((out) => isCompatible(out.product_id));
+  const matchingInputIndex = findBestProductMatchIndex(recipe.inputs, preselectedProductId);
+  const matchingOutputIndex = findBestProductMatchIndex(recipe.outputs, preselectedProductId);
 
   let targetX = 0;
   let targetY = 0;
