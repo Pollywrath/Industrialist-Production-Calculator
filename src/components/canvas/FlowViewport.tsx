@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -235,6 +235,8 @@ const onNodeClick = (_event: React.MouseEvent, node: Node) => {
   const toggleId = getEffectiveToggleId(useUIStore.getState());
   if (toggleId === 'delete_mode') {
     useFlowStore.getState().deleteNode(node.id);
+  } else if (toggleId === 'multi_select') {
+    useFlowStore.getState().toggleNodeSelection(node.id);
   } else if (toggleId === 'target') {
     const isTarget = !!node.data?.isTarget;
     useFlowStore.getState().updateNodeData(node.id, { isTarget: !isTarget });
@@ -243,6 +245,13 @@ const onNodeClick = (_event: React.MouseEvent, node: Node) => {
 
 interface FlowViewportCanvasProps {
   isZoomedOut: boolean;
+}
+
+interface BatchDragState {
+  nodeIds: string[];
+  startPositions: Map<string, { x: number; y: number }>;
+  draggedNodeId: string;
+  draggedStartPosition: { x: number; y: number };
 }
 
 function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
@@ -254,8 +263,35 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const onConnect = useFlowStore((s) => s.onConnect);
   const captureDragStart = useFlowStore((s) => s.captureDragStart);
   const commitDragStop = useFlowStore((s) => s.commitDragStop);
-  const { screenToFlowPosition, getInternalNode } = useReactFlow();
+  const moveNodesFromSnapshots = useFlowStore((s) => s.moveNodesFromSnapshots);
+  const fitViewRequestId = useUIStore((s) => s.fitViewRequestId);
+  const { screenToFlowPosition, getInternalNode, fitView } = useReactFlow();
   const resolutionContext = createGraphResolutionContext(nodes, edges);
+  const batchDragRef = useRef<BatchDragState | null>(null);
+
+  useEffect(() => {
+    let wasMultiSelectMode = getEffectiveToggleId(useUIStore.getState()) === 'multi_select';
+
+    return useUIStore.subscribe((state) => {
+      const isMultiSelectMode = getEffectiveToggleId(state) === 'multi_select';
+      if (wasMultiSelectMode && !isMultiSelectMode) {
+        useFlowStore.getState().clearNodeSelection();
+      }
+      wasMultiSelectMode = isMultiSelectMode;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (fitViewRequestId === 0) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      void fitView({ padding: 0.12 });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [fitView, fitViewRequestId]);
 
   const isValidConnection = (connection: Connection | Edge) => {
       if (
@@ -306,12 +342,54 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       return false;
     };
 
-  const handleNodeDragStart = (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
-    captureDragStart(draggedNodes.map((draggedNode) => draggedNode.id));
+  const handleNodeDragStart = (_event: React.MouseEvent, node: Node) => {
+    const isMultiSelectMode = getEffectiveToggleId(useUIStore.getState()) === 'multi_select';
+    const shouldBatchDrag = node.data?.isMultiSelected && isMultiSelectMode;
+    const nodeIds: string[] = [];
+    const startPositions = new Map<string, { x: number; y: number }>();
+
+    for (let i = 0; i < nodes.length; i++) {
+      const currentNode = nodes[i];
+      if (shouldBatchDrag ? !currentNode.data.isMultiSelected : currentNode.id !== node.id) {
+        continue;
+      }
+
+      nodeIds.push(currentNode.id);
+      startPositions.set(currentNode.id, {
+        x: currentNode.position.x,
+        y: currentNode.position.y,
+      });
+    }
+
+    const draggedStartPosition = startPositions.get(node.id) ?? {
+      x: node.position.x,
+      y: node.position.y,
+    };
+    batchDragRef.current = {
+      nodeIds,
+      startPositions,
+      draggedNodeId: node.id,
+      draggedStartPosition,
+    };
+
+    captureDragStart(nodeIds);
+  };
+
+  const handleNodeDrag = (_event: React.MouseEvent, node: Node) => {
+    const batchDrag = batchDragRef.current;
+    if (!batchDrag || batchDrag.draggedNodeId !== node.id || batchDrag.nodeIds.length <= 1) return;
+
+    const deltaX = node.position.x - batchDrag.draggedStartPosition.x;
+    const deltaY = node.position.y - batchDrag.draggedStartPosition.y;
+    moveNodesFromSnapshots(batchDrag.startPositions, deltaX, deltaY);
   };
 
   const handleNodeDragStop = (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
-    commitDragStop(draggedNodes.map((draggedNode) => draggedNode.id));
+    const nodeIds =
+      batchDragRef.current?.nodeIds ??
+      draggedNodes.map((draggedNode) => draggedNode.id);
+    batchDragRef.current = null;
+    commitDragStop(nodeIds);
   };
 
   const handleSelectionDragStart = (_event: React.MouseEvent, draggedNodes: Node[]) => {
@@ -320,6 +398,33 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
 
   const handleSelectionDragStop = (_event: React.MouseEvent, draggedNodes: Node[]) => {
     commitDragStop(draggedNodes.map((draggedNode) => draggedNode.id));
+  };
+
+  const handleNodesChange: typeof onNodesChange = (changes) => {
+    let hasSelectionChange = false;
+    for (let i = 0; i < changes.length; i++) {
+      if (changes[i].type === 'select') {
+        hasSelectionChange = true;
+        break;
+      }
+    }
+
+    if (!hasSelectionChange) {
+      onNodesChange(changes);
+      return;
+    }
+
+    const nonSelectionChanges = [];
+    for (let i = 0; i < changes.length; i++) {
+      const change = changes[i];
+      if (change.type !== 'select') {
+        nonSelectionChanges.push(change);
+      }
+    }
+
+    if (nonSelectionChanges.length > 0) {
+      onNodesChange(nonSelectionChanges);
+    }
   };
 
   const onEdgeClick = (event: React.MouseEvent, edge: Edge) => {
@@ -444,10 +549,11 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       edges={edges}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
-      onNodesChange={onNodesChange}
+      onNodesChange={handleNodesChange}
       onEdgesChange={onEdgesChange}
       onConnect={onConnect}
       onNodeDragStart={handleNodeDragStart}
+      onNodeDrag={handleNodeDrag}
       onNodeDragStop={handleNodeDragStop}
       onSelectionDragStart={handleSelectionDragStart}
       onSelectionDragStop={handleSelectionDragStop}

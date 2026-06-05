@@ -12,6 +12,7 @@ export type RecipeNodeData = {
   outputOrder?: number[];
   settings?: Record<string, unknown>;
   isTarget?: boolean;
+  isMultiSelected?: boolean;
 };
 
 export type RecipeNodeType = Node<RecipeNodeData, 'recipe'>;

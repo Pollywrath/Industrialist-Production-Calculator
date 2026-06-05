@@ -62,6 +62,13 @@ interface FlowState {
   runTransaction: (fn: () => void) => void;
   captureDragStart: (nodeIds: string[]) => void;
   commitDragStop: (nodeIds: string[]) => void;
+  moveNodesFromSnapshots: (
+    startPositions: Map<string, PositionSnapshot>,
+    deltaX: number,
+    deltaY: number,
+  ) => void;
+  toggleNodeSelection: (nodeId: string) => void;
+  clearNodeSelection: () => void;
 
   onNodesChange: OnNodesChange<Node<RecipeNodeData>>;
   onEdgesChange: OnEdgesChange;
@@ -421,6 +428,92 @@ const useFlowStore = create(
         });
       },
 
+      moveNodesFromSnapshots: (startPositions, deltaX, deltaY) => {
+        if (startPositions.size === 0) return;
+
+        const state = get();
+        let changed = false;
+        const nextNodes = new Array<Node<RecipeNodeData>>(state.nodes.length);
+
+        for (let i = 0; i < state.nodes.length; i++) {
+          const node = state.nodes[i];
+          const start = startPositions.get(node.id);
+          if (!start) {
+            nextNodes[i] = node;
+            continue;
+          }
+
+          const nextPosition = {
+            x: start.x + deltaX,
+            y: start.y + deltaY,
+          };
+
+          if (arePositionsEqual(toPositionSnapshot(node.position), nextPosition)) {
+            nextNodes[i] = node;
+            continue;
+          }
+
+          changed = true;
+          nextNodes[i] = {
+            ...node,
+            position: nextPosition,
+          };
+        }
+
+        if (!changed) return;
+        set({ nodes: nextNodes });
+      },
+
+      toggleNodeSelection: (nodeId) => {
+        const state = get();
+        let changed = false;
+        const nextNodes = new Array<Node<RecipeNodeData>>(state.nodes.length);
+
+        for (let i = 0; i < state.nodes.length; i++) {
+          const node = state.nodes[i];
+          if (node.id === nodeId) {
+            changed = true;
+            nextNodes[i] = {
+              ...node,
+              data: {
+                ...node.data,
+                isMultiSelected: !node.data.isMultiSelected,
+              },
+            };
+          } else {
+            nextNodes[i] = node;
+          }
+        }
+
+        if (!changed) return;
+        set({ nodes: nextNodes });
+      },
+
+      clearNodeSelection: () => {
+        const state = get();
+        let changed = false;
+        const nextNodes = new Array<Node<RecipeNodeData>>(state.nodes.length);
+
+        for (let i = 0; i < state.nodes.length; i++) {
+          const node = state.nodes[i];
+          if (node.data.isMultiSelected) {
+            changed = true;
+            nextNodes[i] = {
+              ...node,
+              data: {
+                ...node.data,
+                isMultiSelected: false,
+              },
+            };
+          } else {
+            nextNodes[i] = node;
+          }
+        }
+
+        if (!changed) return;
+        set({ nodes: nextNodes });
+      },
+
       onNodesChange: (changes) => {
         const state = get();
         const nextNodes = applyNodeChanges(changes, state.nodes);
@@ -565,7 +658,6 @@ const useFlowStore = create(
       },
 
       setNodesAndEdges: (nodes, edges, options) => {
-        clearFlowCache();
         const state = get();
         const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(nodes, edges);
         const len = sanitizedNodes.length;
@@ -576,12 +668,21 @@ const useFlowStore = create(
           enriched[i] = node;
           map.set(node.id, node);
         }
-        set({
-          nodes: enriched,
-          nodesMap: map,
-          edges: sanitizedEdges,
-          graphVersion: state.graphVersion + 1,
-        });
+        if (options?.visualOnly) {
+          set({
+            nodes: enriched,
+            nodesMap: map,
+            edges: sanitizedEdges,
+          });
+        } else {
+          clearFlowCache();
+          set({
+            nodes: enriched,
+            nodesMap: map,
+            edges: sanitizedEdges,
+            graphVersion: state.graphVersion + 1,
+          });
+        }
 
         if (options?.resetHistory) {
           resetHistoryState();

@@ -101,6 +101,7 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
         className={styles['recipe-node']}
         style={{ '--node-height': `${displayHeight}px` } as React.CSSProperties}
         data-target={data.isTarget ? 'true' : undefined}
+        data-multi-selected={data.isMultiSelected ? 'true' : undefined}
       >
         <RecipeNodeInfo
           recipe={recipe}

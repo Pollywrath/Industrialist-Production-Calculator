@@ -121,6 +121,7 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
               await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
               useFlowStore.getState().setNodesAndEdges(nodes, edges);
               useUIStore.getState().setSavesOverlayOpen(false);
+              useUIStore.getState().requestFitView();
             } catch {
               setStatusWithTimeout({
                 type: 'error',
@@ -154,6 +155,7 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
               await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
               setNodesAndEdges(nodes, edges);
               useUIStore.getState().setSavesOverlayOpen(false);
+              useUIStore.getState().requestFitView();
             } catch {
               setStatusWithTimeout({
                 type: 'error',

@@ -1,5 +1,6 @@
 import type { Edge, Node } from '@xyflow/react';
-import ELK from 'elkjs/lib/elk.bundled.js';
+import ELK from 'elkjs/lib/elk-api.js';
+import elkWorkerUrl from 'elkjs/lib/elk-worker.min.js?url';
 import type { EdgePathStyle } from '../stores/useEdgeThemeStore';
 import { getRecipe } from '../data/lookup';
 import type { RecipeNodeData } from '../types/nodes';
@@ -28,7 +29,10 @@ const snapToGrid = (x: number, y: number) => ({
 const snapX = (x: number) => Math.round(x / GRID_X) * GRID_X;
 const snapY = (y: number) => Math.round(y / GRID_Y) * GRID_Y;
 
-const elk = new ELK();
+const elk = new ELK({
+  workerUrl: elkWorkerUrl,
+  workerFactory: (url) => new Worker(url ?? elkWorkerUrl),
+});
 
 interface AutoLayoutOptions {
   edgePath?: EdgePathStyle;

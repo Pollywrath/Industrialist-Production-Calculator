@@ -56,6 +56,8 @@ interface UIState {
   setIsZoomedOut: (isZoomedOut: boolean) => void;
   isExporting: boolean;
   setIsExporting: (isExporting: boolean) => void;
+  fitViewRequestId: number;
+  requestFitView: () => void;
   isLPSolverOpen: boolean;
   setIsLPSolverOpen: (isOpen: boolean) => void;
   confirmQueue: {
@@ -163,6 +165,8 @@ const useUIStore = create<UIState>((set) => ({
   setIsZoomedOut: (isZoomedOut) => set({ isZoomedOut }),
   isExporting: false,
   setIsExporting: (isExporting) => set({ isExporting }),
+  fitViewRequestId: 0,
+  requestFitView: () => set((state) => ({ fitViewRequestId: state.fitViewRequestId + 1 })),
   isLPSolverOpen: false,
   setIsLPSolverOpen: (isOpen) => set({ isLPSolverOpen: isOpen }),
   confirmQueue: [],

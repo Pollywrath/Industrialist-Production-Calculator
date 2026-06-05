@@ -100,7 +100,6 @@ const BUTTONS: ButtonConfig[] = [
 ];
 
 const UNWIRED_IDS = new Set([
-  'multi_select',
   'coming_soon',
 ]);
 
@@ -129,6 +128,8 @@ export function ControlsTray() {
       setRecipeSelectorOpen(true);
     } else if (btn.id === 'delete_mode') {
       toggleButton('delete_mode');
+    } else if (btn.id === 'multi_select') {
+      toggleButton('multi_select');
     } else if (btn.id === 'target') {
       toggleButton('target');
     } else if (btn.id === 'machine_toggle') {
@@ -173,18 +174,20 @@ export function ControlsTray() {
       if (flowStore.nodes.length === 0) return;
 
       setIsLayouting(true);
-      void import('../../utils/autoLayout').then(({ autoLayout }) => {
-        void autoLayout(flowStore.nodes, flowStore.edges, { edgePath: edgePathStyle })
-          .then(({ nodes, edges }) => {
-            setNodesAndEdges(nodes, edges);
-          })
-          .catch((error) => {
-            console.error('Auto-layout failed:', error);
-          })
-          .finally(() => {
-            setIsLayouting(false);
-          });
-      });
+      void import('../../utils/autoLayout')
+        .then(({ autoLayout }) => {
+          return autoLayout(flowStore.nodes, flowStore.edges, { edgePath: edgePathStyle });
+        })
+        .then(({ nodes, edges }) => {
+          setNodesAndEdges(nodes, edges, { visualOnly: true });
+          useUIStore.getState().requestFitView();
+        })
+        .catch((error) => {
+          console.error('Auto-layout failed:', error);
+        })
+        .finally(() => {
+          setIsLayouting(false);
+        });
     } else if (btn.id === 'clear_canvas') {
       setNodesAndEdges([], []);
     } else if (btn.id === 'undo') {
