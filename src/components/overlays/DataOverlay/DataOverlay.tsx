@@ -17,6 +17,7 @@ import { ProductsTab } from './ProductsTab';
 import { MachinesTab } from './MachinesTab';
 import { RecipesTab } from './RecipesTab';
 import { ResearchesTab } from './ResearchesTab';
+import { DataComparatorTab } from './DataComparatorTab';
 import styles from './DataOverlay.module.css';
 
 export function DataOverlay() {
@@ -102,13 +103,7 @@ function DataOverlayModal() {
 
         <div className={styles['data-content']}>
           {activeMainTab === 'comparing' ? (
-            <div className={styles['empty-state']}>
-              <GitCompare size={36} className={styles['empty-icon']} />
-              <div className={styles['empty-title']}>Comparison Module</div>
-              <div className={styles['empty-desc']}>
-                Compare system state and custom dataset. Features coming soon.
-              </div>
-            </div>
+            <DataComparatorTab />
           ) : (
             <div className={styles['edit-container']}>
               <div className={styles['data-tabs-sub']}>
