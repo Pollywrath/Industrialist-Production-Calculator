@@ -66,10 +66,6 @@
   --theme-color-node-border: #d4a637;
   --theme-color-node-target-bg: #2d2416;
   --theme-color-node-target-border: #f5d56a;
-  --theme-color-group-bg: rgba(212, 166, 55, 0.05);
-  --theme-color-group-border: #d4a637;
-  --theme-color-group-preview-bg: rgba(212, 166, 55, 0.08);
-  --theme-color-group-preview-border: #f5d56a;
 
   --theme-color-handle-input-supplied: #22c55e;
   --theme-color-handle-input-deficient: #ef4444;

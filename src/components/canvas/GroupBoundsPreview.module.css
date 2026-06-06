@@ -5,8 +5,8 @@
   width: var(--group-preview-width);
   height: var(--group-preview-height);
   pointer-events: none;
-  background: var(--theme-color-group-preview-bg);
-  border: 2px dashed var(--theme-color-group-preview-border);
+  background: var(--theme-color-panel-empty-bg);
+  border: 2px dashed var(--theme-color-node-target-border);
   border-radius: 8px;
   transform: translate(var(--group-preview-x), var(--group-preview-y));
 }

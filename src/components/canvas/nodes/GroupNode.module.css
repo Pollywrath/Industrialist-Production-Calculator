@@ -7,7 +7,7 @@
   font-family: inherit;
   pointer-events: auto;
   user-select: none;
-  contain: layout style;
+  contain: layout style paint;
 }
 
 .group-node__boundary {
@@ -18,9 +18,13 @@
   min-width: 120px;
   min-height: 80px;
   pointer-events: auto;
-  background: var(--theme-color-group-bg);
-  border: 2px dashed var(--theme-color-group-border);
+  background: var(--theme-color-panel-empty-bg);
+  border: 2px dashed var(--theme-color-node-border);
   border-radius: 8px;
+}
+
+:global(.is-transforming) .group-node {
+  will-change: transform;
 }
 
 .group-node__header {
@@ -44,7 +48,7 @@
   color: var(--theme-color-text-primary);
   background: var(--theme-color-bg-secondary);
   border: 0;
-  border-bottom: 1px solid var(--theme-color-group-border);
+  border-bottom: 1px solid var(--theme-color-node-border);
   border-radius: 6px 6px 0 0;
   cursor: pointer;
 }

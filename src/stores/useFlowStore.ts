@@ -174,6 +174,14 @@ const syncProxyEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[] => {
   const recipeNodeMap = new Map(recipeNodes.map((rn) => [rn.id, rn]));
   const groupNodes = nodes.filter(isGroupNode);
   const groupNodeMap = new Map(groupNodes.map((gn) => [gn.id, gn]));
+  const existingProxyEdgeMap = new Map<string, Edge>();
+
+  for (let i = 0; i < edges.length; i++) {
+    const edge = edges[i];
+    if (edge.id.startsWith('proxy-')) {
+      existingProxyEdgeMap.set(edge.id, edge);
+    }
+  }
 
   const realEdges: Edge[] = edges
     .filter((e) => !e.id.startsWith('proxy-'))
@@ -244,14 +252,19 @@ const syncProxyEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[] => {
       }
 
       if (sourceMapped && targetMapped && (finalSource !== edge.source || finalTarget !== edge.target)) {
+        const proxyId = `proxy-${edge.id}`;
+        const existingProxyEdge = existingProxyEdgeMap.get(proxyId);
+        const nextData = { ...(existingProxyEdge?.data ?? edge.data) };
+        delete nextData.orthogonalTurns;
+        delete nextData.controlPoints;
         proxyEdges.push({
-          id: `proxy-${edge.id}`,
+          id: proxyId,
           type: 'recipe',
           source: finalSource,
           sourceHandle: finalSourceHandle,
           target: finalTarget,
           targetHandle: finalTargetHandle,
-          data: edge.data,
+          data: nextData,
         });
       }
     }
