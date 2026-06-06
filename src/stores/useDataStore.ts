@@ -7,8 +7,11 @@ import {
   getMachine,
   getAllResearches,
   getResearch,
+  getRecipe,
+  getAllRecipes,
   reloadDatabase,
 } from '../data/lookup';
+import { getSpecialRecipe } from '../data/registry';
 import {
   batchSaveDataOverrides,
   clearDataOverrides,
@@ -16,7 +19,7 @@ import {
   clearCategoryDataOverrides,
 } from '../persistence/idb';
 import { useUIStore } from './useUIStore';
-import { validateProduct, validateMachine, validateResearch } from '../utils/dataValidation';
+import { validateProduct, validateMachine, validateResearch, validateRecipe } from '../utils/dataValidation';
 
 export interface PendingEdits {
   products: Record<string, Partial<Product> & { _tombstone?: boolean; _isNew?: boolean }>;
@@ -50,11 +53,15 @@ interface DataState {
   updateMachinePendingEdit: (id: string, updates: Partial<Machine>) => string;
   addMachine: (name?: string) => string;
   deleteMachine: (id: string) => void;
+  updateRecipePendingEdit: (id: string, updates: Partial<Recipe>) => string;
+  addRecipe: (name?: string, machineId?: string) => string;
+  deleteRecipe: (id: string) => void;
   updateResearchPendingEdit: (id: string, updates: Partial<Research>) => string;
   addResearch: (name?: string) => string;
   deleteResearch: (id: string) => void;
   restoreProductDefault: (id: string) => Promise<void>;
   restoreMachineDefault: (id: string) => Promise<void>;
+  restoreRecipeDefault: (id: string) => Promise<void>;
   restoreResearchDefault: (id: string) => Promise<void>;
   discardEdits: () => void;
   saveEdits: () => Promise<void>;
@@ -164,6 +171,37 @@ export function generateUniqueResearchId(
   while (isDuplicate(id)) {
     id = `${baseId}_${counter}`;
     counter++;
+  }
+
+  return id;
+}
+
+export function generateUniqueRecipeId(
+  machineId: string,
+  existingRecipes: Recipe[],
+  pendingRecipes: Record<string, Partial<Recipe> & { _tombstone?: boolean; _isNew?: boolean }>,
+): string {
+  // Replace the 'm_' prefix of machineId with 'r_'
+  let baseId = machineId || 'unassigned';
+  if (baseId.startsWith('m_')) {
+    baseId = 'r_' + baseId.substring(2);
+  } else if (!baseId.startsWith('r_')) {
+    baseId = 'r_' + baseId;
+  }
+
+  let id = `${baseId}_01`;
+  let counter = 1;
+
+  const isDuplicate = (checkId: string) => {
+    const inActive = existingRecipes.some((r) => r.id === checkId);
+    const inPending = checkId in pendingRecipes;
+    return inActive || inPending;
+  };
+
+  while (isDuplicate(id)) {
+    counter++;
+    const suffix = counter < 10 ? `0${counter}` : `${counter}`;
+    id = `${baseId}_${suffix}`;
   }
 
   return id;
@@ -404,6 +442,109 @@ export const useDataStore = create<DataState>((set, get) => ({
       };
     }),
 
+  updateRecipePendingEdit: (id, updates) => {
+    if (getSpecialRecipe(id)) return id;
+
+    let targetId = id;
+    set((state) => {
+      const prevEdit = state.pendingEdits.recipes[id] || {};
+      const nextRecipes = { ...state.pendingEdits.recipes };
+
+      const activeMachine =
+        updates.machine_id !== undefined ? updates.machine_id : prevEdit.machine_id || 'm_assembler';
+
+      const machChanged = updates.machine_id !== undefined && updates.machine_id !== prevEdit.machine_id;
+
+      if (prevEdit._isNew && machChanged) {
+        const otherPending = { ...state.pendingEdits.recipes };
+        delete otherPending[id];
+        targetId = generateUniqueRecipeId(
+          activeMachine,
+          getAllRecipes(),
+          otherPending,
+        );
+
+        delete nextRecipes[id];
+        nextRecipes[targetId] = {
+          ...prevEdit,
+          ...updates,
+          id: targetId,
+        };
+      } else {
+        nextRecipes[id] = {
+          ...prevEdit,
+          ...updates,
+        };
+      }
+
+      return {
+        pendingEdits: {
+          ...state.pendingEdits,
+          recipes: nextRecipes,
+        },
+      };
+    });
+    return targetId;
+  },
+
+  addRecipe: (name = 'New Recipe', machineId = 'm_assembler') => {
+    let generatedId = '';
+    set((state) => {
+      const activeRecipes = getAllRecipes();
+      generatedId = generateUniqueRecipeId(machineId, activeRecipes, state.pendingEdits.recipes);
+
+      const newRecipe: Recipe = {
+        id: generatedId,
+        name,
+        machine_id: machineId,
+        cycle_time: 1,
+        power_consumption: 100,
+        power_type: 'MV',
+        pollution: 0,
+        inputs: [],
+        outputs: [],
+      };
+
+      return {
+        pendingEdits: {
+          ...state.pendingEdits,
+          recipes: {
+            ...state.pendingEdits.recipes,
+            [generatedId]: {
+              ...newRecipe,
+              _isNew: true,
+            },
+          },
+        },
+      };
+    });
+    return generatedId;
+  },
+
+  deleteRecipe: (id: string) =>
+    set((state) => {
+      if (getSpecialRecipe(id)) return state;
+
+      const pending = state.pendingEdits.recipes[id];
+      const nextRecipes = { ...state.pendingEdits.recipes };
+
+      if (pending?._isNew) {
+        delete nextRecipes[id];
+      } else {
+        nextRecipes[id] = {
+          ...nextRecipes[id],
+          _tombstone: true,
+        };
+      }
+
+      return {
+        pendingEdits: {
+          ...state.pendingEdits,
+          recipes: nextRecipes,
+        },
+      };
+    }),
+
   addResearch: (name = 'New Research') => {
     let generatedId = '';
     set((state) => {
@@ -489,6 +630,23 @@ export const useDataStore = create<DataState>((set, get) => ({
         pendingEdits: {
           ...state.pendingEdits,
           machines: nextMachines,
+        },
+        dbVersion: state.dbVersion + 1,
+      };
+    });
+  },
+
+  restoreRecipeDefault: async (id: string) => {
+    const dbKey = `recipe:${id}`;
+    await deleteDataOverride(dbKey);
+    await reloadDatabase();
+    set((state) => {
+      const nextRecipes = { ...state.pendingEdits.recipes };
+      delete nextRecipes[id];
+      return {
+        pendingEdits: {
+          ...state.pendingEdits,
+          recipes: nextRecipes,
         },
         dbVersion: state.dbVersion + 1,
       };
@@ -590,6 +748,44 @@ export const useDataStore = create<DataState>((set, get) => ({
       }
     }
 
+    const validProductIds = new Set(getAllProducts().map((p) => p.id));
+    for (const [id, editData] of Object.entries(pendingEdits.products)) {
+      if (editData._tombstone) {
+        validProductIds.delete(id);
+      } else if (editData._isNew) {
+        validProductIds.add(id);
+      }
+    }
+
+    const validMachineIds = new Set(getAllMachines().map((m) => m.id));
+    for (const [id, editData] of Object.entries(pendingEdits.machines)) {
+      if (editData._tombstone) {
+        validMachineIds.delete(id);
+      } else if (editData._isNew) {
+        validMachineIds.add(id);
+      }
+    }
+
+    for (const [id, editData] of Object.entries(pendingEdits.recipes)) {
+      if (getSpecialRecipe(id)) continue;
+      if (editData._tombstone) continue;
+      const existing = getRecipe(id);
+      const compiled = existing ? { ...existing, ...editData } : editData;
+      const validation = validateRecipe(compiled, validProductIds, validMachineIds);
+      if (!validation.valid) {
+        const errorMsg = validation.errors
+          .map((err) => `- ${err.field}: ${err.message}`)
+          .join('\n');
+        await useUIStore.getState().confirm({
+          title: 'Recipe Validation Failed',
+          message: `The recipe "${compiled.name || id}" has invalid properties:\n${errorMsg}`,
+          confirmLabel: 'Dismiss',
+          intent: 'error',
+        });
+        return;
+      }
+    }
+
     const batch: { id: string; data: Record<string, unknown> }[] = [];
 
     for (const [id, editData] of Object.entries(pendingEdits.products)) {
@@ -637,6 +833,25 @@ export const useDataStore = create<DataState>((set, get) => ({
         const savedData = existing ? { ...existing, ...editData } : editData;
 
         const cleanData = { ...savedData } as Partial<Research> & {
+          _isNew?: boolean;
+          _tombstone?: boolean;
+        };
+        delete cleanData._isNew;
+        delete cleanData._tombstone;
+        batch.push({ id: dbKey, data: cleanData as unknown as Record<string, unknown> });
+      }
+    }
+
+    for (const [id, editData] of Object.entries(pendingEdits.recipes)) {
+      if (getSpecialRecipe(id)) continue;
+      const dbKey = `recipe:${id}`;
+      if (editData._tombstone) {
+        batch.push({ id: dbKey, data: { _tombstone: true } });
+      } else {
+        const existing = getRecipe(id);
+        const savedData = existing ? { ...existing, ...editData } : editData;
+
+        const cleanData = { ...savedData } as Partial<Recipe> & {
           _isNew?: boolean;
           _tombstone?: boolean;
         };

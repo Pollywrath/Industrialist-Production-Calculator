@@ -15,6 +15,7 @@ import { useUIStore } from '../../../stores/useUIStore';
 import { useDataStore } from '../../../stores/useDataStore';
 import { ProductsTab } from './ProductsTab';
 import { MachinesTab } from './MachinesTab';
+import { RecipesTab } from './RecipesTab';
 import { ResearchesTab } from './ResearchesTab';
 import styles from './DataOverlay.module.css';
 
@@ -153,16 +154,7 @@ function DataOverlayModal() {
                 {activeEditTab === 'products' && <ProductsTab />}
 
                 {activeEditTab === 'machines' && <MachinesTab />}
-                {activeEditTab === 'recipes' && (
-                  <div className={styles['empty-state']}>
-                    <ClipboardList size={32} className={styles['empty-icon']} />
-                    <div className={styles['empty-title']}>Edit Recipes</div>
-                    <div className={styles['empty-desc']}>
-                      Custom recipe definitions and manufacturing processes. Editor interface coming
-                      soon.
-                    </div>
-                  </div>
-                )}
+                {activeEditTab === 'recipes' && <RecipesTab />}
                 {activeEditTab === 'researches' && <ResearchesTab />}
               </div>
             </div>

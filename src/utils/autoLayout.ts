@@ -2,7 +2,7 @@ import type { Edge } from '@xyflow/react';
 import ELK from 'elkjs/lib/elk-api.js';
 import elkWorkerUrl from 'elkjs/lib/elk-worker.min.js?url';
 import type { EdgePathStyle } from '../stores/useEdgeThemeStore';
-import { getRecipe } from '../data/lookup';
+import { resolveActiveRecipe } from '../data/lookup';
 import { isGroupNode, isRecipeNode } from '../types/nodes';
 import type { CanvasNode, GroupNodeType, RecipeNodeType } from '../types/nodes';
 import {
@@ -140,7 +140,7 @@ const createIndexOrder = (count: number): number[] =>
   Array.from({ length: count }, (_unused, index) => index);
 
 function getRecipeNodeHandlesMeta(node: RecipeNodeType): NodeHandlesMeta {
-  const recipe = getRecipe(node.data.recipeId);
+  const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id);
   const fallbackInputCount = recipe?.inputs.length ?? 0;
   const fallbackOutputCount = recipe?.outputs.length ?? 0;
 

@@ -12,6 +12,7 @@ interface GenericDataFormShellProps {
   entityLabel: string;
   EmptyIcon: React.ComponentType<{ className?: string; size?: number; strokeWidth?: number }>;
   children?: React.ReactNode;
+  isReadOnly?: boolean;
 }
 
 export function GenericDataFormShell({
@@ -25,6 +26,7 @@ export function GenericDataFormShell({
   entityLabel,
   EmptyIcon,
   children,
+  isReadOnly = false,
 }: GenericDataFormShellProps) {
   const emptyState = (
     <div className={styles['empty-detail']}>
@@ -66,37 +68,40 @@ export function GenericDataFormShell({
             <label className={styles['form-label']}>{entityLabel} Name</label>
             <input
               type="text"
-              className={styles['form-input']}
+              className={isReadOnly ? styles['form-input-readonly'] : styles['form-input']}
               value={activeEntity.name || ''}
               onChange={(e) => onNameChange(e.target.value)}
               placeholder={`e.g. New ${entityLabel}`}
               maxLength={64}
+              disabled={isReadOnly}
             />
           </div>
 
           {children}
 
-          <div className={styles['form-actions']}>
-            {isModified ? (
-              <button
-                className={styles[`btn-restore-${labelLower}`] || styles['btn-restore']}
-                onClick={onRestore}
-                title="Restore this entry back to its baseline default configuration"
-              >
-                <RotateCcw size={14} />
-                Restore Baseline Defaults
-              </button>
-            ) : (
-              <button
-                className={styles[`btn-delete-${labelLower}`] || styles['btn-delete']}
-                onClick={onDelete}
-                title={`Delete Custom ${entityLabel}`}
-              >
-                <Trash2 size={14} />
-                Delete {entityLabel} Record
-              </button>
-            )}
-          </div>
+          {!isReadOnly && (
+            <div className={styles['form-actions']}>
+              {isModified ? (
+                <button
+                  className={styles[`btn-restore-${labelLower}`] || styles['btn-restore']}
+                  onClick={onRestore}
+                  title="Restore this entry back to its baseline default configuration"
+                >
+                  <RotateCcw size={14} />
+                  Restore Baseline Defaults
+                </button>
+              ) : (
+                <button
+                  className={styles[`btn-delete-${labelLower}`] || styles['btn-delete']}
+                  onClick={onDelete}
+                  title={`Delete Custom ${entityLabel}`}
+                >
+                  <Trash2 size={14} />
+                  Delete {entityLabel} Record
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

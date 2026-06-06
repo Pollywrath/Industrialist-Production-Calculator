@@ -1,8 +1,7 @@
 import type { Recipe, Machine, Product, Research } from '../types/data';
 import type { SettingDefinition, SpecialRecipe } from '../types/specialRecipes';
-import { getAllSpecialRecipes, getSpecialRecipe } from './registry';
+import { getAllSpecialRecipes, getSpecialRecipe, setSpecialRecipeOverrides } from './registry';
 import { getDataOverrides } from '../persistence/idb';
-import { setSpecialRecipeOverrides } from './registry';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { useFlowStore } from '../stores/useFlowStore';
 import { useFlowResultStore } from '../stores/useFlowResultStore';
@@ -20,6 +19,7 @@ let researches: Research[] = [];
 const overriddenProducts = new Set<string>();
 const overriddenMachines = new Set<string>();
 const overriddenResearches = new Set<string>();
+const overriddenRecipes = new Set<string>();
 
 let defaultRecipes: Recipe[] = [];
 let defaultMachines: Machine[] = [];
@@ -38,6 +38,7 @@ function processCategory<T extends { id: string }>(
   prefix: string,
   defaults: T[],
   overrides: { id: string; data: Record<string, unknown> }[],
+  shouldApplyOverride?: (entityId: string, data: Record<string, unknown>) => boolean,
 ): T[] {
   const activeMap = new Map<string, T>(defaults.map((item) => [item.id, item]));
 
@@ -46,6 +47,9 @@ function processCategory<T extends { id: string }>(
     if (override.id.startsWith(prefix)) {
       const entityId = override.id.substring(prefix.length);
       const data = override.data;
+      if (shouldApplyOverride && !shouldApplyOverride(entityId, data)) {
+        continue;
+      }
       if (data._tombstone) {
         activeMap.delete(entityId);
       } else {
@@ -196,7 +200,12 @@ export function rebuildActiveDatabase(
 
   products = processCategory('product:', defaultProducts, overrides);
   machines = processCategory('machine:', defaultMachines, overrides);
-  recipes = processCategory('recipe:', defaultRecipes, overrides);
+  recipes = processCategory(
+    'recipe:',
+    defaultRecipes,
+    overrides,
+    (entityId) => !getSpecialRecipe(entityId),
+  );
   researches = processCategory('research:', defaultResearches, overrides);
 
   for (let i = 0; i < recipes.length; i++) {
@@ -226,6 +235,7 @@ export function rebuildActiveDatabase(
   overriddenProducts.clear();
   overriddenMachines.clear();
   overriddenResearches.clear();
+  overriddenRecipes.clear();
 
   const defaultProductMap = new Map(defaultProducts.map((p) => [p.id, p]));
   for (let i = 0; i < products.length; i++) {
@@ -251,6 +261,15 @@ export function rebuildActiveDatabase(
     const baseline = defaultResearchMap.get(r.id);
     if (baseline && !deepEqual(baseline, r)) {
       overriddenResearches.add(r.id);
+    }
+  }
+
+  const defaultRecipeMap = new Map(defaultRecipes.map((r) => [r.id, r]));
+  for (let i = 0; i < recipes.length; i++) {
+    const r = recipes[i];
+    const baseline = defaultRecipeMap.get(r.id);
+    if (baseline && !deepEqual(baseline, r)) {
+      overriddenRecipes.add(r.id);
     }
   }
 
@@ -464,6 +483,7 @@ export function resolveActiveRecipe(
     computedRecipe.potential_outputs = sr.potentialOutputs;
     computedRecipe.potential_inputs = sr.potentialInputs;
     computedRecipe.isSellTrash = !!sr.isSellTrash;
+
     return computedRecipe;
   }
 
@@ -526,6 +546,10 @@ export function isBaselineResearch(id: string): boolean {
   return defaultResearches.some((r) => r.id === id);
 }
 
+export function isBaselineRecipe(id: string): boolean {
+  return defaultRecipes.some((r) => r.id === id);
+}
+
 export function hasProductOverride(id: string): boolean {
   return overriddenProducts.has(id);
 }
@@ -536,4 +560,8 @@ export function hasMachineOverride(id: string): boolean {
 
 export function hasResearchOverride(id: string): boolean {
   return overriddenResearches.has(id);
+}
+
+export function hasRecipeOverride(id: string): boolean {
+  return overriddenRecipes.has(id);
 }

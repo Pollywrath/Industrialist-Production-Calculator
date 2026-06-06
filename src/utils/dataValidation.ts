@@ -228,13 +228,13 @@ export function validateRecipe(
 
   const r = recipe as Partial<Recipe> & Record<string, unknown>;
 
-  const recipeIdRegex = /^r_([a-zA-Z0-9_]+)_(0[1-9]|[1-9]\d)$/;
+  const recipeIdRegex = /^r_([a-zA-Z0-9_]+)_(0[1-9]|[1-9]\d*)$/;
   if (typeof r.id !== 'string' || !r.id.trim()) {
     errors.push({ field: 'id', message: 'ID must be a non-empty string' });
   } else if (!recipeIdRegex.test(r.id)) {
     errors.push({
       field: 'id',
-      message: `ID "${r.id}" must start with "r_" prefix and end with a 2-digit index from 01 to 99 (e.g., "r_machine_name_01")`,
+      message: `ID "${r.id}" must start with "r_" prefix and end with a positive numeric index (e.g., "r_machine_name_01")`,
     });
   }
 

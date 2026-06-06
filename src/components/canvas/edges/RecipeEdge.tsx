@@ -172,7 +172,7 @@ function normalizeOrthogonalTurns(
   }
 
   if (finiteTurns.length !== 2 && finiteTurns.length !== 4) {
-    return finiteTurns;
+    return buildDefaultOrthogonalTurns(layout, sourceX, sourceY, targetX, targetY);
   }
 
   const defaultTurns = buildDefaultOrthogonalTurns(layout, sourceX, sourceY, targetX, targetY);
@@ -384,7 +384,18 @@ export function RecipeEdge({
     options?: { recordHistory?: boolean; visualOnly?: boolean },
   ) => {
     const flowStore = useFlowStore.getState();
-    const normalizedPoints = toFinitePoints(nextPoints);
+    const finitePoints = toFinitePoints(nextPoints);
+    const normalizedPoints =
+      key === 'orthogonalTurns' && finitePoints.length > 0
+        ? normalizeOrthogonalTurns(
+            orthogonalLayout,
+            finitePoints,
+            sourceX,
+            sourceY,
+            targetX,
+            targetY,
+          )
+        : finitePoints;
 
     const isProxy = edgeId.startsWith('proxy-');
     const realId = isProxy ? edgeId.substring(6) : edgeId;

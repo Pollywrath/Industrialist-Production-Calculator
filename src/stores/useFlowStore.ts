@@ -169,6 +169,13 @@ const prepareGroupNode = (node: GroupNodeType): GroupNodeType => {
   };
 };
 
+const stripRouteData = (data: Edge['data']): Record<string, unknown> => {
+  const nextData = { ...(data as Record<string, unknown> | undefined) };
+  delete nextData.orthogonalTurns;
+  delete nextData.controlPoints;
+  return nextData;
+};
+
 const syncProxyEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[] => {
   const recipeNodes = nodes.filter(isRecipeNode);
   const recipeNodeMap = new Map(recipeNodes.map((rn) => [rn.id, rn]));
@@ -254,9 +261,17 @@ const syncProxyEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[] => {
       if (sourceMapped && targetMapped && (finalSource !== edge.source || finalTarget !== edge.target)) {
         const proxyId = `proxy-${edge.id}`;
         const existingProxyEdge = existingProxyEdgeMap.get(proxyId);
-        const nextData = { ...(existingProxyEdge?.data ?? edge.data) };
-        delete nextData.orthogonalTurns;
-        delete nextData.controlPoints;
+        const proxyEndpointsUnchanged =
+          !!existingProxyEdge &&
+          existingProxyEdge.source === finalSource &&
+          existingProxyEdge.sourceHandle === finalSourceHandle &&
+          existingProxyEdge.target === finalTarget &&
+          existingProxyEdge.targetHandle === finalTargetHandle;
+        const nextData = proxyEndpointsUnchanged
+          ? { ...(existingProxyEdge.data as Record<string, unknown> | undefined) }
+          : existingProxyEdge
+            ? stripRouteData(edge.data)
+            : { ...(edge.data as Record<string, unknown> | undefined) };
         proxyEdges.push({
           id: proxyId,
           type: 'recipe',
