@@ -1,6 +1,6 @@
 import type { Edge } from '@xyflow/react';
 import type { Recipe } from '../../../types/data';
-import { isRecipeNode } from '../../../types/nodes';
+import { isGroupNode, isRecipeNode } from '../../../types/nodes';
 import type { CanvasNode, RecipeNodeType } from '../../../types/nodes';
 import { SNAP_GRID, NODE_WIDTH } from '../../shared/layoutConstants';
 import { calculateMachineCountFromRate } from '../../../utils/recipeComputation';
@@ -23,6 +23,30 @@ interface InsertionParams {
 interface InsertionResult {
   newNode: RecipeNodeType;
   nextEdges: Edge[];
+}
+
+function getInsertionAnchorNode(
+  nodes: CanvasNode[],
+  existingNode: CanvasNode,
+  sourceSide: 'input' | 'output' | null,
+  handleIndex: number | null,
+): CanvasNode {
+  if (!isRecipeNode(existingNode) || !existingNode.data.groupId || !sourceSide || handleIndex === null) {
+    return existingNode;
+  }
+
+  const candidateGroupNode = nodes.find((node) => node.id === existingNode.data.groupId);
+  if (!isGroupNode(candidateGroupNode) || !candidateGroupNode.data.collapsed) {
+    return existingNode;
+  }
+
+  const internalHandleId = buildHandleId(existingNode.id, sourceSide, handleIndex);
+  const proxyHandleIds =
+    sourceSide === 'input'
+      ? candidateGroupNode.data.inputProxyHandleIds
+      : candidateGroupNode.data.outputProxyHandleIds;
+
+  return proxyHandleIds.includes(internalHandleId) ? candidateGroupNode : existingNode;
 }
 
 export function computeRecipeInsertion({
@@ -61,6 +85,13 @@ export function computeRecipeInsertion({
         targetX = center.x - NODE_WIDTH / 2;
         targetY = center.y - 50;
       } else {
+        const anchorNode = getInsertionAnchorNode(
+          nodes,
+          existingNode,
+          preselectedSourceSide,
+          preselectedHandleIndex,
+        );
+
         if (derivedRate !== null) {
           const targetIndex =
             preselectedSourceSide === 'input' ? matchingOutputIndex : matchingInputIndex;
@@ -80,8 +111,8 @@ export function computeRecipeInsertion({
 
         const horizontalGap = 150;
         if (preselectedSourceSide === 'input') {
-          targetX = existingNode.position.x - NODE_WIDTH - horizontalGap;
-          targetY = existingNode.position.y;
+          targetX = anchorNode.position.x - NODE_WIDTH - horizontalGap;
+          targetY = anchorNode.position.y;
 
           if (matchingOutputIndex !== -1 && preselectedHandleIndex !== null) {
             shouldAutoConnect = true;
@@ -94,8 +125,8 @@ export function computeRecipeInsertion({
             };
           }
         } else if (preselectedSourceSide === 'output') {
-          targetX = existingNode.position.x + NODE_WIDTH + horizontalGap;
-          targetY = existingNode.position.y;
+          targetX = anchorNode.position.x + NODE_WIDTH + horizontalGap;
+          targetY = anchorNode.position.y;
 
           if (matchingInputIndex !== -1 && preselectedHandleIndex !== null) {
             shouldAutoConnect = true;

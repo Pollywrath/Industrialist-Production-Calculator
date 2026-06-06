@@ -121,7 +121,6 @@ export function GroupNodeIO({
   const rateMode = useUIStore((s) => s.rateMode);
   const flowResults = useFlowResultStore((s) => s.results);
   const resolvedProducts = useFlowResultStore((s) => s.resolvedProducts);
-  const { nodes, edges } = useFlowStore.getState();
   const nodesMap = useFlowStore((s) => s.nodesMap);
 
   const leftHandles = inputProxyHandleIds.map((_, index) => ({ side: 'input' as const, index }));
@@ -198,6 +197,7 @@ export function GroupNodeIO({
   };
 
   const handleDoubleClick = (ref: HandleRef) => {
+    const { nodes, edges, nodesMap: latestNodesMap } = useFlowStore.getState();
     const internalHandleId =
       ref.side === 'input'
         ? inputProxyHandleIds[ref.index]
@@ -207,7 +207,7 @@ export function GroupNodeIO({
     const parsed = parseHandleId(internalHandleId);
     if (!parsed) return;
 
-    const internalNode = nodesMap.get(parsed.nodeId);
+    const internalNode = latestNodesMap.get(parsed.nodeId);
     if (!isRecipeNode(internalNode)) return;
 
     const recipe = resolveActiveRecipe(internalNode.data.recipeId, internalNode.data.settings, internalNode.id);

@@ -1139,11 +1139,12 @@ const useFlowStore = create(
         const state = get();
         const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(nodes, state.edges);
         const enriched = syncAllGroupBounds(sanitizedNodes.map(enrichNodeDimensions));
+        const nextEdges = syncProxyEdges(enriched, sanitizedEdges);
         const nextNodesMap = createNodesMap(enriched);
         set({
           nodes: enriched,
           nodesMap: nextNodesMap,
-          edges: sanitizedEdges,
+          edges: nextEdges,
           graphVersion: state.graphVersion + 1,
         });
 
@@ -1152,22 +1153,23 @@ const useFlowStore = create(
           return;
         }
         if (shouldRecordHistory(options)) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, enriched, sanitizedEdges));
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, enriched, nextEdges));
         }
       },
 
       setEdges: (edges, options) => {
         const state = get();
         const { edges: sanitizedEdges } = ensureGraphIntegrity(state.nodes, edges);
+        const nextEdges = syncProxyEdges(state.nodes, sanitizedEdges);
 
         if (options?.visualOnly) {
           set({
-            edges: sanitizedEdges,
+            edges: nextEdges,
           });
         } else {
           clearFlowCache();
           set({
-            edges: sanitizedEdges,
+            edges: nextEdges,
             graphVersion: state.graphVersion + 1,
           });
         }
@@ -1178,7 +1180,7 @@ const useFlowStore = create(
         }
         if (shouldRecordHistory(options)) {
           pushHistoryEntry(
-            buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, sanitizedEdges),
+            buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges),
           );
         }
       },
@@ -1192,19 +1194,20 @@ const useFlowStore = create(
           enrichedNodes[i] = enrichNodeDimensions(sanitizedNodes[i]);
         }
         const enriched = syncAllGroupBounds(enrichedNodes);
+        const nextEdges = syncProxyEdges(enriched, sanitizedEdges);
         const map = createNodesMap(enriched);
         if (options?.visualOnly) {
           set({
             nodes: enriched,
             nodesMap: map,
-            edges: sanitizedEdges,
+            edges: nextEdges,
           });
         } else {
           clearFlowCache();
           set({
             nodes: enriched,
             nodesMap: map,
-            edges: sanitizedEdges,
+            edges: nextEdges,
             graphVersion: state.graphVersion + 1,
           });
         }
@@ -1214,7 +1217,7 @@ const useFlowStore = create(
           return;
         }
         if (shouldRecordHistory(options)) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, enriched, sanitizedEdges));
+          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, enriched, nextEdges));
         }
       },
 

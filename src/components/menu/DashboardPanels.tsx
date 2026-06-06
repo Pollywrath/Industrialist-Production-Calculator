@@ -14,6 +14,7 @@ import { useUIStore } from '../../stores/useUIStore';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
 import { useDashboardStore, initDashboardStore } from '../../stores/useDashboardStore';
+import { isGroupNode, isRecipeNode } from '../../types/nodes';
 import {
   formatCurrency,
   formatPower,
@@ -68,10 +69,21 @@ export function DashboardPanels() {
 
   const handleNodeClick = (nodeId?: string) => {
     if (!nodeId) return;
-    const node = useFlowStore.getState().nodes.find((n) => n.id === nodeId);
-    if (node) {
-      const x = node.position.x + (node.measured?.width ?? 200) / 2;
-      const y = node.position.y + (node.measured?.height ?? 120) / 2;
+    const nodes = useFlowStore.getState().nodes;
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+
+    const targetNode =
+      isRecipeNode(node) && node.data.groupId
+        ? (() => {
+            const groupNode = nodes.find((n) => n.id === node.data.groupId);
+            return isGroupNode(groupNode) && groupNode.data.collapsed ? groupNode : node;
+          })()
+        : node;
+
+    if (targetNode) {
+      const x = targetNode.position.x + (targetNode.measured?.width ?? targetNode.width ?? 200) / 2;
+      const y = targetNode.position.y + (targetNode.measured?.height ?? targetNode.height ?? 120) / 2;
       setCenter(x, y, { zoom: 1.2 });
     }
   };

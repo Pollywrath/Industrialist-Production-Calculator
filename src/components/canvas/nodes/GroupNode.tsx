@@ -3,6 +3,7 @@ import { useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import { ChevronDown, ChevronRight, Ellipsis } from 'lucide-react';
 import { getEffectiveToggleId, useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
+import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { isRecipeNode } from '../../../types/nodes';
 import type { GroupNodeType } from '../../../types/nodes';
@@ -29,9 +30,13 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const updateGroupNodeData = useFlowStore((s) => s.updateGroupNodeData);
   const updateNodeInternals = useUpdateNodeInternals();
+  const globalSettings = useGlobalSettingsStore((s) => s.settings);
 
   const memberNodes = useFlowStore(
     useShallow((s) => s.nodes.filter((n) => isRecipeNode(n) && n.data.groupId === id))
+  );
+  const memberRecipes = useFlowResultStore(
+    useShallow((s) => memberNodes.map((node) => s.nodeRecipes[node.id]))
   );
 
   useEffect(() => {
@@ -56,11 +61,11 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
     let totalMachineCost = 0;
     let totalPower = 0;
     let totalPollution = 0;
-    const globalSettings = useGlobalSettingsStore.getState().settings;
 
-    memberNodes.forEach((node) => {
+    memberNodes.forEach((node, index) => {
       if (!isRecipeNode(node)) return;
-      const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id);
+      const recipe =
+        memberRecipes[index] ?? resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id);
       if (!recipe) return;
       const sr = getSpecialRecipe(recipe.id);
       const machine = getMachine(recipe.machine_id);
