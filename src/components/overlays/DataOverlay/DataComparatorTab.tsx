@@ -1,21 +1,25 @@
 import { AlertTriangle, CheckCircle2, ClipboardList, Cpu, FlaskConical, Package, RefreshCw } from 'lucide-react';
 import type { ComponentType } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  fetchAllWikiBucketRows,
+  fetchCachedWikiBucketRows,
+  getCachedWikiBucketRows,
+  type CachedWikiBucketRowsResult,
   type IndustrialistBucketName,
 } from '../../../services/wikiBucketApi';
 import styles from './DataOverlay.module.css';
 
 type ComparatorDataType = 'products' | 'machines' | 'recipes' | 'research';
-type BucketLoadStatus = 'idle' | 'loading' | 'success' | 'error';
+type BucketLoadStatus = 'idle' | 'loading' | 'success' | 'cached' | 'error';
 
 interface BucketSnapshot {
   bucket: IndustrialistBucketName;
   status: BucketLoadStatus;
   rows: unknown;
   error?: string;
+  warning?: string;
   fetchedAt?: number;
+  checkedAt?: number;
 }
 
 const COMPARATOR_TABS: Array<{
@@ -35,6 +39,22 @@ const DATA_TYPE_BUCKETS: Record<ComparatorDataType, IndustrialistBucketName[]> =
   recipes: ['recipes_info', 'recipes_inputs', 'recipes_outputs'],
   research: [],
 };
+const COMPARATOR_BUCKETS = Array.from(
+  new Set(Object.values(DATA_TYPE_BUCKETS).flat()),
+) as IndustrialistBucketName[];
+
+function snapshotFromResult(result: CachedWikiBucketRowsResult): BucketSnapshot {
+  return {
+    bucket: result.bucket,
+    status: result.source === 'cache' ? 'cached' : 'success',
+    rows: result.rows,
+    fetchedAt: result.fetchedAt,
+    checkedAt: result.checkedAt,
+    warning: result.freshnessError
+      ? `Using cached data. Freshness check failed: ${result.freshnessError}`
+      : undefined,
+  };
+}
 
 function getBucketRowsCount(rows: unknown): number {
   return Array.isArray(rows) ? rows.length : rows === undefined ? 0 : 1;
@@ -59,6 +79,38 @@ export function DataComparatorTab() {
   const [snapshots, setSnapshots] = useState<Partial<Record<IndustrialistBucketName, BucketSnapshot>>>({});
   const activeBuckets = DATA_TYPE_BUCKETS[activeTab];
   const hasActiveLoading = activeBuckets.some((bucket) => snapshots[bucket]?.status === 'loading');
+  const hasActiveRows = activeBuckets.some((bucket) => snapshots[bucket]?.rows !== undefined);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadCachedBuckets = async () => {
+      const cachedSnapshots = await Promise.all(
+        COMPARATOR_BUCKETS.map(async (bucket) => ({
+          bucket,
+          result: await getCachedWikiBucketRows({ bucket }),
+        })),
+      );
+
+      if (isCancelled) return;
+
+      setSnapshots((prev) => {
+        const next = { ...prev };
+        for (const { bucket, result } of cachedSnapshots) {
+          if (result && next[bucket]?.rows === undefined) {
+            next[bucket] = snapshotFromResult(result);
+          }
+        }
+        return next;
+      });
+    };
+
+    void loadCachedBuckets();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   const fetchBucket = async (bucket: IndustrialistBucketName) => {
     setSnapshots((prev) => ({
@@ -67,20 +119,17 @@ export function DataComparatorTab() {
         bucket,
         status: 'loading',
         rows: prev[bucket]?.rows,
+        warning: prev[bucket]?.warning,
         fetchedAt: prev[bucket]?.fetchedAt,
+        checkedAt: prev[bucket]?.checkedAt,
       },
     }));
 
     try {
-      const rows = await fetchAllWikiBucketRows({ bucket });
+      const result = await fetchCachedWikiBucketRows({ bucket });
       setSnapshots((prev) => ({
         ...prev,
-        [bucket]: {
-          bucket,
-          status: 'success',
-          rows,
-          fetchedAt: Date.now(),
-        },
+        [bucket]: snapshotFromResult(result),
       }));
     } catch (error) {
       setSnapshots((prev) => ({
@@ -90,7 +139,9 @@ export function DataComparatorTab() {
           status: 'error',
           rows: prev[bucket]?.rows,
           error: getErrorMessage(error),
+          warning: prev[bucket]?.warning,
           fetchedAt: prev[bucket]?.fetchedAt,
+          checkedAt: prev[bucket]?.checkedAt,
         },
       }));
     }
@@ -108,7 +159,7 @@ export function DataComparatorTab() {
         {COMPARATOR_TABS.map((tab) => {
           const Icon = tab.icon;
           const buckets = DATA_TYPE_BUCKETS[tab.id];
-          const loadedCount = buckets.filter((bucket) => snapshots[bucket]?.status === 'success').length;
+          const loadedCount = buckets.filter((bucket) => snapshots[bucket]?.rows !== undefined).length;
           return (
             <button
               key={tab.id}
@@ -144,7 +195,7 @@ export function DataComparatorTab() {
           disabled={hasActiveLoading || activeBuckets.length === 0}
         >
           <RefreshCw size={14} />
-          <span>{hasActiveLoading ? 'Fetching' : 'Fetch'}</span>
+          <span>{hasActiveLoading ? 'Checking' : hasActiveRows ? 'Check' : 'Fetch'}</span>
         </button>
       </div>
 
@@ -161,6 +212,7 @@ export function DataComparatorTab() {
           activeBuckets.map((bucket) => {
             const snapshot = snapshots[bucket];
             const status = snapshot?.status ?? 'idle';
+            const statusLabel = snapshot?.warning && status === 'cached' ? 'stale cache' : status;
             return (
               <section key={bucket} className={styles['compare-bucket']}>
                 <div className={styles['compare-bucket-header']}>
@@ -173,9 +225,10 @@ export function DataComparatorTab() {
                   <div className={styles['compare-bucket-actions']}>
                     <span className={styles[`compare-status-${status}`]}>
                       {status === 'success' && <CheckCircle2 size={13} />}
+                      {status === 'cached' && <CheckCircle2 size={13} />}
                       {status === 'error' && <AlertTriangle size={13} />}
                       {status === 'loading' && <RefreshCw size={13} />}
-                      {status}
+                      {statusLabel}
                     </span>
                     <span className={styles['compare-bucket-time']}>
                       {formatFetchedAt(snapshot?.fetchedAt)}
@@ -196,6 +249,9 @@ export function DataComparatorTab() {
 
                 {status === 'error' && (
                   <div className={styles['compare-error']}>{snapshot?.error}</div>
+                )}
+                {snapshot?.warning && (
+                  <div className={styles['compare-warning']}>{snapshot.warning}</div>
                 )}
 
                 <pre className={styles['compare-output']}>{getBucketOutput(snapshot)}</pre>

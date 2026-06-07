@@ -14,10 +14,24 @@ interface SavesDB extends DBSchema {
     key: string;
     value: { id: string; data: Record<string, unknown> };
   };
+  wiki_bucket_cache: {
+    key: string;
+    value: WikiBucketCacheRecord;
+  };
 }
 
 const DB_NAME = 'industrialist_saves_db';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
+
+export interface WikiBucketCacheRecord {
+  id: string;
+  bucket: string;
+  querySignature: string;
+  rows: Record<string, unknown>[];
+  contentHash: string;
+  fetchedAt: number;
+  checkedAt: number;
+}
 
 let dbPromise: Promise<IDBPDatabase<SavesDB> | null> | null = null;
 
@@ -32,6 +46,11 @@ function getDB(): Promise<IDBPDatabase<SavesDB> | null> {
         if (oldVersion < 2) {
           if (!db.objectStoreNames.contains('data_overrides')) {
             db.createObjectStore('data_overrides', { keyPath: 'id' });
+          }
+        }
+        if (oldVersion < 3) {
+          if (!db.objectStoreNames.contains('wiki_bucket_cache')) {
+            db.createObjectStore('wiki_bucket_cache', { keyPath: 'id' });
           }
         }
       },
@@ -126,7 +145,47 @@ export async function clearAllData(): Promise<void> {
   const db = await getDB();
   if (!db) return;
 
-  await Promise.all([db.clear('autosave'), db.clear('data_overrides')]);
+  await Promise.all([
+    db.clear('autosave'),
+    db.clear('data_overrides'),
+    db.clear('wiki_bucket_cache'),
+  ]);
+}
+
+export async function getWikiBucketCache(id: string): Promise<WikiBucketCacheRecord | null> {
+  try {
+    const db = await getDB();
+    if (!db) return null;
+    const record = await db.get('wiki_bucket_cache', id);
+    return record ?? null;
+  } catch (err) {
+    console.warn('Failed to get wiki bucket cache from IndexedDB:', err);
+    return null;
+  }
+}
+
+export async function saveWikiBucketCache(record: WikiBucketCacheRecord): Promise<boolean> {
+  try {
+    const db = await getDB();
+    if (!db) return false;
+    await db.put('wiki_bucket_cache', record);
+    return true;
+  } catch (err) {
+    console.warn('Failed to save wiki bucket cache in IndexedDB:', err);
+    return false;
+  }
+}
+
+export async function clearWikiBucketCache(): Promise<boolean> {
+  try {
+    const db = await getDB();
+    if (!db) return false;
+    await db.clear('wiki_bucket_cache');
+    return true;
+  } catch (err) {
+    console.warn('Failed to clear wiki bucket cache in IndexedDB:', err);
+    return false;
+  }
 }
 
 export async function getDataOverrides(): Promise<{ id: string; data: Record<string, unknown> }[]> {

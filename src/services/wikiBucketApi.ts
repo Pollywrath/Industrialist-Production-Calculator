@@ -1,3 +1,9 @@
+import {
+  getWikiBucketCache,
+  saveWikiBucketCache,
+  type WikiBucketCacheRecord,
+} from '../persistence/idb';
+
 export const INDUSTRIALIST_WIKI_API_URL =
   import.meta.env.VITE_INDUSTRIALIST_WIKI_API_URL ??
   'https://industrialist.miraheze.org/w/api.php';
@@ -47,9 +53,30 @@ export interface WikiBucketFetchAllOptions extends WikiBucketFetchOptions {
 
 export type WikiBucketRow = Record<string, unknown>;
 
+export interface CachedWikiBucketRowsResult {
+  rows: WikiBucketRow[];
+  bucket: IndustrialistBucketName;
+  source: 'cache' | 'network';
+  contentHash: string;
+  fetchedAt: number;
+  checkedAt: number;
+  stale?: boolean;
+  freshnessError?: string;
+}
+
 export interface WikiBucketApiResponse<TBucket = WikiBucketRow[]> {
   bucketQuery?: string;
   bucket?: TBucket;
+  error?: string | { code?: string; info?: string; [key: string]: unknown };
+}
+
+interface MediaWikiRecentChangesResponse {
+  query?: {
+    recentchanges?: Array<{
+      title?: string;
+      timestamp?: string;
+    }>;
+  };
   error?: string | { code?: string; info?: string; [key: string]: unknown };
 }
 
@@ -135,6 +162,42 @@ function toLuaValue(value: BucketScalarValue): string {
   return 'nil';
 }
 
+function hashString(value: string): string {
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function buildWikiBucketCacheSignature(request: BucketQueryRequest): string {
+  const cacheRequest: BucketQueryRequest = { ...request };
+  delete cacheRequest.limit;
+  delete cacheRequest.offset;
+  return buildWikiBucketQuery(cacheRequest);
+}
+
+function buildWikiBucketCacheId(querySignature: string): string {
+  return `wiki-bucket:${hashString(querySignature)}`;
+}
+
+function toCachedResult(
+  record: WikiBucketCacheRecord,
+  source: CachedWikiBucketRowsResult['source'],
+  extras: Pick<CachedWikiBucketRowsResult, 'stale' | 'freshnessError'> = {},
+): CachedWikiBucketRowsResult {
+  return {
+    rows: record.rows,
+    bucket: record.bucket as IndustrialistBucketName,
+    source,
+    contentHash: record.contentHash,
+    fetchedAt: record.fetchedAt,
+    checkedAt: record.checkedAt,
+    ...extras,
+  };
+}
+
 export function buildWikiBucketQuery(request: BucketQueryRequest): string {
   assertBucketName(request.bucket);
 
@@ -216,6 +279,48 @@ async function fetchWikiBucketDirect<TBucket>(
   }
 
   return payload.bucket;
+}
+
+async function hasIndustrialistWikiChangedSince(
+  timestamp: number,
+  options: WikiBucketFetchOptions,
+): Promise<boolean> {
+  const params = new URLSearchParams({
+    action: 'query',
+    format: 'json',
+    formatversion: '2',
+    origin: '*',
+    list: 'recentchanges',
+    rcdir: 'newer',
+    rclimit: '1',
+    rcprop: 'timestamp|title',
+    rcstart: new Date(timestamp).toISOString(),
+  });
+
+  const response = await fetch(`${options.apiUrl ?? INDUSTRIALIST_WIKI_API_URL}?${params}`, {
+    headers: {
+      Accept: 'application/json',
+    },
+    signal: options.signal,
+  });
+
+  if (!response.ok) {
+    throw new WikiBucketApiError(
+      `Wiki recent changes request failed with HTTP ${response.status}`,
+      params.toString(),
+    );
+  }
+
+  const payload = (await response.json()) as MediaWikiRecentChangesResponse;
+  if (payload.error) {
+    throw new WikiBucketApiError(
+      getApiErrorMessage(payload.error),
+      params.toString(),
+      payload.error,
+    );
+  }
+
+  return (payload.query?.recentchanges?.length ?? 0) > 0;
 }
 
 async function fetchWikiBucketProxy<TBucket>(
@@ -300,5 +405,74 @@ export async function fetchAllWikiBucketRows(
       return rows;
     }
     offset += pageSize;
+  }
+}
+
+export async function getCachedWikiBucketRows(
+  request: BucketQueryRequest,
+): Promise<CachedWikiBucketRowsResult | null> {
+  const querySignature = buildWikiBucketCacheSignature(request);
+  const cacheRecord = await getWikiBucketCache(buildWikiBucketCacheId(querySignature));
+  if (!cacheRecord || cacheRecord.querySignature !== querySignature) {
+    return null;
+  }
+  return toCachedResult(cacheRecord, 'cache');
+}
+
+export async function fetchCachedWikiBucketRows(
+  request: BucketQueryRequest,
+  options: WikiBucketFetchAllOptions = {},
+): Promise<CachedWikiBucketRowsResult> {
+  const querySignature = buildWikiBucketCacheSignature(request);
+  const cacheId = buildWikiBucketCacheId(querySignature);
+  const cachedRecord = await getWikiBucketCache(cacheId);
+
+  if (cachedRecord && cachedRecord.querySignature === querySignature) {
+    try {
+      const wikiChanged = await hasIndustrialistWikiChangedSince(
+        cachedRecord.checkedAt || cachedRecord.fetchedAt,
+        options,
+      );
+
+      if (!wikiChanged) {
+        const checkedRecord: WikiBucketCacheRecord = {
+          ...cachedRecord,
+          checkedAt: Date.now(),
+        };
+        await saveWikiBucketCache(checkedRecord);
+        return toCachedResult(checkedRecord, 'cache');
+      }
+    } catch (error) {
+      return toCachedResult(cachedRecord, 'cache', {
+        stale: true,
+        freshnessError: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  try {
+    const fetchStartedAt = Date.now();
+    const rows = await fetchAllWikiBucketRows(request, options);
+    const now = Date.now();
+    const contentHash = hashString(JSON.stringify(rows));
+    const cacheRecord: WikiBucketCacheRecord = {
+      id: cacheId,
+      bucket: request.bucket,
+      querySignature,
+      rows,
+      contentHash,
+      fetchedAt: now,
+      checkedAt: fetchStartedAt,
+    };
+    await saveWikiBucketCache(cacheRecord);
+    return toCachedResult(cacheRecord, 'network');
+  } catch (error) {
+    if (cachedRecord && cachedRecord.querySignature === querySignature) {
+      return toCachedResult(cachedRecord, 'cache', {
+        stale: true,
+        freshnessError: error instanceof Error ? error.message : String(error),
+      });
+    }
+    throw error;
   }
 }

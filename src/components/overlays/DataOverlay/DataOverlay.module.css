@@ -470,6 +470,7 @@
 .compare-status-idle,
 .compare-status-loading,
 .compare-status-success,
+.compare-status-cached,
 .compare-status-error {
   display: flex;
   align-items: center;
@@ -481,6 +482,10 @@
 
 .compare-status-success {
   color: var(--theme-color-success);
+}
+
+.compare-status-cached {
+  color: var(--theme-color-text-dim);
 }
 
 .compare-status-error {
@@ -495,6 +500,13 @@
   padding: 8px 10px;
   font-size: 11px;
   color: var(--theme-color-error);
+  border-bottom: 1px solid var(--theme-color-border-light);
+}
+
+.compare-warning {
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--theme-color-warning);
   border-bottom: 1px solid var(--theme-color-border-light);
 }
 
