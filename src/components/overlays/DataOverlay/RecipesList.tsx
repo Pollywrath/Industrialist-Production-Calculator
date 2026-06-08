@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Search, Plus, X, ChevronRight, ChevronDown } from 'lucide-react';
 import { VirtualList } from '../../shared/VirtualList';
 import {
@@ -8,8 +8,9 @@ import {
   hasRecipeOverride,
 } from '../../../data/lookup';
 import { buildVirtualModularMachines } from '../../../utils/modularMachineFactory';
-import type { Recipe } from '../../../types/data';
+import type { Machine, Recipe } from '../../../types/data';
 import { useDataStore, overlayPendingEdit } from '../../../stores/useDataStore';
+import crudStyles from './DataCrud.module.css';
 import styles from './RecipesTab.module.css';
 
 interface RecipesListProps {
@@ -59,136 +60,131 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
     onSelectRecipe(newId);
   };
 
-  const compiledRecipes = useMemo(() => {
-    if (dbVersion === -1) return [];
-
+  const compiledRecipes: Recipe[] = [];
+  if (dbVersion !== -1) {
     const baseline = getAllRecipes();
     const pendingRecipes = pendingEdits.recipes;
 
-    const items = baseline
-      .map((item) => overlayPendingEdit(item, pendingRecipes[item.id]))
-      .filter((item): item is Recipe => item !== null);
+    for (const item of baseline) {
+      const recipe = overlayPendingEdit(item, pendingRecipes[item.id]);
+      if (recipe) compiledRecipes.push(recipe);
+    }
 
     const newItems = Object.values(pendingRecipes).filter(
       (item) => item._isNew && !item._tombstone,
     ) as Recipe[];
+    compiledRecipes.push(...newItems);
+  }
 
-    return [...items, ...newItems];
-  }, [dbVersion, pendingEdits.recipes]);
-
-  const machines = useMemo(() => {
-    if (dbVersion === -1) return [];
+  const machines: Machine[] = [];
+  if (dbVersion !== -1) {
     const baseMachines = getAllMachines();
     const virtuals = buildVirtualModularMachines(baseMachines);
-    return [...baseMachines, ...virtuals];
-  }, [dbVersion]);
+    machines.push(...baseMachines, ...virtuals);
+  }
 
-  const virtualItems = useMemo(() => {
-    const list: RecipeVirtualItem[] = [];
-    const query = searchQuery.toLowerCase().trim();
+  const virtualItems: RecipeVirtualItem[] = [];
+  const query = searchQuery.toLowerCase().trim();
+  const recipeGroups = new Map<string, Recipe[]>();
 
-    const recipeGroups = new Map<string, Recipe[]>();
-    compiledRecipes.forEach((recipe) => {
-      const mId = recipe.machine_id || 'unassigned';
-      let group = recipeGroups.get(mId);
-      if (!group) {
-        group = [];
-        recipeGroups.set(mId, group);
-      }
-      group.push(recipe);
+  compiledRecipes.forEach((recipe) => {
+    const mId = recipe.machine_id || 'unassigned';
+    let group = recipeGroups.get(mId);
+    if (!group) {
+      group = [];
+      recipeGroups.set(mId, group);
+    }
+    group.push(recipe);
+  });
+
+  recipeGroups.forEach((group) => {
+    group.sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  const allMachines = [...machines];
+  const hasUnassigned = Array.from(recipeGroups.keys()).some(
+    (mId) => !machines.some((machine) => machine.id === mId),
+  );
+  if (hasUnassigned) {
+    allMachines.push({
+      id: 'unassigned',
+      name: 'Unassigned / Other',
+      cost: 0,
+      tier: 1,
+      size: { x: 1, y: 1 },
+      variant: '',
+      limited: false,
+      research: '',
+      category: 'Factory',
+      subcategory: 'Assembler',
     });
+  }
 
-    recipeGroups.forEach((group) => {
-      group.sort((a, b) => a.name.localeCompare(b.name));
-    });
+  allMachines.sort((a, b) => {
+    if (a.id === 'unassigned') return 1;
+    if (b.id === 'unassigned') return -1;
+    return a.name.localeCompare(b.name);
+  });
 
-    const allMachines = [...machines];
-    const hasUnassigned = Array.from(recipeGroups.keys()).some(
-      (mId) => !machines.some((m) => m.id === mId),
-    );
-    if (hasUnassigned) {
-      allMachines.push({
-        id: 'unassigned',
-        name: 'Unassigned / Other',
-        cost: 0,
-        tier: 1,
-        size: { x: 1, y: 1 },
-        variant: '',
-        limited: false,
-        research: '',
-        category: 'Factory',
-        subcategory: 'Assembler',
-      });
+  allMachines.forEach((machine) => {
+    const machineRecipes = recipeGroups.get(machine.id) || [];
+    if (machineRecipes.length === 0 && machine.id !== 'm_assembler') {
+      return;
     }
 
-    allMachines.sort((a, b) => {
-      if (a.id === 'unassigned') return 1;
-      if (b.id === 'unassigned') return -1;
-      return a.name.localeCompare(b.name);
+    const machineMatches =
+      machine.name.toLowerCase().includes(query) || machine.id.toLowerCase().includes(query);
+
+    const matchedRecipes = machineRecipes.filter(
+      (recipe) =>
+        recipe.name.toLowerCase().includes(query) || recipe.id.toLowerCase().includes(query),
+    );
+
+    if (query && !machineMatches && matchedRecipes.length === 0) {
+      return;
+    }
+
+    const isExpanded = query ? true : expandedMachines.has(machine.id);
+
+    virtualItems.push({
+      key: `machine-${machine.id}`,
+      type: 'machine',
+      id: machine.id,
+      name: machine.name,
+      isExpanded,
+      recipeCount: machineRecipes.length,
     });
 
-    allMachines.forEach((machine) => {
-      const machineRecipes = recipeGroups.get(machine.id) || [];
-      if (machineRecipes.length === 0 && machine.id !== 'm_assembler') {
-        return;
-      }
-
-      const machineMatches =
-        machine.name.toLowerCase().includes(query) || machine.id.toLowerCase().includes(query);
-
-      const matchedRecipes = machineRecipes.filter(
-        (recipe) =>
-          recipe.name.toLowerCase().includes(query) || recipe.id.toLowerCase().includes(query),
-      );
-
-      if (query && !machineMatches && matchedRecipes.length === 0) {
-        return;
-      }
-
-      const isExpanded = query ? true : expandedMachines.has(machine.id);
-
-      list.push({
-        key: `machine-${machine.id}`,
-        type: 'machine',
-        id: machine.id,
-        name: machine.name,
-        isExpanded,
-        recipeCount: machineRecipes.length,
-      });
-
-      if (isExpanded) {
-        const recipesToShow = query ? matchedRecipes : machineRecipes;
-        recipesToShow.forEach((recipe) => {
-          list.push({
-            key: `recipe-${recipe.id}`,
-            type: 'recipe',
-            id: recipe.id,
-            name: recipe.name,
-            machineId: machine.id,
-            recipe,
-          });
+    if (isExpanded) {
+      const recipesToShow = query ? matchedRecipes : machineRecipes;
+      recipesToShow.forEach((recipe) => {
+        virtualItems.push({
+          key: `recipe-${recipe.id}`,
+          type: 'recipe',
+          id: recipe.id,
+          name: recipe.name,
+          machineId: machine.id,
+          recipe,
         });
-      }
-    });
-
-    return list;
-  }, [machines, compiledRecipes, searchQuery, expandedMachines]);
+      });
+    }
+  });
 
   return (
-    <div className={styles['sidebar-pane']}>
-      <div className={styles['sidebar-toolbar']}>
-        <div className={styles['search-box']}>
-          <Search className={styles['search-icon']} size={14} />
+    <div className={crudStyles['sidebar-pane']}>
+      <div className={crudStyles['sidebar-toolbar']}>
+        <div className={crudStyles['search-box']}>
+          <Search className={crudStyles['search-icon']} size={14} />
           <input
             type="text"
-            className={styles['search-input']}
+            className={crudStyles['search-input']}
             placeholder="Search recipes or machines..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           {searchQuery && (
             <button
-              className={styles['search-clear']}
+              className={crudStyles['search-clear']}
               onClick={() => setSearchQuery('')}
               title="Clear search"
             >
@@ -197,7 +193,7 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
           )}
         </div>
         <button
-          className={styles['btn-add-recipe']}
+          className={crudStyles['btn-add']}
           onClick={handleAddNew}
           title="Add Custom Recipe"
         >
@@ -205,7 +201,7 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
         </button>
       </div>
 
-      <div className={styles['list-viewport']}>
+      <div className={crudStyles['list-viewport']}>
         <VirtualList<RecipeVirtualItem>
           items={virtualItems}
           itemHeight={36}
@@ -249,10 +245,10 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
               >
                 <div className={styles['recipe-row-left']}>
                   <span className={styles['recipe-name']}>{recipe.name}</span>
-                  {isNew && <span className={styles['badge-new']}>New</span>}
-                  {isPending && <span className={styles['badge-pending']}>Pending</span>}
+                  {isNew && <span className={crudStyles['badge-new']}>New</span>}
+                  {isPending && <span className={crudStyles['badge-pending']}>Pending</span>}
                   {isModified && !isPending && (
-                    <span className={styles['badge-modified']}>Edited</span>
+                    <span className={crudStyles['badge-modified']}>Edited</span>
                   )}
                 </div>
                 <span className={styles['recipe-id']}>{recipe.id}</span>

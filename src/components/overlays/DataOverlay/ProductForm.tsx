@@ -1,10 +1,10 @@
-import React from 'react';
+import type { ChangeEvent } from 'react';
 import { Box } from 'lucide-react';
 import { getProduct, hasProductOverride } from '../../../data/lookup';
 import { useDataStore, overlayPendingEdit } from '../../../stores/useDataStore';
 import { GenericDataFormShell } from './GenericDataFormShell';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
-import styles from './ProductsTab.module.css';
+import styles from './DataCrud.module.css';
 
 interface ProductFormProps {
   selectedProductId: string | null;
@@ -31,33 +31,19 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
   const pending = selectedProductId ? pendingEdits.products[selectedProductId] : undefined;
   const activeProduct = overlayPendingEdit(baseline, pending);
 
-  if (!selectedProductId) {
+  if (!selectedProductId || !activeProduct) {
     return (
-      <div className={styles['empty-detail']}>
-        <Box className={styles['empty-icon']} size={40} strokeWidth={1} />
-        <div className={styles['empty-title']}>No Product Selected</div>
-        <div className={styles['empty-desc']}>
-          Select a product from the master index list on the left to view or edit its parameters, or
-          click the plus button to create a new custom product.
-        </div>
-      </div>
+      <GenericDataFormShell
+        entityId={selectedProductId}
+        activeEntity={activeProduct ?? null}
+        isModified={isModified}
+        entityLabel="Product"
+        EmptyIcon={Box}
+      />
     );
   }
 
-  if (!activeProduct) {
-    return (
-      <div className={styles['empty-detail']}>
-        <Box className={styles['empty-icon']} size={40} strokeWidth={1} />
-        <div className={styles['empty-title']}>No Product Selected</div>
-        <div className={styles['empty-desc']}>
-          Select a product from the master index list on the left to view or edit its parameters, or
-          click the plus button to create a new custom product.
-        </div>
-      </div>
-    );
-  }
-
-  const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleTypeChange = (e: ChangeEvent<HTMLSelectElement>) => {
     updateProductPendingEdit(selectedProductId, { type: e.target.value as 'Item' | 'Fluid' });
   };
 
@@ -79,7 +65,6 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
           onSelectProduct(nextId);
         }
       }}
-      styles={styles}
       entityLabel="Product"
       EmptyIcon={Box}
     >

@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { ClipboardList, Plus, Trash2, Info } from 'lucide-react';
 import {
   getRecipe,
@@ -13,6 +12,7 @@ import { GenericDataFormShell } from './GenericDataFormShell';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
 import { SearchDropdown } from '../../shared/SearchDropdown';
 import type { Machine, Product, RecipeInput, RecipeOutput } from '../../../types/data';
+import crudStyles from './DataCrud.module.css';
 import styles from './RecipesTab.module.css';
 
 interface RecipeFormProps {
@@ -45,9 +45,8 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
   const isSpecial = selectedRecipeId ? !!getSpecialRecipe(selectedRecipeId) : false;
   const specialRecipeDef = selectedRecipeId ? getSpecialRecipe(selectedRecipeId) : null;
 
-  const machineOptions = useMemo(() => {
-    if (dbVersion === -1) return [];
-
+  const machineOptions: Array<{ value: string; label: string }> = [];
+  if (dbVersion !== -1) {
     const machineMap = new Map(getAllMachines().map((machine) => [machine.id, machine]));
     for (const [id, editData] of Object.entries(pendingEdits.machines)) {
       if (editData._tombstone) {
@@ -60,15 +59,13 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
 
     const baseMachines = Array.from(machineMap.values());
     const virtuals = buildVirtualModularMachines(baseMachines);
-    return [...baseMachines, ...virtuals].map((m) => ({
-      value: m.id,
-      label: m.name,
-    }));
-  }, [dbVersion, pendingEdits.machines]);
+    for (const machine of [...baseMachines, ...virtuals]) {
+      machineOptions.push({ value: machine.id, label: machine.name });
+    }
+  }
 
-  const productOptions = useMemo(() => {
-    if (dbVersion === -1) return [];
-
+  const productOptions: Array<{ value: string; label: string }> = [];
+  if (dbVersion !== -1) {
     const productMap = new Map(getAllProducts().map((product) => [product.id, product]));
     for (const [id, editData] of Object.entries(pendingEdits.products)) {
       if (editData._tombstone) {
@@ -79,22 +76,20 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
       productMap.set(id, { ...(existing ?? {}), ...editData, id } as Product);
     }
 
-    return Array.from(productMap.values()).map((p) => ({
-      value: p.id,
-      label: p.name,
-    }));
-  }, [dbVersion, pendingEdits.products]);
+    for (const product of productMap.values()) {
+      productOptions.push({ value: product.id, label: product.name });
+    }
+  }
 
   if (!selectedRecipeId || !activeRecipe) {
     return (
-      <div className={styles['empty-detail']}>
-        <ClipboardList className={styles['empty-icon']} size={40} strokeWidth={1} />
-        <div className={styles['empty-title']}>No Recipe Selected</div>
-        <div className={styles['empty-desc']}>
-          Select a recipe from the machine index on the left to view or edit its parameters, or
-          click the plus button to create a new custom recipe.
-        </div>
-      </div>
+      <GenericDataFormShell
+        entityId={selectedRecipeId}
+        activeEntity={activeRecipe ?? null}
+        isModified={isModified}
+        entityLabel="Recipe"
+        EmptyIcon={ClipboardList}
+      />
     );
   }
 
@@ -153,7 +148,6 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
           onSelectRecipe(nextId);
         }
       }}
-      styles={styles}
       entityLabel={isSpecial ? "Special Recipe" : "Recipe"}
       EmptyIcon={ClipboardList}
       isReadOnly={isSpecial}
@@ -173,18 +167,18 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
 
       {isSpecial && specialRecipeDef?.description && (
         <div className={styles['recipe-formula-desc']}>
-          <span className={styles['form-label']}>Formula Description</span>
+          <span className={crudStyles['form-label']}>Formula Description</span>
           <p className={styles['formula-text']}>{specialRecipeDef.description}</p>
         </div>
       )}
 
-      <div className={styles['form-row-grid']}>
-        <div className={styles['form-group']}>
-          <label className={styles['form-label']}>Crafted In (Machine)</label>
+      <div className={crudStyles['form-row-grid']}>
+        <div className={crudStyles['form-group']}>
+          <label className={crudStyles['form-label']}>Crafted In (Machine)</label>
           {isSpecial ? (
             <input
               type="text"
-              className={styles['form-input-readonly']}
+              className={crudStyles['form-input-readonly']}
               value={activeRecipe.machine_id}
               disabled
             />
@@ -203,8 +197,8 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
           )}
         </div>
 
-        <div className={styles['form-group']}>
-          <label className={styles['form-label']}>Power Consumption (W)</label>
+        <div className={crudStyles['form-group']}>
+          <label className={crudStyles['form-label']}>Power Consumption (W)</label>
           <ValidatedNumberInput
             value={activeRecipe.power_consumption}
             onChange={(val) => updateRecipePendingEdit(selectedRecipeId, { power_consumption: val })}
@@ -212,15 +206,15 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
             allowDecimals={true}
             allowNegatives={false}
             min={0}
-            className={isSpecial ? styles['form-input-readonly'] : styles['form-input']}
+            className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
             disabled={isSpecial}
           />
         </div>
       </div>
 
-      <div className={styles['form-row-grid']}>
-        <div className={styles['form-group']}>
-          <label className={styles['form-label']}>Cycle Time (seconds)</label>
+      <div className={crudStyles['form-row-grid']}>
+        <div className={crudStyles['form-group']}>
+          <label className={crudStyles['form-label']}>Cycle Time (seconds)</label>
           <ValidatedNumberInput
             value={activeRecipe.cycle_time}
             onChange={(val) => updateRecipePendingEdit(selectedRecipeId, { cycle_time: val })}
@@ -228,15 +222,15 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
             allowDecimals={true}
             allowNegatives={false}
             min={0.01}
-            className={isSpecial ? styles['form-input-readonly'] : styles['form-input']}
+            className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
             disabled={isSpecial}
           />
         </div>
 
-        <div className={styles['form-group']}>
-          <label className={styles['form-label']}>Power Connection Tier</label>
+        <div className={crudStyles['form-group']}>
+          <label className={crudStyles['form-label']}>Power Connection Tier</label>
           <select
-            className={isSpecial ? styles['form-select-readonly'] : styles['form-select']}
+            className={isSpecial ? crudStyles['form-select-readonly'] : crudStyles['form-select']}
             value={activeRecipe.power_type || 'MV'}
             onChange={(e) => updateRecipePendingEdit(selectedRecipeId, { power_type: e.target.value as 'MV' | 'HV' })}
             disabled={isSpecial}
@@ -247,22 +241,22 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
         </div>
       </div>
 
-      <div className={styles['form-group']}>
-        <label className={styles['form-label']}>Base Pollution Rate</label>
+      <div className={crudStyles['form-group']}>
+        <label className={crudStyles['form-label']}>Base Pollution Rate</label>
         <ValidatedNumberInput
           value={activeRecipe.pollution}
           onChange={(val) => updateRecipePendingEdit(selectedRecipeId, { pollution: val })}
           defaultValue={0}
           allowDecimals={true}
           allowNegatives={true}
-          className={isSpecial ? styles['form-input-readonly'] : styles['form-input']}
+          className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
           disabled={isSpecial}
         />
       </div>
 
       {isSpecial && specialRecipeDef && Object.keys(specialRecipeDef.settings).length > 0 && (
         <div className={styles['special-settings-list']}>
-          <span className={styles['form-label']}>Recipe Formula Variables</span>
+          <span className={crudStyles['form-label']}>Recipe Formula Variables</span>
           <div className={styles['variables-grid']}>
             {Object.entries(specialRecipeDef.settings).map(([key, def]) => (
               <div key={key} className={styles['variable-card']}>
@@ -278,7 +272,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
 
       <div className={styles['recipe-io-section']}>
         <div className={styles['io-header-row']}>
-          <span className={styles['form-label']}>Recipe Inputs (Reagents)</span>
+          <span className={crudStyles['form-label']}>Recipe Inputs (Reagents)</span>
           {!isSpecial && (
             <button
               type="button"
@@ -323,7 +317,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                     allowDecimals={true}
                     allowNegatives={false}
                     min={0.0001}
-                    className={isSpecial ? styles['form-input-readonly'] : styles['form-input']}
+                    className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
                     disabled={isSpecial}
                   />
                 </div>
@@ -355,7 +349,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
 
       <div className={styles['recipe-io-section']}>
         <div className={styles['io-header-row']}>
-          <span className={styles['form-label']}>Recipe Outputs (Products)</span>
+          <span className={crudStyles['form-label']}>Recipe Outputs (Products)</span>
           {!isSpecial && (
             <button
               type="button"
@@ -402,7 +396,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                     allowDecimals={true}
                     allowNegatives={false}
                     min={0.0001}
-                    className={isSpecial ? styles['form-input-readonly'] : styles['form-input']}
+                    className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
                     disabled={isSpecial}
                   />
                 </div>
@@ -413,7 +407,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                     defaultValue={18}
                     allowDecimals={true}
                     allowNegatives={true}
-                    className={isSpecial ? styles['form-input-readonly'] : styles['form-input']}
+                    className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
                     disabled={isSpecial}
                   />
                 </div>

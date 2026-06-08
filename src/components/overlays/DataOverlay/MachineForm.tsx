@@ -1,4 +1,4 @@
-import React from 'react';
+import type { ChangeEvent } from 'react';
 import { Cpu } from 'lucide-react';
 import {
   getMachine,
@@ -16,7 +16,7 @@ import {
 import type { Machine, MachineSize } from '../../../types/data';
 import { GenericDataFormShell } from './GenericDataFormShell';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
-import styles from './MachinesTab.module.css';
+import styles from './DataCrud.module.css';
 
 interface MachineFormProps {
   selectedMachineId: string | null;
@@ -43,29 +43,15 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
   const pending = selectedMachineId ? pendingEdits.machines[selectedMachineId] : undefined;
   const activeMachine = overlayPendingEdit(baseline, pending);
 
-  if (!selectedMachineId) {
+  if (!selectedMachineId || !activeMachine) {
     return (
-      <div className={styles['empty-detail']}>
-        <Cpu className={styles['empty-icon']} size={40} strokeWidth={1} />
-        <div className={styles['empty-title']}>No Machine Selected</div>
-        <div className={styles['empty-desc']}>
-          Select a machine from the master index list on the left to view or edit its parameters, or
-          click the plus button to create a new custom machine.
-        </div>
-      </div>
-    );
-  }
-
-  if (!activeMachine) {
-    return (
-      <div className={styles['empty-detail']}>
-        <Cpu className={styles['empty-icon']} size={40} strokeWidth={1} />
-        <div className={styles['empty-title']}>No Machine Selected</div>
-        <div className={styles['empty-desc']}>
-          Select a machine from the master index list on the left to view or edit its parameters, or
-          click the plus button to create a new custom machine.
-        </div>
-      </div>
+      <GenericDataFormShell
+        entityId={selectedMachineId}
+        activeEntity={activeMachine ?? null}
+        isModified={isModified}
+        entityLabel="Machine"
+        EmptyIcon={Cpu}
+      />
     );
   }
 
@@ -97,7 +83,7 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
     ...baseMachines.map((m) => ({ value: m.name, label: m.name })),
   ];
 
-  const handleTierChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleTierChange = (e: ChangeEvent<HTMLSelectElement>) => {
     updateMachinePendingEdit(selectedMachineId, { tier: parseInt(e.target.value, 10) });
   };
 
@@ -105,7 +91,7 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
     updateMachinePendingEdit(selectedMachineId, { variant: newVal });
   };
 
-  const handleLimitedChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLimitedChange = (e: ChangeEvent<HTMLInputElement>) => {
     updateMachinePendingEdit(selectedMachineId, { limited: e.target.checked });
   };
 
@@ -146,7 +132,6 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
           onSelectMachine(nextId);
         }
       }}
-      styles={styles}
       entityLabel="Machine"
       EmptyIcon={Cpu}
     >

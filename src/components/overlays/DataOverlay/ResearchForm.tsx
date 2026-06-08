@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { FlaskConical, CheckSquare, Plus, Trash2 } from 'lucide-react';
 import { getResearch, getAllResearches, hasResearchOverride } from '../../../data/lookup';
 import { useDataStore, overlayPendingEdit } from '../../../stores/useDataStore';
@@ -6,6 +7,7 @@ import { SearchDropdown } from '../../shared/SearchDropdown';
 import type { Research } from '../../../types/data';
 import { GenericDataFormShell } from './GenericDataFormShell';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
+import crudStyles from './DataCrud.module.css';
 import styles from './ResearchesTab.module.css';
 
 interface ResearchFormProps {
@@ -39,10 +41,10 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
 
   if (!selectedResearchId) {
     return (
-      <div className={styles['empty-detail']}>
-        <FlaskConical size={48} className={styles['empty-icon']} />
-        <div className={styles['empty-title']}>No Research Selected</div>
-        <div className={styles['empty-desc']}>
+      <div className={crudStyles['empty-detail']}>
+        <FlaskConical size={48} className={crudStyles['empty-icon']} />
+        <div className={crudStyles['empty-title']}>No Research Selected</div>
+        <div className={crudStyles['empty-desc']}>
           Select a research node from the sidebar list to inspect or modify its attributes.
         </div>
       </div>
@@ -51,10 +53,10 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
 
   if (pending?._tombstone) {
     return (
-      <div className={styles['empty-detail']}>
-        <FlaskConical size={48} className={styles['empty-icon']} />
-        <div className={styles['empty-title']}>Research Deleted</div>
-        <div className={styles['empty-desc']}>
+      <div className={crudStyles['empty-detail']}>
+        <FlaskConical size={48} className={crudStyles['empty-icon']} />
+        <div className={crudStyles['empty-title']}>Research Deleted</div>
+        <div className={crudStyles['empty-desc']}>
           This research has been marked for deletion. Save changes to commit.
         </div>
       </div>
@@ -63,10 +65,10 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
 
   if (!activeResearch) {
     return (
-      <div className={styles['empty-detail']}>
-        <FlaskConical size={48} className={styles['empty-icon']} />
-        <div className={styles['empty-title']}>Not Found</div>
-        <div className={styles['empty-desc']}>
+      <div className={crudStyles['empty-detail']}>
+        <FlaskConical size={48} className={crudStyles['empty-icon']} />
+        <div className={crudStyles['empty-title']}>Not Found</div>
+        <div className={crudStyles['empty-desc']}>
           The requested research details could not be parsed.
         </div>
       </div>
@@ -101,7 +103,7 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
     updateResearchPendingEdit(selectedResearchId, { prerequisites: updated });
   };
 
-  const handleAddCustomPrereq = (e?: React.FormEvent) => {
+  const handleAddCustomPrereq = (e?: FormEvent) => {
     if (e) e.preventDefault();
     const text = customPrereqText.trim();
     if (!text) return;
@@ -136,12 +138,11 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
       onRestore={async () => {
         await restoreResearchDefault(activeResearch.id);
       }}
-      styles={styles}
       entityLabel="Research"
       EmptyIcon={FlaskConical}
     >
-      <div className={styles['form-group']}>
-        <label className={styles['form-label']}>RP Cost</label>
+      <div className={crudStyles['form-group']}>
+        <label className={crudStyles['form-label']}>RP Cost</label>
         <ValidatedNumberInput
           value={activeResearch.rp_cost}
           onChange={(val) => updateResearchPendingEdit(selectedResearchId, { rp_cost: val })}
@@ -149,14 +150,14 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
           allowDecimals={false}
           allowNegatives={false}
           min={0}
-          className={styles['form-input']}
+          className={crudStyles['form-input']}
         />
       </div>
 
-      <div className={styles['form-group']}>
-        <label className={styles['form-label']}>Category</label>
+      <div className={crudStyles['form-group']}>
+        <label className={crudStyles['form-label']}>Category</label>
         <select
-          className={styles['form-select']}
+          className={crudStyles['form-select']}
           value={activeResearch.category}
           onChange={(e) => handleCategoryChange(e.target.value)}
         >
@@ -168,8 +169,8 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
         </select>
       </div>
 
-      <div className={styles['form-group']}>
-        <label className={styles['form-label']}>Prerequisites</label>
+      <div className={crudStyles['form-group']}>
+        <label className={crudStyles['form-label']}>Prerequisites</label>
         <div className={styles['prereqs-container']}>
           <div className={styles['prereqs-list']}>
             {currentPrereqs.length === 0 ? (
@@ -215,8 +216,8 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
           </div>
 
           <div className={styles['prereqs-add-controls']}>
-            <div className={styles['form-group']}>
-              <span className={styles['form-label-small']}>Add Research Prerequisite</span>
+            <div className={crudStyles['form-group']}>
+              <span className={crudStyles['form-label-small']}>Add Research Prerequisite</span>
               <SearchDropdown
                 value=""
                 options={searchDropdownOptions}
@@ -230,8 +231,8 @@ export function ResearchForm({ selectedResearchId, onSelectResearch }: ResearchF
               />
             </div>
 
-            <div className={styles['form-group']}>
-              <span className={styles['form-label-small']}>Add Custom Prerequisite</span>
+            <div className={crudStyles['form-group']}>
+              <span className={crudStyles['form-label-small']}>Add Custom Prerequisite</span>
               <form
                 onSubmit={handleAddCustomPrereq}
                 className={styles['custom-prereq-input-group']}

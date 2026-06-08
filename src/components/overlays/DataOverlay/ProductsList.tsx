@@ -1,5 +1,4 @@
 import { GenericDataList } from './GenericDataList';
-import styles from './ProductsTab.module.css';
 
 interface ProductsListProps {
   selectedProductId: string | null;
@@ -12,7 +11,6 @@ export function ProductsList({ selectedProductId, onSelectProduct }: ProductsLis
       type="product"
       selectedId={selectedProductId}
       onSelect={onSelectProduct}
-      styles={styles}
     />
   );
 }

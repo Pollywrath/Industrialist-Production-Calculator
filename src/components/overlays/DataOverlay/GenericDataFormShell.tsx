@@ -1,17 +1,17 @@
-import React from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { Trash2, RotateCcw } from 'lucide-react';
+import styles from './DataCrud.module.css';
 
 interface GenericDataFormShellProps {
   entityId: string | null;
   activeEntity: { id: string; name: string } | null;
   isModified: boolean;
-  onRestore: () => void;
-  onDelete: () => void;
-  onNameChange: (name: string) => void;
-  styles: Record<string, string>;
+  onRestore?: () => void;
+  onDelete?: () => void;
+  onNameChange?: (name: string) => void;
   entityLabel: string;
-  EmptyIcon: React.ComponentType<{ className?: string; size?: number; strokeWidth?: number }>;
-  children?: React.ReactNode;
+  EmptyIcon: ComponentType<{ className?: string; size?: number; strokeWidth?: number }>;
+  children?: ReactNode;
   isReadOnly?: boolean;
 }
 
@@ -22,7 +22,6 @@ export function GenericDataFormShell({
   onRestore,
   onDelete,
   onNameChange,
-  styles,
   entityLabel,
   EmptyIcon,
   children,
@@ -42,8 +41,6 @@ export function GenericDataFormShell({
   if (!entityId || !activeEntity) {
     return emptyState;
   }
-
-  const labelLower = entityLabel.toLowerCase();
 
   return (
     <div className={styles['detail-pane']}>
@@ -70,7 +67,7 @@ export function GenericDataFormShell({
               type="text"
               className={isReadOnly ? styles['form-input-readonly'] : styles['form-input']}
               value={activeEntity.name || ''}
-              onChange={(e) => onNameChange(e.target.value)}
+              onChange={(e) => onNameChange?.(e.target.value)}
               placeholder={`e.g. New ${entityLabel}`}
               maxLength={64}
               disabled={isReadOnly}
@@ -83,7 +80,7 @@ export function GenericDataFormShell({
             <div className={styles['form-actions']}>
               {isModified ? (
                 <button
-                  className={styles[`btn-restore-${labelLower}`] || styles['btn-restore']}
+                  className={styles['btn-restore']}
                   onClick={onRestore}
                   title="Restore this entry back to its baseline default configuration"
                 >
@@ -92,7 +89,7 @@ export function GenericDataFormShell({
                 </button>
               ) : (
                 <button
-                  className={styles[`btn-delete-${labelLower}`] || styles['btn-delete']}
+                  className={styles['btn-delete']}
                   onClick={onDelete}
                   title={`Delete Custom ${entityLabel}`}
                 >

@@ -13,17 +13,17 @@ import {
 } from '../../../data/lookup';
 import type { Product, Machine, Research } from '../../../types/data';
 import { useDataStore, overlayPendingEdit } from '../../../stores/useDataStore';
+import styles from './DataCrud.module.css';
 
 interface GenericDataListProps {
   type: 'product' | 'machine' | 'research';
   selectedId: string | null;
   onSelect: (id: string | null) => void;
-  styles: Record<string, string>;
 }
 
 type DataEntity = Product | Machine | Research;
 
-export function GenericDataList({ type, selectedId, onSelect, styles }: GenericDataListProps) {
+export function GenericDataList({ type, selectedId, onSelect }: GenericDataListProps) {
   const pendingEdits = useDataStore((s) => s.pendingEdits);
   const searchQuery = useDataStore((s) => s.searchQuery);
   const setSearchQuery = useDataStore((s) => s.setSearchQuery);
@@ -107,7 +107,7 @@ export function GenericDataList({ type, selectedId, onSelect, styles }: GenericD
           )}
         </div>
         <button
-          className={styles[`btn-add-${type}`] || styles['btn-add']}
+          className={styles['btn-add']}
           onClick={handleAddNew}
           title={`Add Custom ${labelSingle}`}
         >

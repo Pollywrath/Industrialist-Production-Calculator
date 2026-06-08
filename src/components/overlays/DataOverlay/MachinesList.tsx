@@ -1,5 +1,4 @@
 import { GenericDataList } from './GenericDataList';
-import styles from './MachinesTab.module.css';
 
 interface MachinesListProps {
   selectedMachineId: string | null;
@@ -12,7 +11,6 @@ export function MachinesList({ selectedMachineId, onSelectMachine }: MachinesLis
       type="machine"
       selectedId={selectedMachineId}
       onSelect={onSelectMachine}
-      styles={styles}
     />
   );
 }
