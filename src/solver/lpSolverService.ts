@@ -1,20 +1,9 @@
 import type { Edge } from '@xyflow/react';
 import type { RecipeNodeType } from '../types/nodes';
-import type {
-  LPSolverNode,
-  LPSolverConnection,
-  LPSolverResponse,
-  LPFailureDiagnostics,
-} from './lpWorker';
-import { useFlowResultStore } from '../stores/useFlowResultStore';
-import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
-import { resolveActiveRecipe } from '../data/lookup';
-import { solveFlowPipeline } from './solverPipeline';
-import { getRateMultiplier } from '../utils/recipeComputation';
+import type { LPSolverResponse, LPFailureDiagnostics } from './lpTypes';
 import { ASSET_VERSION } from '../data/productIcons';
-import { createGraphResolutionContext } from '../utils/graphResolutionContext';
-import { parseHandleId, buildHandleId } from '../utils/idGenerator';
-export type { LPFailureDiagnostics } from './lpWorker';
+import { buildLPSolverPayload } from './lpPayload';
+export type { LPFailureDiagnostics } from './lpTypes';
 
 export interface LPSolverResult {
   feasible: boolean;
@@ -98,122 +87,7 @@ export function solveLP(
   }
   activeSolveInFlight = true;
 
-  const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
-  const { inputTemps, edgeFlows } = solveFlowPipeline(nodes, edges, globalSettings);
-
-  const resolutionContext = createGraphResolutionContext(nodes, edges);
-  const { edgeLookup } = resolutionContext;
-  const nodesById = new Map(nodes.map((n) => [n.id, n]));
-
-  const makeHelpers = (nodeId: string) => {
-    const baseHelpers = resolutionContext.createHelpers(nodeId);
-    return {
-      ...baseHelpers,
-      resolveProduct: (side: 'input' | 'output', index: number): string => {
-        const handleId = buildHandleId(nodeId, side, index);
-        return useFlowResultStore.getState().resolvedProducts[handleId] ?? baseHelpers.resolveProduct(side, index);
-      },
-      getFlowRate: (side: 'input' | 'output', index: number): number => {
-        const handleId = buildHandleId(nodeId, side, index);
-        const connectedEdges = edgeLookup.get(handleId) ?? [];
-        let totalFlow = 0;
-        for (const edge of connectedEdges) {
-          totalFlow += edgeFlows[edge.id] ?? 0;
-        }
-        return totalFlow;
-      },
-    };
-  };
-
-  const lpNodes: LPSolverNode[] = [];
-  for (const node of nodes) {
-    const helpers = makeHelpers(node.id);
-    const recipe = resolveActiveRecipe(
-      node.data.recipeId,
-      node.data.settings,
-      node.id,
-      helpers,
-      { temperatureInputOverrides: inputTemps[node.id], suppressStoreTemperatureOverrides: true, globalSettings }
-    );
-    if (!recipe) continue;
-
-    const multiplier = getRateMultiplier(recipe.cycle_time, 'second');
-
-    let powerVal = 0;
-    const power = recipe.power_consumption;
-    if (typeof power === 'number') {
-      powerVal = power;
-    } else if (power && typeof power === 'object' && 'max' in power) {
-      powerVal = (power as { max: number }).max;
-    }
-
-    const pollutionVal = recipe.pollution ?? 0;
-
-    const inputs = recipe.inputs.map((inp, idx) => {
-      return {
-        productId: helpers.resolveProduct('input', idx),
-        quantity: inp.quantity * multiplier,
-        isSink: !!inp.variable,
-      };
-    });
-
-    const outputs = recipe.outputs.map((out, idx) => {
-      const handleId = buildHandleId(node.id, 'output', idx);
-      const outgoingEdges = edgeLookup.get(handleId) ?? [];
-
-      const hasSinkConnection = outgoingEdges.some((edge) => {
-        if (!edge.targetHandle) return false;
-        const targetParsed = parseHandleId(edge.targetHandle);
-        if (!targetParsed) return false;
-        const targetNode = nodesById.get(edge.target);
-        if (!targetNode) return false;
-        const targetHelpers = makeHelpers(targetNode.id);
-        const targetRecipe = resolveActiveRecipe(
-          targetNode.data.recipeId,
-          targetNode.data.settings,
-          targetNode.id,
-          targetHelpers,
-          { temperatureInputOverrides: inputTemps[targetNode.id], suppressStoreTemperatureOverrides: true, globalSettings }
-        );
-        if (!targetRecipe) return false;
-        const targetInput = targetRecipe.inputs[targetParsed.index];
-        return !!targetInput?.variable;
-      });
-
-      return {
-        productId: helpers.resolveProduct('output', idx),
-        quantity: out.quantity * multiplier,
-        hasSinkConnection,
-      };
-    });
-
-    lpNodes.push({
-      id: node.id,
-      currentMachineCount: node.data.machineCount ?? 0,
-      isTarget: !!node.data.isTarget,
-      power: powerVal,
-      pollution: pollutionVal,
-      inputs,
-      outputs,
-    });
-  }
-
-  const lpConnections: LPSolverConnection[] = [];
-  for (const edge of edges) {
-    if (!edge.sourceHandle || !edge.targetHandle) continue;
-    const sourceParsed = parseHandleId(edge.sourceHandle);
-    const targetParsed = parseHandleId(edge.targetHandle);
-    if (!sourceParsed || !targetParsed) continue;
-
-    lpConnections.push({
-      id: edge.id,
-      sourceNodeId: edge.source,
-      sourceOutputIndex: sourceParsed.index,
-      targetNodeId: edge.target,
-      targetInputIndex: targetParsed.index,
-    });
-  }
-
+  const payload = buildLPSolverPayload(nodes, edges);
   const worker = getOrCreateWorker();
 
   const promise = new Promise<LPSolverResult>((resolve) => {
@@ -239,8 +113,8 @@ export function solveLP(
     try {
       worker.postMessage({
         origin: window.location.origin,
-        nodes: lpNodes,
-        connections: lpConnections,
+        nodes: payload.nodes,
+        connections: payload.connections,
         version: ASSET_VERSION,
       });
     } catch (error) {

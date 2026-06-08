@@ -213,14 +213,57 @@ export function LPSolverOverlay() {
     return label;
   };
 
-  const formatNodeDebugId = (nodeId: string): string => {
-    return nodeId;
-  };
-
   const formatDeficiencyHeadline = (diagnostics: LPFailureDiagnostics): string => {
     const count = diagnostics.deficientInputs.length;
     const total = diagnostics.deficientInputs.reduce((sum, input) => sum + input.deficiency, 0);
     return `${count} connected ${count === 1 ? 'input is' : 'inputs are'} still missing ${total.toFixed(4)} units/sec.`;
+  };
+
+  const formatRate = (rate: number): string => {
+    return `${rate.toFixed(4)} / sec`;
+  };
+
+  const formatCauseLabel = (
+    causeKind: LPFailureDiagnostics['rootCauses'][number]['kind']
+  ): string => {
+    switch (causeKind) {
+      case 'feedback_loop':
+        return 'Deficient feedback loop';
+      case 'product_mismatch':
+        return 'Connected product mismatch';
+      case 'upstream_input_deficient':
+        return 'Upstream producer is missing connected inputs';
+      case 'upstream_not_producing':
+        return 'Producer output is 0 under current recipe conditions';
+      case 'upstream_output_limited':
+        return 'Connected producer output is too small or fully allocated';
+      case 'unknown':
+      default:
+        return 'Cause could not be isolated';
+    }
+  };
+
+  const formatRootCauseRate = (
+    cause: LPFailureDiagnostics['rootCauses'][number]
+  ): string => {
+    if (cause.kind === 'feedback_loop') {
+      return `Loop shortage: ${formatRate(cause.deficiency)}`;
+    }
+
+    if (cause.outputIndex !== null) {
+      if (cause.kind === 'upstream_not_producing') {
+        return `Output ${cause.outputIndex + 1}: ${formatRate(cause.unitOutputRate)} per machine`;
+      }
+      return `Output ${cause.outputIndex + 1}: ${formatRate(cause.outputRate)} solved`;
+    }
+
+    return `Supplied: ${formatRate(cause.suppliedRate)}`;
+  };
+
+  const formatNodeList = (nodeIds: string[]): string => {
+    return nodeIds.length > 0
+      ? nodeIds.map((id) => formatNodeLabel(id)).join(', ')
+      : 'None';
   };
 
   return createPortal(
@@ -256,60 +299,62 @@ export function LPSolverOverlay() {
                   <div className={styles['diagnostic-summary']}>
                     {formatDeficiencyHeadline(failureDiagnostics)}
                   </div>
-                  {failureDiagnostics.likelyRootNodeIds.length > 0 && (
+                  {failureDiagnostics.rootCauses.length > 0 && (
                     <div className={styles['diagnostic-group']}>
-                      <div className={styles['diagnostic-title']}>Likely upstream causes</div>
-                      <ul className={styles['diagnostic-list']}>
-                        {failureDiagnostics.likelyRootNodeIds.slice(0, 8).map((nodeId) => (
-                          <li key={`root-${nodeId}`}>{formatNodeLabel(nodeId)}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {failureDiagnostics.cycleNodeIds.length > 0 && (
-                    <div className={styles['diagnostic-group']}>
-                      <div className={styles['diagnostic-title']}>Detected deficient loop nodes</div>
-                      <ul className={styles['diagnostic-list']}>
-                        {failureDiagnostics.cycleNodeIds.slice(0, 8).map((nodeId) => (
-                          <li key={`cycle-${nodeId}`}>{formatNodeLabel(nodeId)}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {failureDiagnostics.deficientInputs.length > 0 && (
-                    <div className={styles['diagnostic-group']}>
-                      <div className={styles['diagnostic-title']}>Most deficient inputs</div>
+                      <div className={styles['diagnostic-title']}>Root causes</div>
                       <div className={styles['deficiency-cards']}>
-                        {failureDiagnostics.deficientInputs.slice(0, 8).map((input) => (
+                        {failureDiagnostics.rootCauses.slice(0, 4).map((cause) => (
                           <div
                             className={styles['deficiency-card']}
-                            key={`${input.nodeId}-${input.inputIndex}-${input.productId}`}
+                            key={[
+                              cause.kind,
+                              cause.nodeId,
+                              cause.outputIndex ?? 'input',
+                              cause.productId,
+                            ].join('-')}
                           >
                             <div className={styles['deficiency-card-header']}>
                               <span className={styles['deficiency-node-name']}>
-                                {formatNodeLabel(input.nodeId)}
+                                {formatNodeLabel(cause.nodeId)}
                               </span>
                               <span className={styles['deficiency-rate']}>
-                                {input.deficiency.toFixed(4)} / sec
+                                {formatRate(cause.deficiency)}
                               </span>
                             </div>
                             <div className={styles['deficiency-card-meta']}>
-                              <span>Node ID: {formatNodeDebugId(input.nodeId)}</span>
-                              <span>Input Port: {input.inputIndex + 1}</span>
-                              <span>Product: {getProductName(input.productId)}</span>
+                              <span>Cause: {formatCauseLabel(cause.kind)}</span>
+                              <span>Product: {getProductName(cause.productId)}</span>
+                              <span>{formatRootCauseRate(cause)}</span>
                               <span>
-                                Upstream:
+                                Blocks:
                                 {' '}
-                                {input.upstreamNodeIds.length > 0
-                                  ? input.upstreamNodeIds.map((id) => formatNodeLabel(id)).join(', ')
-                                  : 'None'}
+                                {formatNodeLabel(cause.blockedInputNodeId)}
+                                {' '}
+                                input {cause.blockedInputIndex + 1}
                               </span>
+                              {cause.boundaryNodeIds.length > 0 && (
+                                <span>
+                                  Loop Boundary:
+                                  {' '}
+                                  {formatNodeList(cause.boundaryNodeIds)}
+                                </span>
+                              )}
                             </div>
                           </div>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {failureDiagnostics.rootCauses.length === 0 &&
+                    failureDiagnostics.likelyRootNodeIds.length > 0 && (
+                    <div className={styles['diagnostic-group']}>
+                      <div className={styles['diagnostic-title']}>Likely upstream causes</div>
+                      <ul className={styles['diagnostic-list']}>
+                        {failureDiagnostics.likelyRootNodeIds.slice(0, 4).map((nodeId) => (
+                          <li key={`root-${nodeId}`}>{formatNodeLabel(nodeId)}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </div>
