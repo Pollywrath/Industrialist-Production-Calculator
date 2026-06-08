@@ -181,7 +181,6 @@ export function generateUniqueRecipeId(
   existingRecipes: Recipe[],
   pendingRecipes: Record<string, Partial<Recipe> & { _tombstone?: boolean; _isNew?: boolean }>,
 ): string {
-  // Replace the 'm_' prefix of machineId with 'r_'
   let baseId = machineId || 'unassigned';
   if (baseId.startsWith('m_')) {
     baseId = 'r_' + baseId.substring(2);

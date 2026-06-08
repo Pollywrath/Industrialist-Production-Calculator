@@ -19,7 +19,7 @@ export const m_van_depot_01: SpecialRecipe = {
       cycle_time: 80,
       power_consumption: 0,
       power_type: 'MV',
-      pollution: 2.86875,
+      pollution: 0.03375,
       inputs: [{ product_id: resolvedItem, quantity: 85, variable: true }],
       outputs: [],
     };

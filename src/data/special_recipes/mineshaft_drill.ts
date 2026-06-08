@@ -383,18 +383,6 @@ export const m_mineshaft_drill_01: SpecialRecipe = {
     'p_machine_oil',
   ],
   resolveSettings: (productId: string) => {
-    let bestDepth = 6000;
-    let bestYield = 0;
-
-    for (const depth of DEPTHS) {
-      const yields = DEPTH_YIELDS[depth] || [];
-      const yieldItem = yields.find((y) => y.product_id === productId);
-      if (yieldItem && yieldItem.amount > bestYield) {
-        bestYield = yieldItem.amount;
-        bestDepth = depth;
-      }
-    }
-
     const defaultSettings = Object.entries(settingDefinitions).reduce(
       (acc, [key, def]) => {
         acc[key] = def.default;
@@ -402,9 +390,44 @@ export const m_mineshaft_drill_01: SpecialRecipe = {
       },
       {} as Record<string, unknown>,
     );
-    defaultSettings.depth = bestDepth;
 
-    return defaultSettings;
+    const drillHeadEntry = Object.entries(DRILL_HEADS).find(([, val]) => val.product_id === productId);
+    if (drillHeadEntry) {
+      defaultSettings.drill_head = drillHeadEntry[0];
+      return defaultSettings;
+    }
+
+    const acidEntry = Object.entries(ACIDS).find(([, val]) => val.product_id === productId);
+    if (acidEntry) {
+      defaultSettings.acid_type = acidEntry[0];
+      return defaultSettings;
+    }
+
+    if (productId === 'p_machine_oil') {
+      defaultSettings.has_machine_oil = 'Yes';
+      return defaultSettings;
+    }
+
+    let bestDepth = 6000;
+    let bestYield = 0;
+    let foundYield = false;
+
+    for (const depth of DEPTHS) {
+      const yields = DEPTH_YIELDS[depth] || [];
+      const yieldItem = yields.find((y) => y.product_id === productId);
+      if (yieldItem && yieldItem.amount > bestYield) {
+        bestYield = yieldItem.amount;
+        bestDepth = depth;
+        foundYield = true;
+      }
+    }
+
+    if (foundYield) {
+      defaultSettings.depth = bestDepth;
+      return defaultSettings;
+    }
+
+    return null;
   },
   compute: (settings) => {
     const { drillHead, acid, cycleTime, drillingEfficiency, hasMachineOil, depth, oilMultiplier, powerConsumption } =

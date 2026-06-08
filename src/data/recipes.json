@@ -2874,6 +2874,14 @@
       {
         "product_id": "p_sulfuric_acid",
         "quantity": 5
+      },
+      {
+        "product_id": "p_sulfuric_acid",
+        "quantity": 2
+      },
+      {
+        "product_id": "p_distilled_water",
+        "quantity": 20
       }
     ],
     "outputs": [
@@ -6226,7 +6234,7 @@
     "name": "Makes Iron Coil",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 1130,
+    "power_consumption": 1125,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6248,7 +6256,7 @@
     "name": "Makes Steel Rod",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 9370,
+    "power_consumption": 9375,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6270,7 +6278,7 @@
     "name": "Makes Gear",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 9370,
+    "power_consumption": 9375,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6292,7 +6300,7 @@
     "name": "Makes Nails",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 1130,
+    "power_consumption": 1125,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6314,7 +6322,7 @@
     "name": "Makes Ferroaluminium Magnet",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 1130,
+    "power_consumption": 1125,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6336,9 +6344,9 @@
     "name": "Makes Gold Wire",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 11300,
+    "power_consumption": 11250,
     "power_type": "MV",
-    "pollution": 0,
+    "pollution": 1000,
     "inputs": [
       {
         "product_id": "p_gold_ingot",

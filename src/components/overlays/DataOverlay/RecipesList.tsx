@@ -20,7 +20,7 @@ interface RecipesListProps {
 interface RecipeVirtualItem {
   key: string;
   type: 'machine' | 'recipe';
-  id: string; // machineId or recipeId
+  id: string;
   name: string;
   machineId?: string;
   recipe?: Recipe;
@@ -50,9 +50,7 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
   };
 
   const handleAddNew = () => {
-    // Generate a default recipe
     const newId = addRecipe('New Recipe');
-    // Default machine_id for new recipes is m_assembler, let's expand it
     setExpandedMachines((prev) => {
       const next = new Set(prev);
       next.add('m_assembler');
@@ -67,12 +65,10 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
     const baseline = getAllRecipes();
     const pendingRecipes = pendingEdits.recipes;
 
-    // Merge baseline with pending
     const items = baseline
       .map((item) => overlayPendingEdit(item, pendingRecipes[item.id]))
       .filter((item): item is Recipe => item !== null);
 
-    // Append newly added pending recipes
     const newItems = Object.values(pendingRecipes).filter(
       (item) => item._isNew && !item._tombstone,
     ) as Recipe[];
@@ -87,12 +83,10 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
     return [...baseMachines, ...virtuals];
   }, [dbVersion]);
 
-  // Generate virtual list items
   const virtualItems = useMemo(() => {
     const list: RecipeVirtualItem[] = [];
     const query = searchQuery.toLowerCase().trim();
 
-    // Group recipes by machine_id
     const recipeGroups = new Map<string, Recipe[]>();
     compiledRecipes.forEach((recipe) => {
       const mId = recipe.machine_id || 'unassigned';
@@ -104,12 +98,10 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
       group.push(recipe);
     });
 
-    // Also sort recipes within each group by id/name
     recipeGroups.forEach((group) => {
       group.sort((a, b) => a.name.localeCompare(b.name));
     });
 
-    // Create a special unassigned category for recipes without active machine
     const allMachines = [...machines];
     const hasUnassigned = Array.from(recipeGroups.keys()).some(
       (mId) => !machines.some((m) => m.id === mId),
@@ -129,22 +121,18 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
       });
     }
 
-    // Sort machines alphabetically by name, keeping 'unassigned' at the bottom
     allMachines.sort((a, b) => {
       if (a.id === 'unassigned') return 1;
       if (b.id === 'unassigned') return -1;
       return a.name.localeCompare(b.name);
     });
 
-    // Filter and build list
     allMachines.forEach((machine) => {
       const machineRecipes = recipeGroups.get(machine.id) || [];
       if (machineRecipes.length === 0 && machine.id !== 'm_assembler') {
-        // Skip machines with no recipes, except m_assembler (where adding new goes by default)
         return;
       }
 
-      // Check search match
       const machineMatches =
         machine.name.toLowerCase().includes(query) || machine.id.toLowerCase().includes(query);
 
@@ -153,7 +141,6 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
           recipe.name.toLowerCase().includes(query) || recipe.id.toLowerCase().includes(query),
       );
 
-      // If search query active and nothing matches, skip
       if (query && !machineMatches && matchedRecipes.length === 0) {
         return;
       }
@@ -184,7 +171,6 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
       }
     });
 
-    // Sort machines by name
     return list;
   }, [machines, compiledRecipes, searchQuery, expandedMachines]);
 
@@ -242,7 +228,6 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
               );
             }
 
-            // Recipe Item
             const recipe = item.recipe!;
             const isSelected = selectedRecipeId === recipe.id;
             const isSavedNew = !isBaselineRecipe(recipe.id);

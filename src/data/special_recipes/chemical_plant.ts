@@ -309,7 +309,7 @@ export const chemical_plant_recipes: SpecialRecipe[] = baseRecipes.map((base) =>
     speed_factor: {
       type: 'number',
       label: 'Speed Factor (%)',
-      default: 200,
+      default: 100,
       min: 50,
       max: 200,
       step: 5,
@@ -317,7 +317,7 @@ export const chemical_plant_recipes: SpecialRecipe[] = baseRecipes.map((base) =>
     efficiency_factor: {
       type: 'number',
       label: 'Efficiency Factor (%)',
-      default: 120,
+      default: 100,
       min: 80,
       max: 120,
       step: 5,

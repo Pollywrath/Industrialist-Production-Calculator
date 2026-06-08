@@ -66,6 +66,11 @@ export const modular_diesel_engine_01: SpecialRecipe = {
   description: 'Modular diesel engine. Configure components. Throttle and AFR dictate target torque. Cylinders scale base torque, fuel, air, and exhaust. Crankshafts/Flywheels drive efficiency (reducing exhaust). Generators convert torque to power; too much torque per generator causes overload penalties.',
   potentialInputs: ['p_refined_diesel', 'p_diesel', 'p_poor_quality_diesel', 'p_crude_diesel'],
   potentialOutputs: [],
+  resolveSettings: (productId: string) => {
+    const fuel = Object.entries(FUEL_MAP).find(([, f]) => f.product_id === productId);
+    if (fuel) return { fuel_type: fuel[0] };
+    return null;
+  },
   settings: {
     throttle: {
       type: 'number',

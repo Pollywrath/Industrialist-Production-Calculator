@@ -42,7 +42,6 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
   const pending = selectedRecipeId ? pendingEdits.recipes[selectedRecipeId] : undefined;
   const activeRecipe = overlayPendingEdit(baseline, pending);
 
-  // Check if it's a special recipe
   const isSpecial = selectedRecipeId ? !!getSpecialRecipe(selectedRecipeId) : false;
   const specialRecipeDef = selectedRecipeId ? getSpecialRecipe(selectedRecipeId) : null;
 
@@ -148,7 +147,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
       onRestore={() => restoreRecipeDefault(selectedRecipeId)}
       onDelete={handleDelete}
       onNameChange={(name) => {
-        if (isSpecial) return; // Special recipes names are read-only
+        if (isSpecial) return;
         const nextId = updateRecipePendingEdit(selectedRecipeId, { name });
         if (nextId && nextId !== selectedRecipeId) {
           onSelectRecipe(nextId);
@@ -166,7 +165,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
             <span>Special Formula Recipe</span>
           </div>
           <p className={styles['alert-message']}>
-            This recipe's inputs, outputs, cycle times, power consumptions, and pollutions are dynamically 
+            This recipe's inputs, outputs, cycle times, power consumptions, and pollutions are dynamically
             calculated by its mathematical code formula. They cannot be statically overridden in the database.
           </p>
         </div>
@@ -277,7 +276,6 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
         </div>
       )}
 
-      {/* Inputs Section */}
       <div className={styles['recipe-io-section']}>
         <div className={styles['io-header-row']}>
           <span className={styles['form-label']}>Recipe Inputs (Reagents)</span>
@@ -355,7 +353,6 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
         </div>
       </div>
 
-      {/* Outputs Section */}
       <div className={styles['recipe-io-section']}>
         <div className={styles['io-header-row']}>
           <span className={styles['form-label']}>Recipe Outputs (Products)</span>

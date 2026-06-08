@@ -90,7 +90,7 @@ export const steam_condenser_01: SpecialRecipe = {
     steam_flow: {
       type: 'number',
       label: 'Steam Flow',
-      default: 6000,
+      default: 24000,
       min: 0,
       max: 24000,
       step: 100,

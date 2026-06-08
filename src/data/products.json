@@ -192,7 +192,7 @@
     "name": "Mixed Fissile Nitrates",
     "sell_price": 0,
     "rp_multiplier": 1,
-    "type": "Item"
+    "type": "Fluid"
   },
   {
     "id": "p_leaded_gasoline",
@@ -455,7 +455,7 @@
     "name": "Mixed Fissile Oxides",
     "sell_price": 0,
     "rp_multiplier": 1,
-    "type": "Item"
+    "type": "Fluid"
   },
   {
     "id": "p_cement",

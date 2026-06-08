@@ -29,7 +29,7 @@ const getFuel = (settings: Record<string, unknown>) => {
 
 const getCycleTime = (energy: number, extra: number = 0) => (settings: Record<string, unknown>) => {
   const fuel = getFuel(settings);
-  return parseFloat((energy / fuel.energy + extra).toFixed(6));
+  return Math.ceil(energy / fuel.energy) + extra;
 };
 
 const getFuelQty = (energy: number) => (settings: Record<string, unknown>) => {
@@ -84,7 +84,7 @@ export const industrial_firebox_02: SpecialRecipe = {
   potentialInputs: commonPotentialInputs,
   resolveSettings: commonResolveSettings,
   compute: (settings) => {
-    const cycleTime = getCycleTime(900000, 1)(settings);
+    const cycleTime = getCycleTime(900000)(settings);
     const fuel = getFuel(settings);
     const fuelQty = getFuelQty(900000)(settings);
 
@@ -249,11 +249,11 @@ export const industrial_firebox_07: SpecialRecipe = {
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
-        { product_id: 'p_water', quantity: 12 },
+        { product_id: 'p_water', quantity: 16 },
         { product_id: 'p_oak_log', quantity: 1 },
       ],
       outputs: [
-        { product_id: 'p_water', quantity: 12, temperature: 18 },
+        { product_id: 'p_water', quantity: 16, temperature: 18 },
         { product_id: 'p_sodium_carbonate', quantity: 16, temperature: 18 },
       ],
     };
