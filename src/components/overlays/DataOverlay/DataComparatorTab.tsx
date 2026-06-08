@@ -21,15 +21,17 @@ import {
   compareProducts,
   compareMachines,
   compareRecipes,
-  getWikiBoolean,
-  getWikiNumber,
   getWikiString,
+  getOptionalWikiBoolean,
+  getOptionalWikiNumber,
+  type ComparisonResult,
+  type DiffItem,
   type WikiRecipe,
 } from '../../../utils/dataComparator';
 import { getAllProducts, getAllMachines, getAllResearches, getAllRecipes } from '../../../data/lookup';
 import styles from './DataOverlay.module.css';
 import { VirtualList } from '../../shared/VirtualList';
-import type { Recipe } from '../../../types/data';
+import type { Machine, Product, Recipe } from '../../../types/data';
 
 interface ComparatorVirtualRow {
   key: string;
@@ -46,6 +48,8 @@ interface ComparatorVirtualRow {
   isLastChild?: boolean;
 }
 
+type ComparatorIcon = ComponentType<{ size?: number; className?: string }>;
+type ComparatorBadge = NonNullable<ComparatorVirtualRow['badgeType']>;
 type ComparatorDataType = 'products' | 'machines' | 'recipes' | 'research';
 type BucketLoadStatus = 'idle' | 'loading' | 'success' | 'cached' | 'error';
 type ComparisonFilter = 'changed' | 'onlyInApp' | 'onlyInWiki' | 'unchanged';
@@ -63,7 +67,7 @@ interface BucketSnapshot {
 const COMPARATOR_TABS: Array<{
   id: ComparatorDataType;
   label: string;
-  icon: ComponentType<{ size?: number }>;
+  icon: ComparatorIcon;
 }> = [
     { id: 'products', label: 'Products', icon: Package },
     { id: 'machines', label: 'Machines', icon: Cpu },
@@ -112,6 +116,422 @@ function formatFetchedAt(timestamp: number | undefined): string {
   return new Date(timestamp).toLocaleTimeString();
 }
 
+type BucketRowsSnapshot = BucketSnapshot & { rows: Record<string, unknown>[] };
+type ComparatorProp = { label: string; val: unknown };
+type ComparisonCounts = Record<ComparisonFilter, number>;
+
+function hasBucketRows(snapshot: BucketSnapshot | undefined): snapshot is BucketRowsSnapshot {
+  return Array.isArray(snapshot?.rows) && snapshot.rows.length > 0;
+}
+
+function needsFreshErrorState(snapshot: BucketSnapshot | undefined): boolean {
+  return snapshot?.status === 'error' && (!snapshot.rows || (Array.isArray(snapshot.rows) && snapshot.rows.length === 0));
+}
+
+function getFilteredItems<TApp, TWiki>(
+  result: ComparisonResult<TApp, TWiki>,
+  filter: ComparisonFilter
+): Array<DiffItem<TApp, TWiki>> {
+  return result[filter];
+}
+
+function getComparisonCounts<TApp, TWiki>(result: ComparisonResult<TApp, TWiki>): ComparisonCounts {
+  return {
+    changed: result.changed.length,
+    onlyInApp: result.onlyInApp.length,
+    onlyInWiki: result.onlyInWiki.length,
+    unchanged: result.unchanged.length,
+  };
+}
+
+function pushHeaderRow(
+  rows: ComparatorVirtualRow[],
+  itemKey: string,
+  isExpanded: boolean,
+  badgeType?: ComparatorBadge,
+  diffCount?: number
+) {
+  rows.push({
+    key: `header-${itemKey}`,
+    type: 'header',
+    itemKey,
+    isExpanded,
+    badgeType,
+    diffCount,
+  });
+}
+
+function pushChangedRows<TApp, TWiki>(
+  rows: ComparatorVirtualRow[],
+  item: DiffItem<TApp, TWiki>,
+  isExpanded: boolean
+) {
+  pushHeaderRow(rows, item.key, isExpanded, 'changed', item.differences?.length);
+  if (!isExpanded || !item.differences) return;
+
+  rows.push({
+    key: `diff-header-${item.key}`,
+    type: 'diff-header',
+    itemKey: item.key,
+    isExpanded,
+  });
+
+  item.differences.forEach((diff, index) => {
+    rows.push({
+      key: `diff-${item.key}-${diff.field}`,
+      type: 'diff-row',
+      itemKey: item.key,
+      isExpanded,
+      field: diff.field,
+      appValue: diff.appValue,
+      wikiValue: diff.wikiValue,
+      isLastChild: index === item.differences!.length - 1,
+    });
+  });
+}
+
+function pushPropRows(
+  rows: ComparatorVirtualRow[],
+  itemKey: string,
+  isExpanded: boolean,
+  props: ComparatorProp[]
+) {
+  if (!isExpanded) return;
+
+  props.forEach((prop, index) => {
+    rows.push({
+      key: `prop-${itemKey}-${prop.label}`,
+      type: 'prop-row',
+      itemKey,
+      isExpanded,
+      propLabel: prop.label,
+      propValue: prop.val,
+      isLastChild: index === props.length - 1,
+    });
+  });
+}
+
+function buildComparatorRows<TApp, TWiki>(
+  result: ComparisonResult<TApp, TWiki>,
+  filter: ComparisonFilter,
+  expandedKeys: Set<string>,
+  prefix: string,
+  getAppProps: (item: TApp) => ComparatorProp[],
+  getWikiProps: (item: TWiki) => ComparatorProp[]
+): ComparatorVirtualRow[] {
+  const rows: ComparatorVirtualRow[] = [];
+
+  for (const item of getFilteredItems(result, filter)) {
+    const isExpanded = expandedKeys.has(`${prefix}-${filter}-${item.key}`);
+
+    if (filter === 'changed') {
+      pushChangedRows(rows, item, isExpanded);
+    } else if (filter === 'onlyInApp' && item.appItem) {
+      pushHeaderRow(rows, item.key, isExpanded, 'only-app');
+      pushPropRows(rows, item.key, isExpanded, getAppProps(item.appItem));
+    } else if (filter === 'onlyInWiki' && item.wikiItem) {
+      pushHeaderRow(rows, item.key, isExpanded, 'only-wiki');
+      pushPropRows(rows, item.key, isExpanded, getWikiProps(item.wikiItem));
+    } else {
+      pushHeaderRow(rows, item.key, false);
+    }
+  }
+
+  return rows;
+}
+
+function formatQuantityList<T>(
+  items: T[],
+  getName: (item: T) => string,
+  getQuantity: (item: T) => number
+): string {
+  const grouped = new Map<string, number>();
+  for (const item of items) {
+    const name = getName(item);
+    grouped.set(name, (grouped.get(name) || 0) + getQuantity(item));
+  }
+
+  return Array.from(grouped.entries())
+    .map(([name, quantity]) => `${name} x${quantity}`)
+    .join(', ') || '(None)';
+}
+
+function getAppProductProps(product: Product): ComparatorProp[] {
+  return [
+    { label: 'Type', val: product.type },
+    { label: 'Sell Price', val: product.sell_price },
+    { label: 'RP Multiplier', val: product.rp_multiplier },
+  ];
+}
+
+function getWikiProductProps(row: Record<string, unknown>): ComparatorProp[] {
+  const isFluid = getOptionalWikiBoolean(row.is_fluid);
+  const sellPrice = getOptionalWikiNumber(row.sellvalue !== undefined ? row.sellvalue : row.sellValue);
+  const rpMultiplier = getOptionalWikiNumber(row.resvalue !== undefined ? row.resvalue : row.resValue);
+
+  return [
+    { label: 'Type', val: isFluid === null ? 'Missing' : isFluid ? 'Fluid' : 'Item' },
+    { label: 'Sell Price', val: sellPrice ?? 'Missing' },
+    { label: 'RP Multiplier', val: rpMultiplier ?? 'Missing' },
+  ];
+}
+
+function getAppMachineProps(
+  machine: Machine,
+  researchMap: Map<string, string>,
+  machineIdToNameMap: Map<string, string>
+): ComparatorProp[] {
+  const appResearchName = researchMap.get(machine.research) || machine.research || '(None)';
+  const appVariantName = machine.variant && machine.variant !== 'none'
+    ? machineIdToNameMap.get(machine.variant) || machine.variant
+    : 'none';
+
+  return [
+    { label: 'Category', val: machine.category },
+    { label: 'Subcategory', val: machine.subcategory },
+    { label: 'Cost', val: machine.cost },
+    { label: 'Tier', val: machine.tier },
+    { label: 'Size', val: `${machine.size.x}x${machine.size.y}` },
+    { label: 'Limited', val: machine.limited ? 'Yes' : 'No' },
+    { label: 'Variant', val: appVariantName },
+    { label: 'Research', val: appResearchName },
+  ];
+}
+
+function getWikiMachineProps(row: Record<string, unknown>): ComparatorProp[] {
+  const limited = getOptionalWikiBoolean(row.limited);
+
+  return [
+    { label: 'Category', val: getWikiString(row.category) },
+    { label: 'Subcategory', val: getWikiString(row.subcategory) },
+    { label: 'Cost', val: getOptionalWikiNumber(row.cost) ?? 'Missing' },
+    { label: 'Tier', val: getOptionalWikiNumber(row.tier) ?? 'Missing' },
+    { label: 'Size', val: getWikiString(row.size) },
+    { label: 'Limited', val: limited === null ? 'Missing' : limited ? 'Yes' : 'No' },
+    { label: 'Variant', val: getWikiString(row.variant) },
+    { label: 'Research', val: getWikiString(row.research) },
+  ];
+}
+
+function getAppRecipeProps(
+  recipe: Recipe,
+  productMap: Map<string, string>,
+  machineMap: Map<string, string>
+): ComparatorProp[] {
+  const getProductName = (productId: string) => productMap.get(productId) || productId;
+
+  return [
+    { label: 'Machine', val: machineMap.get(recipe.machine_id) || recipe.machine_id },
+    { label: 'Cycle Time', val: recipe.cycle_time },
+    { label: 'Power Consumption', val: recipe.power_consumption },
+    { label: 'Pollution', val: recipe.pollution },
+    { label: 'Inputs', val: formatQuantityList(recipe.inputs, (input) => getProductName(input.product_id), (input) => input.quantity) },
+    { label: 'Outputs', val: formatQuantityList(recipe.outputs, (output) => getProductName(output.product_id), (output) => output.quantity) },
+  ];
+}
+
+function getWikiRecipeProps(recipe: WikiRecipe): ComparatorProp[] {
+  return [
+    { label: 'Machine', val: recipe.machine },
+    { label: 'Cycle Time', val: recipe.time },
+    { label: 'Power Consumption', val: recipe.mamyflux },
+    { label: 'Pollution', val: recipe.pollution || '(None)' },
+    { label: 'Inputs', val: formatQuantityList(recipe.inputs, (input) => input.item, (input) => input.amount) },
+    { label: 'Outputs', val: formatQuantityList(recipe.outputs, (output) => output.item, (output) => output.amount) },
+  ];
+}
+
+function CompareEmptyState({
+  icon: Icon,
+  title,
+  description,
+  spin = false,
+}: {
+  icon: ComparatorIcon;
+  title: string;
+  description?: string;
+  spin?: boolean;
+}) {
+  return (
+    <div className={styles['compare-empty']}>
+      <Icon className={spin ? styles['spin'] : undefined} size={32} />
+      <div className={styles['compare-empty-title']}>{title}</div>
+      {description && <div className={styles['compare-empty-desc']}>{description}</div>}
+    </div>
+  );
+}
+
+function ComparisonSubTabs({
+  activeFilter,
+  counts,
+  onChange,
+}: {
+  activeFilter: ComparisonFilter;
+  counts: ComparisonCounts;
+  onChange: (filter: ComparisonFilter) => void;
+}) {
+  const tabs: Array<{ id: ComparisonFilter; label: string }> = [
+    { id: 'changed', label: 'Changed' },
+    { id: 'onlyInApp', label: 'Only in App' },
+    { id: 'onlyInWiki', label: 'Only in Wiki' },
+    { id: 'unchanged', label: 'Unchanged' },
+  ];
+
+  return (
+    <div className={styles['compare-subtabs']}>
+      {tabs.map((tab) => (
+        <button
+          key={tab.id}
+          className={`${styles['compare-subtab-btn']} ${activeFilter === tab.id ? styles['is-active'] : ''}`}
+          onClick={() => onChange(tab.id)}
+        >
+          <span>{tab.label}</span>
+          <span className={styles['compare-subtab-count']}>{counts[tab.id]}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ComparatorRowsList({
+  rows,
+  prefix,
+  activeFilter,
+  onToggle,
+}: {
+  rows: ComparatorVirtualRow[];
+  prefix: string;
+  activeFilter: ComparisonFilter;
+  onToggle: (key: string) => void;
+}) {
+  return (
+    <VirtualList<ComparatorVirtualRow>
+      key={`${prefix}s-${activeFilter}`}
+      items={rows}
+      itemHeight={32}
+      height={450}
+      getKey={(item) => item.key}
+    >
+      {(row) => {
+        if (row.type === 'header') {
+          const expKey = `${prefix}-${activeFilter}-${row.itemKey}`;
+          if (activeFilter === 'unchanged') {
+            return (
+              <div className={styles['unchanged-row']}>
+                <CheckCircle2 className={styles['unchanged-icon']} size={14} />
+                <span>{row.itemKey}</span>
+              </div>
+            );
+          }
+          return (
+            <div
+              className={`${styles['compare-row-header']} ${row.isExpanded ? styles['is-expanded'] : ''}`}
+              onClick={() => onToggle(expKey)}
+            >
+              <div className={styles['compare-row-header-left']}>
+                {row.isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                <span>{row.itemKey}</span>
+              </div>
+              <div className={styles['compare-row-header-right']}>
+                {row.badgeType === 'changed' && (
+                  <span className={`${styles['compare-row-badge']} ${styles['changed']}`}>
+                    {row.diffCount} {row.diffCount === 1 ? 'difference' : 'differences'}
+                  </span>
+                )}
+                {row.badgeType === 'only-app' && (
+                  <span className={`${styles['compare-row-badge']} ${styles['only-app']}`}>
+                    Only in App
+                  </span>
+                )}
+                {row.badgeType === 'only-wiki' && (
+                  <span className={`${styles['compare-row-badge']} ${styles['only-wiki']}`}>
+                    Only in Wiki
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        if (row.type === 'diff-header') {
+          return (
+            <div className={styles['compare-row-diff-header']}>
+              <div className={styles['compare-row-diff-cell']}>Field</div>
+              <div className={styles['compare-row-diff-cell']}>App Value</div>
+              <div className={styles['compare-row-diff-cell']}>Wiki Value</div>
+            </div>
+          );
+        }
+
+        if (row.type === 'diff-row') {
+          return (
+            <div className={`${styles['compare-row-diff']} ${row.isLastChild ? styles['is-last'] : ''}`}>
+              <div className={`${styles['compare-row-diff-cell']} ${styles['field']}`}>{row.field}</div>
+              <div className={`${styles['compare-row-diff-cell']} ${styles['app']}`}>{String(row.appValue)}</div>
+              <div className={`${styles['compare-row-diff-cell']} ${styles['wiki']}`}>{String(row.wikiValue)}</div>
+            </div>
+          );
+        }
+
+        if (row.type === 'prop-row') {
+          return (
+            <div className={`${styles['compare-row-prop']} ${row.isLastChild ? styles['is-last'] : ''}`}>
+              <div className={`${styles['compare-row-prop-cell']} ${styles['label']}`}>{row.propLabel}</div>
+              <div className={`${styles['compare-row-prop-cell']} ${styles['value']}`}>{String(row.propValue)}</div>
+            </div>
+          );
+        }
+
+        return null;
+      }}
+    </VirtualList>
+  );
+}
+
+function ComparisonResultView({
+  counts,
+  rows,
+  activeFilter,
+  prefix,
+  warning,
+  error,
+  onFilterChange,
+  onToggle,
+}: {
+  counts: ComparisonCounts;
+  rows: ComparatorVirtualRow[];
+  activeFilter: ComparisonFilter;
+  prefix: string;
+  warning?: string;
+  error?: string;
+  onFilterChange: (filter: ComparisonFilter) => void;
+  onToggle: (key: string) => void;
+}) {
+  return (
+    <>
+      {warning && <div className={styles['compare-warning']}>{warning}</div>}
+      {error && <div className={styles['compare-error']}>{error}</div>}
+
+      <ComparisonSubTabs activeFilter={activeFilter} counts={counts} onChange={onFilterChange} />
+
+      <div className={styles['compare-results-container']}>
+        {rows.length === 0 ? (
+          <div className={styles['diff-empty-msg']}>
+            No items in this category.
+          </div>
+        ) : (
+          <ComparatorRowsList
+            rows={rows}
+            prefix={prefix}
+            activeFilter={activeFilter}
+            onToggle={onToggle}
+          />
+        )}
+      </div>
+    </>
+  );
+}
+
 export function DataComparatorTab() {
   const [activeTab, setActiveTab] = useState<ComparatorDataType>('products');
   const [activeFilter, setActiveFilter] = useState<ComparisonFilter>('changed');
@@ -120,7 +540,8 @@ export function DataComparatorTab() {
 
   const activeBuckets = DATA_TYPE_BUCKETS[activeTab];
   const hasActiveLoading = activeBuckets.some((bucket) => snapshots[bucket]?.status === 'loading');
-  const hasActiveRows = activeBuckets.some((bucket) => snapshots[bucket]?.rows !== undefined);
+  const hasAllActiveRows =
+    activeBuckets.length > 0 && activeBuckets.every((bucket) => snapshots[bucket]?.rows !== undefined);
 
   useEffect(() => {
     let isCancelled = false;
@@ -206,348 +627,57 @@ export function DataComparatorTab() {
     });
   };
 
-  const productsCompare = (() => {
-    const itemsSnapshot = snapshots.items;
-    if (!itemsSnapshot || !Array.isArray(itemsSnapshot.rows)) return null;
-    return compareProducts(getAllProducts(), itemsSnapshot.rows as Record<string, unknown>[]);
-  })();
-
-  const machinesCompare = (() => {
-    const machinesSnapshot = snapshots.machines;
-    if (!machinesSnapshot || !Array.isArray(machinesSnapshot.rows)) return null;
-    return compareMachines(
-      getAllMachines(),
-      machinesSnapshot.rows as Record<string, unknown>[],
-      getAllResearches(),
-      getAllMachines()
-    );
-  })();
-
-  const recipesCompare = (() => {
-    const infoSnap = snapshots.recipes_info;
-    const inputsSnap = snapshots.recipes_inputs;
-    const outputsSnap = snapshots.recipes_outputs;
-    const machinesSnap = snapshots.machines;
-    if (
-      !infoSnap ||
-      !inputsSnap ||
-      !outputsSnap ||
-      !machinesSnap ||
-      !Array.isArray(infoSnap.rows) ||
-      !Array.isArray(inputsSnap.rows) ||
-      !Array.isArray(outputsSnap.rows) ||
-      !Array.isArray(machinesSnap.rows)
-    ) {
-      return null;
-    }
-    return compareRecipes(
-      getAllRecipes(),
-      infoSnap.rows as Record<string, unknown>[],
-      inputsSnap.rows as Record<string, unknown>[],
-      outputsSnap.rows as Record<string, unknown>[],
-      getAllMachines(),
-      getAllProducts(),
-      machinesSnap.rows as Record<string, unknown>[]
-    );
-  })();
-
-  const renderSubTabs = (
-    changedCount: number,
-    onlyInAppCount: number,
-    onlyInWikiCount: number,
-    unchangedCount: number
-  ) => {
-    return (
-      <div className={styles['compare-subtabs']}>
-        <button
-          className={`${styles['compare-subtab-btn']} ${activeFilter === 'changed' ? styles['is-active'] : ''}`}
-          onClick={() => setActiveFilter('changed')}
-        >
-          <span>Changed</span>
-          <span className={styles['compare-subtab-count']}>{changedCount}</span>
-        </button>
-        <button
-          className={`${styles['compare-subtab-btn']} ${activeFilter === 'onlyInApp' ? styles['is-active'] : ''}`}
-          onClick={() => setActiveFilter('onlyInApp')}
-        >
-          <span>Only in App</span>
-          <span className={styles['compare-subtab-count']}>{onlyInAppCount}</span>
-        </button>
-        <button
-          className={`${styles['compare-subtab-btn']} ${activeFilter === 'onlyInWiki' ? styles['is-active'] : ''}`}
-          onClick={() => setActiveFilter('onlyInWiki')}
-        >
-          <span>Only in Wiki</span>
-          <span className={styles['compare-subtab-count']}>{onlyInWikiCount}</span>
-        </button>
-        <button
-          className={`${styles['compare-subtab-btn']} ${activeFilter === 'unchanged' ? styles['is-active'] : ''}`}
-          onClick={() => setActiveFilter('unchanged')}
-        >
-          <span>Unchanged</span>
-          <span className={styles['compare-subtab-count']}>{unchangedCount}</span>
-        </button>
-      </div>
-    );
-  };
-
   const renderProductsTab = () => {
     const snapshot = snapshots.items;
     const status = snapshot?.status ?? 'idle';
 
     if (status === 'loading') {
       return (
-        <div className={styles['compare-empty']}>
-          <RefreshCw className={styles['spin']} size={32} />
-          <div className={styles['compare-empty-title']}>Loading Wiki Data...</div>
-        </div>
+        <CompareEmptyState icon={RefreshCw} title="Loading Wiki Data..." spin />
       );
     }
 
-    if (status === 'error' && (!snapshot || !snapshot.rows)) {
+    if (needsFreshErrorState(snapshot)) {
       return (
-        <div className={styles['compare-empty']}>
-          <AlertTriangle size={32} />
-          <div className={styles['compare-empty-title']}>Error Loading Wiki Data</div>
-          <div className={styles['compare-empty-desc']}>{snapshot?.error}</div>
-        </div>
+        <CompareEmptyState
+          icon={AlertTriangle}
+          title="Error Loading Wiki Data"
+          description={snapshot?.error}
+        />
       );
     }
 
-    if (!snapshot || !Array.isArray(snapshot.rows) || snapshot.rows.length === 0) {
+    if (!hasBucketRows(snapshot)) {
       return (
-        <div className={styles['compare-empty']}>
-          <Package size={32} />
-          <div className={styles['compare-empty-title']}>No Wiki Data Fetched</div>
-          <div className={styles['compare-empty-desc']}>
-            Click the "Fetch" button in the toolbar to load product data from the wiki.
-          </div>
-        </div>
+        <CompareEmptyState
+          icon={Package}
+          title="No Wiki Data Fetched"
+          description={'Click the "Fetch" button in the toolbar to load product data from the wiki.'}
+        />
       );
     }
 
-    const result = productsCompare;
-    if (!result) return null;
-
-    const currentList =
-      activeFilter === 'changed'
-        ? result.changed
-        : activeFilter === 'onlyInApp'
-          ? result.onlyInApp
-          : activeFilter === 'onlyInWiki'
-            ? result.onlyInWiki
-            : result.unchanged;
-
-    const flatItems: ComparatorVirtualRow[] = [];
-
-    currentList.forEach((item) => {
-      const productKey = item.key;
-      const expKey = `product-${activeFilter}-${productKey}`;
-      const isExpanded = expandedKeys.has(expKey);
-
-      if (activeFilter === 'changed') {
-        flatItems.push({
-          key: `header-${productKey}`,
-          type: 'header',
-          itemKey: productKey,
-          isExpanded,
-          diffCount: item.differences?.length,
-          badgeType: 'changed',
-        });
-        if (isExpanded && item.differences) {
-          flatItems.push({
-            key: `diff-header-${productKey}`,
-            type: 'diff-header',
-            itemKey: productKey,
-            isExpanded,
-          });
-          item.differences.forEach((diff, idx) => {
-            flatItems.push({
-              key: `diff-${productKey}-${diff.field}`,
-              type: 'diff-row',
-              itemKey: productKey,
-              isExpanded,
-              field: diff.field,
-              appValue: diff.appValue,
-              wikiValue: diff.wikiValue,
-              isLastChild: idx === item.differences!.length - 1,
-            });
-          });
-        }
-      } else if (activeFilter === 'onlyInApp') {
-        const p = item.appItem!;
-        flatItems.push({
-          key: `header-${productKey}`,
-          type: 'header',
-          itemKey: productKey,
-          isExpanded,
-          badgeType: 'only-app',
-        });
-        if (isExpanded) {
-          const props = [
-            { label: 'Type', val: p.type },
-            { label: 'Sell Price', val: p.sell_price },
-            { label: 'RP Multiplier', val: p.rp_multiplier },
-          ];
-          props.forEach((prop, idx) => {
-            flatItems.push({
-              key: `prop-${productKey}-${prop.label}`,
-              type: 'prop-row',
-              itemKey: productKey,
-              isExpanded,
-              propLabel: prop.label,
-              propValue: prop.val,
-              isLastChild: idx === props.length - 1,
-            });
-          });
-        }
-      } else if (activeFilter === 'onlyInWiki') {
-        const row = item.wikiItem!;
-        const isFluid = getWikiBoolean(row.is_fluid);
-        const sellPrice = getWikiNumber(row.sellvalue !== undefined ? row.sellvalue : row.sellValue);
-        const rpMultiplier = getWikiNumber(row.resvalue !== undefined ? row.resvalue : row.resValue);
-
-        flatItems.push({
-          key: `header-${productKey}`,
-          type: 'header',
-          itemKey: productKey,
-          isExpanded,
-          badgeType: 'only-wiki',
-        });
-        if (isExpanded) {
-          const props = [
-            { label: 'Type', val: isFluid ? 'Fluid' : 'Item' },
-            { label: 'Sell Price', val: sellPrice },
-            { label: 'RP Multiplier', val: rpMultiplier },
-          ];
-          props.forEach((prop, idx) => {
-            flatItems.push({
-              key: `prop-${productKey}-${prop.label}`,
-              type: 'prop-row',
-              itemKey: productKey,
-              isExpanded,
-              propLabel: prop.label,
-              propValue: prop.val,
-              isLastChild: idx === props.length - 1,
-            });
-          });
-        }
-      } else {
-        flatItems.push({
-          key: `header-${productKey}`,
-          type: 'header',
-          itemKey: productKey,
-          isExpanded: false,
-        });
-      }
-    });
+    const result = compareProducts(getAllProducts(), snapshot.rows);
+    const rows = buildComparatorRows(
+      result,
+      activeFilter,
+      expandedKeys,
+      'product',
+      getAppProductProps,
+      getWikiProductProps
+    );
 
     return (
-      <>
-        {snapshot.warning && (
-          <div className={styles['compare-warning']}>{snapshot.warning}</div>
-        )}
-        {snapshot.error && (
-          <div className={styles['compare-error']}>{snapshot.error}</div>
-        )}
-
-        {renderSubTabs(
-          result.changed.length,
-          result.onlyInApp.length,
-          result.onlyInWiki.length,
-          result.unchanged.length
-        )}
-
-        <div className={styles['compare-results-container']}>
-          {flatItems.length === 0 ? (
-            <div className={styles['diff-empty-msg']}>
-              No items in this category.
-            </div>
-          ) : (
-            <VirtualList<ComparatorVirtualRow>
-              key={`products-${activeFilter}`}
-              items={flatItems}
-              itemHeight={32}
-              height={450}
-              getKey={(item) => item.key}
-            >
-              {(row) => {
-                if (row.type === 'header') {
-                  const expKey = `product-${activeFilter}-${row.itemKey}`;
-                  if (activeFilter === 'unchanged') {
-                    return (
-                      <div className={styles['unchanged-row']} style={{ height: '100%' }}>
-                        <CheckCircle2 className={styles['unchanged-icon']} size={14} />
-                        <span>{row.itemKey}</span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div
-                      className={styles['compare-row-header']}
-                      style={{ height: '100%', borderBottom: row.isExpanded ? 'none' : undefined }}
-                      onClick={() => toggleExpanded(expKey)}
-                    >
-                      <div className={styles['compare-row-header-left']}>
-                        {row.isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                        <span>{row.itemKey}</span>
-                      </div>
-                      <div className={styles['compare-row-header-right']}>
-                        {row.badgeType === 'changed' && (
-                          <span className={`${styles['compare-row-badge']} ${styles['changed']}`}>
-                            {row.diffCount} {row.diffCount === 1 ? 'difference' : 'differences'}
-                          </span>
-                        )}
-                        {row.badgeType === 'only-app' && (
-                          <span className={`${styles['compare-row-badge']} ${styles['only-app']}`}>
-                            Only in App
-                          </span>
-                        )}
-                        {row.badgeType === 'only-wiki' && (
-                          <span className={`${styles['compare-row-badge']} ${styles['only-wiki']}`}>
-                            Only in Wiki
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (row.type === 'diff-header') {
-                  return (
-                    <div className={styles['compare-row-diff-header']}>
-                      <div className={styles['compare-row-diff-cell']}>Field</div>
-                      <div className={styles['compare-row-diff-cell']}>App Value</div>
-                      <div className={styles['compare-row-diff-cell']}>Wiki Value</div>
-                    </div>
-                  );
-                }
-
-                if (row.type === 'diff-row') {
-                  return (
-                    <div className={`${styles['compare-row-diff']} ${row.isLastChild ? styles['is-last'] : ''}`}>
-                      <div className={`${styles['compare-row-diff-cell']} ${styles['field']}`}>{row.field}</div>
-                      <div className={`${styles['compare-row-diff-cell']} ${styles['app']}`}>{String(row.appValue)}</div>
-                      <div className={`${styles['compare-row-diff-cell']} ${styles['wiki']}`}>{String(row.wikiValue)}</div>
-                    </div>
-                  );
-                }
-
-                if (row.type === 'prop-row') {
-                  return (
-                    <div className={`${styles['compare-row-prop']} ${row.isLastChild ? styles['is-last'] : ''}`}>
-                      <div className={`${styles['compare-row-prop-cell']} ${styles['label']}`}>{row.propLabel}</div>
-                      <div className={`${styles['compare-row-prop-cell']} ${styles['value']}`}>{String(row.propValue)}</div>
-                    </div>
-                  );
-                }
-
-                return null;
-              }}
-            </VirtualList>
-          )}
-        </div>
-      </>
+      <ComparisonResultView
+        counts={getComparisonCounts(result)}
+        rows={rows}
+        activeFilter={activeFilter}
+        prefix="product"
+        warning={snapshot.warning}
+        error={snapshot.error}
+        onFilterChange={setActiveFilter}
+        onToggle={toggleExpanded}
+      />
     );
   };
 
@@ -557,284 +687,58 @@ export function DataComparatorTab() {
 
     if (status === 'loading') {
       return (
-        <div className={styles['compare-empty']}>
-          <RefreshCw className={styles['spin']} size={32} />
-          <div className={styles['compare-empty-title']}>Loading Wiki Data...</div>
-        </div>
+        <CompareEmptyState icon={RefreshCw} title="Loading Wiki Data..." spin />
       );
     }
 
-    if (status === 'error' && (!snapshot || !snapshot.rows)) {
+    if (needsFreshErrorState(snapshot)) {
       return (
-        <div className={styles['compare-empty']}>
-          <AlertTriangle size={32} />
-          <div className={styles['compare-empty-title']}>Error Loading Wiki Data</div>
-          <div className={styles['compare-empty-desc']}>{snapshot?.error}</div>
-        </div>
+        <CompareEmptyState
+          icon={AlertTriangle}
+          title="Error Loading Wiki Data"
+          description={snapshot?.error}
+        />
       );
     }
 
-    if (!snapshot || !Array.isArray(snapshot.rows) || snapshot.rows.length === 0) {
+    if (!hasBucketRows(snapshot)) {
       return (
-        <div className={styles['compare-empty']}>
-          <Cpu size={32} />
-          <div className={styles['compare-empty-title']}>No Wiki Data Fetched</div>
-          <div className={styles['compare-empty-desc']}>
-            Click the "Fetch" button in the toolbar to load machine data from the wiki.
-          </div>
-        </div>
+        <CompareEmptyState
+          icon={Cpu}
+          title="No Wiki Data Fetched"
+          description={'Click the "Fetch" button in the toolbar to load machine data from the wiki.'}
+        />
       );
     }
 
-    const result = machinesCompare;
-    if (!result) return null;
-
-    const currentList =
-      activeFilter === 'changed'
-        ? result.changed
-        : activeFilter === 'onlyInApp'
-          ? result.onlyInApp
-          : activeFilter === 'onlyInWiki'
-            ? result.onlyInWiki
-            : result.unchanged;
-
-    const researchesList = getAllResearches();
-    const researchMap = new Map(researchesList.map((r) => [r.id, r.name]));
-    const machinesList = getAllMachines();
-    const machineIdToNameMap = new Map(machinesList.map((m) => [m.id, m.name]));
-
-    const flatItems: ComparatorVirtualRow[] = [];
-
-    currentList.forEach((item) => {
-      const machineKey = item.key;
-      const expKey = `machine-${activeFilter}-${machineKey}`;
-      const isExpanded = expandedKeys.has(expKey);
-
-      if (activeFilter === 'changed') {
-        flatItems.push({
-          key: `header-${machineKey}`,
-          type: 'header',
-          itemKey: machineKey,
-          isExpanded,
-          diffCount: item.differences?.length,
-          badgeType: 'changed',
-        });
-        if (isExpanded && item.differences) {
-          flatItems.push({
-            key: `diff-header-${machineKey}`,
-            type: 'diff-header',
-            itemKey: machineKey,
-            isExpanded,
-          });
-          item.differences.forEach((diff, idx) => {
-            flatItems.push({
-              key: `diff-${machineKey}-${diff.field}`,
-              type: 'diff-row',
-              itemKey: machineKey,
-              isExpanded,
-              field: diff.field,
-              appValue: diff.appValue,
-              wikiValue: diff.wikiValue,
-              isLastChild: idx === item.differences!.length - 1,
-            });
-          });
-        }
-      } else if (activeFilter === 'onlyInApp') {
-        const m = item.appItem!;
-        const appResearchName = researchMap.get(m.research) || m.research || '(None)';
-        let appVariantName = 'none';
-        if (m.variant && m.variant !== 'none') {
-          appVariantName = machineIdToNameMap.get(m.variant) || m.variant;
-        }
-        const sizeStr = `${m.size.x}x${m.size.y}`;
-
-        flatItems.push({
-          key: `header-${machineKey}`,
-          type: 'header',
-          itemKey: machineKey,
-          isExpanded,
-          badgeType: 'only-app',
-        });
-        if (isExpanded) {
-          const props = [
-            { label: 'Category', val: m.category },
-            { label: 'Subcategory', val: m.subcategory },
-            { label: 'Cost', val: m.cost },
-            { label: 'Tier', val: m.tier },
-            { label: 'Size', val: sizeStr },
-            { label: 'Limited', val: m.limited ? 'Yes' : 'No' },
-            { label: 'Variant', val: appVariantName },
-            { label: 'Research', val: appResearchName },
-          ];
-          props.forEach((prop, idx) => {
-            flatItems.push({
-              key: `prop-${machineKey}-${prop.label}`,
-              type: 'prop-row',
-              itemKey: machineKey,
-              isExpanded,
-              propLabel: prop.label,
-              propValue: prop.val,
-              isLastChild: idx === props.length - 1,
-            });
-          });
-        }
-      } else if (activeFilter === 'onlyInWiki') {
-        const row = item.wikiItem!;
-        const category = getWikiString(row.category);
-        const subcategory = getWikiString(row.subcategory);
-        const cost = getWikiNumber(row.cost);
-        const tier = getWikiNumber(row.tier);
-        const size = getWikiString(row.size);
-        const limited = getWikiBoolean(row.limited);
-        const variant = getWikiString(row.variant);
-        const research = getWikiString(row.research);
-
-        flatItems.push({
-          key: `header-${machineKey}`,
-          type: 'header',
-          itemKey: machineKey,
-          isExpanded,
-          badgeType: 'only-wiki',
-        });
-        if (isExpanded) {
-          const props = [
-            { label: 'Category', val: category },
-            { label: 'Subcategory', val: subcategory },
-            { label: 'Cost', val: cost },
-            { label: 'Tier', val: tier },
-            { label: 'Size', val: size },
-            { label: 'Limited', val: limited ? 'Yes' : 'No' },
-            { label: 'Variant', val: variant },
-            { label: 'Research', val: research },
-          ];
-          props.forEach((prop, idx) => {
-            flatItems.push({
-              key: `prop-${machineKey}-${prop.label}`,
-              type: 'prop-row',
-              itemKey: machineKey,
-              isExpanded,
-              propLabel: prop.label,
-              propValue: prop.val,
-              isLastChild: idx === props.length - 1,
-            });
-          });
-        }
-      } else {
-        flatItems.push({
-          key: `header-${machineKey}`,
-          type: 'header',
-          itemKey: machineKey,
-          isExpanded: false,
-        });
-      }
-    });
+    const result = compareMachines(
+      getAllMachines(),
+      snapshot.rows,
+      getAllResearches(),
+      getAllMachines()
+    );
+    const researchMap = new Map(getAllResearches().map((r) => [r.id, r.name]));
+    const machineIdToNameMap = new Map(getAllMachines().map((m) => [m.id, m.name]));
+    const rows = buildComparatorRows(
+      result,
+      activeFilter,
+      expandedKeys,
+      'machine',
+      (machine) => getAppMachineProps(machine, researchMap, machineIdToNameMap),
+      getWikiMachineProps
+    );
 
     return (
-      <>
-        {snapshot.warning && (
-          <div className={styles['compare-warning']}>{snapshot.warning}</div>
-        )}
-        {snapshot.error && (
-          <div className={styles['compare-error']}>{snapshot.error}</div>
-        )}
-
-        {renderSubTabs(
-          result.changed.length,
-          result.onlyInApp.length,
-          result.onlyInWiki.length,
-          result.unchanged.length
-        )}
-
-        <div className={styles['compare-results-container']}>
-          {flatItems.length === 0 ? (
-            <div className={styles['diff-empty-msg']}>
-              No items in this category.
-            </div>
-          ) : (
-            <VirtualList<ComparatorVirtualRow>
-              key={`machines-${activeFilter}`}
-              items={flatItems}
-              itemHeight={32}
-              height={450}
-              getKey={(item) => item.key}
-            >
-              {(row) => {
-                if (row.type === 'header') {
-                  const expKey = `machine-${activeFilter}-${row.itemKey}`;
-                  if (activeFilter === 'unchanged') {
-                    return (
-                      <div className={styles['unchanged-row']} style={{ height: '100%' }}>
-                        <CheckCircle2 className={styles['unchanged-icon']} size={14} />
-                        <span>{row.itemKey}</span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div
-                      className={styles['compare-row-header']}
-                      style={{ height: '100%', borderBottom: row.isExpanded ? 'none' : undefined }}
-                      onClick={() => toggleExpanded(expKey)}
-                    >
-                      <div className={styles['compare-row-header-left']}>
-                        {row.isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                        <span>{row.itemKey}</span>
-                      </div>
-                      <div className={styles['compare-row-header-right']}>
-                        {row.badgeType === 'changed' && (
-                          <span className={`${styles['compare-row-badge']} ${styles['changed']}`}>
-                            {row.diffCount} {row.diffCount === 1 ? 'difference' : 'differences'}
-                          </span>
-                        )}
-                        {row.badgeType === 'only-app' && (
-                          <span className={`${styles['compare-row-badge']} ${styles['only-app']}`}>
-                            Only in App
-                          </span>
-                        )}
-                        {row.badgeType === 'only-wiki' && (
-                          <span className={`${styles['compare-row-badge']} ${styles['only-wiki']}`}>
-                            Only in Wiki
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (row.type === 'diff-header') {
-                  return (
-                    <div className={styles['compare-row-diff-header']}>
-                      <div className={styles['compare-row-diff-cell']}>Field</div>
-                      <div className={styles['compare-row-diff-cell']}>App Value</div>
-                      <div className={styles['compare-row-diff-cell']}>Wiki Value</div>
-                    </div>
-                  );
-                }
-
-                if (row.type === 'diff-row') {
-                  return (
-                    <div className={`${styles['compare-row-diff']} ${row.isLastChild ? styles['is-last'] : ''}`}>
-                      <div className={`${styles['compare-row-diff-cell']} ${styles['field']}`}>{row.field}</div>
-                      <div className={`${styles['compare-row-diff-cell']} ${styles['app']}`}>{String(row.appValue)}</div>
-                      <div className={`${styles['compare-row-diff-cell']} ${styles['wiki']}`}>{String(row.wikiValue)}</div>
-                    </div>
-                  );
-                }
-
-                if (row.type === 'prop-row') {
-                  return (
-                    <div className={`${styles['compare-row-prop']} ${row.isLastChild ? styles['is-last'] : ''}`}>
-                      <div className={`${styles['compare-row-prop-cell']} ${styles['label']}`}>{row.propLabel}</div>
-                      <div className={`${styles['compare-row-prop-cell']} ${styles['value']}`}>{String(row.propValue)}</div>
-                    </div>
-                  );
-                }
-
-                return null;
-              }}
-            </VirtualList>
-          )}
-        </div>
-      </>
+      <ComparisonResultView
+        counts={getComparisonCounts(result)}
+        rows={rows}
+        activeFilter={activeFilter}
+        prefix="machine"
+        warning={snapshot.warning}
+        error={snapshot.error}
+        onFilterChange={setActiveFilter}
+        onToggle={toggleExpanded}
+      />
     );
   };
 
@@ -844,334 +748,77 @@ export function DataComparatorTab() {
     const outputsSnap = snapshots.recipes_outputs;
     const machinesSnap = snapshots.machines;
 
-    const isAnyLoading =
-      infoSnap?.status === 'loading' ||
-      inputsSnap?.status === 'loading' ||
-      outputsSnap?.status === 'loading' ||
-      machinesSnap?.status === 'loading';
+    const recipeSnapshots = [infoSnap, inputsSnap, outputsSnap, machinesSnap];
+    const isAnyLoading = recipeSnapshots.some((snapshot) => snapshot?.status === 'loading');
 
     if (isAnyLoading) {
       return (
-        <div className={styles['compare-empty']}>
-          <RefreshCw className={styles['spin']} size={32} />
-          <div className={styles['compare-empty-title']}>Loading Wiki Data...</div>
-        </div>
+        <CompareEmptyState icon={RefreshCw} title="Loading Wiki Data..." spin />
       );
     }
 
-    const isAnyError =
-      (infoSnap?.status === 'error' && (!infoSnap.rows || (Array.isArray(infoSnap.rows) && infoSnap.rows.length === 0))) ||
-      (inputsSnap?.status === 'error' && (!inputsSnap.rows || (Array.isArray(inputsSnap.rows) && inputsSnap.rows.length === 0))) ||
-      (outputsSnap?.status === 'error' && (!outputsSnap.rows || (Array.isArray(outputsSnap.rows) && outputsSnap.rows.length === 0))) ||
-      (machinesSnap?.status === 'error' && (!machinesSnap.rows || (Array.isArray(machinesSnap.rows) && machinesSnap.rows.length === 0)));
+    const errorSnapshot = recipeSnapshots.find(needsFreshErrorState);
 
-    if (isAnyError) {
-      const errorMsg =
-        infoSnap?.error || inputsSnap?.error || outputsSnap?.error || machinesSnap?.error || 'Unknown error';
+    if (errorSnapshot) {
       return (
-        <div className={styles['compare-empty']}>
-          <AlertTriangle size={32} />
-          <div className={styles['compare-empty-title']}>Error Loading Wiki Data</div>
-          <div className={styles['compare-empty-desc']}>{errorMsg}</div>
-        </div>
+        <CompareEmptyState
+          icon={AlertTriangle}
+          title="Error Loading Wiki Data"
+          description={errorSnapshot.error || 'Unknown error'}
+        />
       );
     }
 
-    const hasNoData =
-      !infoSnap || !Array.isArray(infoSnap.rows) || infoSnap.rows.length === 0 ||
-      !inputsSnap || !Array.isArray(inputsSnap.rows) || inputsSnap.rows.length === 0 ||
-      !outputsSnap || !Array.isArray(outputsSnap.rows) || outputsSnap.rows.length === 0 ||
-      !machinesSnap || !Array.isArray(machinesSnap.rows) || machinesSnap.rows.length === 0;
-
-    if (hasNoData) {
+    if (
+      !hasBucketRows(infoSnap) ||
+      !hasBucketRows(inputsSnap) ||
+      !hasBucketRows(outputsSnap) ||
+      !hasBucketRows(machinesSnap)
+    ) {
       return (
-        <div className={styles['compare-empty']}>
-          <ClipboardList size={32} />
-          <div className={styles['compare-empty-title']}>No Wiki Data Fetched</div>
-          <div className={styles['compare-empty-desc']}>
-            Click the "Fetch" button in the toolbar to load recipe data from the wiki.
-          </div>
-        </div>
+        <CompareEmptyState
+          icon={ClipboardList}
+          title="No Wiki Data Fetched"
+          description={'Click the "Fetch" button in the toolbar to load recipe data from the wiki.'}
+        />
       );
     }
 
-    const result = recipesCompare;
-    if (!result) return null;
+    const result = compareRecipes(
+      getAllRecipes(),
+      infoSnap.rows,
+      inputsSnap.rows,
+      outputsSnap.rows,
+      getAllMachines(),
+      getAllProducts(),
+      machinesSnap.rows
+    );
 
-    const currentList =
-      activeFilter === 'changed'
-        ? result.changed
-        : activeFilter === 'onlyInApp'
-          ? result.onlyInApp
-          : activeFilter === 'onlyInWiki'
-            ? result.onlyInWiki
-            : result.unchanged;
-
-    const productsList = getAllProducts();
-    const productMap = new Map(productsList.map((p) => [p.id, p.name]));
-    const machinesList = getAllMachines();
-    const machineMap = new Map(machinesList.map((m) => [m.id, m.name]));
-
-    const formatAppInputs = (r: Recipe) => {
-      const grouped = new Map<string, number>();
-      for (const input of r.inputs) {
-        const name = productMap.get(input.product_id) || input.product_id;
-        grouped.set(name, (grouped.get(name) || 0) + input.quantity);
-      }
-      return Array.from(grouped.entries())
-        .map(([name, quantity]) => `${name} x${quantity}`)
-        .join(', ') || '(None)';
-    };
-
-    const formatAppOutputs = (r: Recipe) => {
-      const grouped = new Map<string, number>();
-      for (const output of r.outputs) {
-        const name = productMap.get(output.product_id) || output.product_id;
-        grouped.set(name, (grouped.get(name) || 0) + output.quantity);
-      }
-      return Array.from(grouped.entries())
-        .map(([name, quantity]) => `${name} x${quantity}`)
-        .join(', ') || '(None)';
-    };
-
-    const formatWikiInputs = (wr: WikiRecipe) => {
-      const grouped = new Map<string, number>();
-      for (const input of wr.inputs) {
-        grouped.set(input.item, (grouped.get(input.item) || 0) + input.amount);
-      }
-      return Array.from(grouped.entries())
-        .map(([item, amount]) => `${item} x${amount}`)
-        .join(', ') || '(None)';
-    };
-
-    const formatWikiOutputs = (wr: WikiRecipe) => {
-      const grouped = new Map<string, number>();
-      for (const output of wr.outputs) {
-        grouped.set(output.item, (grouped.get(output.item) || 0) + output.amount);
-      }
-      return Array.from(grouped.entries())
-        .map(([item, amount]) => `${item} x${amount}`)
-        .join(', ') || '(None)';
-    };
-
-    const flatItems: ComparatorVirtualRow[] = [];
-
-    currentList.forEach((item) => {
-      const recipeKey = item.key;
-      const expKey = `recipe-${activeFilter}-${recipeKey}`;
-      const isExpanded = expandedKeys.has(expKey);
-
-      if (activeFilter === 'changed') {
-        flatItems.push({
-          key: `header-${recipeKey}`,
-          type: 'header',
-          itemKey: recipeKey,
-          isExpanded,
-          diffCount: item.differences?.length,
-          badgeType: 'changed',
-        });
-        if (isExpanded && item.differences) {
-          flatItems.push({
-            key: `diff-header-${recipeKey}`,
-            type: 'diff-header',
-            itemKey: recipeKey,
-            isExpanded,
-          });
-          item.differences.forEach((diff, idx) => {
-            flatItems.push({
-              key: `diff-${recipeKey}-${diff.field}`,
-              type: 'diff-row',
-              itemKey: recipeKey,
-              isExpanded,
-              field: diff.field,
-              appValue: diff.appValue,
-              wikiValue: diff.wikiValue,
-              isLastChild: idx === item.differences!.length - 1,
-            });
-          });
-        }
-      } else if (activeFilter === 'onlyInApp') {
-        const r = item.appItem!;
-        const appMachineName = machineMap.get(r.machine_id) || r.machine_id;
-
-        flatItems.push({
-          key: `header-${recipeKey}`,
-          type: 'header',
-          itemKey: recipeKey,
-          isExpanded,
-          badgeType: 'only-app',
-        });
-        if (isExpanded) {
-          const props = [
-            { label: 'Machine', val: appMachineName },
-            { label: 'Cycle Time', val: r.cycle_time },
-            { label: 'Power Consumption', val: r.power_consumption },
-            { label: 'Pollution', val: r.pollution },
-            { label: 'Inputs', val: formatAppInputs(r) },
-            { label: 'Outputs', val: formatAppOutputs(r) },
-          ];
-          props.forEach((prop, idx) => {
-            flatItems.push({
-              key: `prop-${recipeKey}-${prop.label}`,
-              type: 'prop-row',
-              itemKey: recipeKey,
-              isExpanded,
-              propLabel: prop.label,
-              propValue: prop.val,
-              isLastChild: idx === props.length - 1,
-            });
-          });
-        }
-      } else if (activeFilter === 'onlyInWiki') {
-        const wr = item.wikiItem!;
-
-        flatItems.push({
-          key: `header-${recipeKey}`,
-          type: 'header',
-          itemKey: recipeKey,
-          isExpanded,
-          badgeType: 'only-wiki',
-        });
-        if (isExpanded) {
-          const props = [
-            { label: 'Machine', val: wr.machine },
-            { label: 'Cycle Time', val: wr.time },
-            { label: 'Power Consumption', val: wr.mamyflux },
-            { label: 'Pollution', val: wr.pollution || '(None)' },
-            { label: 'Inputs', val: formatWikiInputs(wr) },
-            { label: 'Outputs', val: formatWikiOutputs(wr) },
-          ];
-          props.forEach((prop, idx) => {
-            flatItems.push({
-              key: `prop-${recipeKey}-${prop.label}`,
-              type: 'prop-row',
-              itemKey: recipeKey,
-              isExpanded,
-              propLabel: prop.label,
-              propValue: prop.val,
-              isLastChild: idx === props.length - 1,
-            });
-          });
-        }
-      } else {
-        flatItems.push({
-          key: `header-${recipeKey}`,
-          type: 'header',
-          itemKey: recipeKey,
-          isExpanded: false,
-        });
-      }
-    });
+    const productMap = new Map(getAllProducts().map((product) => [product.id, product.name]));
+    const machineMap = new Map(getAllMachines().map((machine) => [machine.id, machine.name]));
+    const rows = buildComparatorRows(
+      result,
+      activeFilter,
+      expandedKeys,
+      'recipe',
+      (recipe) => getAppRecipeProps(recipe, productMap, machineMap),
+      getWikiRecipeProps
+    );
 
     const warning = infoSnap?.warning || inputsSnap?.warning || outputsSnap?.warning || machinesSnap?.warning;
     const error = infoSnap?.error || inputsSnap?.error || outputsSnap?.error || machinesSnap?.error;
 
     return (
-      <>
-        {warning && (
-          <div className={styles['compare-warning']}>{warning}</div>
-        )}
-        {error && (
-          <div className={styles['compare-error']}>{error}</div>
-        )}
-
-        {renderSubTabs(
-          result.changed.length,
-          result.onlyInApp.length,
-          result.onlyInWiki.length,
-          result.unchanged.length
-        )}
-
-        <div className={styles['compare-results-container']}>
-          {flatItems.length === 0 ? (
-            <div className={styles['diff-empty-msg']}>
-              No items in this category.
-            </div>
-          ) : (
-            <VirtualList<ComparatorVirtualRow>
-              key={`recipes-${activeFilter}`}
-              items={flatItems}
-              itemHeight={32}
-              height={450}
-              getKey={(item) => item.key}
-            >
-              {(row) => {
-                if (row.type === 'header') {
-                  const expKey = `recipe-${activeFilter}-${row.itemKey}`;
-                  if (activeFilter === 'unchanged') {
-                    return (
-                      <div className={styles['unchanged-row']} style={{ height: '100%' }}>
-                        <CheckCircle2 className={styles['unchanged-icon']} size={14} />
-                        <span>{row.itemKey}</span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div
-                      className={styles['compare-row-header']}
-                      style={{ height: '100%', borderBottom: row.isExpanded ? 'none' : undefined }}
-                      onClick={() => toggleExpanded(expKey)}
-                    >
-                      <div className={styles['compare-row-header-left']}>
-                        {row.isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                        <span>{row.itemKey}</span>
-                      </div>
-                      <div className={styles['compare-row-header-right']}>
-                        {row.badgeType === 'changed' && (
-                          <span className={`${styles['compare-row-badge']} ${styles['changed']}`}>
-                            {row.diffCount} {row.diffCount === 1 ? 'difference' : 'differences'}
-                          </span>
-                        )}
-                        {row.badgeType === 'only-app' && (
-                          <span className={`${styles['compare-row-badge']} ${styles['only-app']}`}>
-                            Only in App
-                          </span>
-                        )}
-                        {row.badgeType === 'only-wiki' && (
-                          <span className={`${styles['compare-row-badge']} ${styles['only-wiki']}`}>
-                            Only in Wiki
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                }
-
-                if (row.type === 'diff-header') {
-                  return (
-                    <div className={styles['compare-row-diff-header']}>
-                      <div className={styles['compare-row-diff-cell']}>Field</div>
-                      <div className={styles['compare-row-diff-cell']}>App Value</div>
-                      <div className={styles['compare-row-diff-cell']}>Wiki Value</div>
-                    </div>
-                  );
-                }
-
-                if (row.type === 'diff-row') {
-                  return (
-                    <div className={`${styles['compare-row-diff']} ${row.isLastChild ? styles['is-last'] : ''}`}>
-                      <div className={`${styles['compare-row-diff-cell']} ${styles['field']}`}>{row.field}</div>
-                      <div className={`${styles['compare-row-diff-cell']} ${styles['app']}`}>{String(row.appValue)}</div>
-                      <div className={`${styles['compare-row-diff-cell']} ${styles['wiki']}`}>{String(row.wikiValue)}</div>
-                    </div>
-                  );
-                }
-
-                if (row.type === 'prop-row') {
-                  return (
-                    <div className={`${styles['compare-row-prop']} ${row.isLastChild ? styles['is-last'] : ''}`}>
-                      <div className={`${styles['compare-row-prop-cell']} ${styles['label']}`}>{row.propLabel}</div>
-                      <div className={`${styles['compare-row-prop-cell']} ${styles['value']}`}>{String(row.propValue)}</div>
-                    </div>
-                  );
-                }
-
-                return null;
-              }}
-            </VirtualList>
-          )}
-        </div>
-      </>
+      <ComparisonResultView
+        counts={getComparisonCounts(result)}
+        rows={rows}
+        activeFilter={activeFilter}
+        prefix="recipe"
+        warning={warning}
+        error={error}
+        onFilterChange={setActiveFilter}
+        onToggle={toggleExpanded}
+      />
     );
   };
 
@@ -1219,7 +866,7 @@ export function DataComparatorTab() {
           disabled={hasActiveLoading || activeBuckets.length === 0}
         >
           <RefreshCw className={hasActiveLoading ? styles['spin'] : ''} size={14} />
-          <span>{hasActiveLoading ? 'Checking' : hasActiveRows ? 'Check' : 'Fetch'}</span>
+          <span>{hasActiveLoading ? 'Checking' : hasAllActiveRows ? 'Check' : 'Fetch'}</span>
         </button>
       </div>
 

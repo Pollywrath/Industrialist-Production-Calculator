@@ -1,38 +1,83 @@
 import type { Product, Machine, Research, Recipe } from '../types/data';
 
-export function getWikiNumber(val: unknown): number {
+function decodeWikiHtmlEntities(value: string): string {
+  return value
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(parseInt(code, 10)));
+}
+
+export function normalizeWikiMarkup(val: unknown): string {
+  if (val === null || val === undefined) return '';
+  return decodeWikiHtmlEntities(String(val))
+    .replace(/<\s*sup\s*>(.*?)<\s*\/\s*sup\s*>/gi, '^$1')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function normalizeCompareKey(val: unknown): string {
+  return normalizeWikiMarkup(val).toLowerCase();
+}
+
+function getFirstWikiString(...values: unknown[]): string {
+  for (const value of values) {
+    const text = getWikiString(value);
+    if (text) return text;
+  }
+  return '';
+}
+
+function getWikiTitle(row: Record<string, unknown>): string {
+  return getFirstWikiString(row.title, row.page_name, row.page_name_sub);
+}
+
+export function getOptionalWikiNumber(val: unknown): number | null {
   if (typeof val === 'number') return val;
   if (typeof val === 'string') {
-    const cleaned = val.replace(/,/g, '');
+    const cleaned = normalizeWikiMarkup(val).replace(/,/g, '');
     const match = cleaned.match(/-?\d+(?:\.\d+)?/);
     if (match) {
       const num = parseFloat(match[0]);
-      return isNaN(num) ? 0 : num;
+      return isNaN(num) ? null : num;
     }
   }
-  return 0;
+  return null;
 }
 
-export function getWikiBoolean(val: unknown): boolean {
+export function getWikiNumber(val: unknown): number {
+  return getOptionalWikiNumber(val) ?? 0;
+}
+
+export function getOptionalWikiBoolean(val: unknown): boolean | null {
   if (typeof val === 'boolean') return val;
   if (typeof val === 'string') {
     const s = val.trim().toLowerCase();
-    return s === 'true' || s === '1' || s === 'yes';
+    if (s === 'true' || s === '1' || s === 'yes') return true;
+    if (s === 'false' || s === '0' || s === 'no') return false;
+    if (!s) return null;
   }
   if (typeof val === 'number') {
     return val !== 0;
   }
-  return false;
+  return null;
+}
+
+export function getWikiBoolean(val: unknown): boolean {
+  return getOptionalWikiBoolean(val) ?? false;
 }
 
 export function getWikiString(val: unknown): string {
-  if (val === null || val === undefined) return '';
-  return String(val).trim();
+  return normalizeWikiMarkup(val);
 }
 
 export function matchPluralAndSingular(appVal: string, wikiVal: string): boolean {
   const clean = (s: string) => {
-    let val = s.trim().toLowerCase();
+    let val = normalizeCompareKey(s);
     if (val === 'miscellaneous' || val === 'misc') return 'misc';
     if (val.endsWith('ies')) {
       val = val.slice(0, -3) + 'y';
@@ -47,12 +92,12 @@ export function matchPluralAndSingular(appVal: string, wikiVal: string): boolean
 export function matchSize(appSize: { x: number; y: number }, wikiSize: string): boolean {
   if (!wikiSize) return false;
   const cleanApp = `${appSize.x}x${appSize.y}`.toLowerCase().replace(/\s+/g, '');
-  const cleanWiki = wikiSize.toLowerCase().replace(/\s+/g, '');
+  const cleanWiki = normalizeCompareKey(wikiSize).replace(/\s+/g, '').replace(/\u00d7/g, 'x');
   return cleanApp === cleanWiki;
 }
 
 export function matchVariant(appVariant: string, wikiVariant: string): boolean {
-  const clean = (s: string) => (s || '').trim().toLowerCase();
+  const clean = (s: string) => normalizeCompareKey(s);
   const cleanApp = clean(appVariant);
   const cleanWiki = clean(wikiVariant);
   if (cleanApp === 'none' || !cleanApp) {
@@ -133,7 +178,7 @@ export function compareData<TApp, TWiki>(
 
   const wikiMap = new Map<string, TWiki>();
   for (const wiki of wikiItems) {
-    const key = getWikiKey(wiki).trim().toLowerCase();
+    const key = normalizeCompareKey(getWikiKey(wiki));
     if (key) {
       wikiMap.set(key, wiki);
     }
@@ -143,7 +188,7 @@ export function compareData<TApp, TWiki>(
 
   for (const app of appItems) {
     const key = getAppKey(app);
-    const normalizedKey = key.trim().toLowerCase();
+    const normalizedKey = normalizeCompareKey(key);
     const wiki = wikiMap.get(normalizedKey);
 
     if (wiki) {
@@ -173,7 +218,7 @@ export function compareData<TApp, TWiki>(
 
   for (const wiki of wikiItems) {
     const key = getWikiKey(wiki);
-    const normalizedKey = key.trim().toLowerCase();
+    const normalizedKey = normalizeCompareKey(key);
     if (!matchedWikiKeys.has(normalizedKey)) {
       onlyInWiki.push({
         key,
@@ -200,35 +245,35 @@ export function compareProducts(
     filteredApp,
     wikiRows,
     (p) => p.name,
-    (row) => getWikiString(row.page_name || row.page_name_sub || row.title),
+    getWikiTitle,
     (app, wiki) => {
       const diffs: Difference[] = [];
 
-      const wikiIsFluid = getWikiBoolean(wiki.is_fluid);
+      const wikiIsFluid = getOptionalWikiBoolean(wiki.is_fluid);
       const appIsFluid = app.type === 'Fluid';
-      if (appIsFluid !== wikiIsFluid) {
+      if (wikiIsFluid === null || appIsFluid !== wikiIsFluid) {
         diffs.push({
           field: 'Type',
           appValue: app.type,
-          wikiValue: wikiIsFluid ? 'Fluid' : 'Item',
+          wikiValue: wikiIsFluid === null ? 'Missing' : wikiIsFluid ? 'Fluid' : 'Item',
         });
       }
 
-      const wikiSellVal = getWikiNumber(wiki.sellvalue !== undefined ? wiki.sellvalue : wiki.sellValue);
-      if (Math.abs(app.sell_price - wikiSellVal) > 1e-6) {
+      const wikiSellVal = getOptionalWikiNumber(wiki.sellvalue !== undefined ? wiki.sellvalue : wiki.sellValue);
+      if (wikiSellVal === null || Math.abs(app.sell_price - wikiSellVal) > 1e-6) {
         diffs.push({
           field: 'Sell Price',
           appValue: app.sell_price,
-          wikiValue: wikiSellVal,
+          wikiValue: wikiSellVal ?? 'Missing',
         });
       }
 
-      const wikiResVal = getWikiNumber(wiki.resvalue !== undefined ? wiki.resvalue : wiki.resValue);
-      if (Math.abs(app.rp_multiplier - wikiResVal) > 1e-6) {
+      const wikiResVal = getOptionalWikiNumber(wiki.resvalue !== undefined ? wiki.resvalue : wiki.resValue);
+      if (wikiResVal === null || Math.abs(app.rp_multiplier - wikiResVal) > 1e-6) {
         diffs.push({
           field: 'RP Multiplier',
           appValue: app.rp_multiplier,
-          wikiValue: wikiResVal,
+          wikiValue: wikiResVal ?? 'Missing',
         });
       }
 
@@ -250,7 +295,7 @@ export function compareMachines(
     appMachines,
     wikiRows,
     (m) => m.name,
-    (row) => getWikiString(row.page_name || row.page_name_sub || row.title),
+    getWikiTitle,
     (app, wiki) => {
       const diffs: Difference[] = [];
 
@@ -272,18 +317,18 @@ export function compareMachines(
         });
       }
 
-      const wikiCost = getWikiNumber(wiki.cost);
-      if (Math.abs(app.cost - wikiCost) > 1e-6) {
+      const wikiCost = getOptionalWikiNumber(wiki.cost);
+      if (wikiCost === null || Math.abs(app.cost - wikiCost) > 1e-6) {
         diffs.push({
           field: 'Cost',
           appValue: app.cost,
-          wikiValue: wikiCost,
+          wikiValue: wikiCost ?? 'Missing',
         });
       }
 
       const appResearchName = researchMap.get(app.research) || '';
       const wikiResearchName = getWikiString(wiki.research);
-      if (appResearchName.trim().toLowerCase() !== wikiResearchName.trim().toLowerCase()) {
+      if (normalizeCompareKey(appResearchName) !== normalizeCompareKey(wikiResearchName)) {
         diffs.push({
           field: 'Research',
           appValue: appResearchName || '(None)',
@@ -291,12 +336,12 @@ export function compareMachines(
         });
       }
 
-      const wikiLimited = getWikiBoolean(wiki.limited);
-      if (app.limited !== wikiLimited) {
+      const wikiLimited = getOptionalWikiBoolean(wiki.limited);
+      if (wikiLimited === null || app.limited !== wikiLimited) {
         diffs.push({
           field: 'Limited',
           appValue: app.limited,
-          wikiValue: wikiLimited,
+          wikiValue: wikiLimited ?? 'Missing',
         });
       }
 
@@ -313,12 +358,12 @@ export function compareMachines(
         });
       }
 
-      const wikiTier = getWikiNumber(wiki.tier);
-      if (app.tier !== wikiTier) {
+      const wikiTier = getOptionalWikiNumber(wiki.tier);
+      if (wikiTier === null || app.tier !== wikiTier) {
         diffs.push({
           field: 'Tier',
           appValue: app.tier,
-          wikiValue: wikiTier,
+          wikiValue: wikiTier ?? 'Missing',
         });
       }
 
@@ -377,6 +422,74 @@ function matchQuantities(
   return pairs;
 }
 
+interface QuantitySource {
+  quantities: Map<string, number[]>;
+  names: Map<string, string>;
+}
+
+function buildQuantitySource<T>(
+  items: T[],
+  getName: (item: T) => string,
+  getQuantity: (item: T) => number
+): QuantitySource {
+  const source: QuantitySource = {
+    quantities: new Map(),
+    names: new Map(),
+  };
+
+  for (const item of items) {
+    const name = getName(item);
+    const key = normalizeCompareKey(name);
+    if (!key) continue;
+
+    if (!source.quantities.has(key)) source.quantities.set(key, []);
+    source.quantities.get(key)!.push(getQuantity(item));
+    if (!source.names.has(key)) source.names.set(key, name);
+  }
+
+  return source;
+}
+
+function addQuantityDiffs(
+  diffs: Difference[],
+  label: 'Input' | 'Output',
+  appSource: QuantitySource,
+  wikiSource: QuantitySource,
+  preferredNames: Map<string, string>
+) {
+  const allNames = new Set([...appSource.quantities.keys(), ...wikiSource.quantities.keys()]);
+
+  for (const name of allNames) {
+    const appVals = appSource.quantities.get(name) || [];
+    const wikiVals = wikiSource.quantities.get(name) || [];
+    const originalName = preferredNames.get(name) || wikiSource.names.get(name) || appSource.names.get(name) || name;
+
+    for (const pair of matchQuantities(appVals, wikiVals)) {
+      if (pair.appVal !== undefined && pair.wikiVal !== undefined) {
+        if (Math.abs(pair.appVal - pair.wikiVal) > 1e-6) {
+          diffs.push({
+            field: `${originalName} (${label})`,
+            appValue: pair.appVal,
+            wikiValue: pair.wikiVal,
+          });
+        }
+      } else if (pair.appVal !== undefined) {
+        diffs.push({
+          field: `${originalName} (${label})`,
+          appValue: pair.appVal,
+          wikiValue: 'Missing',
+        });
+      } else if (pair.wikiVal !== undefined) {
+        diffs.push({
+          field: `${originalName} (${label})`,
+          appValue: 'Missing',
+          wikiValue: pair.wikiVal,
+        });
+      }
+    }
+  }
+}
+
 export function compareRecipes(
   appRecipes: Recipe[],
   wikiInfo: Record<string, unknown>[],
@@ -388,10 +501,16 @@ export function compareRecipes(
 ): ComparisonResult<Recipe, WikiRecipe> {
   const machineMap = new Map(machinesList.map((m) => [m.id, m.name]));
   const productMap = new Map(productsList.map((p) => [p.id, p.name]));
+  const productNameByCompareKey = new Map(productsList.map((p) => [normalizeCompareKey(p.name), p.name]));
+
+  const getNormalizedRecipeId = (id: string) => {
+    const s = normalizeCompareKey(id);
+    return s.startsWith('r_') ? s.slice(2) : s;
+  };
 
   const wikiMachineMap = new Map<string, Record<string, unknown>>();
   for (const row of wikiMachines) {
-    const mName = getWikiString(row.page_name || row.page_name_sub || row.title).trim().toLowerCase();
+    const mName = normalizeCompareKey(getWikiTitle(row));
     if (mName) {
       wikiMachineMap.set(mName, row);
     }
@@ -399,9 +518,9 @@ export function compareRecipes(
 
   const inputsMap = new Map<string, Array<{ item: string; amount: number }>>();
   for (const row of wikiInputs) {
-    const id = getWikiString(row.id || row.recipe_id || row.recipeId || row.recipe).trim().toLowerCase();
-    const item = getWikiString(row.item || row.input || row.name);
-    const amount = getWikiNumber(row.amount || row.quantity || row.qty);
+    const id = getNormalizedRecipeId(getFirstWikiString(row.id, row.recipe_id, row.recipeId, row.recipe));
+    const item = getFirstWikiString(row.item, row.input, row.name);
+    const amount = getWikiNumber(row.amount ?? row.quantity ?? row.qty);
     if (id && item) {
       if (!inputsMap.has(id)) {
         inputsMap.set(id, []);
@@ -412,9 +531,9 @@ export function compareRecipes(
 
   const outputsMap = new Map<string, Array<{ item: string; amount: number }>>();
   for (const row of wikiOutputs) {
-    const id = getWikiString(row.id || row.recipe_id || row.recipeId || row.recipe).trim().toLowerCase();
-    const item = getWikiString(row.item || row.output || row.name);
-    const amount = getWikiNumber(row.amount || row.quantity || row.qty);
+    const id = getNormalizedRecipeId(getFirstWikiString(row.id, row.recipe_id, row.recipeId, row.recipe));
+    const item = getFirstWikiString(row.item, row.output, row.name);
+    const amount = getWikiNumber(row.amount ?? row.quantity ?? row.qty);
     if (id && item) {
       if (!outputsMap.has(id)) {
         outputsMap.set(id, []);
@@ -427,18 +546,18 @@ export function compareRecipes(
   const wikiRecipesMap = new Map<string, WikiRecipe>();
 
   for (const info of wikiInfo) {
-    const id = getWikiString(info.id || info.recipe_id || info.recipeId || info.recipe).trim().toLowerCase();
+    const id = getNormalizedRecipeId(getFirstWikiString(info.id, info.recipe_id, info.recipeId, info.recipe));
     if (!id) continue;
 
-    const mName = getWikiString(info.machine).trim().toLowerCase();
+    const mName = normalizeCompareKey(info.machine);
     const wikiMachine = wikiMachineMap.get(mName);
     const pollution = wikiMachine ? getWikiString(wikiMachine.pollution) : '';
 
     const recipe: WikiRecipe = {
       id,
-      name: getWikiString(info.name || info.title || id),
-      mamyflux: getWikiNumber(info.mamyflux || info.power || info.power_consumption),
-      time: getWikiNumber(info.time || info.cycle_time || info.duration),
+      name: getFirstWikiString(info.name, info.title, id),
+      mamyflux: getWikiNumber(info.mamyflux ?? info.power ?? info.power_consumption),
+      time: getWikiNumber(info.time ?? info.cycle_time ?? info.duration),
       machine: getWikiString(info.machine),
       pollution,
       inputs: inputsMap.get(id) || [],
@@ -467,16 +586,11 @@ export function compareRecipes(
     }
   }
 
-  const getNormalizedId = (id: string) => {
-    const s = id.trim().toLowerCase();
-    return s.startsWith('r_') ? s.slice(2) : s;
-  };
-
   return compareData(
     appRecipes,
     wikiRecipes,
-    (r) => getNormalizedId(r.id),
-    (wr) => wr.id,
+    (r) => getNormalizedRecipeId(r.id),
+    (wr) => getNormalizedRecipeId(wr.id),
     (app, wiki) => {
       const diffs: Difference[] = [];
 
@@ -500,7 +614,7 @@ export function compareRecipes(
 
       const appMachineName = machineMap.get(app.machine_id) || app.machine_id;
       const wikiMachineName = wiki.machine;
-      if (appMachineName.trim().toLowerCase() !== wikiMachineName.trim().toLowerCase()) {
+      if (normalizeCompareKey(appMachineName) !== normalizeCompareKey(wikiMachineName)) {
         diffs.push({
           field: 'Machine',
           appValue: appMachineName || '(None)',
@@ -518,108 +632,23 @@ export function compareRecipes(
         }
       }
 
-      const appInputsMap = new Map<string, number[]>();
-      for (const input of app.inputs) {
-        const name = productMap.get(input.product_id) || input.product_id;
-        const key = name.toLowerCase().trim();
-        if (!appInputsMap.has(key)) appInputsMap.set(key, []);
-        appInputsMap.get(key)!.push(input.quantity);
-      }
-
-      const wikiInputsMap = new Map<string, number[]>();
-      for (const input of wiki.inputs) {
-        const key = input.item.toLowerCase().trim();
-        if (!wikiInputsMap.has(key)) wikiInputsMap.set(key, []);
-        wikiInputsMap.get(key)!.push(input.amount);
-      }
-
-      const allInputNames = new Set([...appInputsMap.keys(), ...wikiInputsMap.keys()]);
-      for (const name of allInputNames) {
-        const appVals = appInputsMap.get(name) || [];
-        const wikiVals = wikiInputsMap.get(name) || [];
-
-        const originalName = productsList.find(p => p.name.toLowerCase() === name.toLowerCase())?.name
-          || wiki.inputs.find(i => i.item.toLowerCase() === name.toLowerCase())?.item
-          || name;
-
-        const pairs = matchQuantities(appVals, wikiVals);
-        for (const pair of pairs) {
-          if (pair.appVal !== undefined && pair.wikiVal !== undefined) {
-            if (Math.abs(pair.appVal - pair.wikiVal) > 1e-6) {
-              diffs.push({
-                field: `${originalName} (Input)`,
-                appValue: pair.appVal,
-                wikiValue: pair.wikiVal,
-              });
-            }
-          } else if (pair.appVal !== undefined) {
-            diffs.push({
-              field: `${originalName} (Input)`,
-              appValue: pair.appVal,
-              wikiValue: 'Missing',
-            });
-          } else if (pair.wikiVal !== undefined) {
-            diffs.push({
-              field: `${originalName} (Input)`,
-              appValue: 'Missing',
-              wikiValue: pair.wikiVal,
-            });
-          }
-        }
-      }
-
-      const appOutputsMap = new Map<string, number[]>();
-      for (const output of app.outputs) {
-        const name = productMap.get(output.product_id) || output.product_id;
-        const key = name.toLowerCase().trim();
-        if (!appOutputsMap.has(key)) appOutputsMap.set(key, []);
-        appOutputsMap.get(key)!.push(output.quantity);
-      }
-
-      const wikiOutputsMap = new Map<string, number[]>();
-      for (const output of wiki.outputs) {
-        const key = output.item.toLowerCase().trim();
-        if (!wikiOutputsMap.has(key)) wikiOutputsMap.set(key, []);
-        wikiOutputsMap.get(key)!.push(output.amount);
-      }
-
-      const allOutputNames = new Set([...appOutputsMap.keys(), ...wikiOutputsMap.keys()]);
-      for (const name of allOutputNames) {
-        const appVals = appOutputsMap.get(name) || [];
-        const wikiVals = wikiOutputsMap.get(name) || [];
-
-        const originalName = productsList.find(p => p.name.toLowerCase() === name.toLowerCase())?.name
-          || wiki.outputs.find(o => o.item.toLowerCase() === name.toLowerCase())?.item
-          || name;
-
-        const pairs = matchQuantities(appVals, wikiVals);
-        for (const pair of pairs) {
-          if (pair.appVal !== undefined && pair.wikiVal !== undefined) {
-            if (Math.abs(pair.appVal - pair.wikiVal) > 1e-6) {
-              diffs.push({
-                field: `${originalName} (Output)`,
-                appValue: pair.appVal,
-                wikiValue: pair.wikiVal,
-              });
-            }
-          } else if (pair.appVal !== undefined) {
-            diffs.push({
-              field: `${originalName} (Output)`,
-              appValue: pair.appVal,
-              wikiValue: 'Missing',
-            });
-          } else if (pair.wikiVal !== undefined) {
-            diffs.push({
-              field: `${originalName} (Output)`,
-              appValue: 'Missing',
-              wikiValue: pair.wikiVal,
-            });
-          }
-        }
-      }
+      const getProductName = (productId: string) => productMap.get(productId) || productId;
+      addQuantityDiffs(
+        diffs,
+        'Input',
+        buildQuantitySource(app.inputs, (input) => getProductName(input.product_id), (input) => input.quantity),
+        buildQuantitySource(wiki.inputs, (input) => input.item, (input) => input.amount),
+        productNameByCompareKey
+      );
+      addQuantityDiffs(
+        diffs,
+        'Output',
+        buildQuantitySource(app.outputs, (output) => getProductName(output.product_id), (output) => output.quantity),
+        buildQuantitySource(wiki.outputs, (output) => output.item, (output) => output.amount),
+        productNameByCompareKey
+      );
 
       return diffs;
     }
   );
 }
-
