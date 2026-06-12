@@ -8,6 +8,9 @@ function formatWithPrefix(
   prefixUnit = '',
   decimals = 2,
 ): string {
+  if (!Number.isFinite(value)) {
+    return value < 0 ? `-${prefixUnit}∞` : `${prefixUnit}∞`;
+  }
   const isNegative = value < 0;
   const absValue = Math.abs(value);
 
@@ -124,10 +127,16 @@ function formatWithCommasAndCounting(
 }
 
 export function formatQuantity(value: number): string {
+  if (!Number.isFinite(value)) {
+    return value < 0 ? '-∞' : '∞';
+  }
   return formatWithCommasAndCounting(value, (val) => toPlainString(val, 4), 100000);
 }
 
 export function formatMachineCount(value: number): string {
+  if (!Number.isFinite(value)) {
+    return value < 0 ? '-∞' : '∞';
+  }
   return formatWithCommasAndCounting(value, (val) => toPlainString(val, 2), 100000);
 }
 

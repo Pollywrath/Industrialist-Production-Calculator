@@ -15,7 +15,7 @@ const settingDefinitions = {
 };
 
 export const m_research_station3_01: SpecialRecipe = {
-  id: 'r_m_research_station3_01',
+  id: 'r_research_station3_01',
   name: 'Research Station 3',
   machine_id: 'm_research_station3',
   isSellTrash: true,
@@ -37,7 +37,7 @@ export const m_research_station3_01: SpecialRecipe = {
     ];
 
     const recipe: Recipe = {
-      id: 'r_m_research_station3_01',
+      id: 'r_research_station3_01',
       name: 'Research Station 3',
       machine_id: 'm_research_station3',
       cycle_time: 1,

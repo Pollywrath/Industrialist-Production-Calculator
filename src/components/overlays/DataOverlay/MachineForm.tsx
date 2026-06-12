@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import { Cpu } from 'lucide-react';
 import {
@@ -21,6 +22,77 @@ import styles from './DataCrud.module.css';
 interface MachineFormProps {
   selectedMachineId: string | null;
   onSelectMachine: (id: string | null) => void;
+}
+
+function MachineCostInput({
+  value,
+  onChange,
+  defaultValue = 100,
+}: {
+  value: number | undefined;
+  onChange: (value: number) => void;
+  defaultValue?: number;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (inputRef.current && document.activeElement !== inputRef.current) {
+      inputRef.current.value =
+        value === Infinity
+          ? 'infinity'
+          : value === undefined || value === null
+            ? ''
+            : value.toString();
+    }
+  }, [value]);
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const valStr = e.target.value;
+    if (valStr.toLowerCase() === 'infinity') {
+      onChange(Infinity);
+      return;
+    }
+    const parsed = parseFloat(valStr);
+    if (!isNaN(parsed) && !valStr.endsWith('.') && valStr !== '-') {
+      onChange(Math.max(0.01, parsed));
+    }
+  };
+
+  const handleBlur = () => {
+    const currentValStr = inputRef.current?.value || '';
+    if (currentValStr.toLowerCase() === 'infinity') {
+      onChange(Infinity);
+      if (inputRef.current) {
+        inputRef.current.value = 'infinity';
+      }
+      return;
+    }
+    const parsed = parseFloat(currentValStr);
+    const committed = isNaN(parsed) || parsed <= 0 ? defaultValue : parsed;
+    if (inputRef.current) {
+      inputRef.current.value = committed.toString();
+    }
+    onChange(committed);
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      defaultValue={
+        value === Infinity
+          ? 'infinity'
+          : value === undefined || value === null
+            ? ''
+            : value.toString()
+      }
+      onChange={handleChange}
+      onBlur={handleBlur}
+      className={styles['form-input']}
+      placeholder="100.0 or infinity"
+      title="Must be a positive float value or 'infinity'"
+    />
+  );
 }
 
 export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormProps) {
@@ -138,16 +210,10 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
       <div className={styles['form-row-grid']}>
         <div className={styles['form-group']}>
           <label className={styles['form-label']}>Cost ($)</label>
-          <ValidatedNumberInput
+          <MachineCostInput
             value={activeMachine.cost}
             onChange={(val) => updateMachinePendingEdit(selectedMachineId, { cost: val })}
             defaultValue={100}
-            allowDecimals={true}
-            allowNegatives={false}
-            min={0.01}
-            className={styles['form-input']}
-            placeholder="100.0"
-            title="Must be a positive float value (> 0)"
           />
         </div>
 
@@ -219,15 +285,35 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
 
         <div className={styles['form-group']}>
           <label className={styles['form-label']}>Availability</label>
-          <label className={styles['form-group-row']}>
-            <input
-              type="checkbox"
-              className={styles['form-checkbox']}
-              checked={!!activeMachine.limited}
-              onChange={handleLimitedChange}
-            />
-            <span className={styles['checkbox-label']}>Limited</span>
-          </label>
+          <div className={styles['checkbox-group']}>
+            <label className={styles['form-group-row']}>
+              <input
+                type="checkbox"
+                className={styles['form-checkbox']}
+                checked={!!activeMachine.limited}
+                onChange={handleLimitedChange}
+              />
+              <span className={styles['checkbox-label']}>Limited</span>
+            </label>
+            <label className={styles['form-group-row']}>
+              <input
+                type="checkbox"
+                className={styles['form-checkbox']}
+                checked={!!activeMachine.sandboxOnly}
+                onChange={(e) => updateMachinePendingEdit(selectedMachineId, { sandboxOnly: e.target.checked })}
+              />
+              <span className={styles['checkbox-label']}>Sandbox Only</span>
+            </label>
+            <label className={styles['form-group-row']}>
+              <input
+                type="checkbox"
+                className={styles['form-checkbox']}
+                checked={!!activeMachine.sandboxPlusOnly}
+                onChange={(e) => updateMachinePendingEdit(selectedMachineId, { sandboxPlusOnly: e.target.checked })}
+              />
+              <span className={styles['checkbox-label']}>Sandbox+ Only</span>
+            </label>
+          </div>
         </div>
       </div>
 

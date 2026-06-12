@@ -4,6 +4,8 @@ import { getSpecialRecipe } from '../data/registry';
 import { parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 
+const EFFECTIVE_TEMPERATURE_FLOW_EPSILON = 1e-8;
+
 export interface TemperaturePropagationResult {
   edgeTemps: Record<string, number>;
   inputTemps: Record<string, Record<number, number>>;
@@ -119,6 +121,10 @@ export function propagateTemperatures(
 
     for (const edge of edges) {
       if (!edge.sourceHandle) continue;
+      if ((edgeFlows[edge.id] ?? 0) <= EFFECTIVE_TEMPERATURE_FLOW_EPSILON) {
+        edgeTemps[edge.id] = 18;
+        continue;
+      }
       const sourceParsed = parseHandleId(edge.sourceHandle);
       if (!sourceParsed) continue;
 
@@ -156,7 +162,7 @@ export function propagateTemperatures(
         node.data.settings,
         nodeId,
         getHelpers(nodeId),
-        { suppressStoreTemperatureOverrides: true },
+        { suppressStoreTemperatureOverrides: true, globalSettings },
       );
       if (!recipe) continue;
 
@@ -174,11 +180,12 @@ export function propagateTemperatures(
           let weightedSum = 0;
           for (const edge of connected) {
             const flow = edgeFlows[edge.id] ?? 0;
+            if (flow <= EFFECTIVE_TEMPERATURE_FLOW_EPSILON) continue;
             totalFlow += flow;
             weightedSum += flow * edgeTemps[edge.id];
           }
 
-          if (totalFlow > 1e-8) {
+          if (totalFlow > EFFECTIVE_TEMPERATURE_FLOW_EPSILON) {
             inputTemps[nodeId][i] = weightedSum / totalFlow;
           } else {
             inputTemps[nodeId][i] = resolveConfiguredInputTemp(node, i, sr);
@@ -246,6 +253,10 @@ export function propagateTemperatures(
 
   for (const edge of edges) {
     if (!edge.sourceHandle) continue;
+    if ((edgeFlows[edge.id] ?? 0) <= EFFECTIVE_TEMPERATURE_FLOW_EPSILON) {
+      edgeTemps[edge.id] = 18;
+      continue;
+    }
     const sourceParsed = parseHandleId(edge.sourceHandle);
     if (!sourceParsed) continue;
 

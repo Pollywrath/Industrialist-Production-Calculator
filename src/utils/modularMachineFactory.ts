@@ -7,7 +7,7 @@ export function createVirtualModularMachine(
   defaultRecipeCost: number,
 ): Machine {
   const tier = componentMachines[0]?.tier ?? 1;
-  const research = componentMachines[0]?.research ?? '';
+  const research = componentMachines.map((m) => m.research).find((r) => r !== '') ?? '';
 
   return {
     id: `m_${subcategory.toLowerCase().replace(/\s+/g, '_')}`,
@@ -41,7 +41,8 @@ export function validateModularConsistency(
     if (group.length === 0) continue;
 
     const firstTier = group[0].tier;
-    const firstResearch = group[0].research;
+    const nonBlankResearches = group.map((m) => m.research).filter((r) => r !== '');
+    const expectedResearch = nonBlankResearches[0] ?? '';
 
     for (let i = 1; i < group.length; i++) {
       if (group[i].tier !== firstTier) {
@@ -49,9 +50,12 @@ export function validateModularConsistency(
           `Modular subcategory "${subcategory}" has inconsistent tiers: machine "${group[i].id}" has tier ${group[i].tier} but expected ${firstTier}`,
         );
       }
-      if (group[i].research !== firstResearch) {
+    }
+
+    for (const machine of group) {
+      if (machine.research !== '' && machine.research !== expectedResearch) {
         errors.push(
-          `Modular subcategory "${subcategory}" has inconsistent research: machine "${group[i].id}" has research "${group[i].research}" but expected "${firstResearch}"`,
+          `Modular subcategory "${subcategory}" has inconsistent research: machine "${machine.id}" has research "${machine.research}" but expected "${expectedResearch}" or to be blank`,
         );
       }
     }

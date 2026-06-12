@@ -199,7 +199,13 @@ export function rebuildActiveDatabase(
   researchMap.clear();
 
   products = processCategory('product:', defaultProducts, overrides);
-  machines = processCategory('machine:', defaultMachines, overrides);
+  machines = processCategory('machine:', defaultMachines, overrides).map((m) => {
+    const rawCost = m.cost as unknown;
+    return {
+      ...m,
+      cost: typeof rawCost === 'string' && rawCost.toLowerCase() === 'infinity' ? Infinity : Number(rawCost),
+    };
+  });
   recipes = processCategory(
     'recipe:',
     defaultRecipes,
@@ -293,7 +299,13 @@ export function initializeDatabase(): Promise<void> {
     ]);
 
     defaultRecipes = recipesJson.default as Recipe[];
-    defaultMachines = machinesJson.default as Machine[];
+    defaultMachines = (machinesJson.default as Record<string, unknown>[]).map((m) => {
+      const rawCost = m.cost;
+      return {
+        ...m,
+        cost: typeof rawCost === 'string' && rawCost.toLowerCase() === 'infinity' ? Infinity : Number(rawCost),
+      };
+    }) as Machine[];
     defaultProducts = [
       ...(productsJson.default as Product[]),
       {
@@ -492,6 +504,19 @@ export function resolveActiveRecipe(
 
 export function getMachine(id: string): Machine | undefined {
   return machineMap.get(id);
+}
+
+export function isMachineUnlocked(machine: Machine, unlockedResearchIds: Set<string>): boolean {
+  if (machine.research && !unlockedResearchIds.has(machine.research)) {
+    return false;
+  }
+  if (machine.variant && machine.variant !== 'none' && machine.variant !== '') {
+    const parentMachine = getMachine(machine.variant);
+    if (parentMachine) {
+      return isMachineUnlocked(parentMachine, unlockedResearchIds);
+    }
+  }
+  return true;
 }
 
 export function getProduct(id: string): Product | undefined {

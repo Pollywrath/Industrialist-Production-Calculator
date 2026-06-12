@@ -95,7 +95,7 @@ export const vertical_heat_exchanger_standard: SpecialRecipe = {
       machine_id: 'm_vertical_heat_exchanger',
       cycle_time: 1,
       power_consumption: 0,
-      power_type: 'HV',
+      power_type: 'MV',
       pollution: 0,
       inputs: [
         { product_id: 'p_distilled_water', quantity: 400 },

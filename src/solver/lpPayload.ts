@@ -26,6 +26,17 @@ export function buildLPSolverPayload(
   const resolutionContext = createGraphResolutionContext(nodes, edges);
   const { edgeLookup } = resolutionContext;
   const nodesById = new Map(nodes.map((n) => [n.id, n]));
+  const getResolvedPortProduct = (
+    nodeId: string,
+    side: 'input' | 'output',
+    index: number,
+  ): string => {
+    const recipe = nodeRecipes[nodeId];
+    const list = side === 'input' ? recipe?.inputs : recipe?.outputs;
+    const fallback = list?.[index]?.product_id ?? '';
+    const handleId = buildHandleId(nodeId, side, index);
+    return resolvedProducts[handleId] ?? fallback;
+  };
 
   const lpNodes: LPSolverNode[] = [];
   for (const node of nodes) {
@@ -54,21 +65,26 @@ export function buildLPSolverPayload(
     const outputs = recipe.outputs.map((out, idx) => {
       const handleId = buildHandleId(node.id, 'output', idx);
       const outgoingEdges = edgeLookup.get(handleId) ?? [];
+      const sourceProductId = getResolvedPortProduct(node.id, 'output', idx);
 
       const hasSinkConnection = outgoingEdges.some((edge) => {
+        if (edge.sourceHandle !== handleId) return false;
         if (!edge.targetHandle) return false;
         const targetParsed = parseHandleId(edge.targetHandle);
         if (!targetParsed) return false;
+        if (targetParsed.side !== 'input') return false;
         const targetNode = nodesById.get(edge.target);
         if (!targetNode) return false;
         const targetRecipe = nodeRecipes[targetNode.id];
         if (!targetRecipe) return false;
         const targetInput = targetRecipe.inputs[targetParsed.index];
+        const targetProductId = getResolvedPortProduct(edge.target, 'input', targetParsed.index);
+        if (sourceProductId !== targetProductId) return false;
         return !!targetInput?.variable;
       });
 
       return {
-        productId: resolvedProducts[handleId] ?? out.product_id,
+        productId: sourceProductId || out.product_id,
         quantity: out.quantity * multiplier,
         hasSinkConnection,
       };
@@ -91,6 +107,11 @@ export function buildLPSolverPayload(
     const sourceParsed = parseHandleId(edge.sourceHandle);
     const targetParsed = parseHandleId(edge.targetHandle);
     if (!sourceParsed || !targetParsed) continue;
+    if (sourceParsed.side !== 'output' || targetParsed.side !== 'input') continue;
+
+    const sourceProductId = getResolvedPortProduct(edge.source, 'output', sourceParsed.index);
+    const targetProductId = getResolvedPortProduct(edge.target, 'input', targetParsed.index);
+    if (!sourceProductId || sourceProductId !== targetProductId) continue;
 
     lpConnections.push({
       id: edge.id,

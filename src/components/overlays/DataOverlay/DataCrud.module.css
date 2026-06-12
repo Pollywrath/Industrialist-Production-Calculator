@@ -405,3 +405,11 @@
 .btn-restore:active {
   background: var(--theme-color-warning-translucent);
 }
+
+.checkbox-group {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}

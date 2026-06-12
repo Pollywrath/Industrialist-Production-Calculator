@@ -19,7 +19,7 @@ const getMultiplier = (settings: Record<string, unknown>) => {
 };
 
 export const m_industrial_drill_01: SpecialRecipe = {
-  id: 'r_m_industrial_drill_01',
+  id: 'r_industrial_drill_01',
   name: 'Extract Raw Iron',
   machine_id: 'm_industrial_drill',
   settings: settingDefinitions,
@@ -28,10 +28,10 @@ export const m_industrial_drill_01: SpecialRecipe = {
     const multiplier = getMultiplier(settings);
 
     const recipe: Recipe = {
-      id: 'r_m_industrial_drill_01',
+      id: 'r_industrial_drill_01',
       name: 'Extract Raw Iron',
       machine_id: 'm_industrial_drill',
-      cycle_time: 1,
+      cycle_time: 8,
       power_consumption: 0,
       power_type: 'MV',
       pollution: 0,
@@ -44,7 +44,7 @@ export const m_industrial_drill_01: SpecialRecipe = {
 };
 
 export const m_industrial_drill_02: SpecialRecipe = {
-  id: 'r_m_industrial_drill_02',
+  id: 'r_industrial_drill_02',
   name: 'Extract Raw Copper',
   machine_id: 'm_industrial_drill',
   settings: settingDefinitions,
@@ -53,10 +53,10 @@ export const m_industrial_drill_02: SpecialRecipe = {
     const multiplier = getMultiplier(settings);
 
     const recipe: Recipe = {
-      id: 'r_m_industrial_drill_02',
+      id: 'r_industrial_drill_02',
       name: 'Extract Raw Copper',
       machine_id: 'm_industrial_drill',
-      cycle_time: 1,
+      cycle_time: 8,
       power_consumption: 0,
       power_type: 'MV',
       pollution: 0,
@@ -69,7 +69,7 @@ export const m_industrial_drill_02: SpecialRecipe = {
 };
 
 export const m_industrial_drill_03: SpecialRecipe = {
-  id: 'r_m_industrial_drill_03',
+  id: 'r_industrial_drill_03',
   name: 'Extract Bauxite Residue',
   machine_id: 'm_industrial_drill',
   settings: settingDefinitions,
@@ -78,10 +78,10 @@ export const m_industrial_drill_03: SpecialRecipe = {
     const multiplier = getMultiplier(settings);
 
     const recipe: Recipe = {
-      id: 'r_m_industrial_drill_03',
+      id: 'r_industrial_drill_03',
       name: 'Extract Bauxite Residue',
       machine_id: 'm_industrial_drill',
-      cycle_time: 1,
+      cycle_time: 8,
       power_consumption: 0,
       power_type: 'MV',
       pollution: 0,

@@ -6,6 +6,7 @@ import { getProductName } from '../../../data/lookup';
 import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
+import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import {
   getRateMultiplier,
   calculateMachineCountFromRate,
@@ -248,6 +249,7 @@ export function RecipeNodeIO({
     if (!hasEdges) return;
 
     const flowResults = useFlowResultStore.getState().results;
+    const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
 
     const targetRate = calculateBalancedRate(
       nodeId,
@@ -257,6 +259,7 @@ export function RecipeNodeIO({
       recipeEdges,
       flowResults,
       allResolvedProducts,
+      globalSettings,
     );
     const q = resolveQuantity(ref, recipe);
     if (q <= 0) return;

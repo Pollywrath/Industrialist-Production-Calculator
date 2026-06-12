@@ -1,10 +1,10 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
 
-export const m_truck_depot_01: SpecialRecipe = {
-  id: 'r_truck_depot_01',
+export const m_hyper_depot_01: SpecialRecipe = {
+  id: 'r_hyper_depot_01',
   name: 'Sell Item',
-  machine_id: 'm_truck_depot',
+  machine_id: 'm_hyper_depot',
   isSellTrash: true,
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
@@ -13,14 +13,14 @@ export const m_truck_depot_01: SpecialRecipe = {
       : 'any_item';
 
     const recipe: Recipe = {
-      id: 'r_truck_depot_01',
+      id: 'r_hyper_depot_01',
       name: 'Sell Item',
-      machine_id: 'm_truck_depot',
-      cycle_time: 15,
+      machine_id: 'm_hyper_depot',
+      cycle_time: 3.5,
       power_consumption: 0,
       power_type: 'MV',
-      pollution: 0.06,
-      inputs: [{ product_id: resolvedItem, quantity: 10, variable: true }],
+      pollution: 0,
+      inputs: [{ product_id: resolvedItem, quantity: 2, variable: true }],
       outputs: [],
     };
 

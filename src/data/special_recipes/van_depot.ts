@@ -2,7 +2,7 @@ import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
 
 export const m_van_depot_01: SpecialRecipe = {
-  id: 'r_m_van_depot_01',
+  id: 'r_van_depot_01',
   name: 'Sell Item',
   machine_id: 'm_van_depot',
   isSellTrash: true,
@@ -13,7 +13,7 @@ export const m_van_depot_01: SpecialRecipe = {
       : 'any_item';
 
     const recipe: Recipe = {
-      id: 'r_m_van_depot_01',
+      id: 'r_van_depot_01',
       name: 'Sell Item',
       machine_id: 'm_van_depot',
       cycle_time: 80,

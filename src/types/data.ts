@@ -14,6 +14,8 @@ export interface Machine {
   research: string;
   category: string;
   subcategory: string;
+  sandboxOnly?: boolean;
+  sandboxPlusOnly?: boolean;
 }
 
 export type ProductType = 'Item' | 'Fluid';

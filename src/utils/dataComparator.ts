@@ -39,7 +39,10 @@ function getWikiTitle(row: Record<string, unknown>): string {
 export function getOptionalWikiNumber(val: unknown): number | null {
   if (typeof val === 'number') return val;
   if (typeof val === 'string') {
-    const cleaned = normalizeWikiMarkup(val).replace(/,/g, '');
+    const cleaned = normalizeWikiMarkup(val).replace(/,/g, '').toLowerCase().trim();
+    if (cleaned === '∞' || cleaned === 'infinity') {
+      return Infinity;
+    }
     const match = cleaned.match(/-?\d+(?:\.\d+)?/);
     if (match) {
       const num = parseFloat(match[0]);
@@ -318,11 +321,18 @@ export function compareMachines(
       }
 
       const wikiCost = getOptionalWikiNumber(wiki.cost);
-      if (wikiCost === null || Math.abs(app.cost - wikiCost) > 1e-6) {
+      const rawAppCost = app.cost as unknown;
+      const appCost = typeof rawAppCost === 'string' && rawAppCost.toLowerCase() === 'infinity' ? Infinity : Number(app.cost);
+      const costDiff = wikiCost === null || (
+        (appCost === Infinity || wikiCost === Infinity)
+          ? appCost !== wikiCost
+          : Math.abs(appCost - wikiCost) > 1e-6
+      );
+      if (costDiff) {
         diffs.push({
           field: 'Cost',
           appValue: app.cost,
-          wikiValue: wikiCost ?? 'Missing',
+          wikiValue: wikiCost === Infinity ? 'infinity' : (wikiCost ?? 'Missing'),
         });
       }
 

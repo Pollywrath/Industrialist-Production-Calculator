@@ -709,11 +709,20 @@ export const useDataStore = create<DataState>((set, get) => ({
         validResearches.add(id);
       }
     }
+    const validMachineIds = new Set(getAllMachines().map((m) => m.id));
+    for (const [id, editData] of Object.entries(pendingEdits.machines)) {
+      if (editData._tombstone) {
+        validMachineIds.delete(id);
+      } else if (editData._isNew) {
+        validMachineIds.add(id);
+      }
+    }
+
     for (const [id, editData] of Object.entries(pendingEdits.machines)) {
       if (editData._tombstone) continue;
       const existing = getMachine(id);
       const compiled = existing ? { ...existing, ...editData } : editData;
-      const validation = validateMachine(compiled, validResearches);
+      const validation = validateMachine(compiled, validResearches, validMachineIds);
       if (!validation.valid) {
         const errorMsg = validation.errors
           .map((err) => `- ${err.field}: ${err.message}`)
@@ -753,15 +762,6 @@ export const useDataStore = create<DataState>((set, get) => ({
         validProductIds.delete(id);
       } else if (editData._isNew) {
         validProductIds.add(id);
-      }
-    }
-
-    const validMachineIds = new Set(getAllMachines().map((m) => m.id));
-    for (const [id, editData] of Object.entries(pendingEdits.machines)) {
-      if (editData._tombstone) {
-        validMachineIds.delete(id);
-      } else if (editData._isNew) {
-        validMachineIds.add(id);
       }
     }
 

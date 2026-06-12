@@ -3,7 +3,7 @@ import { X, Package, Droplet } from 'lucide-react';
 import type { Product, Machine } from '../../../types/data';
 import { SortableSelectorTable, type ColumnConfig } from '../../shared/SortableSelectorTable';
 import { PRODUCT_TABLE_VIEW_HEIGHT, MACHINE_TABLE_VIEW_HEIGHT } from '../../shared/layoutConstants';
-import { getAllMachines, getAllProducts } from '../../../data/lookup';
+import { getAllMachines, getAllProducts, isMachineUnlocked } from '../../../data/lookup';
 import { sortItems } from '../../../utils/sorting';
 import {
   CANONICAL_CATEGORY_MAP,
@@ -364,6 +364,7 @@ function MachineList() {
   const unlockedResearchIds = new Set(unlockedResearchIdsArray);
   const oreNodesEnabled = useGlobalSettingsStore((s) => s.settings.oreNodesEnabled);
   const showVariantLimited = useGlobalSettingsStore((s) => s.settings.showVariantLimited);
+  const difficulty = useGlobalSettingsStore((s) => s.settings.difficulty);
 
   let list = dbVersion !== -1 ? getAllMachines() : [];
 
@@ -374,10 +375,18 @@ function MachineList() {
   list = [...list, ...virtualModularMachines];
 
   list = list.filter((m) => {
-    if (m.research && !unlockedResearchIds.has(m.research)) {
+    if (!isMachineUnlocked(m, unlockedResearchIds)) {
       return false;
     }
     if (m.id === 'm_industrial_drill' && !oreNodesEnabled) {
+      return false;
+    }
+    const isSandboxMode = difficulty === 'sandbox' || difficulty === 'sandbox_plus';
+    const isSandboxPlus = difficulty === 'sandbox_plus';
+    if (m.sandboxPlusOnly && !isSandboxPlus) {
+      return false;
+    }
+    if (m.sandboxOnly && !isSandboxMode) {
       return false;
     }
     const isVariant = m.variant && m.variant !== 'none' && m.variant !== '';

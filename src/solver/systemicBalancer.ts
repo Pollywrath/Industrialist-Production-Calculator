@@ -119,6 +119,7 @@ export function calculateBalancedRate(
   edges: ReactFlowEdge[],
   flowResults: Map<string, NodeFlowResult>,
   resolvedProducts: Record<string, string>,
+  globalSettings?: Record<string, unknown>,
 ): number {
   const scope = buildProductScopedComponent(nodeId, ref, edges, resolvedProducts);
   if (!scope) return 0;
@@ -136,7 +137,7 @@ export function calculateBalancedRate(
     return solveAnalytically(nodeId, ref, recipe, scope.connections, flowResults);
   }
 
-  return solveGoldenSection(nodeId, ref, recipe, nodes, edges, flowResults, scope);
+  return solveGoldenSection(nodeId, ref, recipe, nodes, edges, flowResults, scope, globalSettings);
 }
 
 function solveAnalytically(
@@ -222,6 +223,7 @@ function solveGoldenSection(
   edges: ReactFlowEdge[],
   flowResults: Map<string, NodeFlowResult>,
   scope: ComponentScope,
+  globalSettings?: Record<string, unknown>,
 ): number {
   const nodeFlows = flowResults.get(nodeId);
   const flowStatus = (ref.side === 'input' ? nodeFlows?.inputFlows : nodeFlows?.outputFlows)?.[ref.index];
@@ -252,7 +254,7 @@ function solveGoldenSection(
       data: { ...targetNodeTemplate.data, machineCount: (trialRate * cycleTime) / trialQuantity },
     };
 
-    const { results: trialResults } = solveFlowPipeline(trialNodes, localEdges);
+    const { results: trialResults } = solveFlowPipeline(trialNodes, localEdges, globalSettings);
     let unmet = 0;
     for (let i = 0; i < scope.ports.length; i++) {
       unmet += getUnmet(trialResults, scope.ports[i]);

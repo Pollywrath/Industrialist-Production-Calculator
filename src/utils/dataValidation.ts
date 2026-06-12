@@ -88,6 +88,7 @@ export function validateProduct(product: unknown): ValidationResult {
 export function validateMachine(
   machine: unknown,
   validResearchIds?: Set<string>,
+  validMachineIds?: Set<string>,
   isVirtualModular = false,
 ): ValidationResult {
   const errors: ValidationError[] = [];
@@ -114,9 +115,11 @@ export function validateMachine(
     errors.push({ field: 'name', message: 'Name must be a non-empty string' });
   }
 
-  if (typeof m.cost !== 'number' || isNaN(m.cost)) {
+  const rawCost = m.cost as unknown;
+  const costVal = typeof rawCost === 'string' && rawCost.toLowerCase() === 'infinity' ? Infinity : rawCost;
+  if (typeof costVal !== 'number' || isNaN(costVal)) {
     errors.push({ field: 'cost', message: 'Cost must be a valid number' });
-  } else if (!isVirtualModular && m.cost <= 0) {
+  } else if (!isVirtualModular && costVal <= 0) {
     errors.push({ field: 'cost', message: 'Cost must be greater than 0' });
   }
 
@@ -157,10 +160,23 @@ export function validateMachine(
 
   if (typeof m.variant !== 'string') {
     errors.push({ field: 'variant', message: 'Variant must be a string' });
+  } else if (validMachineIds && m.variant && m.variant !== 'none' && !validMachineIds.has(m.variant)) {
+    errors.push({
+      field: 'variant',
+      message: `Variant machine ID "${m.variant}" does not exist in machine database`,
+    });
   }
 
   if (typeof m.limited !== 'boolean') {
     errors.push({ field: 'limited', message: 'Limited must be a boolean' });
+  }
+
+  if (m.sandboxOnly !== undefined && typeof m.sandboxOnly !== 'boolean') {
+    errors.push({ field: 'sandboxOnly', message: 'Sandbox Only must be a boolean' });
+  }
+
+  if (m.sandboxPlusOnly !== undefined && typeof m.sandboxPlusOnly !== 'boolean') {
+    errors.push({ field: 'sandboxPlusOnly', message: 'Sandbox+ Only must be a boolean' });
   }
 
   if (typeof m.research !== 'string') {
@@ -493,7 +509,7 @@ export function validateFullDatabase(
   });
 
   machines.forEach((m, idx) => {
-    const res = validateMachine(m, researchIds);
+    const res = validateMachine(m, researchIds, machineIds);
     if (!res.valid) {
       const id = (m as Partial<Machine> & Record<string, unknown>)?.id;
       machineErrors.push({ id: id || `[Index ${idx}]`, errors: res.errors });

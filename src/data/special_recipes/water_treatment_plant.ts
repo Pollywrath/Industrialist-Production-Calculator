@@ -5,7 +5,7 @@ const settingDefinitions = {
   steam_temp: {
     type: 'number' as const,
     label: 'Steam Temperature (°C)',
-    default: 363.6363636363636,
+    default: 4000/11,
   },
 };
 

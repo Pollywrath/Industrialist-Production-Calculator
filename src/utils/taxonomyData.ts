@@ -11,7 +11,7 @@ export const CANONICAL_CATEGORY_MAP: Record<string, string[]> = {
     'Separator',
   ],
   Logic: ['Logic Gate', 'Logic Input', 'Logic Output', 'Miscellaneous'],
-  Miscellaneous: ['Decoration', 'Depot', 'Other', 'Research'],
+  Miscellaneous: ['Decoration', 'Depot', 'Pipes', 'Other', 'Research'],
   Modular: ['Modular Diesel Engine', 'Modular Turbine', 'Tree Farm'],
   Power: [
     'Battery',

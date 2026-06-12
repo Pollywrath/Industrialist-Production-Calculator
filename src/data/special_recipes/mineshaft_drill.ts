@@ -366,7 +366,7 @@ const getPotentialOutputs = () => {
 };
 
 export const m_mineshaft_drill_01: SpecialRecipe = {
-  id: 'r_m_mineshaft_drill_01',
+  id: 'r_mineshaft_drill_01',
   name: 'Mineshaft Drill',
   machine_id: 'm_mineshaft_drill',
   settings: settingDefinitions,
@@ -458,7 +458,7 @@ export const m_mineshaft_drill_01: SpecialRecipe = {
     }));
 
     const recipe: Recipe = {
-      id: 'r_m_mineshaft_drill_01',
+      id: 'r_mineshaft_drill_01',
       name: `${depth}m Mineshaft Drill`,
       machine_id: 'm_mineshaft_drill',
       cycle_time: 1,

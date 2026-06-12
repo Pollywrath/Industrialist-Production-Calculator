@@ -1,10 +1,14 @@
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { isRecipeNode } from '../../../types/nodes';
+import type { CanvasNode, HandleRef } from '../../../types/nodes';
+import type { Recipe } from '../../../types/data';
+import type { NodeFlowResult } from '../../../types/solver';
 import { getProductName, resolveActiveRecipe } from '../../../data/lookup';
 import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
+import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import {
   getNormalizedCycleTime,
   calculateMachineCountFromRate,
@@ -14,7 +18,7 @@ import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId, parseHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
 import styles from './RecipeNode.module.css';
-import type { HandleRef } from '../../../types/nodes';
+import { useShallow } from 'zustand/react/shallow';
 import {
   NODE_WIDTH,
   SIDE_PADDING,
@@ -28,6 +32,8 @@ interface GroupNodeIOProps {
   inputProxyHandleIds: string[];
   outputProxyHandleIds: string[];
 }
+
+type ProxyFlowValue = NodeFlowResult | Recipe | string | undefined;
 
 interface GroupNodeIORectProps {
   refVal: HandleRef;
@@ -119,9 +125,49 @@ export function GroupNodeIO({
   outputProxyHandleIds,
 }: GroupNodeIOProps) {
   const rateMode = useUIStore((s) => s.rateMode);
-  const flowResults = useFlowResultStore((s) => s.results);
-  const resolvedProducts = useFlowResultStore((s) => s.resolvedProducts);
-  const nodesMap = useFlowStore((s) => s.nodesMap);
+  const proxyNodes = useFlowStore(
+    useShallow((s): Array<CanvasNode | undefined> => {
+      const values: Array<CanvasNode | undefined> = [];
+      const appendNodeForHandle = (handleId: string): void => {
+        const parsed = parseHandleId(handleId);
+        values.push(parsed ? s.nodesMap.get(parsed.nodeId) : undefined);
+      };
+
+      for (let i = 0; i < inputProxyHandleIds.length; i++) {
+        appendNodeForHandle(inputProxyHandleIds[i]);
+      }
+      for (let i = 0; i < outputProxyHandleIds.length; i++) {
+        appendNodeForHandle(outputProxyHandleIds[i]);
+      }
+      return values;
+    }),
+  );
+  const proxyFlowData = useFlowResultStore(
+    useShallow((s): ProxyFlowValue[] => {
+      const values: ProxyFlowValue[] = [];
+      const appendFlowForHandle = (handleId: string): void => {
+        const parsed = parseHandleId(handleId);
+        const recipe = parsed ? s.nodeRecipes[parsed.nodeId] : undefined;
+        const fallbackProduct =
+          parsed && recipe
+            ? (parsed.side === 'input' ? recipe.inputs : recipe.outputs)[parsed.index]?.product_id
+            : undefined;
+        values.push(
+          parsed ? s.results.get(parsed.nodeId) : undefined,
+          recipe,
+          s.resolvedProducts[handleId] ?? fallbackProduct ?? '',
+        );
+      };
+
+      for (let i = 0; i < inputProxyHandleIds.length; i++) {
+        appendFlowForHandle(inputProxyHandleIds[i]);
+      }
+      for (let i = 0; i < outputProxyHandleIds.length; i++) {
+        appendFlowForHandle(outputProxyHandleIds[i]);
+      }
+      return values;
+    }),
+  );
 
   const leftHandles = inputProxyHandleIds.map((_, index) => ({ side: 'input' as const, index }));
   const rightHandles = outputProxyHandleIds.map((_, index) => ({ side: 'output' as const, index }));
@@ -150,6 +196,9 @@ export function GroupNodeIO({
 
   const gridTemplateColumns = hasLeft && hasRight ? `${leftWidth}px 1fr ${rightWidth}px` : '1fr';
 
+  const getProxyIndex = (ref: HandleRef): number =>
+    ref.side === 'input' ? ref.index : inputProxyHandleIds.length + ref.index;
+
   const handleRectClick = (ref: HandleRef) => {
     const internalHandleId =
       ref.side === 'input'
@@ -160,20 +209,23 @@ export function GroupNodeIO({
     const parsed = parseHandleId(internalHandleId);
     if (!parsed) return;
 
-    const internalNode = nodesMap.get(parsed.nodeId);
+    const internalNode = useFlowStore.getState().nodesMap.get(parsed.nodeId);
     if (!isRecipeNode(internalNode)) return;
 
-    const recipe = resolveActiveRecipe(
-      internalNode.data.recipeId,
-      internalNode.data.settings,
-      internalNode.id,
-    );
+    const flowResultState = useFlowResultStore.getState();
+    const recipe =
+      flowResultState.nodeRecipes[internalNode.id] ??
+      resolveActiveRecipe(
+        internalNode.data.recipeId,
+        internalNode.data.settings,
+        internalNode.id,
+      );
     if (!recipe) return;
 
     const list = parsed.side === 'input' ? recipe.inputs : recipe.outputs;
     const entry = list[parsed.index];
     if (entry) {
-      const resolvedProductId = resolvedProducts[internalHandleId] ?? '';
+      const resolvedProductId = flowResultState.resolvedProducts[internalHandleId] ?? '';
       const concreteProductId =
         resolvedProductId && resolvedProductId !== 'any_fluid' && resolvedProductId !== 'any_item'
           ? resolvedProductId
@@ -210,7 +262,10 @@ export function GroupNodeIO({
     const internalNode = latestNodesMap.get(parsed.nodeId);
     if (!isRecipeNode(internalNode)) return;
 
-    const recipe = resolveActiveRecipe(internalNode.data.recipeId, internalNode.data.settings, internalNode.id);
+    const flowResultState = useFlowResultStore.getState();
+    const recipe =
+      flowResultState.nodeRecipes[internalNode.id] ??
+      resolveActiveRecipe(internalNode.data.recipeId, internalNode.data.settings, internalNode.id);
     if (!recipe) return;
 
     const recipeNodes = nodes.filter(isRecipeNode);
@@ -224,14 +279,16 @@ export function GroupNodeIO({
     );
     if (!hasEdges) return;
 
+    const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
     const targetRate = calculateBalancedRate(
       parsed.nodeId,
       parsed,
       recipe,
       recipeNodes,
       recipeEdges,
-      flowResults,
-      resolvedProducts,
+      flowResultState.results,
+      flowResultState.resolvedProducts,
+      globalSettings,
     );
 
     const list = parsed.side === 'input' ? recipe.inputs : recipe.outputs;
@@ -255,22 +312,24 @@ export function GroupNodeIO({
       return { label: 'Invalid', rate: 0, isFlipped: false };
     }
 
-    const internalNode = nodesMap.get(parsed.nodeId);
+    const proxyIndex = getProxyIndex(ref);
+    const internalNode = proxyNodes[proxyIndex];
     if (!isRecipeNode(internalNode)) {
       return { label: 'Invalid', rate: 0, isFlipped: false };
     }
 
-    const recipe = resolveActiveRecipe(internalNode.data.recipeId, internalNode.data.settings, internalNode.id);
+    const flowDataIndex = proxyIndex * 3;
+    const flowResult = proxyFlowData[flowDataIndex] as NodeFlowResult | undefined;
+    const recipe = proxyFlowData[flowDataIndex + 1] as Recipe | undefined;
     const scaleFactor = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 1;
 
-    const resolvedProduct = resolvedProducts[internalHandleId] ?? '';
+    const resolvedProduct = (proxyFlowData[flowDataIndex + 2] as string | undefined) ?? '';
     const label = getProductName(resolvedProduct);
 
     const list = parsed.side === 'input' ? recipe?.inputs : recipe?.outputs;
     const entry = list?.[parsed.index];
     const isVariable = !!entry?.variable;
 
-    const flowResult = flowResults.get(parsed.nodeId);
     const actualFlow = flowResult
       ? ((parsed.side === 'input'
           ? flowResult.inputFlows[parsed.index]?.connected

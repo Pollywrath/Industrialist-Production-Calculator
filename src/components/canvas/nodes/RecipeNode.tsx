@@ -49,8 +49,8 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   }, [id, data.inputOrder, data.outputOrder, updateNodeInternals]);
 
   const committedRecipe = useFlowResultStore((s) => s.nodeRecipes[id]);
-  const fallbackRecipe = dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings, id) : undefined;
-  const recipe = committedRecipe ?? fallbackRecipe;
+  const recipe =
+    committedRecipe ?? (dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings, id) : undefined);
 
   const inputTempsMap = useFlowResultStore((s) => s.inputTemps[id]);
   let receivedTemp: number | null = null;

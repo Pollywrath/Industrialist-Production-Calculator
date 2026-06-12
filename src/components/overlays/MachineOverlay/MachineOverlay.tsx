@@ -18,7 +18,7 @@ import {
 } from '@xyflow/react';
 import ELK from 'elkjs/lib/elk.bundled.js';
 import { Lock, Settings, Unlock, X } from 'lucide-react';
-import { getAllMachines, getAllResearches } from '../../../data/lookup';
+import { getAllMachines, getAllResearches, getMachine } from '../../../data/lookup';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { useDashboardStore } from '../../../stores/useDashboardStore';
@@ -778,9 +778,34 @@ function MachineOverlayModal() {
 
   const selectedResearch = selectedResearchId ? researchesById.get(selectedResearchId) ?? null : null;
 
+  const isSandboxMode = difficulty === 'sandbox' || difficulty === 'sandbox_plus';
+  const isSandboxPlus = difficulty === 'sandbox_plus';
+
   const unlockedMachines = selectedResearch
     ? machines
-      .filter((machine) => machine.research === selectedResearch.id)
+      .filter((machine) => {
+        if (machine.sandboxPlusOnly && !isSandboxPlus) {
+          return false;
+        }
+        if (machine.sandboxOnly && !isSandboxMode) {
+          return false;
+        }
+        if (machine.research === selectedResearch.id) {
+          return true;
+        }
+        if (machine.variant && machine.variant !== 'none' && machine.variant !== '') {
+          let current = getMachine(machine.variant);
+          while (current) {
+            if (current.research === selectedResearch.id) {
+              return true;
+            }
+            current = (current.variant && current.variant !== 'none' && current.variant !== '')
+              ? getMachine(current.variant)
+              : undefined;
+          }
+        }
+        return false;
+      })
       .sort((a, b) => a.name.localeCompare(b.name))
     : [];
 

@@ -565,9 +565,10 @@
     },
     "variant": "none",
     "limited": false,
-    "research": "s_energy_modular_diesel_engines",
+    "research": "",
     "category": "Modular",
-    "subcategory": "Modular Diesel Engine"
+    "subcategory": "Modular Diesel Engine",
+    "sandboxPlusOnly": true
   },
   {
     "id": "m_diesel_generator",
@@ -2173,5 +2174,628 @@
     "research": "s_energy_wind_turbine_3",
     "category": "Power",
     "subcategory": "Renewable"
+  },
+  {
+    "id": "m_american_oil_rig",
+    "name": "American Oil Rig",
+    "cost": 5000,
+    "tier": 2,
+    "size": {
+      "x": 8,
+      "y": 2
+    },
+    "variant": "m_oil_rig",
+    "limited": true,
+    "research": "",
+    "category": "Extractor",
+    "subcategory": "Fluid Extractor"
+  },
+  {
+    "id": "m_hot_water_pump",
+    "name": "Hot Water Pump",
+    "cost": "infinity",
+    "tier": 1,
+    "size": {
+      "x": 4,
+      "y": 4
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Extractor",
+    "subcategory": "Fluid Extractor",
+    "sandboxPlusOnly": true
+  },
+  {
+    "id": "m_og_oil_rig",
+    "name": "OG Oil Rig",
+    "cost": 1200,
+    "tier": 2,
+    "size": {
+      "x": 8,
+      "y": 2
+    },
+    "variant": "m_oil_rig",
+    "limited": true,
+    "research": "",
+    "category": "Extractor",
+    "subcategory": "Fluid Extractor"
+  },
+  {
+    "id": "m_sand_excavator",
+    "name": "Sand Excavator",
+    "cost": 10000,
+    "tier": 3,
+    "size": {
+      "x": 9,
+      "y": 8
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Extractor",
+    "subcategory": "Item Extractor",
+    "sandboxOnly": true
+  },
+  {
+    "id": "m_soil_excavator",
+    "name": "Soil Excavator",
+    "cost": 250000,
+    "tier": 3,
+    "size": {
+      "x": 10,
+      "y": 5
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Extractor",
+    "subcategory": "Item Extractor",
+    "sandboxOnly": true
+  },
+  {
+    "id": "m_gold_drill",
+    "name": "Gold Drill",
+    "cost": 25000,
+    "tier": 2,
+    "size": {
+      "x": 8,
+      "y": 3
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Extractor",
+    "subcategory": "Item Extractor"
+  },
+  {
+    "id": "m_uranium_drill",
+    "name": "Uranium Drill",
+    "cost": 3500000,
+    "tier": 2,
+    "size": {
+      "x": 6,
+      "y": 2
+    },
+    "variant": "m_iron_drill",
+    "limited": true,
+    "research": "",
+    "category": "Extractor",
+    "subcategory": "Item Extractor"
+  },
+  {
+    "id": "m_fancy_coal_drill",
+    "name": "Fancy Coal Drill",
+    "cost": 50,
+    "tier": 1,
+    "size": {
+      "x": 6,
+      "y": 2
+    },
+    "variant": "m_coal_drill",
+    "limited": true,
+    "research": "",
+    "category": "Extractor",
+    "subcategory": "Item Extractor"
+  },
+  {
+    "id": "m_advanced_present_packing_machine",
+    "name": "Advanced Present Packing Machine",
+    "cost": 7500,
+    "tier": 1,
+    "size": {
+      "x": 20,
+      "y": 12
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Factory",
+    "subcategory": "Assembler"
+  },
+  {
+    "id": "m_cat_assembler",
+    "name": "Cat Assembler",
+    "cost": 16180339,
+    "tier": 4,
+    "size": {
+      "x": 5,
+      "y": 5
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Factory",
+    "subcategory": "Assembler"
+  },
+  {
+    "id": "m_industrial_present_packing_machine",
+    "name": "Industrial Present Packing Machine",
+    "cost": 7500,
+    "tier": 1,
+    "size": {
+      "x": 45,
+      "y": 25
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Factory",
+    "subcategory": "Assembler"
+  },
+  {
+    "id": "m_presents_packing_machine",
+    "name": "Presents Packing Machine",
+    "cost": 10000,
+    "tier": 2,
+    "size": {
+      "x": 9,
+      "y": 7
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Factory",
+    "subcategory": "Assembler"
+  },
+  {
+    "id": "m_advanced_electric_furnace",
+    "name": "Advanced Electric Furnace",
+    "cost": 100000,
+    "tier": 2,
+    "size": {
+      "x": 9,
+      "y": 9
+    },
+    "variant": "m_electric_furnace",
+    "limited": true,
+    "research": "",
+    "category": "Factory",
+    "subcategory": "Furnace"
+  },
+  {
+    "id": "m_industrial_press",
+    "name": "Industrial Press",
+    "cost": 150000,
+    "tier": 3,
+    "size": {
+      "x": 4,
+      "y": 2
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Factory",
+    "subcategory": "Processor",
+    "sandboxPlusOnly": true
+  },
+  {
+    "id": "m_advanced_diesel_refinery",
+    "name": "Advanced Diesel Refinery",
+    "cost": 10000,
+    "tier": 2,
+    "size": {
+      "x": 14,
+      "y": 14
+    },
+    "variant": "m_diesel_refinery",
+    "limited": true,
+    "research": "",
+    "category": "Factory",
+    "subcategory": "Refinery"
+  },
+  {
+    "id": "m_residue_refinery",
+    "name": "Residue Refinery",
+    "cost": 200000,
+    "tier": 4,
+    "size": {
+      "x": 7,
+      "y": 5
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Factory",
+    "subcategory": "Refinery"
+  },
+  {
+    "id": "m_hyper_depot",
+    "name": "Hyper Depot",
+    "cost": 16000,
+    "tier": 1,
+    "size": {
+      "x": 10,
+      "y": 8
+    },
+    "variant": "m_truck_depot",
+    "limited": true,
+    "research": "",
+    "category": "Miscellaneous",
+    "subcategory": "Depot",
+    "sandboxPlusOnly": true
+  },
+  {
+    "id": "m_sleigh_depot",
+    "name": "Sleigh Depot",
+    "cost": 1000,
+    "tier": 1,
+    "size": {
+      "x": 10,
+      "y": 8
+    },
+    "variant": "m_truck_depot",
+    "limited": true,
+    "research": "",
+    "category": "Miscellaneous",
+    "subcategory": "Depot"
+  },
+  {
+    "id": "m_big_liquid_burner",
+    "name": "Big Liquid Burner",
+    "cost": 10000,
+    "tier": 2,
+    "size": {
+      "x": 5,
+      "y": 5
+    },
+    "variant": "m_liquid_burner",
+    "limited": true,
+    "research": "",
+    "category": "Miscellaneous",
+    "subcategory": "Other"
+  },
+  {
+    "id": "m_incinerator",
+    "name": "Incinerator",
+    "cost": 5000,
+    "tier": 2,
+    "size": {
+      "x": 2,
+      "y": 2
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Miscellaneous",
+    "subcategory": "Other"
+  },
+  {
+    "id": "m_item_dump",
+    "name": "Item Dump",
+    "cost": 500,
+    "tier": 2,
+    "size": {
+      "x": 2,
+      "y": 2
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Miscellaneous",
+    "subcategory": "Other"
+  },
+  {
+    "id": "m_tree_scrubber",
+    "name": "Tree Scrubber",
+    "cost": 25000,
+    "tier": 1,
+    "size": {
+      "x": 9,
+      "y": 8
+    },
+    "variant": "m_scrubber",
+    "limited": true,
+    "research": "",
+    "category": "Miscellaneous",
+    "subcategory": "Other"
+  },
+  {
+    "id": "m_fluid_spawner",
+    "name": "Fluid Spawner",
+    "cost": "infinity",
+    "tier": 2,
+    "size": {
+      "x": 2,
+      "y": 2
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Miscellaneous",
+    "subcategory": "Pipes",
+    "sandboxPlusOnly": true
+  },
+  {
+    "id": "m_item_spawner",
+    "name": "Item Spawner",
+    "cost": "infinity",
+    "tier": 2,
+    "size": {
+      "x": 2,
+      "y": 2
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Miscellaneous",
+    "subcategory": "Pipes",
+    "sandboxPlusOnly": true
+  },
+  {
+    "id": "m_candy_cane_tree",
+    "name": "Candy Cane Tree",
+    "cost": 75,
+    "tier": 1,
+    "size": {
+      "x": 4,
+      "y": 4
+    },
+    "variant": "m_tree",
+    "limited": true,
+    "research": "",
+    "category": "Modular",
+    "subcategory": "Tree Farm"
+  },
+  {
+    "id": "m_christmas_tree",
+    "name": "Christmas Tree",
+    "cost": 80,
+    "tier": 1,
+    "size": {
+      "x": 4,
+      "y": 4
+    },
+    "variant": "m_tree",
+    "limited": true,
+    "research": "",
+    "category": "Modular",
+    "subcategory": "Tree Farm"
+  },
+  {
+    "id": "m_igloo_farm_controller",
+    "name": "Igloo Farm Controller",
+    "cost": 1500,
+    "tier": 1,
+    "size": {
+      "x": 4,
+      "y": 4
+    },
+    "variant": "m_tree_farm_controller",
+    "limited": true,
+    "research": "",
+    "category": "Modular",
+    "subcategory": "Tree Farm"
+  },
+  {
+    "id": "m_festive_coal_power_plant",
+    "name": "Festive Coal Power Plant",
+    "cost": 10001984,
+    "tier": 4,
+    "size": {
+      "x": 100,
+      "y": 42
+    },
+    "variant": "m_coal_power_plant",
+    "limited": true,
+    "research": "",
+    "category": "Power",
+    "subcategory": "Large Power Plant"
+  },
+  {
+    "id": "m_festive_cooling_tower",
+    "name": "Festive Cooling Tower",
+    "cost": 2500000,
+    "tier": 4,
+    "size": {
+      "x": 50,
+      "y": 50
+    },
+    "variant": "m_cooling_tower",
+    "limited": true,
+    "research": "",
+    "category": "Power",
+    "subcategory": "Large Power Plant"
+  },
+  {
+    "id": "m_footstep_power_generator",
+    "name": "Footstep Power Generator",
+    "cost": 7202,
+    "tier": 1,
+    "size": {
+      "x": 2,
+      "y": 2
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Power",
+    "subcategory": "Misc"
+  },
+  {
+    "id": "m_small_turbine",
+    "name": "Small Turbine",
+    "cost": 2500,
+    "tier": 2,
+    "size": {
+      "x": 4,
+      "y": 2
+    },
+    "variant": "m_large_turbine",
+    "limited": true,
+    "research": "",
+    "category": "Power",
+    "subcategory": "Non-Renewable"
+  },
+  {
+    "id": "m_lightning_rod",
+    "name": "Lightning Rod",
+    "cost": 75000,
+    "tier": 3,
+    "size": {
+      "x": 9,
+      "y": 9
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Power",
+    "subcategory": "Renewable"
+  },
+  {
+    "id": "m_3_turbine_wind",
+    "name": "3 Turbine Wind",
+    "cost": 250000,
+    "tier": 3,
+    "size": {
+      "x": 8,
+      "y": 8
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Power",
+    "subcategory": "Renewable"
+  },
+  {
+    "id": "m_4_panel_solar",
+    "name": "4 Panel Solar",
+    "cost": 500000,
+    "tier": 4,
+    "size": {
+      "x": 4,
+      "y": 2
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Power",
+    "subcategory": "Renewable"
+  },
+  {
+    "id": "m_dev_solar_panel",
+    "name": "Dev Solar Panel",
+    "cost": "infinity",
+    "tier": 1,
+    "size": {
+      "x": 2,
+      "y": 2
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Power",
+    "subcategory": "Renewable",
+    "sandboxPlusOnly": true
+  },
+  {
+    "id": "m_energy_wheel",
+    "name": "Energy Wheel",
+    "cost": 4415,
+    "tier": 1,
+    "size": {
+      "x": 12,
+      "y": 9
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Power",
+    "subcategory": "Renewable"
+  },
+  {
+    "id": "m_rtg",
+    "name": "RTG",
+    "cost": 100000,
+    "tier": 4,
+    "size": {
+      "x": 2,
+      "y": 2
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Power",
+    "subcategory": "Renewable"
+  },
+  {
+    "id": "m_solar_heater",
+    "name": "Solar Heater",
+    "cost": 1500,
+    "tier": 2,
+    "size": {
+      "x": 7,
+      "y": 7
+    },
+    "variant": "m_geothermal_well",
+    "limited": true,
+    "research": "",
+    "category": "Power",
+    "subcategory": "Renewable"
+  },
+  {
+    "id": "m_wind_turbine4",
+    "name": "Wind Turbine4",
+    "cost": 200000,
+    "tier": 3,
+    "size": {
+      "x": 18,
+      "y": 18
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Power",
+    "subcategory": "Renewable"
+  },
+  {
+    "id": "m_classic_tree",
+    "name": "Classic Tree",
+    "cost": 80,
+    "tier": 1,
+    "size": {
+      "x": 4,
+      "y": 4
+    },
+    "variant": "m_tree",
+    "limited": false,
+    "research": "",
+    "category": "Modular",
+    "subcategory": "Tree Farm"
+  },
+  {
+    "id": "m_fort_tech_heavy_cannon_mk2",
+    "name": "Fort-Tech Heavy Cannon MK2",
+    "cost": 3000009,
+    "tier": 4,
+    "size": {
+      "x": 8,
+      "y": 8
+    },
+    "variant": "none",
+    "limited": true,
+    "research": "",
+    "category": "Miscellaneous",
+    "subcategory": "Decoration"
   }
 ]

@@ -57,13 +57,13 @@ const settingDefinitions = {
   target_chip: {
     type: 'select' as const,
     label: 'Target Chip',
-    default: 'p_8x64x_microchip',
+    default: 'p_2x_microchip',
     options: CHIP_STAGES.map((c) => ({ label: c.name, value: c.productId })),
   },
   has_machine_oil: {
     type: 'select' as const,
     label: 'Use Machine Oil?',
-    default: 'Yes',
+    default: 'No',
     options: [
       { label: 'Yes', value: 'Yes' },
       { label: 'No', value: 'No' },

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
-import { getProductName, getMachineName, getAllRecipes, getMachine } from '../../../data/lookup';
+import { getProductName, getMachineName, getAllRecipes, getMachine, isMachineUnlocked } from '../../../data/lookup';
 import { VirtualList } from '../../shared/VirtualList';
 import { RecipeCard } from './RecipeCard';
 import styles from './RecipeSelector.module.css';
@@ -28,15 +28,24 @@ export function RecipeStage({
   const unlockedResearchIds = new Set(unlockedResearchIdsArray);
   const oreNodesEnabled = useGlobalSettingsStore((s) => s.settings.oreNodesEnabled);
   const showVariantLimited = useGlobalSettingsStore((s) => s.settings.showVariantLimited);
+  const difficulty = useGlobalSettingsStore((s) => s.settings.difficulty);
 
   const unlockedRecipes = allRecipes.filter((r) => {
     const machine = getMachine(r.machine_id);
     if (!machine) return true;
 
-    if (machine.research && !unlockedResearchIds.has(machine.research)) {
+    if (!isMachineUnlocked(machine, unlockedResearchIds)) {
       return false;
     }
     if (machine.id === 'm_industrial_drill' && !oreNodesEnabled) {
+      return false;
+    }
+    const isSandboxMode = difficulty === 'sandbox' || difficulty === 'sandbox_plus';
+    const isSandboxPlus = difficulty === 'sandbox_plus';
+    if (machine.sandboxPlusOnly && !isSandboxPlus) {
+      return false;
+    }
+    if (machine.sandboxOnly && !isSandboxMode) {
       return false;
     }
     const isVariant = machine.variant && machine.variant !== 'none' && machine.variant !== '';
