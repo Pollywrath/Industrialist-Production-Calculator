@@ -3,7 +3,7 @@ import { isGroupNode, isRecipeNode } from '../types/nodes';
 import type { CanvasNode } from '../types/nodes';
 import type { EdgeControlPoint } from '../types/edges';
 import { parseHandleId, buildHandleId, nextNodeId, nextEdgeId } from '../utils/idGenerator';
-import { getRecipe } from '../data/lookup';
+import { getRecipe, resolveActiveRecipe } from '../data/lookup';
 import { cleanMachineCount } from '../utils/precision';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 
@@ -410,8 +410,10 @@ export function deserializeCanvas(saveData: SaveData): {
 
     if (!sourceNode || !targetNode) continue;
 
-    const sourceRecipe = getRecipe(sourceNode.recipeId);
-    const targetRecipe = getRecipe(targetNode.recipeId);
+    const sourceRecipe =
+      resolveActiveRecipe(sourceNode.recipeId, sourceNode.settings) ?? getRecipe(sourceNode.recipeId);
+    const targetRecipe =
+      resolveActiveRecipe(targetNode.recipeId, targetNode.settings) ?? getRecipe(targetNode.recipeId);
 
     if (!sourceRecipe || !targetRecipe) continue;
 

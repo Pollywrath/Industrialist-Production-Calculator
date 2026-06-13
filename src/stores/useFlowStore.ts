@@ -96,6 +96,11 @@ interface FlowState {
     edges: Edge[],
     options?: SetGraphOptions,
   ) => void;
+  applyAutoLayoutResult: (
+    nodes: CanvasNode[],
+    edges: Edge[],
+    expectedGraphVersion: number,
+  ) => boolean;
 
   updateNodeData: (nodeId: string, data: Partial<RecipeNodeData>) => void;
   updateGroupNodeData: (
@@ -376,12 +381,16 @@ const applyGroupBoundsForGroups = (
       continue;
     }
 
-    const bounds = boundsByGroupId.get(node.id);
-    const nextPosition = bounds ? { x: bounds.x, y: bounds.y } : node.position;
-    const nextWidth = bounds?.width ?? node.width ?? EMPTY_GROUP_WIDTH;
-    const nextHeight = bounds?.height ?? node.height ?? EMPTY_GROUP_HEIGHT;
-
     const isCollapsed = !!node.data.collapsed;
+    const bounds = isCollapsed ? undefined : boundsByGroupId.get(node.id);
+    const nextPosition = bounds ? { x: bounds.x, y: bounds.y } : node.position;
+    const nextWidth = isCollapsed ? NODE_CSS_WIDTH : (bounds?.width ?? node.width ?? EMPTY_GROUP_WIDTH);
+    const nextHeight = isCollapsed
+      ? getCollapsedGroupHeight(
+        node.data.inputProxyHandleIds.length,
+        node.data.outputProxyHandleIds.length,
+      )
+      : (bounds?.height ?? node.height ?? EMPTY_GROUP_HEIGHT);
 
     if (
       node.connectable === isCollapsed &&
@@ -481,6 +490,139 @@ const ensureGraphIntegrity = (
   }
 
   return { nodes: sanitizedNodes, edges: sanitizedEdges };
+};
+
+const areNumberArraysEqual = (
+  a: readonly number[] | undefined,
+  b: readonly number[] | undefined,
+): boolean => {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+};
+
+const areStringArraysEqual = (a: readonly string[], b: readonly string[]): boolean => {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+};
+
+const patchCommonAutoLayoutNodeFields = <T extends CanvasNode>(
+  currentNode: T,
+  layoutNode: CanvasNode,
+): T => {
+  let nextNode = currentNode;
+
+  if (!arePositionsEqual(toPositionSnapshot(currentNode.position), layoutNode.position)) {
+    nextNode = {
+      ...nextNode,
+      position: layoutNode.position,
+    };
+  }
+
+  if (layoutNode.width !== undefined && currentNode.width !== layoutNode.width) {
+    nextNode = {
+      ...nextNode,
+      width: layoutNode.width,
+    };
+  }
+
+  if (layoutNode.height !== undefined && currentNode.height !== layoutNode.height) {
+    nextNode = {
+      ...nextNode,
+      height: layoutNode.height,
+    };
+  }
+
+  return nextNode;
+};
+
+const patchNodeWithAutoLayoutResult = (
+  currentNode: CanvasNode,
+  layoutNode: CanvasNode,
+): CanvasNode => {
+  if (isRecipeNode(currentNode) && isRecipeNode(layoutNode)) {
+    const commonNode = patchCommonAutoLayoutNodeFields(currentNode, layoutNode);
+    const shouldPatchInputOrder = !areNumberArraysEqual(
+      currentNode.data.inputOrder,
+      layoutNode.data.inputOrder,
+    );
+    const shouldPatchOutputOrder = !areNumberArraysEqual(
+      currentNode.data.outputOrder,
+      layoutNode.data.outputOrder,
+    );
+
+    if (!shouldPatchInputOrder && !shouldPatchOutputOrder) return commonNode;
+
+    return {
+      ...commonNode,
+      data: {
+        ...commonNode.data,
+        inputOrder: layoutNode.data.inputOrder,
+        outputOrder: layoutNode.data.outputOrder,
+      },
+    };
+  }
+
+  if (isGroupNode(currentNode) && isGroupNode(layoutNode)) {
+    const commonNode = patchCommonAutoLayoutNodeFields(currentNode, layoutNode);
+    const shouldPatchInputProxyIds = !areStringArraysEqual(
+      currentNode.data.inputProxyHandleIds,
+      layoutNode.data.inputProxyHandleIds,
+    );
+    const shouldPatchOutputProxyIds = !areStringArraysEqual(
+      currentNode.data.outputProxyHandleIds,
+      layoutNode.data.outputProxyHandleIds,
+    );
+
+    if (!shouldPatchInputProxyIds && !shouldPatchOutputProxyIds) return commonNode;
+
+    return {
+      ...commonNode,
+      data: {
+        ...commonNode.data,
+        inputProxyHandleIds: layoutNode.data.inputProxyHandleIds,
+        outputProxyHandleIds: layoutNode.data.outputProxyHandleIds,
+      },
+    };
+  }
+
+  return patchCommonAutoLayoutNodeFields(currentNode, layoutNode);
+};
+
+const patchEdgeWithAutoLayoutResult = (currentEdge: Edge, layoutEdge: Edge): Edge => {
+  const layoutData = layoutEdge.data as Record<string, unknown> | undefined;
+  if (!layoutData) return currentEdge;
+
+  const currentData = currentEdge.data as Record<string, unknown> | undefined;
+  const nextData: Record<string, unknown> = {
+    ...(currentData ?? {}),
+  };
+  let changed = false;
+
+  if ('orthogonalTurns' in layoutData && nextData.orthogonalTurns !== layoutData.orthogonalTurns) {
+    nextData.orthogonalTurns = layoutData.orthogonalTurns;
+    changed = true;
+  }
+
+  if ('controlPoints' in layoutData && nextData.controlPoints !== layoutData.controlPoints) {
+    nextData.controlPoints = layoutData.controlPoints;
+    changed = true;
+  }
+
+  if (!changed) return currentEdge;
+
+  return {
+    ...currentEdge,
+    data: nextData,
+    type: layoutEdge.type ?? currentEdge.type,
+  };
 };
 
 const removeProxyHandleIdsForNode = (handleIds: string[], nodeId: string): string[] => {
@@ -1247,6 +1389,61 @@ const useFlowStore = create(
         if (shouldRecordHistory(options)) {
           pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, enriched, nextEdges));
         }
+      },
+
+      applyAutoLayoutResult: (layoutNodes, layoutEdges, expectedGraphVersion) => {
+        const state = get();
+        if (state.graphVersion !== expectedGraphVersion) return false;
+
+        const layoutNodeMap = createNodesMap(layoutNodes);
+        const layoutEdgeMap = new Map(layoutEdges.map((edge) => [edge.id, edge]));
+
+        let nodesChanged = false;
+        const patchedNodes = new Array<CanvasNode>(state.nodes.length);
+        for (let i = 0; i < state.nodes.length; i++) {
+          const node = state.nodes[i];
+          const layoutNode = layoutNodeMap.get(node.id);
+          const patchedNode = layoutNode
+            ? patchNodeWithAutoLayoutResult(node, layoutNode)
+            : node;
+          if (patchedNode !== node) {
+            nodesChanged = true;
+          }
+          patchedNodes[i] = patchedNode;
+        }
+
+        const boundedNodes = syncAllGroupBounds(patchedNodes);
+        const nextNodes = boundedNodes;
+        const nextEdgesBase = new Array<Edge>(state.edges.length);
+        let edgesChanged = false;
+        for (let i = 0; i < state.edges.length; i++) {
+          const edge = state.edges[i];
+          const layoutEdge = layoutEdgeMap.get(edge.id);
+          const patchedEdge = layoutEdge
+            ? patchEdgeWithAutoLayoutResult(edge, layoutEdge)
+            : edge;
+          if (patchedEdge !== edge) {
+            edgesChanged = true;
+          }
+          nextEdgesBase[i] = patchedEdge;
+        }
+
+        const nextEdges = syncProxyEdges(nextNodes, nextEdgesBase);
+        const shouldUpdateNodes = nodesChanged || nextNodes !== state.nodes;
+        const shouldUpdateEdges = edgesChanged || nextEdges !== state.edges;
+        if (!shouldUpdateNodes && !shouldUpdateEdges) return true;
+
+        set({
+          ...(shouldUpdateNodes
+            ? {
+                nodes: nextNodes,
+                nodesMap: createNodesMap(nextNodes),
+              }
+            : {}),
+          ...(shouldUpdateEdges ? { edges: nextEdges } : {}),
+        });
+
+        return true;
       },
 
       updateNodeData: (nodeId, data) => {

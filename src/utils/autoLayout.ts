@@ -20,6 +20,7 @@ import {
   GROUP_HEADER_HEIGHT,
   GROUP_PADDING_X,
   GROUP_PADDING_Y,
+  computeGroupBoundsByGroupId,
   getCollapsedGroupHeight,
 } from './groupBounds';
 import { buildHandleId, parseHandleId } from './idGenerator';
@@ -30,6 +31,11 @@ const HANDLE_STEP = RECT_HEIGHT + RECT_GAP;
 const GRID_X = SNAP_GRID[0];
 const GRID_Y = SNAP_GRID[1];
 const EXPANDED_GROUP_PADDING = `[top=${GROUP_HEADER_HEIGHT + GROUP_PADDING_Y}, left=${GROUP_PADDING_X}, bottom=${GROUP_PADDING_Y}, right=${GROUP_PADDING_X}]`;
+const ORTHOGONAL_MIN_SEGMENT_LENGTH = 12;
+const MAX_ROUTE_LANE_INDEX = 3;
+const ROUTE_OBSTACLE_PADDING = 6;
+const ROUTE_COLLISION_PENALTY = 1_000_000;
+const ROUTE_EPSILON = 0.001;
 
 const snapToGrid = (x: number, y: number) => ({
   x: Math.round(x / GRID_X) * GRID_X,
@@ -71,12 +77,10 @@ interface LayoutNodeSpec {
 
 interface LayoutEdgeSpec {
   id: string;
-  originalEdgeId: string;
   source: string;
   target: string;
   sourceHandle?: string;
   targetHandle?: string;
-  routable: boolean;
 }
 
 interface LayoutComponentResult {
@@ -101,10 +105,10 @@ interface LayoutGraphResult {
 
 interface LayoutedNode {
   id: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
   ports?: Array<{
     id: string;
     x?: number;
@@ -212,8 +216,8 @@ function createRecipeLayoutNode(node: RecipeNodeType, parentId?: string): Layout
     kind: 'recipe',
     parentId,
     position: node.position,
-    width: NODE_CSS_WIDTH,
-    height: calculateRecipeNodeHeight(node),
+    width: node.width ?? NODE_CSS_WIDTH,
+    height: node.height ?? calculateRecipeNodeHeight(node),
     inputOrder: meta.inputOrder,
     outputOrder: meta.outputOrder,
     commitPortOrder: true,
@@ -240,8 +244,8 @@ function createCollapsedGroupLayoutNode(node: GroupNodeType): LayoutNodeSpec {
     id: node.id,
     kind: 'collapsed-group',
     position: node.position,
-    width: node.measured?.width ?? node.width ?? NODE_CSS_WIDTH,
-    height: node.measured?.height ?? node.height ?? fallbackHeight,
+    width: node.width ?? node.measured?.width ?? NODE_CSS_WIDTH,
+    height: node.height ?? node.measured?.height ?? fallbackHeight,
     inputOrder: meta.inputOrder,
     outputOrder: meta.outputOrder,
     commitPortOrder: true,
@@ -331,10 +335,14 @@ function calculateChildrenBounds(children: LayoutComponentResult['layoutedChildr
 
   for (let i = 0; i < children.length; i++) {
     const node = children[i];
-    minX = Math.min(minX, node.x);
-    minY = Math.min(minY, node.y);
-    maxX = Math.max(maxX, node.x + node.width);
-    maxY = Math.max(maxY, node.y + node.height);
+    const width = node.width ?? 0;
+    const height = node.height ?? 0;
+    const x = node.x ?? 0;
+    const y = node.y ?? 0;
+    minX = Math.min(minX, x);
+    minY = Math.min(minY, y);
+    maxX = Math.max(maxX, x + width);
+    maxY = Math.max(maxY, y + height);
   }
 
   if (
@@ -421,185 +429,517 @@ function buildHierarchicalElkNodes(
   return (childrenByParentId.get(null) ?? []).map(buildNode);
 }
 
-function isDescendant(
+interface RouteSegment {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+interface RouteRect {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface PortMetrics {
+  displayIndex: number;
+  y: number;
+}
+
+function getHandleDisplayIndex(order: number[], handleIndex: number): number {
+  const displayIndex = order.indexOf(handleIndex);
+  if (displayIndex >= 0) return displayIndex;
+  if (order.length === 0) return 0;
+  return Math.max(0, Math.min(handleIndex, order.length - 1));
+}
+
+function getPortMetrics(
+  node: LayoutNodeSpec,
+  parsedHandle: NonNullable<ReturnType<typeof parseHandleId>>,
+  inputOrders: Map<string, number[]>,
+  outputOrders: Map<string, number[]>,
+): PortMetrics {
+  const inputOrder = inputOrders.get(node.id) ?? node.inputOrder;
+  const outputOrder = outputOrders.get(node.id) ?? node.outputOrder;
+  const order = parsedHandle.side === 'input' ? inputOrder : outputOrder;
+  const displayIndex = getHandleDisplayIndex(order, parsedHandle.index);
+
+  return {
+    displayIndex,
+    y: getLayoutPortY(parsedHandle.side, displayIndex, inputOrder.length, outputOrder.length),
+  };
+}
+
+function clampBackwardSourceRail(x: number, sourceX: number): number {
+  return Math.max(sourceX + ORTHOGONAL_MIN_SEGMENT_LENGTH, snapX(x));
+}
+
+function clampBackwardTargetRail(x: number, targetX: number): number {
+  return Math.min(targetX - ORTHOGONAL_MIN_SEGMENT_LENGTH, snapX(x));
+}
+
+function buildFourTurnRouteSegments(
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  xA: number,
+  xB: number,
+  midY: number,
+): RouteSegment[] {
+  return [
+    { x1: sourceX, y1: sourceY, x2: xA, y2: sourceY },
+    { x1: xA, y1: sourceY, x2: xA, y2: midY },
+    { x1: xA, y1: midY, x2: xB, y2: midY },
+    { x1: xB, y1: midY, x2: xB, y2: targetY },
+    { x1: xB, y1: targetY, x2: targetX, y2: targetY },
+  ];
+}
+
+function buildTwoTurnRouteSegments(
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  midX: number,
+): RouteSegment[] {
+  return [
+    { x1: sourceX, y1: sourceY, x2: midX, y2: sourceY },
+    { x1: midX, y1: sourceY, x2: midX, y2: targetY },
+    { x1: midX, y1: targetY, x2: targetX, y2: targetY },
+  ];
+}
+
+function routeLength(segments: RouteSegment[]): number {
+  return segments.reduce(
+    (sum, segment) =>
+      sum + Math.abs(segment.x2 - segment.x1) + Math.abs(segment.y2 - segment.y1),
+    0,
+  );
+}
+
+function horizontalSegmentIntersectsRect(segment: RouteSegment, rect: RouteRect): boolean {
+  const minX = Math.min(segment.x1, segment.x2);
+  const maxX = Math.max(segment.x1, segment.x2);
+  return (
+    segment.y1 > rect.y + ROUTE_EPSILON &&
+    segment.y1 < rect.y + rect.height - ROUTE_EPSILON &&
+    maxX > rect.x + ROUTE_EPSILON &&
+    minX < rect.x + rect.width - ROUTE_EPSILON
+  );
+}
+
+function verticalSegmentIntersectsRect(segment: RouteSegment, rect: RouteRect): boolean {
+  const minY = Math.min(segment.y1, segment.y2);
+  const maxY = Math.max(segment.y1, segment.y2);
+  return (
+    segment.x1 > rect.x + ROUTE_EPSILON &&
+    segment.x1 < rect.x + rect.width - ROUTE_EPSILON &&
+    maxY > rect.y + ROUTE_EPSILON &&
+    minY < rect.y + rect.height - ROUTE_EPSILON
+  );
+}
+
+function segmentIntersectsRect(segment: RouteSegment, rect: RouteRect): boolean {
+  return Math.abs(segment.y1 - segment.y2) < ROUTE_EPSILON
+    ? horizontalSegmentIntersectsRect(segment, rect)
+    : verticalSegmentIntersectsRect(segment, rect);
+}
+
+function isAncestorOf(
   nodeId: string,
   potentialAncestorId: string,
   nodeMap: Map<string, LayoutNodeSpec>,
 ): boolean {
-  let currentId: string | undefined = nodeId;
+  let currentId = nodeMap.get(nodeId)?.parentId;
   while (currentId) {
-    const node = nodeMap.get(currentId);
-    if (!node) break;
-    if (node.parentId === potentialAncestorId) {
-      return true;
-    }
-    currentId = node.parentId;
+    if (currentId === potentialAncestorId) return true;
+    currentId = nodeMap.get(currentId)?.parentId;
   }
   return false;
 }
 
-function horizontalSegmentIntersectsRect(
-  x1: number,
-  x2: number,
-  y: number,
-  rx: number,
-  ry: number,
-  rw: number,
-  rh: number,
+function shouldSkipRouteObstacle(
+  obstacleId: string,
+  sourceId: string,
+  targetId: string,
+  nodeMap: Map<string, LayoutNodeSpec>,
 ): boolean {
-  const buffer = 4;
-  const minX = Math.min(x1, x2);
-  const maxX = Math.max(x1, x2);
   return (
-    y >= ry + buffer &&
-    y <= ry + rh - buffer &&
-    maxX >= rx + buffer &&
-    minX <= rx + rw - buffer
+    obstacleId === sourceId ||
+    obstacleId === targetId ||
+    isAncestorOf(sourceId, obstacleId, nodeMap) ||
+    isAncestorOf(targetId, obstacleId, nodeMap)
   );
 }
 
-function verticalSegmentIntersectsRect(
-  x: number,
-  y1: number,
-  y2: number,
-  rx: number,
-  ry: number,
-  rw: number,
-  rh: number,
-): boolean {
-  const buffer = 4;
-  const minY = Math.min(y1, y2);
-  const maxY = Math.max(y1, y2);
-  return (
-    x >= rx + buffer &&
-    x <= rx + rw - buffer &&
-    maxY >= ry + buffer &&
-    minY <= ry + rh - buffer
-  );
+function buildRouteRect(
+  id: string,
+  positions: Map<string, { x: number; y: number }>,
+  dimensions: Map<string, { width: number; height: number }>,
+): RouteRect | null {
+  const position = positions.get(id);
+  const dimension = dimensions.get(id);
+  if (!position || !dimension) return null;
+
+  return {
+    id,
+    x: position.x,
+    y: position.y,
+    width: dimension.width,
+    height: dimension.height,
+  };
 }
 
-function checkPathIntersection(
-  segments: Array<{ x1: number; y1: number; x2: number; y2: number }>,
+function getExpandedRouteRect(rect: RouteRect, padding: number): RouteRect {
+  return {
+    id: rect.id,
+    x: rect.x - padding,
+    y: rect.y - padding,
+    width: rect.width + padding * 2,
+    height: rect.height + padding * 2,
+  };
+}
+
+function countRouteCollisions(
+  segments: RouteSegment[],
   sourceId: string,
   targetId: string,
   componentNodeIds: Set<string>,
   nodeMap: Map<string, LayoutNodeSpec>,
   positions: Map<string, { x: number; y: number }>,
   dimensions: Map<string, { width: number; height: number }>,
-): boolean {
-  for (const nodeId of componentNodeIds) {
-    if (nodeId === sourceId || nodeId === targetId) continue;
+): number {
+  let collisions = 0;
 
-    if (isDescendant(sourceId, nodeId, nodeMap) || isDescendant(targetId, nodeId, nodeMap)) {
-      continue;
-    }
+  componentNodeIds.forEach((nodeId) => {
+    if (shouldSkipRouteObstacle(nodeId, sourceId, targetId, nodeMap)) return;
 
-    const pos = positions.get(nodeId);
-    const dim = dimensions.get(nodeId);
-    if (!pos || !dim) continue;
+    const rect = buildRouteRect(nodeId, positions, dimensions);
+    if (!rect) return;
 
-    const rx = pos.x;
-    const ry = pos.y;
-    const rw = dim.width;
-    const rh = dim.height;
-
-    for (const seg of segments) {
-      const isHorizontal = Math.abs(seg.y1 - seg.y2) < 0.001;
-      if (isHorizontal) {
-        if (horizontalSegmentIntersectsRect(seg.x1, seg.x2, seg.y1, rx, ry, rw, rh)) {
-          return true;
-        }
-      } else {
-        if (verticalSegmentIntersectsRect(seg.x1, seg.y1, seg.y2, rx, ry, rw, rh)) {
-          return true;
-        }
+    const expandedRect = getExpandedRouteRect(rect, ROUTE_OBSTACLE_PADDING);
+    for (let i = 0; i < segments.length; i++) {
+      if (segmentIntersectsRect(segments[i], expandedRect)) {
+        collisions++;
       }
     }
-  }
-  return false;
+  });
+
+  return collisions;
 }
 
-function simplifyToFourTurns(
-  turns: Array<{ x: number; y: number }>,
+function scoreRoute(
+  segments: RouteSegment[],
+  sourceId: string,
+  targetId: string,
+  componentNodeIds: Set<string>,
+  nodeMap: Map<string, LayoutNodeSpec>,
+  positions: Map<string, { x: number; y: number }>,
+  dimensions: Map<string, { width: number; height: number }>,
+): number {
+  const collisions = countRouteCollisions(
+    segments,
+    sourceId,
+    targetId,
+    componentNodeIds,
+    nodeMap,
+    positions,
+    dimensions,
+  );
+
+  return routeLength(segments) + collisions * ROUTE_COLLISION_PENALTY;
+}
+
+function addCandidate(candidates: Set<number>, value: number, snap: (value: number) => number): void {
+  if (!Number.isFinite(value)) return;
+  candidates.add(snap(value));
+}
+
+function nearestCandidates(candidates: Set<number>, preferred: number, limit: number): number[] {
+  return [...candidates]
+    .filter(Number.isFinite)
+    .sort((a, b) => Math.abs(a - preferred) - Math.abs(b - preferred))
+    .slice(0, limit);
+}
+
+function addObstacleYCandidates(
+  candidates: Set<number>,
+  sourceId: string,
+  targetId: string,
+  componentNodeIds: Set<string>,
+  nodeMap: Map<string, LayoutNodeSpec>,
+  positions: Map<string, { x: number; y: number }>,
+  dimensions: Map<string, { width: number; height: number }>,
+  minX: number,
+  maxX: number,
+): void {
+  componentNodeIds.forEach((nodeId) => {
+    if (shouldSkipRouteObstacle(nodeId, sourceId, targetId, nodeMap)) return;
+
+    const rect = buildRouteRect(nodeId, positions, dimensions);
+    if (!rect) return;
+    if (rect.x > maxX || rect.x + rect.width < minX) return;
+
+    addCandidate(candidates, rect.y - GRID_Y, snapY);
+    addCandidate(candidates, rect.y + rect.height + GRID_Y, snapY);
+  });
+}
+
+function chooseFourTurnRoute(
+  sourceId: string,
+  targetId: string,
   sourceX: number,
   sourceY: number,
   targetX: number,
   targetY: number,
-  sourceId: string,
-  targetId: string,
+  sourceLaneIndex: number,
+  targetLaneIndex: number,
+  bendPoints: Array<{ x: number; y: number }>,
   componentNodeIds: Set<string>,
   nodeMap: Map<string, LayoutNodeSpec>,
   positions: Map<string, { x: number; y: number }>,
   dimensions: Map<string, { width: number; height: number }>,
 ): Array<{ x: number; y: number }> {
-  if (turns.length <= 4 && (turns.length === 2 || turns.length === 4 || turns.length === 0)) {
-    return turns;
+  const sourceLane = Math.min(sourceLaneIndex, MAX_ROUTE_LANE_INDEX);
+  const targetLane = Math.min(targetLaneIndex, MAX_ROUTE_LANE_INDEX);
+  const preferredXA = clampBackwardSourceRail(
+    sourceX + ORTHOGONAL_MIN_SEGMENT_LENGTH + sourceLane * GRID_X,
+    sourceX,
+  );
+  const preferredXB = clampBackwardTargetRail(
+    targetX - ORTHOGONAL_MIN_SEGMENT_LENGTH - targetLane * GRID_X,
+    targetX,
+  );
+
+  const xACandidates = new Set<number>([preferredXA]);
+  const xBCandidates = new Set<number>([preferredXB]);
+  const yCandidates = new Set<number>();
+
+  addCandidate(yCandidates, (sourceY + targetY) / 2, snapY);
+
+  for (let i = 0; i < bendPoints.length; i++) {
+    const point = bendPoints[i];
+    if (point.x > sourceX + ORTHOGONAL_MIN_SEGMENT_LENGTH) {
+      addCandidate(xACandidates, clampBackwardSourceRail(point.x, sourceX), (value) => value);
+    }
+    if (point.x < targetX - ORTHOGONAL_MIN_SEGMENT_LENGTH) {
+      addCandidate(xBCandidates, clampBackwardTargetRail(point.x, targetX), (value) => value);
+    }
+    if (i > 0 && i < bendPoints.length - 1) {
+      addCandidate(yCandidates, point.y, snapY);
+    }
   }
 
-  const xA = turns.length > 0 ? turns[0].x : snapX((sourceX + targetX) / 2);
-  const xB = turns.length > 0 ? turns[turns.length - 1].x : snapX((sourceX + targetX) / 2);
-
-  const yCandidates = Array.from(new Set(turns.map((t) => snapY(t.y))));
-  if (yCandidates.length === 0) {
-    yCandidates.push(snapY((sourceY + targetY) / 2));
+  const sourceRect = buildRouteRect(sourceId, positions, dimensions);
+  const targetRect = buildRouteRect(targetId, positions, dimensions);
+  if (sourceRect) {
+    addCandidate(yCandidates, sourceRect.y - GRID_Y, snapY);
+    addCandidate(yCandidates, sourceRect.y + sourceRect.height + GRID_Y, snapY);
+  }
+  if (targetRect) {
+    addCandidate(yCandidates, targetRect.y - GRID_Y, snapY);
+    addCandidate(yCandidates, targetRect.y + targetRect.height + GRID_Y, snapY);
   }
 
-  let bestY = yCandidates[0];
-  let bestCollisionCount = Number.MAX_SAFE_INTEGER;
+  const xAs = nearestCandidates(xACandidates, preferredXA, 5);
+  const xBs = nearestCandidates(xBCandidates, preferredXB, 5);
+  addObstacleYCandidates(
+    yCandidates,
+    sourceId,
+    targetId,
+    componentNodeIds,
+    nodeMap,
+    positions,
+    dimensions,
+    Math.min(targetX, preferredXB),
+    Math.max(sourceX, preferredXA),
+  );
+  const midYs = nearestCandidates(yCandidates, (sourceY + targetY) / 2, 14);
 
-  for (const y of yCandidates) {
-    const proposedSegments = [
-      { x1: sourceX, y1: sourceY, x2: xA, y2: sourceY },
-      { x1: xA, y1: sourceY, x2: xA, y2: y },
-      { x1: xA, y1: y, x2: xB, y2: y },
-      { x1: xB, y1: y, x2: xB, y2: targetY },
-      { x1: xB, y1: targetY, x2: targetX, y2: targetY },
-    ];
+  let bestRoute = [
+    { x: preferredXA, y: sourceY },
+    { x: preferredXA, y: snapY((sourceY + targetY) / 2) },
+    { x: preferredXB, y: snapY((sourceY + targetY) / 2) },
+    { x: preferredXB, y: targetY },
+  ];
+  let bestScore = Number.POSITIVE_INFINITY;
 
-    let collisions = 0;
-    for (const nodeId of componentNodeIds) {
-      if (nodeId === sourceId || nodeId === targetId) continue;
-      if (isDescendant(sourceId, nodeId, nodeMap) || isDescendant(targetId, nodeId, nodeMap)) {
-        continue;
-      }
-      const pos = positions.get(nodeId);
-      const dim = dimensions.get(nodeId);
-      if (!pos || !dim) continue;
+  for (let xAIndex = 0; xAIndex < xAs.length; xAIndex++) {
+    const xA = xAs[xAIndex];
+    for (let xBIndex = 0; xBIndex < xBs.length; xBIndex++) {
+      const xB = xBs[xBIndex];
+      for (let yIndex = 0; yIndex < midYs.length; yIndex++) {
+        const midY = midYs[yIndex];
+        const segments = buildFourTurnRouteSegments(
+          sourceX,
+          sourceY,
+          targetX,
+          targetY,
+          xA,
+          xB,
+          midY,
+        );
+        const score = scoreRoute(
+          segments,
+          sourceId,
+          targetId,
+          componentNodeIds,
+          nodeMap,
+          positions,
+          dimensions,
+        );
 
-      const rx = pos.x;
-      const ry = pos.y;
-      const rw = dim.width;
-      const rh = dim.height;
-
-      for (const seg of proposedSegments) {
-        const isHorizontal = Math.abs(seg.y1 - seg.y2) < 0.001;
-        if (isHorizontal) {
-          if (horizontalSegmentIntersectsRect(seg.x1, seg.x2, seg.y1, rx, ry, rw, rh)) {
-            collisions++;
-          }
-        } else {
-          if (verticalSegmentIntersectsRect(seg.x1, seg.y1, seg.y2, rx, ry, rw, rh)) {
-            collisions++;
-          }
+        if (score < bestScore) {
+          bestScore = score;
+          bestRoute = [
+            { x: xA, y: sourceY },
+            { x: xA, y: midY },
+            { x: xB, y: midY },
+            { x: xB, y: targetY },
+          ];
         }
       }
     }
+  }
 
-    if (collisions === 0) {
-      bestY = y;
-      break;
+  return bestRoute;
+}
+
+function chooseTwoTurnMidX(
+  sourceId: string,
+  targetId: string,
+  sourceX: number,
+  sourceY: number,
+  targetX: number,
+  targetY: number,
+  preferredX: number,
+  componentNodeIds: Set<string>,
+  nodeMap: Map<string, LayoutNodeSpec>,
+  positions: Map<string, { x: number; y: number }>,
+  dimensions: Map<string, { width: number; height: number }>,
+): number {
+  const candidates = new Set<number>([preferredX]);
+
+  componentNodeIds.forEach((nodeId) => {
+    if (shouldSkipRouteObstacle(nodeId, sourceId, targetId, nodeMap)) return;
+
+    const rect = buildRouteRect(nodeId, positions, dimensions);
+    if (!rect) return;
+    addCandidate(candidates, rect.x - GRID_X, snapX);
+    addCandidate(candidates, rect.x + rect.width + GRID_X, snapX);
+  });
+
+  let bestX = preferredX;
+  let bestScore = Number.POSITIVE_INFINITY;
+  const midXs = nearestCandidates(candidates, preferredX, 12);
+  for (let i = 0; i < midXs.length; i++) {
+    const midX = midXs[i];
+    if (midX <= Math.min(sourceX, targetX) || midX >= Math.max(sourceX, targetX)) continue;
+
+    const segments = buildTwoTurnRouteSegments(sourceX, sourceY, targetX, targetY, midX);
+    const score = scoreRoute(
+      segments,
+      sourceId,
+      targetId,
+      componentNodeIds,
+      nodeMap,
+      positions,
+      dimensions,
+    );
+    if (score < bestScore) {
+      bestScore = score;
+      bestX = midX;
     }
+  }
 
-    if (collisions < bestCollisionCount) {
-      bestCollisionCount = collisions;
-      bestY = y;
+  return bestX;
+}
+
+function chooseSelfFourTurnRoute(
+  edge: LayoutEdgeSpec,
+  nodeMap: Map<string, LayoutNodeSpec>,
+  positions: Map<string, { x: number; y: number }>,
+  dimensions: Map<string, { width: number; height: number }>,
+  inputOrders: Map<string, number[]>,
+  outputOrders: Map<string, number[]>,
+  componentNodeIds: Set<string>,
+): Array<{ x: number; y: number }> | null {
+  const node = nodeMap.get(edge.source);
+  const position = positions.get(edge.source);
+  const dimension = dimensions.get(edge.source);
+  if (!node || !position || !dimension) return null;
+
+  const sourceHandle = edge.sourceHandle ?? buildHandleId(edge.source, 'output', 0);
+  const targetHandle = edge.targetHandle ?? buildHandleId(edge.target, 'input', 0);
+  const sourceParsed = parseHandleId(sourceHandle);
+  const targetParsed = parseHandleId(targetHandle);
+  if (!sourceParsed || !targetParsed) return null;
+
+  const sourceMetrics = getPortMetrics(node, sourceParsed, inputOrders, outputOrders);
+  const targetMetrics = getPortMetrics(node, targetParsed, inputOrders, outputOrders);
+  const sourceX = position.x + dimension.width;
+  const targetX = position.x;
+  const sourceY = position.y + sourceMetrics.y;
+  const targetY = position.y + targetMetrics.y;
+  const sourceLane = Math.min(sourceMetrics.displayIndex, MAX_ROUTE_LANE_INDEX);
+  const targetLane = Math.min(targetMetrics.displayIndex, MAX_ROUTE_LANE_INDEX);
+  const xA = clampBackwardSourceRail(
+    sourceX + ORTHOGONAL_MIN_SEGMENT_LENGTH + sourceLane * GRID_X,
+    sourceX,
+  );
+  const xB = clampBackwardTargetRail(
+    targetX - ORTHOGONAL_MIN_SEGMENT_LENGTH - targetLane * GRID_X,
+    targetX,
+  );
+
+  const yCandidates = new Set<number>();
+  addCandidate(yCandidates, position.y - GRID_Y, snapY);
+  addCandidate(yCandidates, position.y - GRID_Y * 2, snapY);
+  addCandidate(yCandidates, position.y + dimension.height + GRID_Y, snapY);
+  addCandidate(yCandidates, position.y + dimension.height + GRID_Y * 2, snapY);
+  addObstacleYCandidates(
+    yCandidates,
+    edge.source,
+    edge.target,
+    componentNodeIds,
+    nodeMap,
+    positions,
+    dimensions,
+    xB,
+    xA,
+  );
+
+  let bestMidY = snapY(position.y - GRID_Y);
+  let bestScore = Number.POSITIVE_INFINITY;
+  const midYs = nearestCandidates(yCandidates, sourceY, 12);
+
+  for (let i = 0; i < midYs.length; i++) {
+    const midY = midYs[i];
+    const segments = buildFourTurnRouteSegments(sourceX, sourceY, targetX, targetY, xA, xB, midY);
+    const score = scoreRoute(
+      segments,
+      edge.source,
+      edge.target,
+      componentNodeIds,
+      nodeMap,
+      positions,
+      dimensions,
+    );
+
+    if (score < bestScore) {
+      bestScore = score;
+      bestMidY = midY;
     }
   }
 
   return [
     { x: xA, y: sourceY },
-    { x: xA, y: bestY },
-    { x: xB, y: bestY },
+    { x: xA, y: bestMidY },
+    { x: xB, y: bestMidY },
     { x: xB, y: targetY },
   ];
 }
@@ -659,8 +999,8 @@ function collectLayoutedNodePlacements(
       id: child.id,
       x,
       y,
-      width: child.width,
-      height: child.height,
+      width: child.width ?? 0,
+      height: child.height ?? 0,
       ports: child.ports,
     });
 
@@ -735,7 +1075,11 @@ async function layoutComponent(
     'elk.padding': '[top=57, left=57, bottom=57, right=57]',
   };
 
-  const elkNodesPass1 = buildHierarchicalElkNodes(componentNodes, 'FIXED_SIDE', baseProperties);
+  const elkNodesPass1 = buildHierarchicalElkNodes(
+    componentNodes,
+    'FIXED_SIDE',
+    baseProperties,
+  );
 
   const graphPass1 = {
     id: 'root',
@@ -749,7 +1093,12 @@ async function layoutComponent(
   const nodePortOrders = new Map<string, { inputOrder: number[]; outputOrder: number[] }>();
   collectPortOrders(layoutedPass1.children as LayoutedNode[] | undefined, nodePortOrders);
 
-  const elkNodesPass2 = buildHierarchicalElkNodes(componentNodes, 'FIXED_POS', baseProperties, nodePortOrders);
+  const elkNodesPass2 = buildHierarchicalElkNodes(
+    componentNodes,
+    'FIXED_POS',
+    baseProperties,
+    nodePortOrders,
+  );
 
   const graphPass2 = {
     id: 'root',
@@ -950,13 +1299,14 @@ async function layoutGraph(
         };
       } catch (error) {
         console.error('ELK layout failed for component:', error);
-        const fallbackChildren = componentNodes.map((node) => ({
-          id: node.id,
-          x: node.position.x,
-          y: node.position.y,
-          width: node.width,
-          height: node.height,
-        }));
+        const fallbackChildren = componentNodes
+          .map((node) => ({
+            id: node.id,
+            x: node.position.x,
+            y: node.position.y,
+            width: node.width,
+            height: node.height,
+          }));
 
         return {
           layoutedChildren: fallbackChildren,
@@ -1037,7 +1387,8 @@ async function layoutGraph(
 
     const forwardEdgesToProcess: Array<{
       edgeId: string;
-      originalEdgeId: string;
+      sourceId: string;
+      targetId: string;
       sourceHandle: string;
       targetHandle: string;
       sourceX: number;
@@ -1045,16 +1396,15 @@ async function layoutGraph(
       sourceY: number;
       targetY: number;
       bestX: number;
-      bendPoints: Array<{ x: number; y: number }>;
     }> = [];
 
     for (let i = 0; i < comp.layoutedEdges.length; i++) {
       const elkEdge = comp.layoutedEdges[i];
       const layoutEdge = edgeMap.get(elkEdge.id);
-      if (!layoutEdge?.routable) continue;
+      if (!layoutEdge) continue;
 
       if (edgePath === 'bezier') {
-        edgeUpdates.set(layoutEdge.originalEdgeId, { clearControlPoints: true });
+        edgeUpdates.set(layoutEdge.id, { clearControlPoints: true });
         continue;
       }
 
@@ -1073,8 +1423,8 @@ async function layoutGraph(
       const containerY = containerOffset?.y ?? 0;
 
       const bendPoints = section.bendPoints.map((point) => ({
-        x: snapX(tx(point.x + containerX)),
-        y: snapY(ty(point.y + containerY)),
+        x: tx(point.x + containerX),
+        y: ty(point.y + containerY),
       }));
 
       const sourceHandle = layoutEdge.sourceHandle ?? buildHandleId(layoutEdge.source, 'output', 0);
@@ -1085,74 +1435,47 @@ async function layoutGraph(
       const targetPos = finalPositions.get(layoutEdge.target);
       const sourceNode = nodeMap.get(layoutEdge.source);
       const targetNode = nodeMap.get(layoutEdge.target);
-      if (!sourceParsed || !targetParsed || !sourcePos || !targetPos || !sourceNode || !targetNode) continue;
-
-      const sourcePortY = sourcePos.y + getLayoutPortY('output', sourceParsed.index, sourceNode.inputOrder.length, sourceNode.outputOrder.length);
-      const targetPortY = targetPos.y + getLayoutPortY('input', targetParsed.index, targetNode.inputOrder.length, targetNode.outputOrder.length);
+      if (!sourceParsed || !targetParsed || !sourcePos || !targetPos || !sourceNode || !targetNode) {
+        continue;
+      }
 
       const sourceX = sourcePos.x + sourceNode.width;
       const targetX = targetPos.x;
+      const sourceMetrics = getPortMetrics(
+        sourceNode,
+        sourceParsed,
+        finalInputOrders,
+        finalOutputOrders,
+      );
+      const targetMetrics = getPortMetrics(
+        targetNode,
+        targetParsed,
+        finalInputOrders,
+        finalOutputOrders,
+      );
+      const sourceY = sourcePos.y + sourceMetrics.y;
+      const targetY = targetPos.y + targetMetrics.y;
       const isBackwardEdge = targetX < sourceX;
+      const componentNodeIds = new Set(placements.keys());
 
       if (isBackwardEdge) {
-        const middleBendPoints = bendPoints.slice(1, -1);
-        if (middleBendPoints.length === 0) continue;
-
-        const midY =
-          middleBendPoints.reduce((sum, point) => sum + point.y, 0) / middleBendPoints.length;
-
-        const xA = snapX(sourceX + 12 + sourceParsed.index * GRID_X);
-        const xB = snapX(targetX - 12 - targetParsed.index * GRID_X);
-        const snappedMidY = snapY(midY);
-
-        const proposedTurns = [
-          { x: xA, y: sourcePos.y },
-          { x: xA, y: snappedMidY },
-          { x: xB, y: snappedMidY },
-          { x: xB, y: targetPos.y },
-        ];
-
-        const proposedSegments = [
-          { x1: sourceX, y1: sourcePortY, x2: xA, y2: sourcePortY },
-          { x1: xA, y1: sourcePortY, x2: xA, y2: snappedMidY },
-          { x1: xA, y1: snappedMidY, x2: xB, y2: snappedMidY },
-          { x1: xB, y1: snappedMidY, x2: xB, y2: targetPortY },
-          { x1: xB, y1: targetPortY, x2: targetX, y2: targetPortY },
-        ];
-
-        const componentNodeIds = new Set(placements.keys());
-        const hasIntersection = checkPathIntersection(
-          proposedSegments,
-          layoutEdge.source,
-          layoutEdge.target,
-          componentNodeIds,
-          nodeMap,
-          finalPositions,
-          finalDimensions,
-        );
-
-        if (hasIntersection) {
-          const simplifiedTurns = simplifyToFourTurns(
-            bendPoints,
-            sourceX,
-            sourcePortY,
-            targetX,
-            targetPortY,
+        edgeUpdates.set(layoutEdge.id, {
+          orthogonalTurns: chooseFourTurnRoute(
             layoutEdge.source,
             layoutEdge.target,
+            sourceX,
+            sourceY,
+            targetX,
+            targetY,
+            sourceMetrics.displayIndex,
+            targetMetrics.displayIndex,
+            bendPoints,
             componentNodeIds,
             nodeMap,
             finalPositions,
             finalDimensions,
-          );
-          edgeUpdates.set(layoutEdge.originalEdgeId, {
-            orthogonalTurns: simplifiedTurns,
-          });
-        } else {
-          edgeUpdates.set(layoutEdge.originalEdgeId, {
-            orthogonalTurns: proposedTurns,
-          });
-        }
+          ),
+        });
       } else {
         let bestX = bendPoints[0].x;
         let bestSpan = 0;
@@ -1171,20 +1494,21 @@ async function layoutGraph(
 
         forwardEdgesToProcess.push({
           edgeId: layoutEdge.id,
-          originalEdgeId: layoutEdge.originalEdgeId,
+          sourceId: layoutEdge.source,
+          targetId: layoutEdge.target,
           sourceHandle,
           targetHandle,
           sourceX,
           targetX,
-          sourceY: sourcePortY,
-          targetY: targetPortY,
+          sourceY,
+          targetY,
           bestX,
-          bendPoints,
         });
       }
     }
 
     const gapGroups = new Map<string, typeof forwardEdgesToProcess>();
+    const componentNodeIds = new Set(placements.keys());
     for (let i = 0; i < forwardEdgesToProcess.length; i++) {
       const fe = forwardEdgesToProcess[i];
       const key = `${fe.sourceX}_${fe.targetX}`;
@@ -1195,8 +1519,6 @@ async function layoutGraph(
       }
       list.push(fe);
     }
-
-    const componentNodeIds = new Set(placements.keys());
 
     gapGroups.forEach((gapEdges, key) => {
       const parts = key.split('_');
@@ -1243,50 +1565,26 @@ async function layoutGraph(
           const edgeData = edgeMapForGap.get(edgeId);
           if (!edgeData) return;
 
-          const proposedSegments = [
-            { x1: edgeData.sourceX, y1: edgeData.sourceY, x2: assignedX, y2: edgeData.sourceY },
-            { x1: assignedX, y1: edgeData.sourceY, x2: assignedX, y2: edgeData.targetY },
-            { x1: assignedX, y1: edgeData.targetY, x2: edgeData.targetX, y2: edgeData.targetY },
-          ];
+          const routedX = chooseTwoTurnMidX(
+            edgeData.sourceId,
+            edgeData.targetId,
+            edgeData.sourceX,
+            edgeData.sourceY,
+            edgeData.targetX,
+            edgeData.targetY,
+            assignedX,
+            componentNodeIds,
+            nodeMap,
+            finalPositions,
+            finalDimensions,
+          );
 
-          const layoutEdge = edgeMap.get(edgeId);
-          const hasIntersection =
-            layoutEdge &&
-            checkPathIntersection(
-              proposedSegments,
-              layoutEdge.source,
-              layoutEdge.target,
-              componentNodeIds,
-              nodeMap,
-              finalPositions,
-              finalDimensions,
-            );
-
-          if (hasIntersection) {
-            const simplifiedTurns = simplifyToFourTurns(
-              edgeData.bendPoints,
-              edgeData.sourceX,
-              edgeData.sourceY,
-              edgeData.targetX,
-              edgeData.targetY,
-              layoutEdge.source,
-              layoutEdge.target,
-              componentNodeIds,
-              nodeMap,
-              finalPositions,
-              finalDimensions,
-            );
-            edgeUpdates.set(edgeData.originalEdgeId, {
-              orthogonalTurns: simplifiedTurns,
-            });
-          } else {
-            edgeUpdates.set(edgeData.originalEdgeId, {
-              orthogonalTurns: [
-                { x: assignedX, y: edgeData.sourceY },
-                { x: assignedX, y: edgeData.targetY },
-              ],
-            });
-          }
+          edgeUpdates.set(edgeId, {
+            orthogonalTurns: [
+              { x: routedX, y: edgeData.sourceY },
+              { x: routedX, y: edgeData.targetY },
+            ],
+          });
         });
       });
     });
@@ -1337,13 +1635,49 @@ function applyEdgeUpdate(edge: Edge, update: EdgeUpdate): Edge {
   };
 }
 
-function getCollapsedGroupIdForRecipe(
-  node: CanvasNode | undefined,
-  groupMap: Map<string, GroupNodeType>,
-): string | null {
-  if (!isRecipeNode(node) || !node.data.groupId) return null;
-  const groupNode = groupMap.get(node.data.groupId);
-  return groupNode?.data.collapsed ? groupNode.id : null;
+function applyExpandedGroupBounds(
+  nodes: readonly CanvasNode[],
+  expandedGroupIds: ReadonlySet<string>,
+): CanvasNode[] {
+  if (expandedGroupIds.size === 0) return nodes as CanvasNode[];
+
+  const boundsByGroupId = computeGroupBoundsByGroupId(nodes, expandedGroupIds);
+  let changed = false;
+  const nextNodes = new Array<CanvasNode>(nodes.length);
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (!isGroupNode(node) || node.data.collapsed || !expandedGroupIds.has(node.id)) {
+      nextNodes[i] = node;
+      continue;
+    }
+
+    const bounds = boundsByGroupId.get(node.id);
+    if (!bounds) {
+      nextNodes[i] = node;
+      continue;
+    }
+
+    if (
+      node.position.x === bounds.x &&
+      node.position.y === bounds.y &&
+      node.width === bounds.width &&
+      node.height === bounds.height
+    ) {
+      nextNodes[i] = node;
+      continue;
+    }
+
+    changed = true;
+    nextNodes[i] = {
+      ...node,
+      position: { x: bounds.x, y: bounds.y },
+      width: bounds.width,
+      height: bounds.height,
+    };
+  }
+
+  return changed ? nextNodes : (nodes as CanvasNode[]);
 }
 
 export async function autoLayout(
@@ -1360,36 +1694,12 @@ export async function autoLayout(
   const groupNodes = nodes.filter(isGroupNode);
   const groupMap = new Map(groupNodes.map((node) => [node.id, node]));
 
-  const outerEdges: LayoutEdgeSpec[] = [];
-  for (let i = 0; i < edges.length; i++) {
-    const edge = edges[i];
-    if (edge.hidden) continue;
-
-    const sourceNode = nodeMap.get(edge.source);
-    const targetNode = nodeMap.get(edge.target);
-    if (!sourceNode || !targetNode || edge.source === edge.target) continue;
-    if (isRecipeNode(sourceNode) && sourceNode.hidden) continue;
-    if (isRecipeNode(targetNode) && targetNode.hidden) continue;
-    if (isGroupNode(sourceNode) && !sourceNode.data.collapsed) continue;
-    if (isGroupNode(targetNode) && !targetNode.data.collapsed) continue;
-
-    outerEdges.push({
-      id: edge.id,
-      originalEdgeId: edge.id,
-      source: edge.source,
-      target: edge.target,
-      sourceHandle: edge.sourceHandle ?? undefined,
-      targetHandle: edge.targetHandle ?? undefined,
-      routable: true,
-    });
-  }
-
-  const outerNodes: LayoutNodeSpec[] = [];
+  const layoutNodes: LayoutNodeSpec[] = [];
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
 
     if (isGroupNode(node)) {
-      outerNodes.push(
+      layoutNodes.push(
         node.data.collapsed
           ? createCollapsedGroupLayoutNode(node)
           : createExpandedGroupLayoutNode(node),
@@ -1401,48 +1711,63 @@ export async function autoLayout(
 
     const groupNode = node.data.groupId ? groupMap.get(node.data.groupId) : undefined;
     const parentId = groupNode && !groupNode.data.collapsed ? groupNode.id : undefined;
-    outerNodes.push(createRecipeLayoutNode(node, parentId));
+    layoutNodes.push(createRecipeLayoutNode(node, parentId));
   }
 
-  const childCountByGroupId = new Map<string, number>();
-  for (let i = 0; i < outerNodes.length; i++) {
-    const parentId = outerNodes[i].parentId;
-    if (!parentId) continue;
-    childCountByGroupId.set(parentId, (childCountByGroupId.get(parentId) ?? 0) + 1);
-  }
+  const layoutNodeIds = new Set(layoutNodes.map((node) => node.id));
+  const layoutEdges: LayoutEdgeSpec[] = [];
+  const selfEdges: LayoutEdgeSpec[] = [];
+  for (let i = 0; i < edges.length; i++) {
+    const edge = edges[i];
+    if (edge.hidden) continue;
+    if (!layoutNodeIds.has(edge.source) || !layoutNodeIds.has(edge.target)) continue;
 
-  for (let i = outerNodes.length - 1; i >= 0; i--) {
-    const node = outerNodes[i];
-    if (node.kind === 'expanded-group' && !childCountByGroupId.has(node.id)) {
-      outerNodes.splice(i, 1);
+    const sourceNode = nodeMap.get(edge.source);
+    const targetNode = nodeMap.get(edge.target);
+    if (!sourceNode || !targetNode) continue;
+    if (isGroupNode(sourceNode) && !sourceNode.data.collapsed) continue;
+    if (isGroupNode(targetNode) && !targetNode.data.collapsed) continue;
+
+    const layoutEdge = {
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      sourceHandle: edge.sourceHandle ?? undefined,
+      targetHandle: edge.targetHandle ?? undefined,
+    };
+
+    if (edge.source === edge.target) {
+      selfEdges.push(layoutEdge);
+      continue;
     }
+
+    layoutEdges.push(layoutEdge);
   }
 
-  if (outerNodes.length === 0) {
+  if (layoutNodes.length === 0) {
     return { nodes, edges };
   }
 
-  outerNodes.sort((a, b) => a.id.localeCompare(b.id));
-  outerEdges.sort((a, b) => a.id.localeCompare(b.id));
+  layoutNodes.sort((a, b) => a.id.localeCompare(b.id));
+  layoutEdges.sort((a, b) => a.id.localeCompare(b.id));
 
-  const outerLayout = await layoutGraph(outerNodes, outerEdges, edgePath);
+  const layout = await layoutGraph(layoutNodes, layoutEdges, edgePath);
   const finalPositions = new Map<string, { x: number; y: number }>();
   const finalInputOrders = new Map<string, number[]>();
   const finalOutputOrders = new Map<string, number[]>();
   const finalGroupDimensions = new Map<string, { width: number; height: number }>();
   const collapsedGroupDeltas = new Map<string, { dx: number; dy: number }>();
-  const edgeUpdates = new Map<string, EdgeUpdate>(outerLayout.edgeUpdates);
 
-  for (let i = 0; i < outerNodes.length; i++) {
-    const layoutNode = outerNodes[i];
-    const position = outerLayout.positions.get(layoutNode.id);
+  for (let i = 0; i < layoutNodes.length; i++) {
+    const layoutNode = layoutNodes[i];
+    const position = layout.positions.get(layoutNode.id);
     if (!position) continue;
 
     finalPositions.set(layoutNode.id, position);
 
     if (layoutNode.kind === 'recipe') {
-      const inputOrder = outerLayout.inputOrders.get(layoutNode.id);
-      const outputOrder = outerLayout.outputOrders.get(layoutNode.id);
+      const inputOrder = layout.inputOrders.get(layoutNode.id);
+      const outputOrder = layout.outputOrders.get(layoutNode.id);
       if (inputOrder) finalInputOrders.set(layoutNode.id, inputOrder);
       if (outputOrder) finalOutputOrders.set(layoutNode.id, outputOrder);
       continue;
@@ -1450,7 +1775,7 @@ export async function autoLayout(
 
     finalGroupDimensions.set(
       layoutNode.id,
-      outerLayout.dimensions.get(layoutNode.id) ?? {
+      layout.dimensions.get(layoutNode.id) ?? {
         width: layoutNode.width,
         height: layoutNode.height,
       },
@@ -1465,16 +1790,34 @@ export async function autoLayout(
     }
   }
 
-  for (let i = 0; i < edges.length; i++) {
-    const edge = edges[i];
-    if (!edge.hidden || edge.id.startsWith('proxy-')) continue;
+  const edgeUpdates = new Map(layout.edgeUpdates);
+  const layoutNodeMap = new Map(layoutNodes.map((node) => [node.id, node]));
+  const componentNodeIds = new Set(layoutNodeIds);
+  const expandedGroupIds = new Set(
+    groupNodes.filter((node) => !node.data.collapsed).map((node) => node.id),
+  );
 
-    const sourceGroupId = getCollapsedGroupIdForRecipe(nodeMap.get(edge.source), groupMap);
-    const targetGroupId = getCollapsedGroupIdForRecipe(nodeMap.get(edge.target), groupMap);
-    if (!sourceGroupId && !targetGroupId) continue;
-    if (sourceGroupId && sourceGroupId === targetGroupId) continue;
+  for (let i = 0; i < selfEdges.length; i++) {
+    const edge = selfEdges[i];
 
-    edgeUpdates.set(edge.id, { clearControlPoints: true });
+    if (edgePath === 'bezier') {
+      edgeUpdates.set(edge.id, { clearControlPoints: true });
+      continue;
+    }
+    if (edgePath !== 'orthogonal') continue;
+
+    const orthogonalTurns = chooseSelfFourTurnRoute(
+      edge,
+      layoutNodeMap,
+      layout.positions,
+      layout.dimensions,
+      layout.inputOrders,
+      layout.outputOrders,
+      componentNodeIds,
+    );
+    if (orthogonalTurns) {
+      edgeUpdates.set(edge.id, { orthogonalTurns });
+    }
   }
 
   const updatedNodes = nodes.map((node) => {
@@ -1526,11 +1869,11 @@ export async function autoLayout(
 
     const inputProxyHandleIds = applyIndexOrder(
       node.data.inputProxyHandleIds,
-      outerLayout.inputOrders.get(node.id),
+      layout.inputOrders.get(node.id),
     );
     const outputProxyHandleIds = applyIndexOrder(
       node.data.outputProxyHandleIds,
-      outerLayout.outputOrders.get(node.id),
+      layout.outputOrders.get(node.id),
     );
 
     return {
@@ -1546,10 +1889,12 @@ export async function autoLayout(
     };
   });
 
+  const boundedNodes = applyExpandedGroupBounds(updatedNodes, expandedGroupIds);
+
   const updatedEdges = edges.map((edge) => {
     const update = edgeUpdates.get(edge.id);
     return update ? applyEdgeUpdate(edge, update) : edge;
   });
 
-  return { nodes: updatedNodes, edges: updatedEdges };
+  return { nodes: boundedNodes, edges: updatedEdges };
 }

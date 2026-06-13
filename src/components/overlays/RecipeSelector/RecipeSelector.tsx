@@ -134,8 +134,8 @@ function RecipeSelectorModal() {
   const clickedRateInfo = derivedRate !== null ? { clickedPerSecondRate: derivedRate } : null;
 
   const handleAddRecipe = (recipeId: string) => {
-    const recipe = resolveActiveRecipe(recipeId);
-    if (!recipe) return;
+    const defaultRecipe = resolveActiveRecipe(recipeId);
+    if (!defaultRecipe) return;
 
     const { nodes, edges } = useFlowStore.getState();
 
@@ -149,6 +149,10 @@ function RecipeSelectorModal() {
         }
       }
     }
+
+    const recipe = resolvedSettings
+      ? (resolveActiveRecipe(recipeId, resolvedSettings) ?? defaultRecipe)
+      : defaultRecipe;
 
     const { newNode, nextEdges } = computeRecipeInsertion({
       recipe,

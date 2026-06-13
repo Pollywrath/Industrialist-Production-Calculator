@@ -124,6 +124,7 @@ export function ControlsTray() {
   const undo = useFlowStore((s) => s.undo);
   const redo = useFlowStore((s) => s.redo);
   const setNodesAndEdges = useFlowStore((s) => s.setNodesAndEdges);
+  const applyAutoLayoutResult = useFlowStore((s) => s.applyAutoLayoutResult);
   const createGroupFromSelection = useFlowStore((s) => s.createGroupFromSelection);
   const selectedGroupableNodeCount = useFlowStore((s) => {
     let count = 0;
@@ -198,6 +199,7 @@ export function ControlsTray() {
       if (isLayouting) return;
       const flowStore = useFlowStore.getState();
       if (flowStore.nodes.length === 0) return;
+      const layoutGraphVersion = flowStore.graphVersion;
 
       setIsLayouting(true);
       void import('../../utils/autoLayout')
@@ -205,8 +207,10 @@ export function ControlsTray() {
           return autoLayout(flowStore.nodes, flowStore.edges, { edgePath: edgePathStyle });
         })
         .then(({ nodes, edges }) => {
-          setNodesAndEdges(nodes, edges, { visualOnly: true });
-          useUIStore.getState().requestFitView();
+          const didApply = applyAutoLayoutResult(nodes, edges, layoutGraphVersion);
+          if (didApply) {
+            useUIStore.getState().requestFitView();
+          }
         })
         .catch((error) => {
           console.error('Auto-layout failed:', error);

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -270,25 +270,38 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const moveNodesFromSnapshots = useFlowStore((s) => s.moveNodesFromSnapshots);
   const fitViewRequestId = useUIStore((s) => s.fitViewRequestId);
   const { screenToFlowPosition, getInternalNode, fitView } = useReactFlow();
-  const recipeNodes: RecipeNodeType[] = [];
-  const renderNodes: CanvasNode[] = [];
-  const recipeNodeIds = new Set<string>();
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    if (isRecipeNode(node)) {
-      recipeNodes.push(node);
-      recipeNodeIds.add(node.id);
-    } else if (isGroupNode(node)) {
-      renderNodes.push(node);
+
+  const { recipeNodes, renderNodes, recipeNodeIds } = useMemo(() => {
+    const nextRecipeNodes: RecipeNodeType[] = [];
+    const nextRenderNodes: CanvasNode[] = [];
+    const nextRecipeNodeIds = new Set<string>();
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (isRecipeNode(node)) {
+        nextRecipeNodes.push(node);
+        nextRecipeNodeIds.add(node.id);
+      } else if (isGroupNode(node)) {
+        nextRenderNodes.push(node);
+      }
     }
-  }
-  for (let i = 0; i < recipeNodes.length; i++) {
-    renderNodes.push(recipeNodes[i]);
-  }
-  const recipeEdges = edges.filter(
-    (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
+    for (let i = 0; i < nextRecipeNodes.length; i++) {
+      nextRenderNodes.push(nextRecipeNodes[i]);
+    }
+    return {
+      recipeNodes: nextRecipeNodes,
+      renderNodes: nextRenderNodes,
+      recipeNodeIds: nextRecipeNodeIds,
+    };
+  }, [nodes]);
+
+  const recipeEdges = useMemo(
+    () => edges.filter((edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target)),
+    [edges, recipeNodeIds],
   );
-  const resolutionContext = createGraphResolutionContext(recipeNodes, recipeEdges);
+  const resolutionContext = useMemo(
+    () => createGraphResolutionContext(recipeNodes, recipeEdges),
+    [recipeNodes, recipeEdges],
+  );
   const batchDragRef = useRef<BatchDragState | null>(null);
   const groupBoundsPreviewRef = useRef<HTMLDivElement | null>(null);
 
@@ -583,30 +596,32 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
     flowStore.setEdges(nextEdges, { visualOnly: true });
   };
 
-  const groupCollapsedMap = new Map<string, { collapsed: boolean; handlesReady: boolean }>();
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    if (isGroupNode(node)) {
-      groupCollapsedMap.set(node.id, {
-        collapsed: !!node.data.collapsed,
-        handlesReady: !!node.data.handlesReady,
-      });
+  const safeEdges = useMemo(() => {
+    const groupCollapsedMap = new Map<string, { collapsed: boolean; handlesReady: boolean }>();
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+      if (isGroupNode(node)) {
+        groupCollapsedMap.set(node.id, {
+          collapsed: !!node.data.collapsed,
+          handlesReady: !!node.data.handlesReady,
+        });
+      }
     }
-  }
 
-  const safeEdges = edges.filter((edge) => {
-    if (edge.id.startsWith('proxy-')) {
-      const sourceGroup = groupCollapsedMap.get(edge.source);
-      if (sourceGroup && (!sourceGroup.collapsed || !sourceGroup.handlesReady)) {
-        return false;
+    return edges.filter((edge) => {
+      if (edge.id.startsWith('proxy-')) {
+        const sourceGroup = groupCollapsedMap.get(edge.source);
+        if (sourceGroup && (!sourceGroup.collapsed || !sourceGroup.handlesReady)) {
+          return false;
+        }
+        const targetGroup = groupCollapsedMap.get(edge.target);
+        if (targetGroup && (!targetGroup.collapsed || !targetGroup.handlesReady)) {
+          return false;
+        }
       }
-      const targetGroup = groupCollapsedMap.get(edge.target);
-      if (targetGroup && (!targetGroup.collapsed || !targetGroup.handlesReady)) {
-        return false;
-      }
-    }
-    return true;
-  });
+      return true;
+    });
+  }, [edges, nodes]);
 
   return (
     <ReactFlow
