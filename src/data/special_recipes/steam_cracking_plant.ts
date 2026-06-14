@@ -1,9 +1,10 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
+import { clamp } from '../../utils/precision';
 
 const calculateCycleTime = (tempC: number): number => {
   const t = Math.max(0, tempC);
-  const factor = Math.min(1, Math.max(0.1, 1 - t / 400));
+  const factor = clamp(1 - t / 400, 0.1, 1);
   const ticks = Math.ceil(900 * factor);
   return ticks / 30;
 };

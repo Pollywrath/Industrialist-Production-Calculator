@@ -339,6 +339,22 @@ export function validateRecipe(
           message: 'Quantity must be a number greater than 0',
         });
       }
+      if (
+        inp.handle_type !== undefined &&
+        inp.handle_type !== 'item' &&
+        inp.handle_type !== 'fluid'
+      ) {
+        errors.push({
+          field: `inputs[${idx}].handle_type`,
+          message: 'Handle type must be either "item" or "fluid"',
+        });
+      }
+      if (inp.product_link_id !== undefined && typeof inp.product_link_id !== 'string') {
+        errors.push({
+          field: `inputs[${idx}].product_link_id`,
+          message: 'Product link ID must be a string',
+        });
+      }
     });
   }
 
@@ -375,6 +391,22 @@ export function validateRecipe(
         errors.push({
           field: `outputs[${idx}].temperature`,
           message: 'Temperature must be a valid number',
+        });
+      }
+      if (
+        out.handle_type !== undefined &&
+        out.handle_type !== 'item' &&
+        out.handle_type !== 'fluid'
+      ) {
+        errors.push({
+          field: `outputs[${idx}].handle_type`,
+          message: 'Handle type must be either "item" or "fluid"',
+        });
+      }
+      if (out.product_link_id !== undefined && typeof out.product_link_id !== 'string') {
+        errors.push({
+          field: `outputs[${idx}].product_link_id`,
+          message: 'Product link ID must be a string',
         });
       }
     });

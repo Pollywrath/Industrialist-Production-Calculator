@@ -1,4 +1,4 @@
-import type { Recipe, Machine, Product, Research } from '../types/data';
+import type { Recipe, Machine, Product, ProductType, Research } from '../types/data';
 import type { SettingDefinition, SpecialRecipe } from '../types/specialRecipes';
 import { getAllSpecialRecipes, getSpecialRecipe, setSpecialRecipeOverrides } from './registry';
 import { getDataOverrides } from '../persistence/idb';
@@ -33,6 +33,32 @@ const researchMap = new Map<string, Research>();
 
 let initPromise: Promise<void> | null = null;
 let filteredProducts: Product[] = [];
+const PLACEHOLDER_PRODUCT_IDS = new Set(['any_fluid', 'any_item']);
+
+function getSpecialPotentialProducts(
+  sr: SpecialRecipe,
+  kind: 'input' | 'output',
+  sourceProducts: Product[],
+): string[] | undefined {
+  const explicitProductIds = kind === 'input' ? sr.potentialInputs : sr.potentialOutputs;
+  const productTypes =
+    kind === 'input' ? sr.potentialInputProductTypes : sr.potentialOutputProductTypes;
+
+  if (!productTypes || productTypes.length === 0) {
+    return explicitProductIds;
+  }
+
+  const allowedTypes = new Set<ProductType>(productTypes);
+  const typeProductIds = sourceProducts
+    .filter((product) => allowedTypes.has(product.type) && !PLACEHOLDER_PRODUCT_IDS.has(product.id))
+    .map((product) => product.id);
+
+  if (!explicitProductIds || explicitProductIds.length === 0) {
+    return typeProductIds;
+  }
+
+  return Array.from(new Set([...explicitProductIds, ...typeProductIds]));
+}
 
 function processCategory<T extends { id: string }>(
   prefix: string,
@@ -92,6 +118,7 @@ function normalizeSettings(
   settings: Record<string, unknown>,
   schema: Record<string, SettingDefinition>,
   productMap: Map<string, Product>,
+  globalSettings?: Record<string, unknown>,
 ): Record<string, unknown> {
   const normalized: Record<string, unknown> = { ...settings };
   let hasChanges = false;
@@ -148,7 +175,10 @@ function normalizeSettings(
         }
       }
     } else if (def.type === 'select') {
-      const options = def.options;
+      const options = def.getOptions?.(normalized, globalSettings) ?? def.options;
+      const normalizedDefault = options.some((opt) => opt.value === defaultValue)
+        ? defaultValue
+        : (options[0]?.value ?? defaultValue);
       const isValidOption = options.some((opt) => {
         if (typeof opt.value === 'number' && typeof value === 'string') {
           return parseFloat(value) === opt.value;
@@ -157,11 +187,11 @@ function normalizeSettings(
       });
 
       if (!isValidOption) {
-        normalized[key] = defaultValue;
+        normalized[key] = normalizedDefault;
         hasChanges = true;
         if (import.meta.env.DEV) {
           console.warn(
-            `[Setting Normalization] Setting "${key}" has invalid value: ${JSON.stringify(value)}, not in options. Using default: ${JSON.stringify(defaultValue)}`,
+            `[Setting Normalization] Setting "${key}" has invalid value: ${JSON.stringify(value)}, not in options. Using default: ${JSON.stringify(normalizedDefault)}`,
           );
         }
       } else if (typeof value === 'string' && options.some((opt) => typeof opt.value === 'number')) {
@@ -173,12 +203,14 @@ function normalizeSettings(
       }
     } else if (def.type === 'product') {
       const productId = value as string;
-      if (!productMap.has(productId)) {
+      const product = productMap.get(productId);
+      const expectedProductType = def.productType ?? 'Fluid';
+      if (!product || product.type !== expectedProductType) {
         normalized[key] = defaultValue;
         hasChanges = true;
         if (import.meta.env.DEV) {
           console.warn(
-            `[Setting Normalization] Setting "${key}" has invalid product ID: ${productId}, using default: ${defaultValue}`,
+            `[Setting Normalization] Setting "${key}" has invalid ${expectedProductType} product ID: ${productId}, using default: ${defaultValue}`,
           );
         }
       }
@@ -217,8 +249,8 @@ export function rebuildActiveDatabase(
   for (let i = 0; i < recipes.length; i++) {
     const sr = getSpecialRecipe(recipes[i].id);
     if (sr) {
-      recipes[i].potential_outputs = sr.potentialOutputs;
-      recipes[i].potential_inputs = sr.potentialInputs;
+      recipes[i].potential_outputs = getSpecialPotentialProducts(sr, 'output', products);
+      recipes[i].potential_inputs = getSpecialPotentialProducts(sr, 'input', products);
       recipes[i].isSellTrash = !!sr.isSellTrash;
     }
     recipeMap.set(recipes[i].id, recipes[i]);
@@ -335,8 +367,8 @@ export function initializeDatabase(): Promise<void> {
       );
 
       const computedRecipe = sr.compute(defaults);
-      computedRecipe.potential_outputs = sr.potentialOutputs;
-      computedRecipe.potential_inputs = sr.potentialInputs;
+      computedRecipe.potential_outputs = getSpecialPotentialProducts(sr, 'output', defaultProducts);
+      computedRecipe.potential_inputs = getSpecialPotentialProducts(sr, 'input', defaultProducts);
       computedRecipe.isSellTrash = !!sr.isSellTrash;
       return computedRecipe;
     });
@@ -413,6 +445,9 @@ export function resolveActiveRecipe(
 
   const sr = getSpecialRecipe(recipeId);
   if (sr) {
+    const globalSettings =
+      (options?.globalSettings as Record<string, unknown> | undefined) ??
+      (useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>);
     const defaultSettings = Object.entries(sr.settings).reduce(
       (acc, [key, def]) => {
         acc[key] = def.default;
@@ -424,10 +459,7 @@ export function resolveActiveRecipe(
       ...defaultSettings,
       ...(nodeSettings || {}),
     };
-    nodeSettings = normalizeSettings(nodeSettings, sr.settings, productMap);
-    const globalSettings =
-      (options?.globalSettings as Record<string, unknown> | undefined) ??
-      (useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>);
+    nodeSettings = normalizeSettings(nodeSettings, sr.settings, productMap, globalSettings);
     const activeHelpers = helpers ?? (() => {
       const flowState = useFlowStore.getState();
       const recipeNodes = flowState.nodes.filter(isRecipeNode);
@@ -489,11 +521,11 @@ export function resolveActiveRecipe(
         };
       }
     }
-    resolvedSettings = normalizeSettings(resolvedSettings, sr.settings, productMap);
+    resolvedSettings = normalizeSettings(resolvedSettings, sr.settings, productMap, globalSettings);
 
     const computedRecipe = sr.compute(resolvedSettings, globalSettings, nodeId, activeHelpers);
-    computedRecipe.potential_outputs = sr.potentialOutputs;
-    computedRecipe.potential_inputs = sr.potentialInputs;
+    computedRecipe.potential_outputs = getSpecialPotentialProducts(sr, 'output', products);
+    computedRecipe.potential_inputs = getSpecialPotentialProducts(sr, 'input', products);
     computedRecipe.isSellTrash = !!sr.isSellTrash;
 
     return computedRecipe;

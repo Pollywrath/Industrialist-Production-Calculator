@@ -226,6 +226,8 @@
 }
 
 .recipe-node-io__columns {
+  position: relative;
+  z-index: 1;
   display: grid;
   align-items: center;
   width: 100%;
@@ -301,6 +303,8 @@
 }
 
 .recipe-node-io__rect-text {
+  position: relative;
+  z-index: 1;
   display: -webkit-box;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -321,6 +325,7 @@
 
 .recipe-node-io__handles {
   position: absolute;
+  z-index: 3;
   top: 0;
   right: 0;
   bottom: 0;
@@ -332,10 +337,49 @@
   pointer-events: auto;
 }
 
+.recipe-node-io__link-lines {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.recipe-node-io__link-line {
+  fill: none;
+  stroke: var(--theme-color-info);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  stroke-linecap: square;
+}
+
+.recipe-node-io__link-dot {
+  fill: var(--theme-color-info);
+  stroke: var(--theme-color-node-bg);
+  stroke-width: 1;
+}
+
+:global(.is-zoomed-out) .recipe-node-io__link-lines {
+  display: none;
+}
+
 .recipe-node-io__handle {
   cursor: pointer;
   border: 2px solid var(--theme-color-node-bg);
   border-radius: 2px;
+}
+
+.recipe-node-io__handle.recipe-node-io__handle--item {
+  border-radius: 2px;
+}
+
+.recipe-node-io__handle.recipe-node-io__handle--fluid {
+  border-radius: 999px;
 }
 
 .recipe-node-io__handle.recipe-node-io__handle--input {

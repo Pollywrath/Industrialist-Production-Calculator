@@ -11,7 +11,7 @@ import { SelectionStage } from './SelectionStage';
 import { RecipeStage } from './RecipeStage';
 import styles from './RecipeSelector.module.css';
 import type { NodeFlowResult } from '../../../types/solver';
-import type { Recipe } from '../../../types/data';
+import type { HandleDataType, Recipe } from '../../../types/data';
 import { RecipeSelectorProvider } from './RecipeSelectorProvider';
 import { useRecipeSelectorStore } from './RecipeSelectorContext';
 import { createGraphResolutionContext } from '../../../utils/graphResolutionContext';
@@ -111,6 +111,12 @@ function RecipeSelectorModal() {
   }, [activeTab, stage]);
 
   const effectiveProductId = preselectedProductId || (activeTab === 'product' ? selectedId : null);
+  const preselectedHandleType: HandleDataType | '' | null =
+    preselectedNodeId && preselectedSourceSide && preselectedHandleIndex !== null
+      ? resolutionContext
+          .createHelpers(preselectedNodeId)
+          .resolveHandleType(preselectedSourceSide, preselectedHandleIndex)
+      : null;
 
   const preselectedRecipe =
     preselectedNodeId && preselectedNodeData
@@ -159,6 +165,7 @@ function RecipeSelectorModal() {
       preselectedNodeId,
       preselectedSourceSide,
       preselectedProductId: effectiveProductId,
+      preselectedHandleType,
       preselectedHandleIndex,
       derivedRate,
       nodes,
@@ -189,6 +196,7 @@ function RecipeSelectorModal() {
             clickedRateInfo={clickedRateInfo}
             preselectedSourceSide={preselectedSourceSide}
             preselectedProductId={effectiveProductId}
+            preselectedHandleType={preselectedHandleType}
             onAddRecipe={handleAddRecipe}
           />
         )}

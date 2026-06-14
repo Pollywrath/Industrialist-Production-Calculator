@@ -1,12 +1,17 @@
 import { useNodeConnections } from '@xyflow/react';
 import type { Recipe } from '../../../types/data';
-import type { SettingDefinition } from '../../../types/specialRecipes';
+import type {
+  ProductSettingDefinition,
+  SelectSettingDefinition,
+  SettingDefinition,
+} from '../../../types/specialRecipes';
 import { getSpecialRecipe } from '../../../data/registry';
 import { useNodeEditorStore } from './NodeEditorContext';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
+import { SearchDropdown } from '../../shared/SearchDropdown';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { getAllProducts } from '../../../data/lookup';
 import styles from './NodeEditor.module.css';
@@ -25,6 +30,19 @@ interface SettingItemProps {
   updateSetting: (key: string, val: unknown) => void;
   resolvedSettings: Record<string, unknown>;
   globalSettings: Record<string, unknown>;
+}
+
+function getProductOptions(def: ProductSettingDefinition) {
+  const productType = def.productType ?? 'Fluid';
+  return getAllProducts().filter((p) => p.type === productType);
+}
+
+function getSelectOptions(
+  def: SelectSettingDefinition,
+  settings: Record<string, unknown>,
+  globalSettings: Record<string, unknown>,
+) {
+  return def.getOptions?.(settings, globalSettings) ?? def.options;
 }
 
 function SettingItem({
@@ -55,6 +73,31 @@ function SettingItem({
   const labelText = def.dynamicLabel
     ? def.dynamicLabel(resolvedSettings, globalSettings)
     : def.label;
+  const productOptions = def.type === 'product' ? getProductOptions(def) : [];
+  const productDropdownOptions = productOptions.map((product) => ({
+    value: product.id,
+    label: product.name,
+  }));
+  const selectOptions =
+    def.type === 'select'
+      ? getSelectOptions(def, resolvedSettings, globalSettings)
+      : [];
+  const selectDisplayValue =
+    def.type === 'select' && selectOptions.some((opt) => opt.value === displayValue)
+      ? displayValue
+      : def.type === 'select'
+        ? selectOptions.some((opt) => opt.value === def.default)
+          ? def.default
+          : (selectOptions[0]?.value ?? '')
+        : '';
+  const productDisplayValue =
+    def.type === 'product' && productOptions.some((p) => p.id === displayValue)
+      ? (displayValue as string)
+      : def.type === 'product'
+        ? productOptions.some((p) => p.id === def.default)
+          ? def.default
+          : ''
+        : '';
 
   return (
     <div className={styles['node-editor-group']}>
@@ -75,15 +118,15 @@ function SettingItem({
       )}
       {def.type === 'select' && (
         <select
-          value={displayValue as string}
+          value={String(selectDisplayValue)}
           onChange={(e) => {
-            const selectedOption = def.options.find((opt) => String(opt.value) === e.target.value);
+            const selectedOption = selectOptions.find((opt) => String(opt.value) === e.target.value);
             updateSetting(settingKey, selectedOption?.value ?? e.target.value);
           }}
           className={styles['node-editor-input']}
           disabled={isConnected}
         >
-          {def.options.map((opt) => (
+          {selectOptions.map((opt) => (
             <option key={String(opt.value)} value={opt.value as string | number}>
               {opt.label}
             </option>
@@ -91,20 +134,17 @@ function SettingItem({
         </select>
       )}
       {def.type === 'product' && (
-        <select
-          value={displayValue as string}
-          onChange={(e) => updateSetting(settingKey, e.target.value)}
-          className={styles['node-editor-input']}
-          disabled={isConnected}
-        >
-          {getAllProducts()
-            .filter((p) => p.type === 'Fluid')
-            .map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-        </select>
+        <SearchDropdown
+          value={productDisplayValue}
+          options={productDropdownOptions}
+          onChange={(selectedProductId) => updateSetting(settingKey, selectedProductId)}
+          placeholder={
+            productDropdownOptions.length === 0
+              ? `No ${def.productType ?? 'Fluid'} products`
+              : 'Search & select product...'
+          }
+          disabled={isConnected || productDropdownOptions.length === 0}
+        />
       )}
     </div>
   );

@@ -1,5 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
+import { clamp } from '../../utils/precision';
 
 const settingDefinitions = {
   steam_temp: {
@@ -15,7 +16,7 @@ const inputTemperatureSettings = {
 
 const getMultiplier = (settings: Record<string, unknown>) => {
   const temp = (settings.steam_temp as number) ?? 100;
-  return Math.min(4, Math.max(0, temp / 100));
+  return clamp(temp / 100, 0, 4);
 };
 
 export const m_industrial_drill_01: SpecialRecipe = {

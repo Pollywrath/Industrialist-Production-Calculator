@@ -19,7 +19,7 @@ import { useState } from 'react';
 import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useEdgeThemeStore } from '../../stores/useEdgeThemeStore';
-import { isLPSolverRunning } from '../../solver/lpSolverService';
+import { isRatioOptimizerRunning } from '../../solver/ratioOptimizer';
 import { isRecipeNode } from '../../types/nodes';
 import styles from './ControlsTray.module.css';
 
@@ -162,7 +162,7 @@ export function ControlsTray() {
     } else if (btn.id === 'machine_toggle') {
       setMachineOverlayOpen(!isMachineOverlayOpen);
     } else if (btn.id === 'compute') {
-      if (isLPSolverRunning()) {
+      if (isRatioOptimizerRunning()) {
         void useUIStore.getState().confirm({
           title: 'Solver Busy',
           message: 'An optimization run is already in progress. Please wait for it to finish or cancel it first.',
@@ -177,7 +177,7 @@ export function ControlsTray() {
       if (!hasTargetNode) {
         void useUIStore.getState().confirm({
           title: 'No Target Nodes Selected',
-          message: 'Please set at least one node as a target to anchor the LP optimization. You can toggle the Target tool (Shift key or Target button) and click on a node.',
+          message: 'Please set at least one node as a target to anchor the ratio optimization. You can toggle the Target tool (Shift key or Target button) and click on a node.',
           confirmLabel: 'OK',
           cancelLabel: 'CLOSE',
           intent: 'info',

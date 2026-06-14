@@ -1,5 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
+import { clamp } from '../../utils/precision';
 
 const powerSteps = [
   [0, 0, 1],
@@ -11,8 +12,6 @@ const powerSteps = [
   [400, 7800, 4001],
   [50000, 7801, 4001],
 ];
-
-const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
 const getInterpolated = (temp: number) => {
   if (temp <= powerSteps[0][0]) return { power: powerSteps[0][1], rpm: powerSteps[0][2] };

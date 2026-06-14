@@ -2,6 +2,7 @@ import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
 import { getMachine } from '../lookup';
 import { formatPower, formatQuantity } from '../../utils/unitFormatting';
+import { clamp, roundTo } from '../../utils/precision';
 
 const FUEL_MAP: Record<string, { product_id: string; rate: number }> = {
   'Refined Diesel': { product_id: 'p_refined_diesel', rate: 690 },
@@ -9,9 +10,6 @@ const FUEL_MAP: Record<string, { product_id: string; rate: number }> = {
   'Poor Quality Diesel': { product_id: 'p_poor_quality_diesel', rate: 420 },
   'Crude Diesel': { product_id: 'p_crude_diesel', rate: 300 },
 };
-
-const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
-const round = (v: number, d = 6) => Math.round(v * 10 ** d) / 10 ** d;
 
 const getCylMap = (cyl: number): number => {
   let sum = 0;
@@ -270,10 +268,10 @@ export const modular_diesel_engine_01: SpecialRecipe = {
       name: `${cylinders} Cyl, ${afr}:${throttle} MDE`,
       machine_id: 'm_modular_diesel_engine',
       cycle_time: 1,
-      power_consumption: -round(power),
+      power_consumption: -roundTo(power, 6),
       power_type: 'MV',
-      pollution: round(0.648 * exhaustsSetting),
-      inputs: [{ product_id: FUEL_MAP[fuelType].product_id, quantity: round(fuelUsage) }],
+      pollution: roundTo(0.648 * exhaustsSetting, 6),
+      inputs: [{ product_id: FUEL_MAP[fuelType].product_id, quantity: roundTo(fuelUsage, 6) }],
       outputs: [],
     };
 

@@ -1,8 +1,8 @@
 import { Handle, Position } from '@xyflow/react';
 import { isRecipeNode } from '../../../types/nodes';
 import type { HandleRef } from '../../../types/nodes';
-import type { Recipe } from '../../../types/data';
-import { getProductName } from '../../../data/lookup';
+import type { HandleDataType, Recipe } from '../../../types/data';
+import { getProduct, getProductName } from '../../../data/lookup';
 import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
@@ -15,6 +15,11 @@ import {
 import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
+import {
+  getRecipeEntryHandleType,
+  getRecipeEntryProductId,
+  productTypeToHandleDataType,
+} from '../../../utils/handleTypes';
 import styles from './RecipeNode.module.css';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -38,6 +43,137 @@ function resolveQuantity(ref: HandleRef, recipe: Recipe | undefined): number {
   const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
   const entry = list[ref.index];
   return entry ? entry.quantity : 0;
+}
+
+interface ProductLinkAnchor {
+  ref: HandleRef;
+  linkId: string;
+  x: number;
+  y: number;
+}
+
+interface ProductLinkLine {
+  key: string;
+  label: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+function getProductLinkId(ref: HandleRef, recipe: Recipe | undefined): string {
+  if (!recipe) return '';
+  const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
+  const linkId = list[ref.index]?.product_link_id;
+  return typeof linkId === 'string' ? linkId.trim() : '';
+}
+
+function createProductLinkAnchor(
+  ref: HandleRef,
+  ordinal: number,
+  sideCount: number,
+  maxCount: number,
+  linkId: string,
+  leftWidth: number,
+  middleWidth: number,
+): ProductLinkAnchor {
+  const verticalOffset = ((maxCount - sideCount) * (RECT_HEIGHT + RECT_GAP)) / 2;
+  const y = 17 + verticalOffset + ordinal * (RECT_HEIGHT + RECT_GAP) + RECT_HEIGHT / 2;
+  const x =
+    ref.side === 'input'
+      ? SIDE_PADDING + leftWidth
+      : SIDE_PADDING + leftWidth + middleWidth;
+
+  return {
+    ref,
+    linkId,
+    x,
+    y,
+  };
+}
+
+function buildProductLinkLines(
+  recipe: Recipe | undefined,
+  leftHandles: HandleRef[],
+  rightHandles: HandleRef[],
+  leftWidth: number,
+  rightWidth: number,
+  maxCount: number,
+): ProductLinkLine[] {
+  if (!recipe) return [];
+
+  const middleWidth = NODE_WIDTH - SIDE_PADDING * 2 - leftWidth - rightWidth;
+  const groups = new Map<string, ProductLinkAnchor[]>();
+
+  const addAnchor = (
+    ref: HandleRef,
+    ordinal: number,
+    sideCount: number,
+  ) => {
+    const linkId = getProductLinkId(ref, recipe);
+    if (!linkId) return;
+
+    const anchor = createProductLinkAnchor(
+      ref,
+      ordinal,
+      sideCount,
+      maxCount,
+      linkId,
+      leftWidth,
+      middleWidth,
+    );
+    const group = groups.get(linkId);
+    if (group) {
+      group.push(anchor);
+    } else {
+      groups.set(linkId, [anchor]);
+    }
+  };
+
+  for (let i = 0; i < leftHandles.length; i++) {
+    addAnchor(leftHandles[i], i, leftHandles.length);
+  }
+
+  for (let i = 0; i < rightHandles.length; i++) {
+    addAnchor(rightHandles[i], i, rightHandles.length);
+  }
+
+  const lines: ProductLinkLine[] = [];
+  groups.forEach((anchors, linkId) => {
+    if (anchors.length < 2) return;
+
+    const inputs = anchors.filter((anchor) => anchor.ref.side === 'input');
+    const outputs = anchors.filter((anchor) => anchor.ref.side === 'output');
+
+    if (inputs.length > 0 && outputs.length > 0) {
+      for (let i = 0; i < inputs.length; i++) {
+        for (let j = 0; j < outputs.length; j++) {
+          lines.push({
+            key: `${linkId}-${inputs[i].ref.side}-${inputs[i].ref.index}-${outputs[j].ref.side}-${outputs[j].ref.index}`,
+            label: linkId,
+            x1: inputs[i].x,
+            y1: inputs[i].y,
+            x2: outputs[j].x,
+            y2: outputs[j].y,
+          });
+        }
+      }
+      return;
+    }
+
+    for (let i = 1; i < anchors.length; i++) {
+      lines.push({
+        key: `${linkId}-${anchors[i - 1].ref.side}-${anchors[i - 1].ref.index}-${anchors[i].ref.side}-${anchors[i].ref.index}`,
+        label: linkId,
+        x1: anchors[i - 1].x,
+        y1: anchors[i - 1].y,
+        x2: anchors[i].x,
+        y2: anchors[i].y,
+      });
+    }
+  });
+
+  return lines;
 }
 
 interface RecipeNodeIORectProps {
@@ -93,6 +229,7 @@ interface RecipeNodeIOHandleProps {
   isFlipped: boolean;
   top: number;
   position: Position;
+  handleDataType: HandleDataType | '';
   onSquareClick: (e: React.MouseEvent, handleId: string) => void;
   onDoubleClick: (ref: HandleRef) => void;
 }
@@ -103,10 +240,14 @@ function RecipeNodeIOHandle({
   isFlipped,
   top,
   position,
+  handleDataType,
   onSquareClick,
   onDoubleClick,
 }: RecipeNodeIOHandleProps) {
   const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
+  const handleTypeClass = handleDataType
+    ? ` ${styles[`recipe-node-io__handle--${handleDataType}`]}`
+    : '';
 
   return (
     <Handle
@@ -115,7 +256,8 @@ function RecipeNodeIOHandle({
       id={handleId}
       className={`${styles['recipe-node-io__handle']} ${styles[`recipe-node-io__handle--${refVal.side}`]}${
         isFlipped ? ` ${styles['recipe-node-io__handle--flipped']}` : ''
-      }`}
+      }${handleTypeClass}`}
+      data-handle-type={handleDataType || undefined}
       style={{
         top,
         width: 'var(--theme-handle-size)',
@@ -200,6 +342,26 @@ export function RecipeNodeIO({
   const ioAreaHeight = maxCount * RECT_HEIGHT + (maxCount - 1) * RECT_GAP + 34;
 
   const gridTemplateColumns = hasLeft && hasRight ? `${leftWidth}px 1fr ${rightWidth}px` : '1fr';
+  const productLinkLines = buildProductLinkLines(
+    recipe,
+    leftHandles,
+    rightHandles,
+    leftWidth,
+    rightWidth,
+    maxCount,
+  );
+
+  const resolveHandleDataType = (ref: HandleRef): HandleDataType | '' => {
+    const list = ref.side === 'input' ? recipe?.inputs : recipe?.outputs;
+    const entry = list?.[ref.index];
+    const override = getRecipeEntryHandleType(entry);
+    if (override) return override;
+
+    const handleId = buildHandleId(nodeId, ref.side, ref.index);
+    const productId =
+      resolvedProducts[handleId] || getRecipeEntryProductId(recipe, ref.side, ref.index) || '';
+    return productTypeToHandleDataType(getProduct(productId)?.type) ?? '';
+  };
 
   const handleRectClick = (ref: HandleRef) => {
     if (!recipe) return;
@@ -342,6 +504,39 @@ export function RecipeNodeIO({
         )}
       </div>
 
+      {productLinkLines.length > 0 && (
+        <svg
+          className={styles['recipe-node-io__link-lines']}
+          aria-hidden="true"
+          focusable="false"
+        >
+          {productLinkLines.map((line) => (
+            <g key={line.key}>
+              <title>{`Linked product: ${line.label}`}</title>
+              <line
+                className={styles['recipe-node-io__link-line']}
+                x1={line.x1}
+                y1={line.y1}
+                x2={line.x2}
+                y2={line.y2}
+              />
+              <circle
+                className={styles['recipe-node-io__link-dot']}
+                cx={line.x1}
+                cy={line.y1}
+                r="3"
+              />
+              <circle
+                className={styles['recipe-node-io__link-dot']}
+                cx={line.x2}
+                cy={line.y2}
+                r="3"
+              />
+            </g>
+          ))}
+        </svg>
+      )}
+
       <div className={styles['recipe-node-io__handles']}>
         {leftHandles.map((refVal, i) => {
           const verticalOffset = ((maxCount - leftCount) * (RECT_HEIGHT + RECT_GAP)) / 2;
@@ -355,6 +550,7 @@ export function RecipeNodeIO({
               isFlipped={isFlipped(refVal)}
               top={top}
               position={Position.Left}
+              handleDataType={resolveHandleDataType(refVal)}
               onSquareClick={handleSquareClick}
               onDoubleClick={handleDoubleClick}
             />
@@ -373,6 +569,7 @@ export function RecipeNodeIO({
               isFlipped={isFlipped(refVal)}
               top={top}
               position={Position.Right}
+              handleDataType={resolveHandleDataType(refVal)}
               onSquareClick={handleSquareClick}
               onDoubleClick={handleDoubleClick}
             />

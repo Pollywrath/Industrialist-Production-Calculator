@@ -2,6 +2,7 @@ import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
 import { getMachine } from '../lookup';
 import { formatPower, formatTemperature } from '../../utils/unitFormatting';
+import { roundTo } from '../../utils/precision';
 
 export interface SteadyStateResult {
   steamFlow: number;
@@ -17,11 +18,6 @@ export interface SteadyStateResult {
   effectiveStages: { hpt: number; lpt: number };
   finalTemp: number;
   finalFlow: number;
-}
-
-function round(n: number, decimals = 0): number {
-  const mul = 10 ** decimals;
-  return Math.floor(n * mul + 0.5) / mul;
 }
 
 export function computeSteadyState(
@@ -139,7 +135,7 @@ export const modular_turbine_01: SpecialRecipe = {
       default: 330,
       dynamicLabel: (settings) => {
         const inputTemp = (settings.input_temp as number) ?? 330;
-        const finalTemp = round(inputTemp * 0.6, 1);
+        const finalTemp = roundTo(inputTemp * 0.6, 1);
         return `Input Temp - Output: ${formatTemperature(finalTemp)}`;
       },
     },
@@ -217,13 +213,13 @@ export const modular_turbine_01: SpecialRecipe = {
       inputs: [
         {
           product_id: 'p_high_pressure_steam',
-          quantity: round(result.steamFlow, 1),
+          quantity: roundTo(result.steamFlow, 1),
         },
       ],
       outputs: [
         {
           product_id: 'p_low_pressure_steam',
-          quantity: round(result.steamFlow, 1),
+          quantity: roundTo(result.steamFlow, 1),
           temperature: result.finalTemp,
         },
       ],

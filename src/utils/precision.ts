@@ -10,6 +10,15 @@ export function cleanFlow(val: number): number {
 
 export const EPSILON = 1e-11;
 
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+export function roundTo(value: number, decimals = 0): number {
+  const multiplier = 10 ** decimals;
+  return Math.round(value * multiplier) / multiplier;
+}
+
 export function clampFlow(flow: number): number {
   return Math.abs(flow) < EPSILON ? 0 : Number(flow.toFixed(10));
 }

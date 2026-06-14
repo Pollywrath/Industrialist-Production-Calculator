@@ -11,7 +11,13 @@ import { useDataStore, overlayPendingEdit } from '../../../stores/useDataStore';
 import { GenericDataFormShell } from './GenericDataFormShell';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
 import { SearchDropdown } from '../../shared/SearchDropdown';
-import type { Machine, Product, RecipeInput, RecipeOutput } from '../../../types/data';
+import type {
+  HandleDataType,
+  Machine,
+  Product,
+  RecipeInput,
+  RecipeOutput,
+} from '../../../types/data';
 import crudStyles from './DataCrud.module.css';
 import styles from './RecipesTab.module.css';
 
@@ -65,6 +71,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
   }
 
   const productOptions: Array<{ value: string; label: string }> = [];
+  const productTypeById = new Map<string, Product['type']>();
   if (dbVersion !== -1) {
     const productMap = new Map(getAllProducts().map((product) => [product.id, product]));
     for (const [id, editData] of Object.entries(pendingEdits.products)) {
@@ -78,6 +85,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
 
     for (const product of productMap.values()) {
       productOptions.push({ value: product.id, label: product.name });
+      productTypeById.set(product.id, product.type);
     }
   }
 
@@ -104,6 +112,18 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
     updateRecipePendingEdit(selectedRecipeId, { inputs: nextInputs });
   };
 
+  const handleInputHandleTypeChange = (idx: number, value: string) => {
+    const nextInputs = [...(activeRecipe.inputs || [])];
+    const nextInput = { ...nextInputs[idx] };
+    if (value === 'auto') {
+      delete nextInput.handle_type;
+    } else {
+      nextInput.handle_type = value as HandleDataType;
+    }
+    nextInputs[idx] = nextInput;
+    updateRecipePendingEdit(selectedRecipeId, { inputs: nextInputs });
+  };
+
   const handleAddInput = () => {
     const nextInputs = [...(activeRecipe.inputs || [])];
     const defaultProduct = getAllProducts()[0]?.id || 'p_water';
@@ -122,6 +142,18 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
     updateRecipePendingEdit(selectedRecipeId, { outputs: nextOutputs });
   };
 
+  const handleOutputHandleTypeChange = (idx: number, value: string) => {
+    const nextOutputs = [...(activeRecipe.outputs || [])];
+    const nextOutput = { ...nextOutputs[idx] };
+    if (value === 'auto') {
+      delete nextOutput.handle_type;
+    } else {
+      nextOutput.handle_type = value as HandleDataType;
+    }
+    nextOutputs[idx] = nextOutput;
+    updateRecipePendingEdit(selectedRecipeId, { outputs: nextOutputs });
+  };
+
   const handleAddOutput = () => {
     const nextOutputs = [...(activeRecipe.outputs || [])];
     const defaultProduct = getAllProducts()[0]?.id || 'p_water';
@@ -132,6 +164,13 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
   const handleRemoveOutput = (idx: number) => {
     const nextOutputs = (activeRecipe.outputs || []).filter((_, i) => i !== idx);
     updateRecipePendingEdit(selectedRecipeId, { outputs: nextOutputs });
+  };
+
+  const getAutoHandleTypeLabel = (productId: string) => {
+    const productType = productTypeById.get(productId);
+    if (productType === 'Item') return 'Item';
+    if (productType === 'Fluid') return 'Fluid';
+    return 'Unknown';
   };
 
   return (
@@ -289,6 +328,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
           <div className={styles['io-table-header']}>
             <div className={styles['col-product']}>Product</div>
             <div className={styles['col-quantity']}>Qty</div>
+            <div className={styles['col-handle-type']}>Handle</div>
             <div className={styles['col-checkbox']}>Sink (Max)</div>
             {!isSpecial && <div className={styles['col-action']}></div>}
           </div>
@@ -320,6 +360,19 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                     className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
                     disabled={isSpecial}
                   />
+                </div>
+                <div className={styles['col-handle-type']}>
+                  <select
+                    className={styles['io-handle-type-select']}
+                    value={input.handle_type ?? 'auto'}
+                    onChange={(e) => handleInputHandleTypeChange(idx, e.target.value)}
+                    disabled={isSpecial}
+                    title="Recipe handle type"
+                  >
+                    <option value="auto">Auto: {getAutoHandleTypeLabel(input.product_id)}</option>
+                    <option value="item">Item</option>
+                    <option value="fluid">Fluid</option>
+                  </select>
                 </div>
                 <div className={styles['col-checkbox']}>
                   <input
@@ -367,6 +420,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
             <div className={styles['col-product']}>Product</div>
             <div className={styles['col-quantity']}>Qty</div>
             <div className={styles['col-temp']}>Temp (°C)</div>
+            <div className={styles['col-handle-type']}>Handle</div>
             <div className={styles['col-checkbox-small']}>Sink</div>
             <div className={styles['col-checkbox-small']}>Void</div>
             {!isSpecial && <div className={styles['col-action']}></div>}
@@ -410,6 +464,19 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                     className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
                     disabled={isSpecial}
                   />
+                </div>
+                <div className={styles['col-handle-type']}>
+                  <select
+                    className={styles['io-handle-type-select']}
+                    value={output.handle_type ?? 'auto'}
+                    onChange={(e) => handleOutputHandleTypeChange(idx, e.target.value)}
+                    disabled={isSpecial}
+                    title="Recipe handle type"
+                  >
+                    <option value="auto">Auto: {getAutoHandleTypeLabel(output.product_id)}</option>
+                    <option value="item">Item</option>
+                    <option value="fluid">Fluid</option>
+                  </select>
                 </div>
                 <div className={styles['col-checkbox-small']}>
                   <input

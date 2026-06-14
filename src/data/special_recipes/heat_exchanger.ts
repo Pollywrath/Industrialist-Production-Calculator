@@ -1,5 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
+import { roundTo } from '../../utils/precision';
 
 
 export interface SteadyStateInputs {
@@ -32,8 +33,6 @@ export function calculateSinkSteadyState(inputs: SteadyStateInputs): SteadyState
   };
 }
 
-
-const round = (v: number, d = 2) => Math.round(v * 10 ** d) / 10 ** d;
 
 export const heat_exchanger_standard: SpecialRecipe = {
   id: 'r_heat_exchanger_01',
@@ -100,22 +99,23 @@ export const heat_exchanger_standard: SpecialRecipe = {
       pollution: 0,
       inputs: [
         { product_id: 'p_distilled_water', quantity: 400 },
-        { product_id: resolvedCoolant, quantity: 400 },
+        { product_id: resolvedCoolant, quantity: 400, product_link_id: 'coolant' },
       ],
       outputs: [
         {
           product_id: resolvedCoolant,
           quantity: 400,
-          temperature: Math.max(18, round(coolantOut - heatLoss)),
+          temperature: Math.max(18, roundTo(coolantOut - heatLoss, 2)),
+          product_link_id: 'coolant',
         },
         {
           product_id: 'p_high_pressure_steam',
           quantity: steamQty,
-          temperature: Math.max(18, round(steam - heatLoss)),
+          temperature: Math.max(18, roundTo(steam - heatLoss, 2)),
         },
       ],
       runtime: {
-        hxTemp: round(hx, 1),
+        hxTemp: roundTo(hx, 1),
       },
     };
 

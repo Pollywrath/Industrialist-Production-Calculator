@@ -7,7 +7,7 @@ import { FlowViewport } from './FlowViewport';
 import { LoadingScreen } from '../shared/LoadingScreen';
 import { useAutosave } from '../../persistence/useAutosave';
 import { overlayPrefetchCache } from './overlayPrefetchCache';
-import { initLPSolverWorker } from '../../solver/lpSolverService';
+import { initRatioOptimizerWorker } from '../../solver/ratioOptimizer';
 import { ASSET_VERSION } from '../../data/productIcons';
 
 import styles from './FlowCanvas.module.css';
@@ -200,7 +200,7 @@ export function FlowCanvas() {
   }, []);
 
   useEffect(() => {
-    initLPSolverWorker();
+    initRatioOptimizerWorker();
   }, []);
 
   const RecipeSelector = overlayPrefetchCache.RecipeSelector;

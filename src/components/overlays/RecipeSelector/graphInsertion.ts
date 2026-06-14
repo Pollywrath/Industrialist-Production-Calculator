@@ -1,5 +1,5 @@
 import type { Edge } from '@xyflow/react';
-import type { Recipe } from '../../../types/data';
+import type { HandleDataType, Recipe } from '../../../types/data';
 import { isGroupNode, isRecipeNode } from '../../../types/nodes';
 import type { CanvasNode, RecipeNodeType } from '../../../types/nodes';
 import { SNAP_GRID, NODE_WIDTH } from '../../shared/layoutConstants';
@@ -12,6 +12,7 @@ interface InsertionParams {
   preselectedNodeId: string | null;
   preselectedSourceSide: 'input' | 'output' | null;
   preselectedProductId: string | null;
+  preselectedHandleType: HandleDataType | '' | null;
   preselectedHandleIndex: number | null;
   derivedRate: number | null;
   nodes: CanvasNode[];
@@ -54,6 +55,7 @@ export function computeRecipeInsertion({
   preselectedNodeId,
   preselectedSourceSide,
   preselectedProductId,
+  preselectedHandleType,
   preselectedHandleIndex,
   derivedRate,
   nodes,
@@ -65,8 +67,16 @@ export function computeRecipeInsertion({
   const inputOrder = recipe.inputs.map((_, i) => i);
   const outputOrder = recipe.outputs.map((_, i) => i);
 
-  const matchingInputIndex = findBestProductMatchIndex(recipe.inputs, preselectedProductId);
-  const matchingOutputIndex = findBestProductMatchIndex(recipe.outputs, preselectedProductId);
+  const matchingInputIndex = findBestProductMatchIndex(
+    recipe.inputs,
+    preselectedProductId,
+    preselectedHandleType,
+  );
+  const matchingOutputIndex = findBestProductMatchIndex(
+    recipe.outputs,
+    preselectedProductId,
+    preselectedHandleType,
+  );
 
   let targetX = 0;
   let targetY = 0;

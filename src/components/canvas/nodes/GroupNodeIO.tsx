@@ -2,9 +2,9 @@ import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { isRecipeNode } from '../../../types/nodes';
 import type { CanvasNode, HandleRef } from '../../../types/nodes';
-import type { Recipe } from '../../../types/data';
+import type { HandleDataType, Recipe } from '../../../types/data';
 import type { NodeFlowResult } from '../../../types/solver';
-import { getProductName, resolveActiveRecipe } from '../../../data/lookup';
+import { getProduct, getProductName, resolveActiveRecipe } from '../../../data/lookup';
 import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
@@ -17,6 +17,10 @@ import {
 import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId, parseHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
+import {
+  getRecipeEntryHandleType,
+  productTypeToHandleDataType,
+} from '../../../utils/handleTypes';
 import styles from './RecipeNode.module.css';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -34,6 +38,13 @@ interface GroupNodeIOProps {
 }
 
 type ProxyFlowValue = NodeFlowResult | Recipe | string | undefined;
+
+interface ProxyFlowInfo {
+  label: string;
+  rate: number;
+  isFlipped: boolean;
+  handleDataType: HandleDataType | '';
+}
 
 interface GroupNodeIORectProps {
   refVal: HandleRef;
@@ -75,6 +86,7 @@ interface GroupNodeIOHandleProps {
   isFlipped: boolean;
   top: number;
   position: Position;
+  handleDataType: HandleDataType | '';
   onSquareClick: (e: React.MouseEvent, handleId: string) => void;
   onDoubleClick: (ref: HandleRef) => void;
 }
@@ -85,10 +97,14 @@ function GroupNodeIOHandle({
   isFlipped,
   top,
   position,
+  handleDataType,
   onSquareClick,
   onDoubleClick,
 }: GroupNodeIOHandleProps) {
   const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
+  const handleTypeClass = handleDataType
+    ? ` ${styles[`recipe-node-io__handle--${handleDataType}`]}`
+    : '';
 
   return (
     <Handle
@@ -97,7 +113,8 @@ function GroupNodeIOHandle({
       id={handleId}
       className={`${styles['recipe-node-io__handle']} ${styles[`recipe-node-io__handle--${refVal.side}`]}${
         isFlipped ? ` ${styles['recipe-node-io__handle--flipped']}` : ''
-      }`}
+      }${handleTypeClass}`}
+      data-handle-type={handleDataType || undefined}
       style={{
         top,
         width: 'var(--theme-handle-size)',
@@ -300,22 +317,22 @@ export function GroupNodeIO({
     useFlowStore.getState().updateNodeData(parsed.nodeId, { machineCount: newMachineCount });
   };
 
-  const getProxyFlowInfo = (ref: HandleRef) => {
+  const getProxyFlowInfo = (ref: HandleRef): ProxyFlowInfo => {
     const internalHandleId =
       ref.side === 'input' ? inputProxyHandleIds[ref.index] : outputProxyHandleIds[ref.index];
     if (!internalHandleId) {
-      return { label: 'Invalid', rate: 0, isFlipped: false };
+      return { label: 'Invalid', rate: 0, isFlipped: false, handleDataType: '' };
     }
 
     const parsed = parseHandleId(internalHandleId);
     if (!parsed) {
-      return { label: 'Invalid', rate: 0, isFlipped: false };
+      return { label: 'Invalid', rate: 0, isFlipped: false, handleDataType: '' };
     }
 
     const proxyIndex = getProxyIndex(ref);
     const internalNode = proxyNodes[proxyIndex];
     if (!isRecipeNode(internalNode)) {
-      return { label: 'Invalid', rate: 0, isFlipped: false };
+      return { label: 'Invalid', rate: 0, isFlipped: false, handleDataType: '' };
     }
 
     const flowDataIndex = proxyIndex * 3;
@@ -325,9 +342,13 @@ export function GroupNodeIO({
 
     const resolvedProduct = (proxyFlowData[flowDataIndex + 2] as string | undefined) ?? '';
     const label = getProductName(resolvedProduct);
-
     const list = parsed.side === 'input' ? recipe?.inputs : recipe?.outputs;
     const entry = list?.[parsed.index];
+    const override = getRecipeEntryHandleType(entry);
+    const handleDataType =
+      override ??
+      productTypeToHandleDataType(getProduct(resolvedProduct || entry?.product_id || '')?.type) ??
+      '';
     const isVariable = !!entry?.variable;
 
     const actualFlow = flowResult
@@ -359,6 +380,7 @@ export function GroupNodeIO({
       label,
       rate,
       isFlipped,
+      handleDataType,
     };
   };
 
@@ -433,6 +455,7 @@ export function GroupNodeIO({
               isFlipped={info.isFlipped}
               top={top}
               position={Position.Left}
+              handleDataType={info.handleDataType}
               onSquareClick={handleSquareClick}
               onDoubleClick={handleDoubleClick}
             />
@@ -452,6 +475,7 @@ export function GroupNodeIO({
               isFlipped={info.isFlipped}
               top={top}
               position={Position.Right}
+              handleDataType={info.handleDataType}
               onSquareClick={handleSquareClick}
               onDoubleClick={handleDoubleClick}
             />

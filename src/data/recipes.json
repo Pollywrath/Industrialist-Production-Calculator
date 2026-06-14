@@ -10203,16 +10203,19 @@
       {
         "product_id": "p_crude_diesel",
         "quantity": 5,
+        "handle_type": "item",
         "temperature": 18
       },
       {
         "product_id": "p_heavy_oil",
         "quantity": 15,
+        "handle_type": "item",
         "temperature": 18
       },
       {
         "product_id": "p_crude_oil",
         "quantity": 10,
+        "handle_type": "item",
         "temperature": 18
       }
     ]

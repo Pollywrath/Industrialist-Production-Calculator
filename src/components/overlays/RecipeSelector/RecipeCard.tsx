@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Recipe } from '../../../types/data';
+import type { HandleDataType, Recipe } from '../../../types/data';
 import { getProductIconPath } from '../../../data/productIcons';
 import { getMachineName, getProductName, getMachine, resolveActiveRecipe } from '../../../data/lookup';
 import { getSpecialRecipe } from '../../../data/registry';
@@ -25,6 +25,7 @@ interface RecipeCardProps {
   clickedRateInfo: { clickedPerSecondRate: number } | null;
   preselectedSourceSide: 'input' | 'output' | null;
   preselectedProductId: string | null;
+  preselectedHandleType: HandleDataType | '' | null;
   onAddRecipe: (recipeId: string) => void;
   isFavorite: boolean;
   onToggleFavorite: (recipeId: string) => void;
@@ -56,6 +57,7 @@ export function RecipeCard({
   clickedRateInfo,
   preselectedSourceSide,
   preselectedProductId,
+  preselectedHandleType,
   onAddRecipe,
   isFavorite,
   onToggleFavorite,
@@ -80,7 +82,11 @@ export function RecipeCard({
     const { clickedPerSecondRate } = clickedRateInfo;
     const targetList = preselectedSourceSide === 'input' ? recipe.outputs : recipe.inputs;
 
-    const targetEntry = findBestProductMatch(targetList, preselectedProductId);
+    const targetEntry = findBestProductMatch(
+      targetList,
+      preselectedProductId,
+      preselectedHandleType,
+    );
     if (targetEntry) {
       const candidateBaseQty = targetEntry.quantity;
       if (candidateBaseQty > 0) {

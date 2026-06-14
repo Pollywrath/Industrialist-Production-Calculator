@@ -1,9 +1,10 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
+import { clamp } from '../../utils/precision';
 
 export function computeChemicalPlantMultipliers(speedFactor: number, efficiencyFactor: number) {
-  const clampedSpeed = Math.min(200, Math.max(50, speedFactor));
-  const clampedEfficiency = Math.min(120, Math.max(80, efficiencyFactor));
+  const clampedSpeed = clamp(speedFactor, 50, 200);
+  const clampedEfficiency = clamp(efficiencyFactor, 80, 120);
 
   const speedDiff = clampedSpeed - 100;
   const speedSteps = speedDiff / 5;

@@ -15,7 +15,6 @@ import '@xyflow/react/dist/style.css';
 import { RecipeNode } from './nodes/RecipeNode';
 import { GroupNode } from './nodes/GroupNode';
 import { RecipeEdge } from './edges/RecipeEdge';
-import { getProduct } from '../../data/lookup';
 import type { EdgeControlPoint } from '../../types/edges';
 import { createGraphResolutionContext } from '../../utils/graphResolutionContext';
 import { useFlowStore } from '../../stores/useFlowStore';
@@ -392,10 +391,19 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
         committedResolvedProducts[inRes.handleId] ??
         targetHelpers.resolveProduct('input', inRes.parsed.index);
 
-      const sourceProdObj = getProduct(resolvedSourceProductId);
-      const targetProdObj = getProduct(resolvedTargetProductId);
+      const resolvedSourceHandleType = sourceHelpers.resolveHandleType(
+        'output',
+        outRes.parsed.index,
+      );
+      const resolvedTargetHandleType = targetHelpers.resolveHandleType('input', inRes.parsed.index);
 
-      if (!sourceProdObj || !targetProdObj) return false;
+      if (
+        !resolvedSourceHandleType ||
+        !resolvedTargetHandleType ||
+        resolvedSourceHandleType !== resolvedTargetHandleType
+      ) {
+        return false;
+      }
 
       if (resolvedSourceProductId === resolvedTargetProductId) return true;
 
@@ -404,9 +412,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       const isTargetAny =
         resolvedTargetProductId === 'any_fluid' || resolvedTargetProductId === 'any_item';
 
-      if (isSourceAny || isTargetAny) {
-        return sourceProdObj.type === targetProdObj.type;
-      }
+      if (isSourceAny || isTargetAny) return true;
 
       return false;
     };

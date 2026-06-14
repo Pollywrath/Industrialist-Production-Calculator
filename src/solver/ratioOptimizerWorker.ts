@@ -1,20 +1,314 @@
 import type {
-  LPDeficiencyCauseKind,
-  LPDeficientInputDiagnostic,
-  LPFailureDiagnostics,
-  LPRootCauseDiagnostic,
-  LPSolverConnection,
-  LPSolverNode,
-  LPSolverResponse,
-  LPUpstreamContributionDiagnostic,
-} from './lpTypes';
+  RatioDeficiencyCauseKind,
+  RatioDeficientInputDiagnostic,
+  RatioFailureDiagnostics,
+  RatioOptimizerConnection,
+  RatioOptimizerNode,
+  RatioOptimizerRequest,
+  RatioOptimizerResponse,
+  RatioRootCauseDiagnostic,
+  RatioUpstreamContributionDiagnostic,
+} from './ratioOptimizer';
+
+interface SCIPRuntime {
+  FS: {
+    writeFile: (path: string, data: string) => void;
+    readFile: (path: string, options: { encoding: 'utf8' }) => string;
+    unlink: (path: string) => void;
+  };
+  main: (args: string[]) => void;
+  stdoutLines: string[];
+}
+
+interface RatioMPSModel {
+  mpsString: string;
+  varNameMap: Map<string, string>;
+}
+
+type MPSRowType = 'E' | 'L' | 'G';
+
+interface MPSRow {
+  type: MPSRowType;
+  rhs: number;
+  terms: Map<string, number>;
+}
+
+let runtimePromise: Promise<SCIPRuntime> | null = null;
+let runtimeKey: string | null = null;
+
+function getRuntimeKey(origin: string, version?: string): string {
+  return `${origin}::${version ?? ''}`;
+}
+
+async function getOrCreateRuntime(origin: string, version?: string): Promise<SCIPRuntime> {
+  const nextKey = getRuntimeKey(origin, version);
+  if (runtimePromise && runtimeKey === nextKey) {
+    return runtimePromise;
+  }
+
+  runtimeKey = nextKey;
+  runtimePromise = (async () => {
+    const versionSuffix = version ? `?v=${version}` : '';
+    const scipUrl = `${origin}/scip/scip.js${versionSuffix}`;
+    const scipModule = await import(/* @vite-ignore */ scipUrl);
+    const createSCIP = scipModule.default;
+
+    const stdoutLines: string[] = [];
+    const scip = await createSCIP({
+      locateFile: (file: string) => `${origin}/scip/${file}${versionSuffix}`,
+      print: (text: string) => {
+        stdoutLines.push(text);
+      },
+      printErr: (text: string) => {
+        stdoutLines.push(text);
+      },
+    });
+
+    return {
+      FS: scip.FS,
+      main: scip.callMain,
+      stdoutLines,
+    };
+  })();
+
+  try {
+    return await runtimePromise;
+  } catch (error) {
+    runtimePromise = null;
+    runtimeKey = null;
+    throw error;
+  }
+}
+
+export function buildMPS(nodes: RatioOptimizerNode[], connections: RatioOptimizerConnection[]): RatioMPSModel {
+  const variables: string[] = [];
+  const varSet = new Set<string>();
+  const varNameMap = new Map<string, string>();
+  const objCoeffs = new Map<string, number>();
+  const rowMap = new Map<string, MPSRow>();
+  const rowOrder: string[] = [];
+
+  let varCounter = 0;
+
+  const registerVar = (originalName: string) => {
+    let sanitized = originalName.replace(/[^a-zA-Z0-9_]/g, '_');
+    if (varSet.has(sanitized)) {
+      sanitized = `${sanitized}_c${varCounter++}`;
+    }
+    varSet.add(sanitized);
+    variables.push(sanitized);
+    varNameMap.set(sanitized, originalName);
+    return sanitized;
+  };
+
+  const addObjCoeff = (varName: string, coeff: number) => {
+    if (coeff === 0) return;
+    objCoeffs.set(varName, (objCoeffs.get(varName) || 0) + coeff);
+  };
+
+  const registerRow = (name: string, type: MPSRowType, rhs = 0) => {
+    let sanitized = name.replace(/[^a-zA-Z0-9_]/g, '_');
+    if (rowMap.has(sanitized)) {
+      sanitized = `${sanitized}_r${varCounter++}`;
+    }
+    rowMap.set(sanitized, { type, rhs, terms: new Map() });
+    rowOrder.push(sanitized);
+    return sanitized;
+  };
+
+  const addRowTerm = (rowName: string, varName: string, coeff: number) => {
+    if (coeff === 0) return;
+    const row = rowMap.get(rowName);
+    if (row) {
+      row.terms.set(varName, (row.terms.get(varName) || 0) + coeff);
+    }
+  };
+
+  const nodeMachineVars = new Map<string, string>();
+  for (const node of nodes) {
+    const mVar = registerVar(`m_${node.id}`);
+    nodeMachineVars.set(node.id, mVar);
+
+    const machineWeight = Math.max(
+      1e-6,
+      1e-3 + 1e-8 * (node.power ?? 0) + 1e-5 * (node.pollution ?? 0)
+    );
+    addObjCoeff(mVar, machineWeight);
+  }
+
+  const edgeFlowVars = new Map<string, string>();
+  for (const conn of connections) {
+    const fVar = registerVar(`f_${conn.id}`);
+    edgeFlowVars.set(conn.id, fVar);
+  }
+
+  for (const node of nodes) {
+    const mVar = nodeMachineVars.get(node.id)!;
+    node.outputs.forEach((out, outputIndex) => {
+      const outgoingVarNames: string[] = [];
+      for (const c of connections) {
+        if (c.sourceNodeId === node.id && c.sourceOutputIndex === outputIndex) {
+          const fVar = edgeFlowVars.get(c.id);
+          if (fVar) outgoingVarNames.push(fVar);
+        }
+      }
+
+      if (!node.isTarget && outgoingVarNames.length === 0) return;
+
+      const excessVar = registerVar(`excess_${node.id}_${outputIndex}`);
+      if (out.hasSinkConnection) {
+        addObjCoeff(excessVar, 1e6);
+      }
+
+      const rowName = registerRow(`flow_out_${node.id}_${outputIndex}`, 'E', 0);
+      addRowTerm(rowName, mVar, out.quantity);
+      outgoingVarNames.forEach((fVar) => addRowTerm(rowName, fVar, -1));
+      addRowTerm(rowName, excessVar, -1);
+    });
+  }
+
+  for (const node of nodes) {
+    const mVar = nodeMachineVars.get(node.id)!;
+    node.inputs.forEach((inp, inputIndex) => {
+      const incomingVarNames: string[] = [];
+      for (const c of connections) {
+        if (c.targetNodeId === node.id && c.targetInputIndex === inputIndex) {
+          const fVar = edgeFlowVars.get(c.id);
+          if (fVar) incomingVarNames.push(fVar);
+        }
+      }
+
+      if (incomingVarNames.length === 0) return;
+
+      if (inp.isSink && !node.isTarget) {
+        const rowName = registerRow(`sink_cap_${node.id}_${inputIndex}`, 'L', 0);
+        incomingVarNames.forEach((fVar) => addRowTerm(rowName, fVar, 1));
+        addRowTerm(rowName, mVar, -inp.quantity);
+      } else {
+        const deficitVar = registerVar(`deficit_${node.id}_${inputIndex}`);
+        addObjCoeff(deficitVar, 1e12);
+
+        const rowName = registerRow(`flow_in_${node.id}_${inputIndex}`, 'E', 0);
+        incomingVarNames.forEach((fVar) => addRowTerm(rowName, fVar, 1));
+        addRowTerm(rowName, deficitVar, 1);
+        addRowTerm(rowName, mVar, -inp.quantity);
+      }
+    });
+  }
+
+  const out: string[] = [];
+  out.push('NAME          MODEL\n');
+
+  out.push('ROWS\n');
+  out.push(' N  obj\n');
+  rowOrder.forEach((rowName) => {
+    const row = rowMap.get(rowName)!;
+    out.push(` ${row.type}  ${rowName}\n`);
+  });
+
+  out.push('COLUMNS\n');
+  const colEntries = new Map<string, [string, number][]>();
+  const getColEntries = (v: string) => {
+    let list = colEntries.get(v);
+    if (!list) {
+      list = [];
+      colEntries.set(v, list);
+    }
+    return list;
+  };
+
+  objCoeffs.forEach((coeff, varName) => {
+    if (coeff !== 0) getColEntries(varName).push(['obj', coeff]);
+  });
+
+  rowOrder.forEach((rowName) => {
+    const row = rowMap.get(rowName)!;
+    row.terms.forEach((coeff, varName) => {
+      if (coeff !== 0) getColEntries(varName).push([rowName, coeff]);
+    });
+  });
+
+  variables.forEach((varName) => {
+    const entries = colEntries.get(varName) || [];
+    if (entries.length === 0) {
+      out.push(`    ${varName}  obj  0\n`);
+      return;
+    }
+    entries.forEach(([rowName, coeff]) => {
+      out.push(`    ${varName}  ${rowName}  ${coeff}\n`);
+    });
+  });
+
+  out.push('RHS\n');
+  rowOrder.forEach((rowName) => {
+    const row = rowMap.get(rowName)!;
+    if (row.rhs !== 0) {
+      out.push(`    RHS  ${rowName}  ${row.rhs}\n`);
+    }
+  });
+
+  out.push('BOUNDS\n');
+  for (const node of nodes) {
+    if (node.isTarget && node.currentMachineCount > 0) {
+      const mVar = nodeMachineVars.get(node.id)!;
+      out.push(` LO BND  ${mVar}  ${node.currentMachineCount}\n`);
+    }
+  }
+
+  out.push('ENDATA\n');
+
+  return {
+    mpsString: out.join(''),
+    varNameMap,
+  };
+}
+
+self.onmessage = async (event: MessageEvent<RatioOptimizerRequest>) => {
+  const { origin, nodes, connections, version } = event.data;
+
+  try {
+    const { mpsString, varNameMap } = buildMPS(nodes, connections);
+
+    const { FS, main, stdoutLines } = await getOrCreateRuntime(origin, version);
+    stdoutLines.length = 0;
+
+    try {
+      FS.unlink('sol.txt');
+    } catch {
+      void 0;
+    }
+    FS.writeFile('model.mps', mpsString);
+
+    main(['-c', 'read model.mps', '-c', 'optimize', '-c', 'display solution', '-c', 'quit']);
+
+    const stdoutText = stdoutLines.join('\n');
+    let solutionText = '';
+    try {
+      solutionText = FS.readFile('sol.txt', { encoding: 'utf8' }) as string;
+    } catch {
+      solutionText = stdoutText;
+    }
+
+    const response = parseSCIPSolution(solutionText, varNameMap, connections, nodes);
+    self.postMessage(response);
+
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    const errorStack = err instanceof Error ? err.stack : undefined;
+    console.error('[Ratio Optimizer Worker] Run failed:', errorMsg, errorStack);
+    self.postMessage({
+      feasible: false,
+      error: `Worker execution failed: ${errorMsg}`,
+    });
+  }
+};
 
 export function parseSCIPSolution(
   solutionText: string,
   varNameMap: Map<string, string>,
-  connections: LPSolverConnection[],
-  nodes: LPSolverNode[]
-): LPSolverResponse {
+  connections: RatioOptimizerConnection[],
+  nodes: RatioOptimizerNode[]
+): RatioOptimizerResponse {
   const DEFICIENCY_EPSILON = 1e-6;
 
   if (
@@ -112,20 +406,20 @@ export function parseSCIPSolution(
 
 function buildFailureDiagnostics(
   unresolvedDeficits: Array<{ name: string; value: number }>,
-  connections: LPSolverConnection[],
-  nodes: LPSolverNode[],
+  connections: RatioOptimizerConnection[],
+  nodes: RatioOptimizerNode[],
   rawValues: Record<string, number>,
   machineCounts: Record<string, number>
-): LPFailureDiagnostics {
-  const deficientInputs: LPDeficientInputDiagnostic[] = [];
+): RatioFailureDiagnostics {
+  const deficientInputs: RatioDeficientInputDiagnostic[] = [];
   const deficientNodeIds = new Set<string>();
-  const nodeById = new Map<string, LPSolverNode>();
+  const nodeById = new Map<string, RatioOptimizerNode>();
   for (const node of nodes) {
     nodeById.set(node.id, node);
   }
 
-  const incomingByInput = new Map<string, LPSolverConnection[]>();
-  const outgoingByOutput = new Map<string, LPSolverConnection[]>();
+  const incomingByInput = new Map<string, RatioOptimizerConnection[]>();
+  const outgoingByOutput = new Map<string, RatioOptimizerConnection[]>();
   for (const connection of connections) {
     const inputKey = `${connection.targetNodeId}::${connection.targetInputIndex}`;
     const inputConnections = incomingByInput.get(inputKey);
@@ -280,7 +574,7 @@ function buildFailureDiagnostics(
   ].sort((a, b) => a.localeCompare(b));
 
   const deficientInputsByNode = getDeficientInputsByNode(deficientInputs);
-  const rootCauseContext: LPRootCauseTraceContext = {
+  const rootCauseContext: RatioRootCauseTraceContext = {
     deficientInputsByNode,
     incomingByInput,
     nodeById,
@@ -335,24 +629,24 @@ function buildFailureDiagnostics(
   };
 }
 
-interface LPCycleComponent {
+interface RatioCycleComponent {
   nodeIds: string[];
   nodeIdSet: Set<string>;
   boundaryNodeIds: string[];
 }
 
-interface LPRootCauseTraceContext {
-  deficientInputsByNode: Map<string, LPDeficientInputDiagnostic[]>;
-  incomingByInput: Map<string, LPSolverConnection[]>;
-  nodeById: Map<string, LPSolverNode>;
-  cycleNodeToComponent: Map<string, LPCycleComponent>;
-  rootCauseCache: Map<string, LPRootCauseDiagnostic[]>;
+interface RatioRootCauseTraceContext {
+  deficientInputsByNode: Map<string, RatioDeficientInputDiagnostic[]>;
+  incomingByInput: Map<string, RatioOptimizerConnection[]>;
+  nodeById: Map<string, RatioOptimizerNode>;
+  cycleNodeToComponent: Map<string, RatioCycleComponent>;
+  rootCauseCache: Map<string, RatioRootCauseDiagnostic[]>;
 }
 
 function getDeficientInputsByNode(
-  deficientInputs: LPDeficientInputDiagnostic[]
-): Map<string, LPDeficientInputDiagnostic[]> {
-  const deficientInputsByNode = new Map<string, LPDeficientInputDiagnostic[]>();
+  deficientInputs: RatioDeficientInputDiagnostic[]
+): Map<string, RatioDeficientInputDiagnostic[]> {
+  const deficientInputsByNode = new Map<string, RatioDeficientInputDiagnostic[]>();
   for (const input of deficientInputs) {
     const list = deficientInputsByNode.get(input.nodeId);
     if (list) {
@@ -364,8 +658,8 @@ function getDeficientInputsByNode(
   return deficientInputsByNode;
 }
 
-function getCycleNodeToComponent(cycleComponents: LPCycleComponent[]): Map<string, LPCycleComponent> {
-  const cycleNodeToComponent = new Map<string, LPCycleComponent>();
+function getCycleNodeToComponent(cycleComponents: RatioCycleComponent[]): Map<string, RatioCycleComponent> {
+  const cycleNodeToComponent = new Map<string, RatioCycleComponent>();
   for (const component of cycleComponents) {
     for (const nodeId of component.nodeIds) {
       cycleNodeToComponent.set(nodeId, component);
@@ -375,9 +669,9 @@ function getCycleNodeToComponent(cycleComponents: LPCycleComponent[]): Map<strin
 }
 
 function attachCycleBoundaryNodeIds(
-  cycleComponents: LPCycleComponent[],
-  deficientInputs: LPDeficientInputDiagnostic[],
-  connections: LPSolverConnection[]
+  cycleComponents: RatioCycleComponent[],
+  deficientInputs: RatioDeficientInputDiagnostic[],
+  connections: RatioOptimizerConnection[]
 ): void {
   for (const component of cycleComponents) {
     const boundaryNodeIds = new Set<string>();
@@ -407,10 +701,10 @@ function attachCycleBoundaryNodeIds(
 }
 
 function traceRootCausesFromInput(
-  input: LPDeficientInputDiagnostic,
-  context: LPRootCauseTraceContext,
+  input: RatioDeficientInputDiagnostic,
+  context: RatioRootCauseTraceContext,
   visitedInputKeys: Set<string>
-): LPRootCauseDiagnostic[] {
+): RatioRootCauseDiagnostic[] {
   const inputKey = `${input.nodeId}::${input.inputIndex}::${input.deficiency.toFixed(9)}`;
   const cached = context.rootCauseCache.get(inputKey);
   if (cached) return cached;
@@ -432,7 +726,7 @@ function traceRootCausesFromInput(
   }
 
   visitedInputKeys.add(inputKey);
-  const rootCauses: LPRootCauseDiagnostic[] = [];
+  const rootCauses: RatioRootCauseDiagnostic[] = [];
 
   for (const contribution of input.upstreamContributions) {
     if (!contribution.productMatches || contribution.unitOutputRate <= 1e-8) {
@@ -445,7 +739,7 @@ function traceRootCausesFromInput(
       context,
       input.deficiency
     );
-    const structuralRootCauses: LPRootCauseDiagnostic[] = [];
+    const structuralRootCauses: RatioRootCauseDiagnostic[] = [];
     for (const structuralInput of structuralInputs) {
       structuralRootCauses.push(...traceRootCausesFromInput(
         structuralInput,
@@ -484,13 +778,13 @@ function traceRootCausesFromInput(
 
 function getConnectedRequiredInputsForNode(
   nodeId: string,
-  context: LPRootCauseTraceContext,
+  context: RatioRootCauseTraceContext,
   inheritedDeficiency: number
-): LPDeficientInputDiagnostic[] {
+): RatioDeficientInputDiagnostic[] {
   const node = context.nodeById.get(nodeId);
   if (!node) return [];
 
-  const structuralInputs: LPDeficientInputDiagnostic[] = [];
+  const structuralInputs: RatioDeficientInputDiagnostic[] = [];
   for (let inputIndex = 0; inputIndex < node.inputs.length; inputIndex++) {
     const input = node.inputs[inputIndex];
     if (!input || input.isSink || input.quantity <= 1e-8) continue;
@@ -542,7 +836,7 @@ function getConnectedRequiredInputsForNode(
   return structuralInputs;
 }
 
-function getNodeDeficiency(nodeId: string, context: LPRootCauseTraceContext): number {
+function getNodeDeficiency(nodeId: string, context: RatioRootCauseTraceContext): number {
   const deficientInputs = context.deficientInputsByNode.get(nodeId) ?? [];
   let total = 0;
   for (const input of deficientInputs) {
@@ -552,10 +846,10 @@ function getNodeDeficiency(nodeId: string, context: LPRootCauseTraceContext): nu
 }
 
 function getSummaryRootCauses(
-  deficientInputs: LPDeficientInputDiagnostic[],
-  cycleComponents: LPCycleComponent[],
-  context: LPRootCauseTraceContext
-): LPRootCauseDiagnostic[] {
+  deficientInputs: RatioDeficientInputDiagnostic[],
+  cycleComponents: RatioCycleComponent[],
+  context: RatioRootCauseTraceContext
+): RatioRootCauseDiagnostic[] {
   const summaryInputs = deficientInputs.filter(
     (input) => !input.upstreamContributions.some((contribution) => contribution.directDeficiency > 1e-6)
   );
@@ -575,7 +869,7 @@ function getSummaryRootCauses(
     summaryInputs.push(deficientInputs[0]);
   }
 
-  const rootCauses: LPRootCauseDiagnostic[] = [];
+  const rootCauses: RatioRootCauseDiagnostic[] = [];
   for (const input of summaryInputs) {
     rootCauses.push(...traceRootCausesFromInput(input, context, new Set()));
   }
@@ -584,9 +878,9 @@ function getSummaryRootCauses(
 }
 
 function createContributionRootCause(
-  input: LPDeficientInputDiagnostic,
-  contribution: LPUpstreamContributionDiagnostic
-): LPRootCauseDiagnostic {
+  input: RatioDeficientInputDiagnostic,
+  contribution: RatioUpstreamContributionDiagnostic
+): RatioRootCauseDiagnostic {
   return {
     nodeId: contribution.nodeId,
     outputIndex: contribution.outputIndex,
@@ -605,9 +899,9 @@ function createContributionRootCause(
 }
 
 function createCycleRootCause(
-  input: LPDeficientInputDiagnostic,
-  component: LPCycleComponent
-): LPRootCauseDiagnostic {
+  input: RatioDeficientInputDiagnostic,
+  component: RatioCycleComponent
+): RatioRootCauseDiagnostic {
   return {
     nodeId: component.boundaryNodeIds[0] ?? input.nodeId,
     outputIndex: null,
@@ -626,9 +920,9 @@ function createCycleRootCause(
 }
 
 function createUnresolvedRootCause(
-  input: LPDeficientInputDiagnostic,
-  kind: LPDeficiencyCauseKind
-): LPRootCauseDiagnostic {
+  input: RatioDeficientInputDiagnostic,
+  kind: RatioDeficiencyCauseKind
+): RatioRootCauseDiagnostic {
   return {
     nodeId: input.nodeId,
     outputIndex: null,
@@ -647,8 +941,8 @@ function createUnresolvedRootCause(
 }
 
 function getContributionRootCauseKind(
-  contribution: LPUpstreamContributionDiagnostic
-): LPDeficiencyCauseKind {
+  contribution: RatioUpstreamContributionDiagnostic
+): RatioDeficiencyCauseKind {
   if (!contribution.productMatches) {
     return 'product_mismatch';
   }
@@ -660,8 +954,8 @@ function getContributionRootCauseKind(
   return 'upstream_output_limited';
 }
 
-function summarizeRootCauseKind(rootCauses: LPRootCauseDiagnostic[]): LPDeficiencyCauseKind {
-  const priority: LPDeficiencyCauseKind[] = [
+function summarizeRootCauseKind(rootCauses: RatioRootCauseDiagnostic[]): RatioDeficiencyCauseKind {
+  const priority: RatioDeficiencyCauseKind[] = [
     'feedback_loop',
     'product_mismatch',
     'upstream_not_producing',
@@ -679,13 +973,13 @@ function summarizeRootCauseKind(rootCauses: LPRootCauseDiagnostic[]): LPDeficien
   return 'unknown';
 }
 
-function getRootCauseNodeIds(rootCauses: LPRootCauseDiagnostic[]): string[] {
+function getRootCauseNodeIds(rootCauses: RatioRootCauseDiagnostic[]): string[] {
   return [...new Set(rootCauses.map((cause) => cause.nodeId))]
     .sort((a, b) => a.localeCompare(b));
 }
 
-function mergeRootCauses(rootCauses: LPRootCauseDiagnostic[]): LPRootCauseDiagnostic[] {
-  const mergedByKey = new Map<string, LPRootCauseDiagnostic>();
+function mergeRootCauses(rootCauses: RatioRootCauseDiagnostic[]): RatioRootCauseDiagnostic[] {
+  const mergedByKey = new Map<string, RatioRootCauseDiagnostic>();
 
   for (const cause of rootCauses) {
     const key = [
@@ -718,8 +1012,8 @@ function mergeRootCauses(rootCauses: LPRootCauseDiagnostic[]): LPRootCauseDiagno
 }
 
 function selectRootCausesForDisplay(
-  rootCauses: LPRootCauseDiagnostic[]
-): LPRootCauseDiagnostic[] {
+  rootCauses: RatioRootCauseDiagnostic[]
+): RatioRootCauseDiagnostic[] {
   const zeroOutputCauses = rootCauses.filter((cause) => cause.kind === 'upstream_not_producing');
   if (zeroOutputCauses.length > 0) return zeroOutputCauses;
 
@@ -729,7 +1023,7 @@ function selectRootCausesForDisplay(
   return rootCauses;
 }
 
-function getRootCausePriority(kind: LPDeficiencyCauseKind): number {
+function getRootCausePriority(kind: RatioDeficiencyCauseKind): number {
   switch (kind) {
     case 'upstream_not_producing':
       return 0;
@@ -755,9 +1049,9 @@ function getRawFlowValue(rawValues: Record<string, number>, edgeId: string): num
 
 function classifyDeficiencyCause(
   nodeId: string,
-  upstreamContributions: LPUpstreamContributionDiagnostic[],
+  upstreamContributions: RatioUpstreamContributionDiagnostic[],
   cycleNodeIds: Set<string>
-): LPDeficiencyCauseKind {
+): RatioDeficiencyCauseKind {
   if (
     cycleNodeIds.has(nodeId) ||
     upstreamContributions.some((contribution) => cycleNodeIds.has(contribution.nodeId))
@@ -786,7 +1080,7 @@ function classifyDeficiencyCause(
 
 function getCauseNodeIds(
   nodeId: string,
-  upstreamContributions: LPUpstreamContributionDiagnostic[],
+  upstreamContributions: RatioUpstreamContributionDiagnostic[],
   deficientNodeIds: Set<string>
 ): string[] {
   if (upstreamContributions.length === 0) {
@@ -810,7 +1104,7 @@ function getCauseNodeIds(
 }
 
 function getLikelyRootNodeIds(
-  deficientInputs: LPDeficientInputDiagnostic[],
+  deficientInputs: RatioDeficientInputDiagnostic[],
   deficientNodeIds: Set<string>,
   deficiencyByNode: Map<string, number>,
   deficientUpstream: Map<string, Set<string>>
@@ -853,12 +1147,12 @@ function parseDeficitVarName(name: string): { nodeId: string; inputIndex: number
   return { nodeId, inputIndex };
 }
 
-function findCycleComponents(graph: Map<string, Set<string>>): LPCycleComponent[] {
+function findCycleComponents(graph: Map<string, Set<string>>): RatioCycleComponent[] {
   const indexMap = new Map<string, number>();
   const lowLinkMap = new Map<string, number>();
   const stack: string[] = [];
   const onStack = new Set<string>();
-  const cycleComponents: LPCycleComponent[] = [];
+  const cycleComponents: RatioCycleComponent[] = [];
   let index = 0;
 
   const strongConnect = (nodeId: string): void => {

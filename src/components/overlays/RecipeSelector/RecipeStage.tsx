@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
+import type { HandleDataType } from '../../../types/data';
 import { getProductName, getMachineName, getAllRecipes, getMachine, isMachineUnlocked } from '../../../data/lookup';
 import { VirtualList } from '../../shared/VirtualList';
 import { RecipeCard } from './RecipeCard';
@@ -13,6 +14,7 @@ interface RecipeStageProps {
   clickedRateInfo: { clickedPerSecondRate: number } | null;
   preselectedSourceSide: 'input' | 'output' | null;
   preselectedProductId: string | null;
+  preselectedHandleType: HandleDataType | '' | null;
   onAddRecipe: (recipeId: string) => void;
 }
 
@@ -20,6 +22,7 @@ export function RecipeStage({
   clickedRateInfo,
   preselectedSourceSide,
   preselectedProductId,
+  preselectedHandleType,
   onAddRecipe,
 }: RecipeStageProps) {
   const dbVersion = useDataStore((s) => s.dbVersion);
@@ -70,7 +73,12 @@ export function RecipeStage({
     setFilterHeatPower,
     handleBack,
     matchingRecipes,
-  } = useRecipeSelectorFilters({ recipes: unlockedRecipes });
+  } = useRecipeSelectorFilters({
+    recipes: unlockedRecipes,
+    preselectedProductId,
+    preselectedSourceSide,
+    preselectedHandleType,
+  });
 
   const effectivePreselectedProductId = activeTab === 'product' ? selectedId : preselectedProductId;
 
@@ -212,6 +220,7 @@ export function RecipeStage({
                 clickedRateInfo={clickedRateInfo}
                 preselectedSourceSide={preselectedSourceSide}
                 preselectedProductId={effectivePreselectedProductId}
+                preselectedHandleType={preselectedHandleType}
                 onAddRecipe={onAddRecipe}
                 isFavorite={favorites.has(recipe.id)}
                 onToggleFavorite={handleToggleFavorite}

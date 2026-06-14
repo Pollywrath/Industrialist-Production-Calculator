@@ -1,5 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
+import { clamp } from '../../utils/precision';
 
 export const air_separation_unit: SpecialRecipe = {
   id: 'r_air_separation_unit_01',
@@ -8,7 +9,7 @@ export const air_separation_unit: SpecialRecipe = {
   settings: {},
   compute: (_settings, globalSettings) => {
     const pollution = (globalSettings?.global_pollution as number) ?? 10;
-    const residueQuantity = Math.min(20, Math.max(1, pollution / 10));
+    const residueQuantity = clamp(pollution / 10, 1, 20);
 
     const recipe: Recipe = {
       id: 'r_air_separation_unit_01',

@@ -1,5 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
+import { roundTo } from '../../utils/precision';
 
 export interface CoolantProperties {
   heatCapacity: number;
@@ -103,8 +104,6 @@ export function computeSelfHeatingSteadyState(waterSourceTemp: number) {
   };
 }
 
-const round = (v: number, d = 2) => Math.round(v * 10 ** d) / 10 ** d;
-
 export const boiler_standard: SpecialRecipe = {
   id: 'r_boiler_01',
   name: 'Standard',
@@ -174,22 +173,23 @@ export const boiler_standard: SpecialRecipe = {
         pollution: 0,
         inputs: [
           { product_id: 'p_water', quantity: 3 },
-          { product_id: resolvedCoolant, quantity: 3 },
+          { product_id: resolvedCoolant, quantity: 3, product_link_id: 'coolant' },
         ],
         outputs: [
           {
             product_id: resolvedCoolant,
             quantity: 3,
-            temperature: Math.max(18, round(coolantOutTemp - heatLoss)),
+            temperature: Math.max(18, roundTo(coolantOutTemp - heatLoss, 2)),
+            product_link_id: 'coolant',
           },
           {
             product_id: 'p_steam',
             quantity: steamQty,
-            temperature: Math.max(18, round(steamOutTemp - heatLoss)),
+            temperature: Math.max(18, roundTo(steamOutTemp - heatLoss, 2)),
           },
         ],
         runtime: {
-          boilerTemp: round(boilerTemp),
+          boilerTemp: roundTo(boilerTemp, 2),
         },
       };
 
@@ -214,11 +214,11 @@ export const boiler_standard: SpecialRecipe = {
           {
             product_id: 'p_steam',
             quantity: steamQty,
-            temperature: Math.max(18, round(steamOutTemp - heatLoss)),
+            temperature: Math.max(18, roundTo(steamOutTemp - heatLoss, 2)),
           },
         ],
         runtime: {
-          boilerTemp: round(boilerTemp),
+          boilerTemp: roundTo(boilerTemp, 2),
         },
       };
 

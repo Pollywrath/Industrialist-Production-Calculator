@@ -19,6 +19,7 @@ export interface Machine {
 }
 
 export type ProductType = 'Item' | 'Fluid';
+export type HandleDataType = 'item' | 'fluid';
 
 export interface Product {
   id: string;
@@ -35,6 +36,8 @@ export type PowerType = 'MV' | 'HV';
 export interface RecipeInput {
   product_id: string;
   quantity: number;
+  handle_type?: HandleDataType;
+  product_link_id?: string;
   variable?: boolean;
 }
 
@@ -42,6 +45,8 @@ export interface RecipeOutput {
   product_id: string;
   quantity: number;
   temperature: number;
+  handle_type?: HandleDataType;
+  product_link_id?: string;
   voidable?: boolean;
   variable?: boolean;
 }

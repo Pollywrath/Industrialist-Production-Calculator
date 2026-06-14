@@ -1,4 +1,4 @@
-import type { Recipe } from './data';
+import type { ProductType, Recipe } from './data';
 
 export type SettingType = 'number' | 'select' | 'product';
 
@@ -20,11 +20,16 @@ export interface SelectSettingDefinition extends BaseSettingDefinition {
   type: 'select';
   default: unknown;
   options: { label: string; value: unknown }[];
+  getOptions?: (
+    settings: Record<string, unknown>,
+    globalSettings?: Record<string, unknown>,
+  ) => { label: string; value: unknown }[];
 }
 
 export interface ProductSettingDefinition extends BaseSettingDefinition {
   type: 'product';
   default: string;
+  productType?: ProductType;
 }
 
 export type SettingDefinition =
@@ -42,6 +47,8 @@ export interface SpecialRecipe {
   inputTemperatureSettings?: Record<number, string>;
   potentialInputs?: string[];
   potentialOutputs?: string[];
+  potentialInputProductTypes?: ProductType[];
+  potentialOutputProductTypes?: ProductType[];
   flowDependentInputs?: boolean;
   pollutionIndependentOfMachineCount?: boolean;
   resolveSettings?: (productId: string) => Record<string, unknown> | null;

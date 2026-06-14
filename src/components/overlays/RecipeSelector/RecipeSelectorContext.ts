@@ -1,8 +1,12 @@
 import { createContext, useContext } from 'react';
 import { useStore } from 'zustand';
 import type { StoreApi } from 'zustand';
-import type { Recipe } from '../../../types/data';
-import { getProduct } from '../../../data/lookup';
+import type { HandleDataType, Recipe } from '../../../types/data';
+import {
+  isEntryHandleTypeMatch,
+  isPotentialHandleTypeMatch,
+  isProductEntryMatch,
+} from './productMatch';
 
 export interface RecipeSelectorState {
   stage: 'select' | 'recipes';
@@ -57,9 +61,17 @@ import { useShallow } from 'zustand/react/shallow';
 
 export interface UseRecipeSelectorFiltersParams {
   recipes: Recipe[];
+  preselectedProductId?: string | null;
+  preselectedSourceSide?: 'input' | 'output' | null;
+  preselectedHandleType?: HandleDataType | '' | null;
 }
 
-export function useRecipeSelectorFilters({ recipes }: UseRecipeSelectorFiltersParams) {
+export function useRecipeSelectorFilters({
+  recipes,
+  preselectedProductId = null,
+  preselectedSourceSide = null,
+  preselectedHandleType = null,
+}: UseRecipeSelectorFiltersParams) {
   const s = useRecipeSelectorStore(
     useShallow((state) => ({
       selectedId: state.selectedId,
@@ -81,30 +93,33 @@ export function useRecipeSelectorFilters({ recipes }: UseRecipeSelectorFiltersPa
   if (s.selectedId && s.stage === 'recipes') {
     if (s.activeTab === 'product') {
       const selectedProductId = s.selectedId;
-      const selectedProductType = getProduct(selectedProductId)?.type;
 
       matchingRecipes = recipes.filter((r) => {
         const isSellTrash = !!r.isSellTrash;
-        const isProductMatch = (productId: string): boolean => {
-          if (productId === selectedProductId) return true;
-          if (selectedProductType === 'Fluid' && productId === 'any_fluid') return true;
-          if (selectedProductType === 'Item' && productId === 'any_item') return true;
-          return false;
-        };
+        const isInputMatch = (entry: Recipe['inputs'][number]): boolean =>
+          isProductEntryMatch(entry, selectedProductId, preselectedHandleType);
+        const isOutputMatch = (entry: Recipe['outputs'][number]): boolean =>
+          isProductEntryMatch(entry, selectedProductId, preselectedHandleType);
+        const potentialProductCanUseHandle = isPotentialHandleTypeMatch(
+          selectedProductId,
+          preselectedHandleType,
+        );
 
-        const hasSelectedOutput = r.outputs.some((out) => isProductMatch(out.product_id));
-        const hasSelectedInput = r.inputs.some((inp) => isProductMatch(inp.product_id));
-        const hasSelectedPotentialOutput = !!r.potential_outputs?.includes(selectedProductId);
-        const hasSelectedPotentialInput = !!r.potential_inputs?.includes(selectedProductId);
+        const hasSelectedOutput = r.outputs.some(isOutputMatch);
+        const hasSelectedInput = r.inputs.some(isInputMatch);
+        const hasSelectedPotentialOutput =
+          potentialProductCanUseHandle && !!r.potential_outputs?.includes(selectedProductId);
+        const hasSelectedPotentialInput =
+          potentialProductCanUseHandle && !!r.potential_inputs?.includes(selectedProductId);
         const producesProduct = hasSelectedOutput || hasSelectedPotentialOutput;
         const consumesProduct = hasSelectedInput || hasSelectedPotentialInput;
 
         const consumesViaVariableInput = r.inputs.some(
-          (inp) => isProductMatch(inp.product_id) && !!inp.variable,
+          (inp) => isInputMatch(inp) && !!inp.variable,
         );
         const consumesViaExplicitNonVariableInput = r.inputs.some(
           (inp) =>
-            isProductMatch(inp.product_id) &&
+            isInputMatch(inp) &&
             !inp.variable &&
             inp.product_id !== 'any_item' &&
             inp.product_id !== 'any_fluid',
@@ -112,8 +127,16 @@ export function useRecipeSelectorFilters({ recipes }: UseRecipeSelectorFiltersPa
 
         const isPowerGenerator = (r.power_consumption ?? 0) < 0;
         const producesHeat = r.outputs.some((out) => (out.temperature ?? 0) > 21);
-        const hasSelectedExplicitInput = r.inputs.some((inp) => inp.product_id === selectedProductId);
-        const hasSelectedExplicitOutput = r.outputs.some((out) => out.product_id === selectedProductId);
+        const hasSelectedExplicitInput = r.inputs.some(
+          (inp) =>
+            inp.product_id === selectedProductId &&
+            isEntryHandleTypeMatch(inp, preselectedHandleType),
+        );
+        const hasSelectedExplicitOutput = r.outputs.some(
+          (out) =>
+            out.product_id === selectedProductId &&
+            isEntryHandleTypeMatch(out, preselectedHandleType),
+        );
         const isHeatLoopForSelected = hasSelectedExplicitInput && hasSelectedExplicitOutput && producesHeat;
         const isHeatPower = (isPowerGenerator || isHeatLoopForSelected) && (producesProduct || consumesProduct);
 
@@ -138,6 +161,15 @@ export function useRecipeSelectorFilters({ recipes }: UseRecipeSelectorFiltersPa
       });
     } else {
       matchingRecipes = recipes.filter((r) => r.machine_id === s.selectedId);
+      if (preselectedProductId && preselectedSourceSide) {
+        matchingRecipes = matchingRecipes.filter((r) => {
+          const targetList =
+            preselectedSourceSide === 'input' ? r.outputs : r.inputs;
+          return targetList.some((entry) =>
+            isProductEntryMatch(entry, preselectedProductId, preselectedHandleType),
+          );
+        });
+      }
     }
   }
 

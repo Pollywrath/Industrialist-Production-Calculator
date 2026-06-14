@@ -17,8 +17,13 @@ import type {
   RecipeNodeType,
 } from '../types/nodes';
 import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/idGenerator';
-import { getRecipe } from '../data/lookup';
+import { getProductName, getRecipe } from '../data/lookup';
 import { clearFlowCache } from '../solver/flowSolver';
+import {
+  buildEdgeLookupMap,
+  resolveHandleProduct,
+  resolveHandleType,
+} from '../utils/productResolver';
 import {
   RECT_HEIGHT,
   RECT_GAP,
@@ -179,6 +184,99 @@ const stripRouteData = (data: Edge['data']): Record<string, unknown> => {
   delete nextData.orthogonalTurns;
   delete nextData.controlPoints;
   return nextData;
+};
+
+const PLACEHOLDER_PRODUCT_IDS = new Set(['any_fluid', 'any_item']);
+
+const filterCompatibleRecipeEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[] => {
+  const recipeNodes = nodes.filter(isRecipeNode);
+  const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
+  const nodesMap = new Map(recipeNodes.map((node) => [node.id, node]));
+  const recipeEdges = edges.filter(
+    (edge) =>
+      !edge.id.startsWith('proxy-') &&
+      recipeNodeIds.has(edge.source) &&
+      recipeNodeIds.has(edge.target),
+  );
+  if (recipeEdges.length === 0) return edges;
+
+  const edgeLookup = buildEdgeLookupMap(recipeEdges);
+  const productCache = new Map<string, string>();
+  const removedEdgeIds = new Set<string>();
+
+  for (let i = 0; i < recipeEdges.length; i++) {
+    const edge = recipeEdges[i];
+    if (!edge.sourceHandle || !edge.targetHandle) {
+      removedEdgeIds.add(edge.id);
+      removedEdgeIds.add(`proxy-${edge.id}`);
+      continue;
+    }
+
+    const sourceParsed = parseHandleId(edge.sourceHandle);
+    const targetParsed = parseHandleId(edge.targetHandle);
+    if (
+      !sourceParsed ||
+      !targetParsed ||
+      sourceParsed.side !== 'output' ||
+      targetParsed.side !== 'input'
+    ) {
+      removedEdgeIds.add(edge.id);
+      removedEdgeIds.add(`proxy-${edge.id}`);
+      continue;
+    }
+
+    const sourceProductId = resolveHandleProduct(
+      edge.source,
+      'output',
+      sourceParsed.index,
+      nodesMap,
+      edgeLookup,
+      new Set(),
+      productCache,
+    );
+    const targetProductId = resolveHandleProduct(
+      edge.target,
+      'input',
+      targetParsed.index,
+      nodesMap,
+      edgeLookup,
+      new Set(),
+      productCache,
+    );
+    const sourceHandleType = resolveHandleType(
+      edge.source,
+      'output',
+      sourceParsed.index,
+      nodesMap,
+      edgeLookup,
+      productCache,
+    );
+    const targetHandleType = resolveHandleType(
+      edge.target,
+      'input',
+      targetParsed.index,
+      nodesMap,
+      edgeLookup,
+      productCache,
+    );
+
+    const isTypeCompatible =
+      !!sourceHandleType && !!targetHandleType && sourceHandleType === targetHandleType;
+    const isProductCompatible =
+      !!sourceProductId &&
+      !!targetProductId &&
+      (sourceProductId === targetProductId ||
+        PLACEHOLDER_PRODUCT_IDS.has(sourceProductId) ||
+        PLACEHOLDER_PRODUCT_IDS.has(targetProductId));
+
+    if (!isTypeCompatible || !isProductCompatible) {
+      removedEdgeIds.add(edge.id);
+      removedEdgeIds.add(`proxy-${edge.id}`);
+    }
+  }
+
+  if (removedEdgeIds.size === 0) return edges;
+  return edges.filter((edge) => !removedEdgeIds.has(edge.id));
 };
 
 const syncProxyEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[] => {
@@ -647,6 +745,55 @@ const addUniqueHandleId = (handleIds: string[], handleId: string | null | undefi
   handleIds.push(handleId);
 };
 
+const buildGroupLabelFromExternalOutputs = (
+  selectedIds: ReadonlySet<string>,
+  nodes: readonly CanvasNode[],
+  edges: readonly Edge[],
+): string => {
+  const recipeNodes = nodes.filter(isRecipeNode);
+  const recipeNodeMap = new Map(recipeNodes.map((node) => [node.id, node]));
+  const recipeEdges = edges.filter(
+    (edge) =>
+      !edge.id.startsWith('proxy-') &&
+      recipeNodeMap.has(edge.source) &&
+      recipeNodeMap.has(edge.target),
+  );
+  if (recipeEdges.length === 0) return 'Group';
+
+  const edgeLookup = buildEdgeLookupMap(recipeEdges);
+  const productCache = new Map<string, string>();
+  const productIds: string[] = [];
+  const seenProductIds = new Set<string>();
+
+  for (let i = 0; i < recipeEdges.length; i++) {
+    const edge = recipeEdges[i];
+    if (!selectedIds.has(edge.source) || selectedIds.has(edge.target)) continue;
+    if (!edge.sourceHandle) continue;
+
+    const sourceParsed = parseHandleId(edge.sourceHandle);
+    if (!sourceParsed || sourceParsed.side !== 'output') continue;
+
+    const productId = resolveHandleProduct(
+      edge.source,
+      'output',
+      sourceParsed.index,
+      recipeNodeMap,
+      edgeLookup,
+      new Set(),
+      productCache,
+    );
+    if (!productId || PLACEHOLDER_PRODUCT_IDS.has(productId) || seenProductIds.has(productId)) {
+      continue;
+    }
+
+    seenProductIds.add(productId);
+    productIds.push(productId);
+  }
+
+  if (productIds.length === 0) return 'Group';
+  return productIds.map((productId) => getProductName(productId)).join(', ');
+};
+
 const useFlowStore = create(
   subscribeWithSelector<FlowState>((set, get) => {
     let isApplyingHistory = false;
@@ -1046,6 +1193,12 @@ const useFlowStore = create(
         const bounds = computeBoundsFromMembers(selectedMemberBounds);
         if (!bounds) return;
 
+        const groupLabel = buildGroupLabelFromExternalOutputs(
+          selectedIds,
+          state.nodes,
+          state.edges,
+        );
+
         const groupNode: GroupNodeType = {
           id: groupId,
           type: 'group',
@@ -1058,7 +1211,7 @@ const useFlowStore = create(
           height: bounds.height,
           zIndex: 0,
           data: {
-            label: 'Group',
+            label: groupLabel,
             collapsed: false,
             handlesReady: false,
             inputProxyHandleIds,
@@ -1280,7 +1433,7 @@ const useFlowStore = create(
           hidden: isCollapsedGroupConnection ? true : undefined,
         } as Edge;
 
-        const nextEdges = [...currentEdges, realEdge];
+        let nextEdges = [...currentEdges, realEdge];
 
         if (isCollapsedGroupConnection) {
           const proxyEdge = {
@@ -1292,6 +1445,11 @@ const useFlowStore = create(
             targetHandle: targetHandle,
           } as Edge;
           nextEdges.push(proxyEdge);
+        }
+
+        nextEdges = filterCompatibleRecipeEdges(state.nodes, nextEdges);
+        if (!nextEdges.some((edge) => edge.id === edgeId)) {
+          return;
         }
 
         set({
@@ -1870,7 +2028,7 @@ const useFlowStore = create(
           }
         }
 
-        const nextEdges =
+        const prunedEdges =
           removedEdgeIds.size === 0
             ? oldEdges
             : oldEdges.filter((edge) => !removedEdgeIds.has(edge.id));
@@ -1900,8 +2058,9 @@ const useFlowStore = create(
         if (updatedNode.data.groupId) affectedGroupIds.add(updatedNode.data.groupId);
         const finalNodes = applyGroupBoundsForGroups(nextNodes, affectedGroupIds);
         const nextNodesMap = createNodesMap(finalNodes);
+        const nextEdges = filterCompatibleRecipeEdges(finalNodes, prunedEdges);
 
-        const edgesChanged = nextEdges.length !== oldEdges.length;
+        const edgesChanged = nextEdges !== oldEdges;
         set({
           nodes: finalNodes,
           nodesMap: nextNodesMap,

@@ -3,11 +3,11 @@ import { createPortal } from 'react-dom';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import {
-  solveLP,
-  cancelLPSolver,
-  type LPSolverSession,
-  type LPFailureDiagnostics,
-} from '../../../solver/lpSolverService';
+  solveRatios,
+  cancelRatioOptimizer,
+  type RatioOptimizerSession,
+  type RatioFailureDiagnostics,
+} from '../../../solver/ratioOptimizer';
 import { getProductName, resolveActiveRecipe } from '../../../data/lookup';
 import { INDUS_LOGO_SRC } from '../../../data/productIcons';
 import { getSpecialRecipe } from '../../../data/registry';
@@ -38,7 +38,7 @@ export function LPSolverOverlay() {
   const [elapsedMs, setElapsedMs] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
-  const [failureDiagnostics, setFailureDiagnostics] = useState<LPFailureDiagnostics | null>(null);
+  const [failureDiagnostics, setFailureDiagnostics] = useState<RatioFailureDiagnostics | null>(null);
   const [changes, setChanges] = useState<NodeChange[]>([]);
   const [proposedMachineCounts, setProposedMachineCounts] = useState<Record<string, number>>({});
 
@@ -47,7 +47,7 @@ export function LPSolverOverlay() {
   const [currentPollutionTotal, setCurrentPollutionTotal] = useState(0);
   const [proposedPollutionTotal, setProposedPollutionTotal] = useState(0);
 
-  const sessionRef = useRef<LPSolverSession | null>(null);
+  const sessionRef = useRef<RatioOptimizerSession | null>(null);
   const startTimeRef = useRef(0);
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export function LPSolverOverlay() {
     const recipeEdges = edges.filter(
       (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
     );
-    const session = solveLP(nodes, recipeEdges);
+    const session = solveRatios(nodes, recipeEdges);
     sessionRef.current = session;
 
     session.promise
@@ -135,7 +135,7 @@ export function LPSolverOverlay() {
       .catch((err: unknown) => {
         if (isDisposed) return;
         setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
-        console.error('[LP Solver Overlay] Execution rejected:', err);
+        console.error('[Ratio Optimizer Overlay] Execution rejected:', err);
         setErrorMsg(err instanceof Error ? err.message : String(err));
         setFailureDiagnostics(null);
         setSolverState('failed');
@@ -153,7 +153,7 @@ export function LPSolverOverlay() {
       clearInterval(timerInterval);
       clearInterval(tipsInterval);
       if (sessionRef.current) {
-        cancelLPSolver();
+        cancelRatioOptimizer();
         sessionRef.current = null;
       }
     };
@@ -163,7 +163,7 @@ export function LPSolverOverlay() {
 
   const handleCancel = () => {
     if (sessionRef.current) {
-      cancelLPSolver();
+      cancelRatioOptimizer();
       sessionRef.current = null;
     }
     resetViewState();
@@ -213,7 +213,7 @@ export function LPSolverOverlay() {
     return label;
   };
 
-  const formatDeficiencyHeadline = (diagnostics: LPFailureDiagnostics): string => {
+  const formatDeficiencyHeadline = (diagnostics: RatioFailureDiagnostics): string => {
     const count = diagnostics.deficientInputs.length;
     const total = diagnostics.deficientInputs.reduce((sum, input) => sum + input.deficiency, 0);
     return `${count} connected ${count === 1 ? 'input is' : 'inputs are'} still missing ${total.toFixed(4)} units/sec.`;
@@ -224,7 +224,7 @@ export function LPSolverOverlay() {
   };
 
   const formatCauseLabel = (
-    causeKind: LPFailureDiagnostics['rootCauses'][number]['kind']
+    causeKind: RatioFailureDiagnostics['rootCauses'][number]['kind']
   ): string => {
     switch (causeKind) {
       case 'feedback_loop':
@@ -244,7 +244,7 @@ export function LPSolverOverlay() {
   };
 
   const formatRootCauseRate = (
-    cause: LPFailureDiagnostics['rootCauses'][number]
+    cause: RatioFailureDiagnostics['rootCauses'][number]
   ): string => {
     if (cause.kind === 'feedback_loop') {
       return `Loop shortage: ${formatRate(cause.deficiency)}`;

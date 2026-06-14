@@ -1,5 +1,7 @@
 // ─── 1. SETTINGS / VARIABLES ─────────────────────────────────────────
 // TODO: Skipped for now. Update to new special recipe format later.
+import { clamp } from '../../utils/precision';
+
 const DISTILLED_WATER_INPUT = 400;
 const COAL_INPUT = 160;
 const DISTILLED_WATER_OUTPUT = 400;
@@ -8,8 +10,6 @@ const EXHAUST_OUTPUT = 12000;
 const POWER_CONSUMPTION = 100000;
 
 // ─── 2. COMPUTATIONS ─────────────────────────────────────────────────
-const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
-
 const dwIn = clamp(DISTILLED_WATER_INPUT, 0.0001, 400);
 const coalIn = clamp(COAL_INPUT, 0.0001, 160);
 const dwOut = clamp(DISTILLED_WATER_OUTPUT, 0.0001, 400);
