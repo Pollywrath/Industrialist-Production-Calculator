@@ -567,7 +567,7 @@ export const coal_power_plant_01: SpecialRecipe = {
   name: 'Coal Power Plant',
   machine_id: 'm_coal_power_plant',
   description:
-    'CPP-only steady state. Central valve and pressurization are fixed at 100%, recirculation is fixed at 0%, and the external HX/turbine/condenser loop is ignored.',
+    'CPP-only steady state. Central valve and pressurization are fixed at 100%, recirculation is fixed at 0%..',
   potentialInputs: ['p_coal', 'p_distilled_water'],
   potentialOutputs: ['p_distilled_water', 'p_exhaust'],
   inputTemperatureSettings: {
