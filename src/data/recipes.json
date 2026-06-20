@@ -4460,7 +4460,7 @@
     "id": "r_advanced_oxidation_plant_02",
     "name": "Makes Yellowcake",
     "machine_id": "m_advanced_oxidation_plant",
-    "cycle_time": 40,
+    "cycle_time": 20,
     "power_consumption": 1000000,
     "power_type": "HV",
     "pollution": 0,
@@ -8905,36 +8905,6 @@
       {
         "product_id": "p_residue",
         "quantity": 4,
-        "temperature": 18
-      }
-    ]
-  },
-  {
-    "id": "r_polisher_01",
-    "name": "Makes Distilled Water",
-    "machine_id": "m_polisher",
-    "cycle_time": 1,
-    "power_consumption": 500000,
-    "power_type": "MV",
-    "pollution": 0,
-    "inputs": [
-      {
-        "product_id": "p_condensate",
-        "quantity": 400
-      },
-      {
-        "product_id": "p_hydrochloric_acid",
-        "quantity": 1
-      },
-      {
-        "product_id": "p_sodium_hydroxide_solution",
-        "quantity": 1
-      }
-    ],
-    "outputs": [
-      {
-        "product_id": "p_distilled_water",
-        "quantity": 400,
         "temperature": 18
       }
     ]

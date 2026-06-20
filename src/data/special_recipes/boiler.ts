@@ -61,7 +61,7 @@ export function computeStandardSteadyState(
     }
     coolantOutTemp = Math.max(AmbientTemp, usedTemp);
   } else {
-    boilerTemp = coolantSourceTemp;
+    boilerTemp = Math.max(AmbientTemp, Tb1);
     let usedTemp: number;
     if (waterSourceTemp < coolantSourceTemp) {
       usedTemp = coolantSourceTemp - 0.1 * coolantSourceTemp;
@@ -93,7 +93,7 @@ export function computeSelfHeatingSteadyState(waterSourceTemp: number) {
     steamOutTemp = Tb1;
     isBoiling = true;
   } else {
-    boilerTemp = AmbientTemp;
+    boilerTemp = Math.max(AmbientTemp, Tb1);
   }
 
   return {
@@ -123,11 +123,13 @@ export const boiler_standard: SpecialRecipe = {
       type: 'number',
       label: 'Water Temperature (°C)',
       default: 18,
+      min: -273.15,
     },
     coolant_temp: {
       type: 'number',
       label: 'Coolant Temperature (°C)',
       default: 240,
+      min: -273.15,
     },
     heat_loss: {
       type: 'number',

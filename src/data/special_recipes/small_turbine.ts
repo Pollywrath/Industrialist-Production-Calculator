@@ -34,7 +34,7 @@ const getInterpolated = (temp: number) => {
 const settingDefinitions = {
   steam_temp: {
     type: 'number' as const,
-    label: 'Steam Temperature (°C)',
+    label: 'Steam Temperature (C)',
     default: 400,
     min: -273.15,
   },
@@ -45,36 +45,38 @@ const inputTemperatureSettings = {
 };
 
 const getComputedValues = (settings: Record<string, unknown>) => {
-  const temp = (settings.steam_temp as number) ?? 300;
+  const temp = (settings.steam_temp as number) ?? 400;
   const interpolated = getInterpolated(temp);
   const targetPower = interpolated.power;
   const targetRPM = Math.max(1, interpolated.rpm);
   const powerPerTick = (targetPower * (targetRPM + 1)) / targetRPM + targetPower;
-  const actualPowerProduction = Math.floor(powerPerTick * 33);
+  const actualPowerProduction = Math.floor(powerPerTick * 33 * 0.25);
   const waterOutputTemp = clamp(temp / 3, 40, 99);
 
-  return { actualPowerProduction, waterOutputTemp, steamTemp: temp };
+  return { actualPowerProduction, waterOutputTemp };
 };
 
-export const large_turbine_01: SpecialRecipe = {
-  id: 'r_large_turbine_01',
+export const small_turbine_01: SpecialRecipe = {
+  id: 'r_small_turbine_01',
   name: 'Makes Power. Makes Water',
-  machine_id: 'm_large_turbine',
+  machine_id: 'm_small_turbine',
+  description:
+    'Converts a steam into power and water. Uses 1/5 of the Steam of Large Turbine but is 25% more efficient',
   settings: settingDefinitions,
   inputTemperatureSettings,
   compute: (settings) => {
     const { actualPowerProduction, waterOutputTemp } = getComputedValues(settings);
 
     const recipe: Recipe = {
-      id: 'r_large_turbine_01',
+      id: 'r_small_turbine_01',
       name: 'Makes Power. Makes Water',
-      machine_id: 'm_large_turbine',
+      machine_id: 'm_small_turbine',
       cycle_time: 1,
       power_consumption: -actualPowerProduction,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_steam', quantity: 90 }],
-      outputs: [{ product_id: 'p_water', quantity: 3, temperature: waterOutputTemp }],
+      inputs: [{ product_id: 'p_steam', quantity: 18 }],
+      outputs: [{ product_id: 'p_water', quantity: 0.6, temperature: waterOutputTemp }],
     };
 
     return recipe;

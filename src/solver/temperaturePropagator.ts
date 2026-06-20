@@ -20,7 +20,23 @@ export function propagateTemperatures(
   globalSettings?: Record<string, unknown>,
 ): TemperaturePropagationResult {
   const resolutionContext = createGraphResolutionContext(nodes, edges);
-  const getHelpers = (nodeId: string) => resolutionContext.createHelpers(nodeId);
+  const getHelpers = (nodeId: string) => {
+    const baseHelpers = resolutionContext.createHelpers(nodeId);
+    return {
+      ...baseHelpers,
+      getFlowRate: (side: 'input' | 'output', index: number) => {
+        const handleId = buildHandleId(nodeId, side, index);
+        const connectedEdges = resolutionContext.edgeLookup.get(handleId) ?? [];
+        let totalFlow = 0;
+
+        for (const edge of connectedEdges) {
+          totalFlow += edgeFlows[edge.id] ?? 0;
+        }
+
+        return totalFlow;
+      },
+    };
+  };
 
   const nodeOutputTemps: Record<string, number[]> = {};
   const inputTemps: Record<string, Record<number, number>> = {};

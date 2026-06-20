@@ -214,6 +214,7 @@
   height: 20px;
   border: 1px solid var(--theme-color-border-light);
   border-radius: 4px;
+  background: var(--preset-swatch-bg);
 }
 
 .preset-source {

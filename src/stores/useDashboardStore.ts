@@ -344,15 +344,10 @@ export function initDashboardStore(): () => void {
     }
   });
 
-  let lastGlobalPollution = useGlobalSettingsStore.getState().settings.global_pollution;
-  let lastDifficulty = useGlobalSettingsStore.getState().settings.difficulty;
+  let lastGlobalSettings = useGlobalSettingsStore.getState().settings;
   const unsubGlobalSettings = useGlobalSettingsStore.subscribe((state) => {
-    if (
-      state.settings.global_pollution !== lastGlobalPollution ||
-      state.settings.difficulty !== lastDifficulty
-    ) {
-      lastGlobalPollution = state.settings.global_pollution;
-      lastDifficulty = state.settings.difficulty;
+    if (state.settings !== lastGlobalSettings) {
+      lastGlobalSettings = state.settings;
       useDashboardStore.getState().recompute();
     }
   });

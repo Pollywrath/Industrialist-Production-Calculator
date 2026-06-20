@@ -384,6 +384,16 @@ export function GroupNodeIO({
     };
   };
 
+  const leftProxyInfos = new Array<ProxyFlowInfo>(leftHandles.length);
+  for (let i = 0; i < leftHandles.length; i++) {
+    leftProxyInfos[i] = getProxyFlowInfo(leftHandles[i]);
+  }
+
+  const rightProxyInfos = new Array<ProxyFlowInfo>(rightHandles.length);
+  for (let i = 0; i < rightHandles.length; i++) {
+    rightProxyInfos[i] = getProxyFlowInfo(rightHandles[i]);
+  }
+
   return (
     <div
       className={styles['recipe-node-io']}
@@ -402,8 +412,8 @@ export function GroupNodeIO({
           <div
             className={`${styles['recipe-node-io__column']} ${styles['recipe-node-io__column--left']}`}
           >
-            {leftHandles.map((refVal) => {
-              const info = getProxyFlowInfo(refVal);
+            {leftHandles.map((refVal, i) => {
+              const info = leftProxyInfos[i];
               return (
                 <GroupNodeIORect
                   key={`left-${refVal.index}`}
@@ -424,8 +434,8 @@ export function GroupNodeIO({
           <div
             className={`${styles['recipe-node-io__column']} ${styles['recipe-node-io__column--right']}`}
           >
-            {rightHandles.map((refVal) => {
-              const info = getProxyFlowInfo(refVal);
+            {rightHandles.map((refVal, i) => {
+              const info = rightProxyInfos[i];
               return (
                 <GroupNodeIORect
                   key={`right-${refVal.index}`}
@@ -445,7 +455,7 @@ export function GroupNodeIO({
         {leftHandles.map((refVal, i) => {
           const verticalOffset = ((maxCount - leftCount) * (RECT_HEIGHT + RECT_GAP)) / 2;
           const top = 17 + verticalOffset + i * (RECT_HEIGHT + RECT_GAP) + RECT_HEIGHT / 2;
-          const info = getProxyFlowInfo(refVal);
+          const info = leftProxyInfos[i];
 
           return (
             <GroupNodeIOHandle
@@ -465,7 +475,7 @@ export function GroupNodeIO({
         {rightHandles.map((refVal, i) => {
           const verticalOffset = ((maxCount - rightCount) * (RECT_HEIGHT + RECT_GAP)) / 2;
           const top = 17 + verticalOffset + i * (RECT_HEIGHT + RECT_GAP) + RECT_HEIGHT / 2;
-          const info = getProxyFlowInfo(refVal);
+          const info = rightProxyInfos[i];
 
           return (
             <GroupNodeIOHandle

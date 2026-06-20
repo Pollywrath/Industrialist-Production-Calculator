@@ -405,7 +405,7 @@ function PresetCard({
           <span
             key={`${preset.id}-swatch-${index}`}
             className={styles['preset-swatch']}
-            style={{ background: swatch }}
+            style={{ '--preset-swatch-bg': swatch } as React.CSSProperties}
           />
         ))}
       </div>

@@ -133,6 +133,7 @@ export const modular_turbine_01: SpecialRecipe = {
       type: 'number',
       label: 'Input Temp (°C)',
       default: 330,
+      min: -273.15,
       dynamicLabel: (settings) => {
         const inputTemp = (settings.input_temp as number) ?? 330;
         const finalTemp = roundTo(inputTemp * 0.6, 1);

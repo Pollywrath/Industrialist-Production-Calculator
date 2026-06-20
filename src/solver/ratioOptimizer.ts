@@ -1,6 +1,8 @@
 import type { Edge } from '@xyflow/react';
 import type { RecipeNodeType } from '../types/nodes';
 import { ASSET_VERSION } from '../data/productIcons';
+import { useFlowStore } from '../stores/useFlowStore';
+import { useFlowResultStore } from '../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { solveFlowPipeline } from './solverPipeline';
 import { getRateMultiplier } from '../utils/recipeComputation';
@@ -117,16 +119,36 @@ interface RatioOptimizerPayload {
   connections: RatioOptimizerConnection[];
 }
 
+function getCommittedSolverSnapshot(nodes: RecipeNodeType[]): Pick<
+  ReturnType<typeof solveFlowPipeline>,
+  'nodeRecipes' | 'resolvedProducts'
+> | null {
+  const flowState = useFlowStore.getState();
+  const resultState = useFlowResultStore.getState();
+  if (resultState.graphVersion !== flowState.graphVersion) {
+    return null;
+  }
+
+  for (let i = 0; i < nodes.length; i++) {
+    if (!resultState.nodeRecipes[nodes[i].id]) {
+      return null;
+    }
+  }
+
+  return {
+    nodeRecipes: resultState.nodeRecipes,
+    resolvedProducts: resultState.resolvedProducts,
+  };
+}
+
 export function buildRatioOptimizerPayload(
   nodes: RecipeNodeType[],
   edges: Edge[],
 ): RatioOptimizerPayload {
   const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
-  const { nodeRecipes, resolvedProducts } = solveFlowPipeline(
-    nodes,
-    edges,
-    globalSettings,
-  );
+  const committedSnapshot = getCommittedSolverSnapshot(nodes);
+  const { nodeRecipes, resolvedProducts } =
+    committedSnapshot ?? solveFlowPipeline(nodes, edges, globalSettings);
 
   const resolutionContext = createGraphResolutionContext(nodes, edges);
   const { edgeLookup } = resolutionContext;
@@ -302,9 +324,23 @@ export function solveRatios(
       }),
     };
   }
-  activeSolveInFlight = true;
 
-  const payload = buildRatioOptimizerPayload(nodes, edges);
+  let payload: RatioOptimizerPayload;
+  try {
+    payload = buildRatioOptimizerPayload(nodes, edges);
+  } catch (error) {
+    return {
+      promise: Promise.resolve({
+        feasible: false,
+        error:
+          error instanceof Error
+            ? `Failed to build ratio optimization payload: ${error.message}`
+            : 'Failed to build ratio optimization payload.',
+      }),
+    };
+  }
+
+  activeSolveInFlight = true;
   const worker = getOrCreateWorker();
 
   const promise = new Promise<RatioOptimizerResult>((resolve) => {

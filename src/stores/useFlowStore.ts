@@ -54,6 +54,9 @@ import {
 } from './flowHistory';
 
 const HISTORY_LIMIT = 50;
+const GROUP_NODE_Z_INDEX = 0;
+const EDGE_Z_INDEX = 1;
+const RECIPE_NODE_MIN_Z_INDEX = 2;
 
 interface SetGraphOptions {
   recordHistory?: boolean;
@@ -64,6 +67,7 @@ interface SetGraphOptions {
 interface FlowState {
   nodes: CanvasNode[];
   nodesMap: Map<string, CanvasNode>;
+  groupMemberIds: Record<string, string[]>;
   edges: Edge[];
   graphVersion: number;
   solutionVersion: number;
@@ -135,8 +139,9 @@ const enrichRecipeNodeDimensions = (node: RecipeNodeType): RecipeNodeType => {
 
   const ioAreaHeight = maxCount * RECT_HEIGHT + (maxCount - 1) * RECT_GAP + IO_COLUMN_PADDING;
   const height = BASE_INFO_HEIGHT + ioAreaHeight + BOTTOM_PADDING;
+  const zIndex = Math.max(node.zIndex ?? RECIPE_NODE_MIN_Z_INDEX, RECIPE_NODE_MIN_Z_INDEX);
 
-  if (node.width === NODE_CSS_WIDTH && node.height === height) {
+  if (node.width === NODE_CSS_WIDTH && node.height === height && node.zIndex === zIndex) {
     return node;
   }
 
@@ -144,6 +149,7 @@ const enrichRecipeNodeDimensions = (node: RecipeNodeType): RecipeNodeType => {
     ...node,
     width: NODE_CSS_WIDTH,
     height,
+    zIndex,
   };
 };
 
@@ -161,7 +167,7 @@ const prepareGroupNode = (node: GroupNodeType): GroupNodeType => {
     node.connectable === isCollapsed &&
     node.draggable === true &&
     node.selectable === false &&
-    node.zIndex === 0 &&
+    node.zIndex === GROUP_NODE_Z_INDEX &&
     node.width === width &&
     node.height === height
   ) {
@@ -175,7 +181,32 @@ const prepareGroupNode = (node: GroupNodeType): GroupNodeType => {
     height,
     selectable: false,
     width,
-    zIndex: 0,
+    zIndex: GROUP_NODE_Z_INDEX,
+  };
+};
+
+const normalizeRecipeEdgeLayer = (edge: Edge): Edge => {
+  if (edge.type === 'recipe' && edge.zIndex === EDGE_Z_INDEX) {
+    return edge;
+  }
+
+  return {
+    ...edge,
+    type: 'recipe',
+    zIndex: EDGE_Z_INDEX,
+  };
+};
+
+const prepareRecipeEdge = (edge: Edge, hidden: boolean | undefined): Edge => {
+  if (edge.type === 'recipe' && edge.zIndex === EDGE_Z_INDEX && edge.hidden === hidden) {
+    return edge;
+  }
+
+  return {
+    ...edge,
+    hidden,
+    type: 'recipe',
+    zIndex: EDGE_Z_INDEX,
   };
 };
 
@@ -293,18 +324,17 @@ const syncProxyEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[] => {
     }
   }
 
-  const realEdges: Edge[] = edges
-    .filter((e) => !e.id.startsWith('proxy-'))
-    .filter((e) => recipeNodeMap.has(e.source) && recipeNodeMap.has(e.target))
-    .map((e) => {
-      const sourceNode = recipeNodeMap.get(e.source);
-      const targetNode = recipeNodeMap.get(e.target);
-      const isHidden = !!(sourceNode?.hidden || targetNode?.hidden);
-      return {
-        ...e,
-        hidden: isHidden ? true : undefined,
-      };
-    });
+  const realEdges: Edge[] = [];
+  for (let i = 0; i < edges.length; i++) {
+    const edge = edges[i];
+    if (edge.id.startsWith('proxy-')) continue;
+    if (!recipeNodeMap.has(edge.source) || !recipeNodeMap.has(edge.target)) continue;
+
+    const sourceNode = recipeNodeMap.get(edge.source);
+    const targetNode = recipeNodeMap.get(edge.target);
+    const isHidden = !!(sourceNode?.hidden || targetNode?.hidden);
+    realEdges.push(prepareRecipeEdge(edge, isHidden ? true : undefined));
+  }
 
   const nextEdges = [...realEdges];
   const proxyEdges: Edge[] = [];
@@ -378,6 +408,7 @@ const syncProxyEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[] => {
         proxyEdges.push({
           id: proxyId,
           type: 'recipe',
+          zIndex: EDGE_Z_INDEX,
           source: finalSource,
           sourceHandle: finalSourceHandle,
           target: finalTarget,
@@ -399,6 +430,28 @@ const enrichNodeDimensions = (node: CanvasNode): CanvasNode => {
 const createNodesMap = (nodes: CanvasNode[]): Map<string, CanvasNode> => {
   return createNodeMap(nodes);
 };
+
+const createGroupMemberIds = (nodes: readonly CanvasNode[]): Record<string, string[]> => {
+  const groupMemberIds: Record<string, string[]> = {};
+
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    if (!isRecipeNode(node) || !node.data.groupId) continue;
+
+    const members = groupMemberIds[node.data.groupId] ?? [];
+    members.push(node.id);
+    groupMemberIds[node.data.groupId] = members;
+  }
+
+  return groupMemberIds;
+};
+
+const createNodeIndexes = (
+  nodes: CanvasNode[],
+): { nodesMap: Map<string, CanvasNode>; groupMemberIds: Record<string, string[]> } => ({
+  nodesMap: createNodesMap(nodes),
+  groupMemberIds: createGroupMemberIds(nodes),
+});
 
 const clearTransientNodeSelectionState = (nodes: CanvasNode[]): CanvasNode[] => {
   let changed = false;
@@ -494,7 +547,7 @@ const applyGroupBoundsForGroups = (
       node.connectable === isCollapsed &&
       node.draggable === true &&
       node.selectable === false &&
-      node.zIndex === 0 &&
+      node.zIndex === GROUP_NODE_Z_INDEX &&
       node.width === nextWidth &&
       node.height === nextHeight &&
       arePositionsEqual(toPositionSnapshot(node.position), nextPosition)
@@ -512,7 +565,7 @@ const applyGroupBoundsForGroups = (
       position: nextPosition,
       selectable: false,
       width: nextWidth,
-      zIndex: 0,
+      zIndex: GROUP_NODE_Z_INDEX,
     };
   }
 
@@ -560,7 +613,7 @@ const ensureGraphIntegrity = (
     const newTarget = nodeIdMap.get(edge.target);
 
     if (!newSource && !newTarget && finalEdgeId === edge.id) {
-      sanitizedEdges.push({ ...edge, type: 'recipe' });
+      sanitizedEdges.push(normalizeRecipeEdgeLayer(edge));
       continue;
     }
 
@@ -576,6 +629,7 @@ const ensureGraphIntegrity = (
       source: sourceId,
       target: targetId,
       type: 'recipe',
+      zIndex: EDGE_Z_INDEX,
       sourceHandle:
         sourceParsed && newSource
           ? buildHandleId(sourceId, sourceParsed.side, sourceParsed.index)
@@ -838,6 +892,7 @@ const useFlowStore = create(
     return {
       nodes: [],
       nodesMap: new Map(),
+      groupMemberIds: {},
       edges: [],
       graphVersion: 0,
       solutionVersion: 0,
@@ -866,10 +921,11 @@ const useFlowStore = create(
                   applyPositionHistoryEntry(entry, 'undo', state.nodes),
                 ),
               );
-              const nextNodesMap = createNodesMap(nextNodes);
+              const nextIndexes = createNodeIndexes(nextNodes);
               return {
                 nodes: nextNodes,
-                nodesMap: nextNodesMap,
+                nodesMap: nextIndexes.nodesMap,
+                groupMemberIds: nextIndexes.groupMemberIds,
                 historyPast: nextPast,
                 historyFuture: nextFuture,
                 canUndo: nextPast.length > 0,
@@ -879,10 +935,11 @@ const useFlowStore = create(
 
             const applied = applyGraphHistoryEntry(entry, 'undo', state.nodes, state.edges);
             const nextNodes = syncAllGroupBounds(clearTransientNodeSelectionState(applied.nodes));
-            const nextNodesMap = createNodesMap(nextNodes);
+            const nextIndexes = createNodeIndexes(nextNodes);
             return {
               nodes: nextNodes,
-              nodesMap: nextNodesMap,
+              nodesMap: nextIndexes.nodesMap,
+              groupMemberIds: nextIndexes.groupMemberIds,
               edges: applied.edges,
               graphVersion: state.graphVersion + 1,
               historyPast: nextPast,
@@ -915,10 +972,11 @@ const useFlowStore = create(
                   applyPositionHistoryEntry(entry, 'redo', state.nodes),
                 ),
               );
-              const nextNodesMap = createNodesMap(nextNodes);
+              const nextIndexes = createNodeIndexes(nextNodes);
               return {
                 nodes: nextNodes,
-                nodesMap: nextNodesMap,
+                nodesMap: nextIndexes.nodesMap,
+                groupMemberIds: nextIndexes.groupMemberIds,
                 historyPast: nextPast,
                 historyFuture: nextFuture,
                 canUndo: nextPast.length > 0,
@@ -928,10 +986,11 @@ const useFlowStore = create(
 
             const applied = applyGraphHistoryEntry(entry, 'redo', state.nodes, state.edges);
             const nextNodes = syncAllGroupBounds(clearTransientNodeSelectionState(applied.nodes));
-            const nextNodesMap = createNodesMap(nextNodes);
+            const nextIndexes = createNodeIndexes(nextNodes);
             return {
               nodes: nextNodes,
-              nodesMap: nextNodesMap,
+              nodesMap: nextIndexes.nodesMap,
+              groupMemberIds: nextIndexes.groupMemberIds,
               edges: applied.edges,
               graphVersion: state.graphVersion + 1,
               historyPast: nextPast,
@@ -1037,9 +1096,11 @@ const useFlowStore = create(
             affectedGroupIds,
           );
           if (boundedNodes !== stateBeforeBoundsCommit.nodes) {
+            const boundedIndexes = createNodeIndexes(boundedNodes);
             set({
               nodes: boundedNodes,
-              nodesMap: createNodesMap(boundedNodes),
+              nodesMap: boundedIndexes.nodesMap,
+              groupMemberIds: boundedIndexes.groupMemberIds,
             });
           }
         }
@@ -1209,7 +1270,7 @@ const useFlowStore = create(
           selected: false,
           width: bounds.width,
           height: bounds.height,
-          zIndex: 0,
+          zIndex: GROUP_NODE_Z_INDEX,
           data: {
             label: groupLabel,
             collapsed: false,
@@ -1226,7 +1287,7 @@ const useFlowStore = create(
             nextNodes[i] = {
               ...node,
               selected: false,
-              zIndex: Math.max(node.zIndex ?? 1, 1),
+              zIndex: Math.max(node.zIndex ?? RECIPE_NODE_MIN_Z_INDEX, RECIPE_NODE_MIN_Z_INDEX),
               data: {
                 ...node.data,
                 groupId,
@@ -1239,11 +1300,12 @@ const useFlowStore = create(
         }
         nextNodes[state.nodes.length] = groupNode;
 
-        const nextNodesMap = createNodesMap(nextNodes);
+        const nextIndexes = createNodeIndexes(nextNodes);
         clearFlowCache();
         set({
           nodes: nextNodes,
-          nodesMap: nextNodesMap,
+          nodesMap: nextIndexes.nodesMap,
+          groupMemberIds: nextIndexes.groupMemberIds,
           graphVersion: state.graphVersion + 1,
         });
 
@@ -1280,18 +1342,26 @@ const useFlowStore = create(
         finalNodes = applyGroupBoundsForGroups(finalNodes, affectedGroupIds);
 
         if (!hasStructuralChange) {
+          const nextIndexes =
+            affectedGroupIds.size > 0 ? createNodeIndexes(finalNodes) : undefined;
           set({
             nodes: finalNodes,
-            ...(affectedGroupIds.size > 0 ? { nodesMap: createNodesMap(finalNodes) } : {}),
+            ...(nextIndexes
+              ? {
+                  nodesMap: nextIndexes.nodesMap,
+                  groupMemberIds: nextIndexes.groupMemberIds,
+                }
+              : {}),
           });
           return;
         }
 
 
-        const nextNodesMap = createNodesMap(finalNodes);
+        const nextIndexes = createNodeIndexes(finalNodes);
         set({
           nodes: finalNodes,
-          nodesMap: nextNodesMap,
+          nodesMap: nextIndexes.nodesMap,
+          groupMemberIds: nextIndexes.groupMemberIds,
           graphVersion: state.graphVersion + 1,
         });
 
@@ -1426,6 +1496,7 @@ const useFlowStore = create(
         const realEdge = {
           id: edgeId,
           type: 'recipe',
+          zIndex: EDGE_Z_INDEX,
           source: realSourceNodeId,
           sourceHandle: realSourceHandle,
           target: realTargetNodeId,
@@ -1439,6 +1510,7 @@ const useFlowStore = create(
           const proxyEdge = {
             id: `proxy-${edgeId}`,
             type: 'recipe',
+            zIndex: EDGE_Z_INDEX,
             source: sourceNodeId,
             sourceHandle: sourceHandle,
             target: targetNodeId,
@@ -1468,10 +1540,11 @@ const useFlowStore = create(
         const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(nodes, state.edges);
         const enriched = syncAllGroupBounds(sanitizedNodes.map(enrichNodeDimensions));
         const nextEdges = syncProxyEdges(enriched, sanitizedEdges);
-        const nextNodesMap = createNodesMap(enriched);
+        const nextIndexes = createNodeIndexes(enriched);
         set({
           nodes: enriched,
-          nodesMap: nextNodesMap,
+          nodesMap: nextIndexes.nodesMap,
+          groupMemberIds: nextIndexes.groupMemberIds,
           edges: nextEdges,
           graphVersion: state.graphVersion + 1,
         });
@@ -1523,18 +1596,20 @@ const useFlowStore = create(
         }
         const enriched = syncAllGroupBounds(enrichedNodes);
         const nextEdges = syncProxyEdges(enriched, sanitizedEdges);
-        const map = createNodesMap(enriched);
+        const indexes = createNodeIndexes(enriched);
         if (options?.visualOnly) {
           set({
             nodes: enriched,
-            nodesMap: map,
+            nodesMap: indexes.nodesMap,
+            groupMemberIds: indexes.groupMemberIds,
             edges: nextEdges,
           });
         } else {
           clearFlowCache();
           set({
             nodes: enriched,
-            nodesMap: map,
+            nodesMap: indexes.nodesMap,
+            groupMemberIds: indexes.groupMemberIds,
             edges: nextEdges,
             graphVersion: state.graphVersion + 1,
           });
@@ -1591,13 +1666,19 @@ const useFlowStore = create(
         const shouldUpdateEdges = edgesChanged || nextEdges !== state.edges;
         if (!shouldUpdateNodes && !shouldUpdateEdges) return true;
 
-        set({
-          ...(shouldUpdateNodes
-            ? {
+        const nodeIndexUpdate = shouldUpdateNodes
+          ? (() => {
+              const nextIndexes = createNodeIndexes(nextNodes);
+              return {
                 nodes: nextNodes,
-                nodesMap: createNodesMap(nextNodes),
-              }
-            : {}),
+                nodesMap: nextIndexes.nodesMap,
+                groupMemberIds: nextIndexes.groupMemberIds,
+              };
+            })()
+          : {};
+
+        set({
+          ...nodeIndexUpdate,
           ...(shouldUpdateEdges ? { edges: nextEdges } : {}),
         });
 
@@ -1631,11 +1712,12 @@ const useFlowStore = create(
         if (previousGroupId) affectedGroupIds.add(previousGroupId);
         if (updatedNode.data.groupId) affectedGroupIds.add(updatedNode.data.groupId);
         const finalNodes = applyGroupBoundsForGroups(nextNodes, affectedGroupIds);
-        const nextNodesMap = createNodesMap(finalNodes);
+        const nextIndexes = createNodeIndexes(finalNodes);
 
         set({
           nodes: finalNodes,
-          nodesMap: nextNodesMap,
+          nodesMap: nextIndexes.nodesMap,
+          groupMemberIds: nextIndexes.groupMemberIds,
           graphVersion: state.graphVersion + 1,
         });
 
@@ -1656,20 +1738,19 @@ const useFlowStore = create(
             get().expandGroup(nodeId);
           }
           if (data.label !== undefined && data.label !== oldNode.data.label) {
-            set((s) => ({
-              nodes: s.nodes.map((node) =>
+            set((s) => {
+              const nextNodes = s.nodes.map((node) =>
                 node.id === nodeId && isGroupNode(node)
                   ? { ...node, data: { ...node.data, label: data.label! } }
                   : node
-              ),
-              nodesMap: createNodesMap(
-                s.nodes.map((node) =>
-                  node.id === nodeId && isGroupNode(node)
-                    ? { ...node, data: { ...node.data, label: data.label! } }
-                    : node
-                )
-              ),
-            }));
+              );
+              const nextIndexes = createNodeIndexes(nextNodes);
+              return {
+                nodes: nextNodes,
+                nodesMap: nextIndexes.nodesMap,
+                groupMemberIds: nextIndexes.groupMemberIds,
+              };
+            });
           }
           return;
         }
@@ -1693,11 +1774,12 @@ const useFlowStore = create(
 
         if (!updatedNode) return;
 
-        const nextNodesMap = createNodesMap(nextNodes);
+        const nextIndexes = createNodeIndexes(nextNodes);
         const nextEdges = syncProxyEdges(nextNodes, state.edges);
         set({
           nodes: nextNodes,
-          nodesMap: nextNodesMap,
+          nodesMap: nextIndexes.nodesMap,
+          groupMemberIds: nextIndexes.groupMemberIds,
           edges: nextEdges,
           graphVersion: state.graphVersion + 1,
         });
@@ -1770,10 +1852,12 @@ const useFlowStore = create(
 
           const nextEdges = syncProxyEdges(nextNodes, edges);
           const boundedNodes = syncAllGroupBounds(nextNodes);
+          const boundedIndexes = createNodeIndexes(boundedNodes);
 
           set({
             nodes: boundedNodes,
-            nodesMap: createNodesMap(boundedNodes),
+            nodesMap: boundedIndexes.nodesMap,
+            groupMemberIds: boundedIndexes.groupMemberIds,
             edges: nextEdges,
             graphVersion: get().graphVersion + 1,
           });
@@ -1808,10 +1892,12 @@ const useFlowStore = create(
 
           const nextEdges = syncProxyEdges(nextNodes, edges);
           const boundedNodes = syncAllGroupBounds(nextNodes);
+          const boundedIndexes = createNodeIndexes(boundedNodes);
 
           set({
             nodes: boundedNodes,
-            nodesMap: createNodesMap(boundedNodes),
+            nodesMap: boundedIndexes.nodesMap,
+            groupMemberIds: boundedIndexes.groupMemberIds,
             edges: nextEdges,
             graphVersion: get().graphVersion + 1,
           });
@@ -1893,7 +1979,7 @@ const useFlowStore = create(
 
         const affectedGroupIds = collectGroupNodeIds(nextNodes);
         const finalNodes = applyGroupBoundsForGroups(nextNodes, affectedGroupIds);
-        const nextNodesMap = createNodesMap(finalNodes);
+        const nextIndexes = createNodeIndexes(finalNodes);
 
         const filteredEdges = state.edges
           .filter((e) => {
@@ -1928,7 +2014,8 @@ const useFlowStore = create(
 
         set({
           nodes: finalNodes,
-          nodesMap: nextNodesMap,
+          nodesMap: nextIndexes.nodesMap,
+          groupMemberIds: nextIndexes.groupMemberIds,
           edges: nextEdges,
           graphVersion: state.graphVersion + 1,
         });
@@ -2057,13 +2144,14 @@ const useFlowStore = create(
         if (previousGroupId) affectedGroupIds.add(previousGroupId);
         if (updatedNode.data.groupId) affectedGroupIds.add(updatedNode.data.groupId);
         const finalNodes = applyGroupBoundsForGroups(nextNodes, affectedGroupIds);
-        const nextNodesMap = createNodesMap(finalNodes);
+        const nextIndexes = createNodeIndexes(finalNodes);
         const nextEdges = filterCompatibleRecipeEdges(finalNodes, prunedEdges);
 
         const edgesChanged = nextEdges !== oldEdges;
         set({
           nodes: finalNodes,
-          nodesMap: nextNodesMap,
+          nodesMap: nextIndexes.nodesMap,
+          groupMemberIds: nextIndexes.groupMemberIds,
           ...(edgesChanged ? { edges: nextEdges } : {}),
           graphVersion: state.graphVersion + 1,
         });

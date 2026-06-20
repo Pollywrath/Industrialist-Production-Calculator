@@ -6,6 +6,7 @@ const settingDefinitions = {
     type: 'number' as const,
     label: 'Input Temperature (°C)',
     default: 18,
+    min: -273.15,
   },
 };
 

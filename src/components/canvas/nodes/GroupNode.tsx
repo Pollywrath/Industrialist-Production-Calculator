@@ -6,7 +6,7 @@ import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { isRecipeNode } from '../../../types/nodes';
-import type { GroupNodeType } from '../../../types/nodes';
+import type { GroupNodeType, RecipeNodeType } from '../../../types/nodes';
 import { getMachine, resolveActiveRecipe } from '../../../data/lookup';
 import { getSpecialRecipe } from '../../../data/registry';
 import {
@@ -26,6 +26,8 @@ import styles from './GroupNode.module.css';
 import recipeStyles from './RecipeNode.module.css';
 import { useShallow } from 'zustand/react/shallow';
 
+const EMPTY_GROUP_MEMBER_IDS: string[] = [];
+
 export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>) {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const updateGroupNodeData = useFlowStore((s) => s.updateGroupNodeData);
@@ -33,7 +35,17 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
   const globalSettings = useGlobalSettingsStore((s) => s.settings);
 
   const memberNodes = useFlowStore(
-    useShallow((s) => s.nodes.filter((n) => isRecipeNode(n) && n.data.groupId === id))
+    useShallow((s) => {
+      const memberIds = s.groupMemberIds[id] ?? EMPTY_GROUP_MEMBER_IDS;
+      const values: RecipeNodeType[] = [];
+      for (let i = 0; i < memberIds.length; i++) {
+        const node = s.nodesMap.get(memberIds[i]);
+        if (isRecipeNode(node)) {
+          values.push(node);
+        }
+      }
+      return values;
+    })
   );
   const memberRecipes = useFlowResultStore(
     useShallow((s) => memberNodes.map((node) => s.nodeRecipes[node.id]))

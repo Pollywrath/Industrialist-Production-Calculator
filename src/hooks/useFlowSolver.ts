@@ -57,10 +57,10 @@ export function useFlowSolver(): void {
       }
     });
 
-    let lastPollution = useGlobalSettingsStore.getState().settings.global_pollution;
-    const unsubPollution = useGlobalSettingsStore.subscribe((state) => {
-      if (state.settings.global_pollution !== lastPollution) {
-        lastPollution = state.settings.global_pollution;
+    let lastGlobalSettings = useGlobalSettingsStore.getState().settings;
+    const unsubGlobalSettings = useGlobalSettingsStore.subscribe((state) => {
+      if (state.settings !== lastGlobalSettings) {
+        lastGlobalSettings = state.settings;
         useFlowStore.setState((s) => ({ graphVersion: s.graphVersion + 1 }));
       }
     });
@@ -78,7 +78,7 @@ export function useFlowSolver(): void {
 
     return () => {
       unsubData();
-      unsubPollution();
+      unsubGlobalSettings();
       unsubFlow();
       if (timerRef.current) clearTimeout(timerRef.current);
       runTokenRef.current += 1;

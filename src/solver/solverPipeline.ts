@@ -177,6 +177,40 @@ function solveFlowsForPipeline(
   return calculateFlows(correctedGraph, true);
 }
 
+function solveTemperatureCoupledPass(
+  nodes: ReactFlowNode[],
+  edges: ReactFlowEdge[],
+  settingsOverrides: SettingsOverrides | undefined,
+  includesFlowDependentRecipes: boolean,
+  globalSettings?: Record<string, unknown>,
+): SolverPipelineResult & { settingsOverrides: SettingsOverrides } {
+  const { results, edgeFlows } = solveFlowsForPipeline(
+    nodes,
+    edges,
+    settingsOverrides,
+    includesFlowDependentRecipes,
+    globalSettings,
+  );
+  const { edgeTemps, inputTemps, settingsOverrides: nextSettingsOverrides, iterationsRun } =
+    propagateTemperatures(
+      nodes,
+      edges,
+      edgeFlows,
+      globalSettings,
+    );
+
+  return {
+    results,
+    edgeFlows,
+    edgeTemps,
+    inputTemps,
+    resolvedProducts: {},
+    nodeRecipes: {},
+    iterationsRun,
+    settingsOverrides: nextSettingsOverrides,
+  };
+}
+
 export function solveFlowPipeline(
   nodes: ReactFlowNode[],
   edges: ReactFlowEdge[],
@@ -194,31 +228,20 @@ export function solveFlowPipeline(
     nodeRecipes: {},
     iterationsRun: 0,
   };
+  let needsFinalResync = false;
 
   for (let pass = 0; pass < MAX_TEMPERATURE_COUPLED_PASSES; pass++) {
-    const { results, edgeFlows } = solveFlowsForPipeline(
+    const passResult = solveTemperatureCoupledPass(
       nodes,
       edges,
       activeOverrides,
       includesFlowDependentRecipes,
       globalSettings,
     );
-    const { edgeTemps, inputTemps, settingsOverrides, iterationsRun } = propagateTemperatures(
-      nodes,
-      edges,
-      edgeFlows,
-      globalSettings,
-    );
+    const { settingsOverrides, ...resultSnapshot } = passResult;
 
-    finalResult = {
-      results,
-      edgeFlows,
-      edgeTemps,
-      inputTemps,
-      resolvedProducts: {},
-      nodeRecipes: {},
-      iterationsRun,
-    };
+    finalResult = resultSnapshot;
+    needsFinalResync = false;
 
     if (!hasMeaningfulOverrides(nodesById, settingsOverrides)) {
       break;
@@ -229,6 +252,26 @@ export function solveFlowPipeline(
     }
 
     activeOverrides = settingsOverrides;
+    needsFinalResync = pass === MAX_TEMPERATURE_COUPLED_PASSES - 1;
+  }
+
+  if (needsFinalResync) {
+    const passResult = solveTemperatureCoupledPass(
+      nodes,
+      edges,
+      activeOverrides,
+      includesFlowDependentRecipes,
+      globalSettings,
+    );
+    finalResult = {
+      results: passResult.results,
+      edgeFlows: passResult.edgeFlows,
+      edgeTemps: passResult.edgeTemps,
+      inputTemps: passResult.inputTemps,
+      resolvedProducts: passResult.resolvedProducts,
+      nodeRecipes: passResult.nodeRecipes,
+      iterationsRun: passResult.iterationsRun,
+    };
   }
 
   finalResult.resolvedProducts = computeResolvedProducts(nodesById, edges, globalSettings);

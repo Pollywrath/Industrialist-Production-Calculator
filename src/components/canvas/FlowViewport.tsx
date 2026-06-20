@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -117,13 +117,13 @@ function evaluateCatmullRomPoint(
   return {
     x:
       0.5 *
-      ((2 * p1.x) +
+      (2 * p1.x +
         (-p0.x + p2.x) * t +
         (2 * p0.x - 5 * p1.x + 4 * p2.x - p3.x) * t2 +
         (-p0.x + 3 * p1.x - 3 * p2.x + p3.x) * t3),
     y:
       0.5 *
-      ((2 * p1.y) +
+      (2 * p1.y +
         (-p0.y + p2.y) * t +
         (2 * p0.y - 5 * p1.y + 4 * p2.y - p3.y) * t2 +
         (-p0.y + 3 * p1.y - 3 * p2.y + p3.y) * t3),
@@ -239,10 +239,13 @@ interface GroupBoundsPreviewState {
   members: GroupMemberBounds[];
 }
 
-function applyGroupBoundsPreview(
-  element: HTMLDivElement | null,
-  bounds: GroupBounds | null,
-): void {
+interface ConnectionValidationCache {
+  nodes: CanvasNode[];
+  edges: Edge[];
+  resolutionContext: ReturnType<typeof createGraphResolutionContext>;
+}
+
+function applyGroupBoundsPreview(element: HTMLDivElement | null, bounds: GroupBounds | null): void {
   if (!element || !bounds) return;
 
   element.style.setProperty('--group-preview-x', `${bounds.x}px`);
@@ -270,39 +273,9 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const fitViewRequestId = useUIStore((s) => s.fitViewRequestId);
   const { screenToFlowPosition, getInternalNode, fitView } = useReactFlow();
 
-  const { recipeNodes, renderNodes, recipeNodeIds } = useMemo(() => {
-    const nextRecipeNodes: RecipeNodeType[] = [];
-    const nextRenderNodes: CanvasNode[] = [];
-    const nextRecipeNodeIds = new Set<string>();
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
-      if (isRecipeNode(node)) {
-        nextRecipeNodes.push(node);
-        nextRecipeNodeIds.add(node.id);
-      } else if (isGroupNode(node)) {
-        nextRenderNodes.push(node);
-      }
-    }
-    for (let i = 0; i < nextRecipeNodes.length; i++) {
-      nextRenderNodes.push(nextRecipeNodes[i]);
-    }
-    return {
-      recipeNodes: nextRecipeNodes,
-      renderNodes: nextRenderNodes,
-      recipeNodeIds: nextRecipeNodeIds,
-    };
-  }, [nodes]);
-
-  const recipeEdges = useMemo(
-    () => edges.filter((edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target)),
-    [edges, recipeNodeIds],
-  );
-  const resolutionContext = useMemo(
-    () => createGraphResolutionContext(recipeNodes, recipeEdges),
-    [recipeNodes, recipeEdges],
-  );
   const batchDragRef = useRef<BatchDragState | null>(null);
   const groupBoundsPreviewRef = useRef<HTMLDivElement | null>(null);
+  const connectionValidationCacheRef = useRef<ConnectionValidationCache | null>(null);
 
   useEffect(() => {
     let wasMultiSelectMode = getEffectiveToggleId(useUIStore.getState()) === 'multi_select';
@@ -328,94 +301,124 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
     };
   }, [fitView, fitViewRequestId]);
 
+  const getConnectionValidationContext = (flowStore: ReturnType<typeof useFlowStore.getState>) => {
+    const cached = connectionValidationCacheRef.current;
+    if (cached && cached.nodes === flowStore.nodes && cached.edges === flowStore.edges) {
+      return cached.resolutionContext;
+    }
+
+    const recipeNodes: RecipeNodeType[] = [];
+    const recipeNodeIds = new Set<string>();
+    for (let i = 0; i < flowStore.nodes.length; i++) {
+      const node = flowStore.nodes[i];
+      if (!isRecipeNode(node)) continue;
+      recipeNodes.push(node);
+      recipeNodeIds.add(node.id);
+    }
+
+    const recipeEdges: Edge[] = [];
+    for (let i = 0; i < flowStore.edges.length; i++) {
+      const edge = flowStore.edges[i];
+      if (recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target)) {
+        recipeEdges.push(edge);
+      }
+    }
+
+    const resolutionContext = createGraphResolutionContext(recipeNodes, recipeEdges);
+    connectionValidationCacheRef.current = {
+      nodes: flowStore.nodes,
+      edges: flowStore.edges,
+      resolutionContext,
+    };
+    return resolutionContext;
+  };
+
   const isValidConnection = (connection: Connection | Edge) => {
-      if (
-        !connection.source ||
-        !connection.target ||
-        !connection.sourceHandle ||
-        !connection.targetHandle
-      )
-        return false;
+    if (
+      !connection.source ||
+      !connection.target ||
+      !connection.sourceHandle ||
+      !connection.targetHandle
+    )
+      return false;
 
-      const flowStore = useFlowStore.getState();
+    const flowStore = useFlowStore.getState();
 
-      const resolveEndpoint = (nodeId: string, handleId: string) => {
-        const node = flowStore.nodesMap.get(nodeId);
-        if (!node) return null;
-        if (isGroupNode(node)) {
-          if (!node.data.collapsed) return null;
-          const parsed = parseHandleId(handleId);
-          if (!parsed) return null;
-          const original =
-            parsed.side === 'input'
-              ? node.data.inputProxyHandleIds[parsed.index]
-              : node.data.outputProxyHandleIds[parsed.index];
-          if (!original) return null;
-          const parsedOriginal = parseHandleId(original);
-          if (!parsedOriginal) return null;
-          return { nodeId: parsedOriginal.nodeId, handleId: original, parsed: parsedOriginal };
-        }
+    const resolveEndpoint = (nodeId: string, handleId: string) => {
+      const node = flowStore.nodesMap.get(nodeId);
+      if (!node) return null;
+      if (isGroupNode(node)) {
+        if (!node.data.collapsed) return null;
         const parsed = parseHandleId(handleId);
         if (!parsed) return null;
-        return { nodeId, handleId, parsed };
-      };
-
-      const sourceRes = resolveEndpoint(connection.source, connection.sourceHandle);
-      const targetRes = resolveEndpoint(connection.target, connection.targetHandle);
-
-      if (!sourceRes || !targetRes) return false;
-
-      let outRes = sourceRes;
-      let inRes = targetRes;
-
-      if (sourceRes.parsed.side === 'input' && targetRes.parsed.side === 'output') {
-        outRes = targetRes;
-        inRes = sourceRes;
-      } else if (sourceRes.parsed.side !== 'output' || targetRes.parsed.side !== 'input') {
-        return false;
+        const original =
+          parsed.side === 'input'
+            ? node.data.inputProxyHandleIds[parsed.index]
+            : node.data.outputProxyHandleIds[parsed.index];
+        if (!original) return null;
+        const parsedOriginal = parseHandleId(original);
+        if (!parsedOriginal) return null;
+        return { nodeId: parsedOriginal.nodeId, handleId: original, parsed: parsedOriginal };
       }
-
-      const sourceNode = flowStore.nodesMap.get(outRes.nodeId);
-      const targetNode = flowStore.nodesMap.get(inRes.nodeId);
-      if (!isRecipeNode(sourceNode) || !isRecipeNode(targetNode)) {
-        return false;
-      }
-
-      const sourceHelpers = resolutionContext.createHelpers(outRes.nodeId);
-      const targetHelpers = resolutionContext.createHelpers(inRes.nodeId);
-      const committedResolvedProducts = useFlowResultStore.getState().resolvedProducts;
-      const resolvedSourceProductId =
-        committedResolvedProducts[outRes.handleId] ??
-        sourceHelpers.resolveProduct('output', outRes.parsed.index);
-      const resolvedTargetProductId =
-        committedResolvedProducts[inRes.handleId] ??
-        targetHelpers.resolveProduct('input', inRes.parsed.index);
-
-      const resolvedSourceHandleType = sourceHelpers.resolveHandleType(
-        'output',
-        outRes.parsed.index,
-      );
-      const resolvedTargetHandleType = targetHelpers.resolveHandleType('input', inRes.parsed.index);
-
-      if (
-        !resolvedSourceHandleType ||
-        !resolvedTargetHandleType ||
-        resolvedSourceHandleType !== resolvedTargetHandleType
-      ) {
-        return false;
-      }
-
-      if (resolvedSourceProductId === resolvedTargetProductId) return true;
-
-      const isSourceAny =
-        resolvedSourceProductId === 'any_fluid' || resolvedSourceProductId === 'any_item';
-      const isTargetAny =
-        resolvedTargetProductId === 'any_fluid' || resolvedTargetProductId === 'any_item';
-
-      if (isSourceAny || isTargetAny) return true;
-
-      return false;
+      const parsed = parseHandleId(handleId);
+      if (!parsed) return null;
+      return { nodeId, handleId, parsed };
     };
+
+    const sourceRes = resolveEndpoint(connection.source, connection.sourceHandle);
+    const targetRes = resolveEndpoint(connection.target, connection.targetHandle);
+
+    if (!sourceRes || !targetRes) return false;
+
+    let outRes = sourceRes;
+    let inRes = targetRes;
+
+    if (sourceRes.parsed.side === 'input' && targetRes.parsed.side === 'output') {
+      outRes = targetRes;
+      inRes = sourceRes;
+    } else if (sourceRes.parsed.side !== 'output' || targetRes.parsed.side !== 'input') {
+      return false;
+    }
+
+    const sourceNode = flowStore.nodesMap.get(outRes.nodeId);
+    const targetNode = flowStore.nodesMap.get(inRes.nodeId);
+    if (!isRecipeNode(sourceNode) || !isRecipeNode(targetNode)) {
+      return false;
+    }
+
+    const resolutionContext = getConnectionValidationContext(flowStore);
+    const sourceHelpers = resolutionContext.createHelpers(outRes.nodeId);
+    const targetHelpers = resolutionContext.createHelpers(inRes.nodeId);
+    const committedResolvedProducts = useFlowResultStore.getState().resolvedProducts;
+    const resolvedSourceProductId =
+      committedResolvedProducts[outRes.handleId] ??
+      sourceHelpers.resolveProduct('output', outRes.parsed.index);
+    const resolvedTargetProductId =
+      committedResolvedProducts[inRes.handleId] ??
+      targetHelpers.resolveProduct('input', inRes.parsed.index);
+
+    const resolvedSourceHandleType = sourceHelpers.resolveHandleType('output', outRes.parsed.index);
+    const resolvedTargetHandleType = targetHelpers.resolveHandleType('input', inRes.parsed.index);
+
+    if (
+      !resolvedSourceHandleType ||
+      !resolvedTargetHandleType ||
+      resolvedSourceHandleType !== resolvedTargetHandleType
+    ) {
+      return false;
+    }
+
+    if (resolvedSourceProductId === resolvedTargetProductId) return true;
+
+    const isSourceAny =
+      resolvedSourceProductId === 'any_fluid' || resolvedSourceProductId === 'any_item';
+    const isTargetAny =
+      resolvedTargetProductId === 'any_fluid' || resolvedTargetProductId === 'any_item';
+
+    if (isSourceAny || isTargetAny) return true;
+
+    return false;
+  };
 
   const handleNodeDragStart = (_event: React.MouseEvent, node: Node) => {
     const isMultiSelectMode = getEffectiveToggleId(useUIStore.getState()) === 'multi_select';
@@ -499,8 +502,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
 
   const handleNodeDragStop = (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
     const nodeIds =
-      batchDragRef.current?.nodeIds ??
-      draggedNodes.map((draggedNode) => draggedNode.id);
+      batchDragRef.current?.nodeIds ?? draggedNodes.map((draggedNode) => draggedNode.id);
     batchDragRef.current = null;
     hideGroupBoundsPreview(groupBoundsPreviewRef.current);
     commitDragStop(nodeIds);
@@ -602,37 +604,10 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
     flowStore.setEdges(nextEdges, { visualOnly: true });
   };
 
-  const safeEdges = useMemo(() => {
-    const groupCollapsedMap = new Map<string, { collapsed: boolean; handlesReady: boolean }>();
-    for (let i = 0; i < nodes.length; i++) {
-      const node = nodes[i];
-      if (isGroupNode(node)) {
-        groupCollapsedMap.set(node.id, {
-          collapsed: !!node.data.collapsed,
-          handlesReady: !!node.data.handlesReady,
-        });
-      }
-    }
-
-    return edges.filter((edge) => {
-      if (edge.id.startsWith('proxy-')) {
-        const sourceGroup = groupCollapsedMap.get(edge.source);
-        if (sourceGroup && (!sourceGroup.collapsed || !sourceGroup.handlesReady)) {
-          return false;
-        }
-        const targetGroup = groupCollapsedMap.get(edge.target);
-        if (targetGroup && (!targetGroup.collapsed || !targetGroup.handlesReady)) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [edges, nodes]);
-
   return (
     <ReactFlow
-      nodes={renderNodes}
-      edges={safeEdges}
+      nodes={nodes}
+      edges={edges}
       nodeTypes={nodeTypes}
       edgeTypes={edgeTypes}
       onNodesChange={handleNodesChange}
@@ -660,7 +635,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       }}
       onMoveStart={() => useUIStore.getState().setIsTransforming(true)}
       onMoveEnd={() => useUIStore.getState().setIsTransforming(false)}
-      onlyRenderVisibleElements={renderNodes.length > 250 && !isZoomedOut}
+      onlyRenderVisibleElements={nodes.length > 250 && !isZoomedOut}
       deleteKeyCode={null}
       selectionKeyCode={null}
       multiSelectionKeyCode={null}
@@ -766,7 +741,5 @@ export function FlowViewport() {
     };
   }, []);
 
-  return (
-    <FlowViewportCanvas isZoomedOut={isZoomedOut} />
-  );
+  return <FlowViewportCanvas isZoomedOut={isZoomedOut} />;
 }

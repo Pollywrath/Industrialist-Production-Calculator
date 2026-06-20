@@ -6,6 +6,7 @@ const settingDefinitions = {
     type: 'number' as const,
     label: 'Distilled Water Temperature (°C)',
     default: 320,
+    min: -273.15,
   },
 };
 
@@ -31,11 +32,11 @@ export const cooling_tower_01: SpecialRecipe = {
       power_consumption: 0,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_distilled_water', quantity: 12000 }],
+      inputs: [{ product_id: 'p_distilled_water', quantity: 800 }],
       outputs: [
         {
           product_id: 'p_distilled_water',
-          quantity: 12000,
+          quantity: 800,
           temperature: outputTemp,
         },
       ],

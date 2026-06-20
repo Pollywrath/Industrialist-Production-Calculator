@@ -43,9 +43,7 @@ export function NodeEditorProvider({
       })();
 
     const initialRecipe =
-      resolveActiveRecipe(recipe.id, initialSettings, nodeId, undefined, {
-        suppressStoreTemperatureOverrides: true,
-      }) ?? recipe;
+      resolveActiveRecipe(recipe.id, initialSettings, nodeId) ?? recipe;
 
     return createStore<NodeEditorState>((set, get) => ({
       inputs: initialData.inputOrder ?? recipe.inputs.map((_, i) => i),
@@ -64,11 +62,7 @@ export function NodeEditorProvider({
 
       getCurrentRecipe: () => {
         const { settings } = get();
-        return (
-          resolveActiveRecipe(recipe.id, settings, nodeId, undefined, {
-            suppressStoreTemperatureOverrides: true,
-          }) ?? recipe
-        );
+        return resolveActiveRecipe(recipe.id, settings, nodeId) ?? recipe;
       },
 
       setInputs: (inputs) => set({ inputs }),
@@ -83,10 +77,7 @@ export function NodeEditorProvider({
       updateSetting: (key, value) => {
         const { settings, inputs, outputs, machineCount } = get();
         const newSettings = { ...settings, [key]: value };
-        const currentRecipe =
-          resolveActiveRecipe(recipe.id, newSettings, nodeId, undefined, {
-            suppressStoreTemperatureOverrides: true,
-          }) ?? recipe;
+        const currentRecipe = resolveActiveRecipe(recipe.id, newSettings, nodeId) ?? recipe;
 
         set({
           settings: newSettings,
