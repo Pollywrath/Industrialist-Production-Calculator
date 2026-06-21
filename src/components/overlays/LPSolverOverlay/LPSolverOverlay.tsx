@@ -12,6 +12,7 @@ import { getProductName, resolveActiveRecipe } from '../../../data/lookup';
 import { INDUS_LOGO_SRC } from '../../../data/productIcons';
 import { getSpecialRecipe } from '../../../data/registry';
 import { formatPower, formatPollution } from '../../../utils/unitFormatting';
+import { getRecipeNetPower } from '../../../utils/recipePower';
 import { isRecipeNode } from '../../../types/nodes';
 import styles from './LPSolverOverlay.module.css';
 
@@ -94,13 +95,7 @@ export function LPSolverOverlay() {
           const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id);
           if (!recipe) continue;
 
-          let powerVal = 0;
-          const power = recipe.power_consumption;
-          if (typeof power === 'number') {
-            powerVal = power;
-          } else if (power && typeof power === 'object' && 'max' in power) {
-            powerVal = (power as { max: number }).max;
-          }
+          const powerVal = getRecipeNetPower(recipe);
 
           const sr = getSpecialRecipe(recipe.id);
           const curPollMultiplier = sr?.pollutionIndependentOfMachineCount ? 1 : (node.data.machineCount ?? 0);

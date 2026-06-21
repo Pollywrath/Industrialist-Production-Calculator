@@ -61,6 +61,20 @@ interface ProductLinkLine {
   y2: number;
 }
 
+const PRODUCT_LINK_LINE_STYLE: React.CSSProperties = {
+  fill: 'none',
+  stroke: 'var(--theme-color-info)',
+  strokeWidth: 2,
+  strokeDasharray: '5 4',
+  strokeLinecap: 'square',
+};
+
+const PRODUCT_LINK_DOT_STYLE: React.CSSProperties = {
+  fill: 'var(--theme-color-info)',
+  stroke: 'var(--theme-color-node-bg)',
+  strokeWidth: 1,
+};
+
 function getProductLinkId(ref: HandleRef, recipe: Recipe | undefined): string {
   if (!recipe) return '';
   const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
@@ -507,6 +521,9 @@ export function RecipeNodeIO({
       {productLinkLines.length > 0 && (
         <svg
           className={styles['recipe-node-io__link-lines']}
+          width={NODE_WIDTH}
+          height={ioAreaHeight}
+          viewBox={`0 0 ${NODE_WIDTH} ${ioAreaHeight}`}
           aria-hidden="true"
           focusable="false"
         >
@@ -519,18 +536,21 @@ export function RecipeNodeIO({
                 y1={line.y1}
                 x2={line.x2}
                 y2={line.y2}
+                style={PRODUCT_LINK_LINE_STYLE}
               />
               <circle
                 className={styles['recipe-node-io__link-dot']}
                 cx={line.x1}
                 cy={line.y1}
                 r="3"
+                style={PRODUCT_LINK_DOT_STYLE}
               />
               <circle
                 className={styles['recipe-node-io__link-dot']}
                 cx={line.x2}
                 cy={line.y2}
                 r="3"
+                style={PRODUCT_LINK_DOT_STYLE}
               />
             </g>
           ))}

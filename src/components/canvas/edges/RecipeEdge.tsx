@@ -731,6 +731,9 @@ export function RecipeEdge({
     selected &&
     activeOrthSegment !== null &&
     activeOrthSegment.editable;
+  const showOrthogonalEditor = pathStyle === 'orthogonal' && selected;
+  const showControlPointEditor =
+    selected && (pathStyle === 'bezier' || pathStyle === 'straight');
   const orthogonalHandleDimensions =
     showOrthogonalHandle && activeOrthSegment
       ? activeOrthSegment.orientation === 'horizontal'
@@ -761,7 +764,7 @@ export function RecipeEdge({
         interactionWidth={EDGE_INTERACTION_WIDTH}
       />
 
-      {pathStyle === 'orthogonal' && (
+      {showOrthogonalEditor && (
         <g className={styles['edge-orth-overlay']} onMouseLeave={handleOrthogonalOverlayLeave}>
           {orthogonalSegments.map((segment) => (
             <line
@@ -805,7 +808,7 @@ export function RecipeEdge({
         </g>
       )}
 
-      {(pathStyle === 'bezier' || pathStyle === 'straight') &&
+      {showControlPointEditor &&
         controlPoints.map((point, index) => (
           <circle
             key={`${id}-cp-${index}`}

@@ -1,5 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
+import { clamp } from '../../utils/precision';
 import { formatTemperature } from '../../utils/unitFormatting';
 
 const MAX_COOLANT_FLOW = 800;
@@ -25,7 +26,7 @@ export function computeSteadyState(
   steamFlow: number,
 ): CondenserSteadyStateResult {
   const f = MAX_COOLANT_FLOW;
-  const q = clampFlow(steamFlow, MAX_STEAM_FLOW);
+  const q = Number.isFinite(steamFlow) ? clamp(steamFlow, 0, MAX_STEAM_FLOW) : 0;
 
   const a = f / 3000;
   const b = q / 360000;
@@ -72,11 +73,6 @@ export function computeSteadyState(
     threshold,
     hypCondensate,
   };
-}
-
-function clampFlow(flow: number, max: number): number {
-  if (!Number.isFinite(flow)) return 0;
-  return Math.max(0, Math.min(max, flow));
 }
 
 function getConfiguredSteamFlow(settings: Record<string, unknown>): number {

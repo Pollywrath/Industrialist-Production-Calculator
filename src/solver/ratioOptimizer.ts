@@ -8,6 +8,7 @@ import { solveFlowPipeline } from './solverPipeline';
 import { getRateMultiplier } from '../utils/recipeComputation';
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 import { buildHandleId, parseHandleId } from '../utils/idGenerator';
+import { getRecipeNetPower } from '../utils/recipePower';
 
 export interface RatioOptimizerNode {
   id: string;
@@ -172,13 +173,7 @@ export function buildRatioOptimizerPayload(
 
     const multiplier = getRateMultiplier(recipe.cycle_time, 'second');
 
-    let powerVal = 0;
-    const power = recipe.power_consumption;
-    if (typeof power === 'number') {
-      powerVal = power;
-    } else if (power && typeof power === 'object' && 'max' in power) {
-      powerVal = (power as { max: number }).max;
-    }
+    const powerVal = getRecipeNetPower(recipe);
 
     const inputs = recipe.inputs.map((inp, idx) => {
       const handleId = buildHandleId(node.id, 'input', idx);

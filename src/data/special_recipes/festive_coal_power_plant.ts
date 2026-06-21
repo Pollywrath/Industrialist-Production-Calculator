@@ -557,10 +557,10 @@ export function calculateCoalPowerPlantSteadyState(
   return result;
 }
 
-export const coal_power_plant_01: SpecialRecipe = {
-  id: 'r_coal_power_plant_01',
+export const festive_coal_power_plant_01: SpecialRecipe = {
+  id: 'r_festive_coal_power_plant_01',
   name: 'Coal Power Plant',
-  machine_id: 'm_coal_power_plant',
+  machine_id: 'm_festive_coal_power_plant',
   description:
     'CPP-only steady state. Central valve and pressurization are fixed at 100%, recirculation is fixed at 0%..',
   potentialInputs: ['p_coal', 'p_distilled_water'],
@@ -625,11 +625,11 @@ export const coal_power_plant_01: SpecialRecipe = {
     const outputTemp = result.working ? evalResult.outputTemp : result.siloTemp;
 
     const recipe: Recipe = {
-      id: 'r_coal_power_plant_01',
+      id: 'r_festive_coal_power_plant_01',
       name: result.working
         ? `${controls.coalPct}% C, ${controls.airPct}% A, ${controls.exhaustPct}% E`
         : 'Tripped',
-      machine_id: 'm_coal_power_plant',
+      machine_id: 'm_festive_coal_power_plant',
       cycle_time: 1,
       power_consumption: roundTo(evalResult.cppPowerUse, 6),
       power_type: 'HV',

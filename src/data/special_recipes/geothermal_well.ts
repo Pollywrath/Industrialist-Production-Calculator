@@ -25,7 +25,7 @@ export const geothermal_well_01: SpecialRecipe = {
   inputTemperatureSettings,
   compute: (settings) => {
     const inputTemp = (settings.input_temp as number) ?? 40;
-    const outputTemp = Math.max(0, Math.min(inputTemp + 80, 220));
+    const outputTemp = Math.min(inputTemp + 80, 220);
 
     const recipe: Recipe = {
       id: 'r_geothermal_well_01',
@@ -51,7 +51,7 @@ export const geothermal_well_02: SpecialRecipe = {
   inputTemperatureSettings,
   compute: (settings) => {
     const inputTemp = (settings.input_temp as number) ?? 40;
-    const outputTemp = Math.max(0, Math.min(inputTemp + 80, 220));
+    const outputTemp = Math.min(inputTemp + 80, 220);
 
     const recipe: Recipe = {
       id: 'r_geothermal_well_02',
@@ -77,7 +77,7 @@ export const geothermal_well_03: SpecialRecipe = {
   inputTemperatureSettings,
   compute: (settings) => {
     const inputTemp = (settings.input_temp as number) ?? 40;
-    const outputTemp = Math.max(0, Math.min(inputTemp + 80, 220));
+    const outputTemp = Math.min(inputTemp + 80, 220);
 
     const recipe: Recipe = {
       id: 'r_geothermal_well_03',

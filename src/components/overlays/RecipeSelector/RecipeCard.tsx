@@ -10,11 +10,11 @@ import {
 } from '../../../utils/recipeComputation';
 import {
   formatPollution,
-  formatPower,
   formatTime,
   formatQuantity,
   formatMachineCount,
 } from '../../../utils/unitFormatting';
+import { formatRecipePowerLine } from '../../../utils/recipePower';
 import { Star } from 'lucide-react';
 import styles from './RecipeSelector.module.css';
 import { findBestProductMatch } from './productMatch';
@@ -166,7 +166,7 @@ export function RecipeCard({
               <div className={styles['recipe-card-arrow-head']} />
             </div>
             <div className={`${styles['recipe-card-arrow-info']} ${styles['below']}`}>
-              {formatPower(recipe.power_consumption * neededMachineCount)}
+              {formatRecipePowerLine(recipe, neededMachineCount)}
             </div>
           </div>
         </div>

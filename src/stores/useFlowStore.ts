@@ -761,10 +761,16 @@ const patchEdgeWithAutoLayoutResult = (currentEdge: Edge, layoutEdge: Edge): Edg
   if ('orthogonalTurns' in layoutData && nextData.orthogonalTurns !== layoutData.orthogonalTurns) {
     nextData.orthogonalTurns = layoutData.orthogonalTurns;
     changed = true;
+  } else if (!('orthogonalTurns' in layoutData) && 'orthogonalTurns' in nextData) {
+    delete nextData.orthogonalTurns;
+    changed = true;
   }
 
   if ('controlPoints' in layoutData && nextData.controlPoints !== layoutData.controlPoints) {
     nextData.controlPoints = layoutData.controlPoints;
+    changed = true;
+  } else if (!('controlPoints' in layoutData) && 'controlPoints' in nextData) {
+    delete nextData.controlPoints;
     changed = true;
   }
 

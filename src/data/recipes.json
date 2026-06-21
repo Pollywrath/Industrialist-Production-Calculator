@@ -246,6 +246,23 @@
     ]
   },
   {
+    "id": "r_hand_pump_01",
+    "name": "Extracts Water",
+    "machine_id": "m_hand_pump",
+    "cycle_time": 3,
+    "power_consumption": 0,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [],
+    "outputs": [
+      {
+        "product_id": "p_water",
+        "quantity": 10,
+        "temperature": 18
+      }
+    ]
+  },
+  {
     "id": "r_advanced_coal_drill_01",
     "name": "Extracts Coal",
     "machine_id": "m_advanced_coal_drill",
@@ -8949,6 +8966,94 @@
         "quantity": 2
       }
     ],
+    "outputs": []
+  },
+  {
+    "id": "r_energy_wheel_01",
+    "name": "Produces Power",
+    "machine_id": "m_energy_wheel",
+    "cycle_time": 1,
+    "power_consumption": -30000,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [],
+    "outputs": []
+  },
+  {
+    "id": "r_hand_crank_01",
+    "name": "Produces Power",
+    "machine_id": "m_hand_crank",
+    "cycle_time": 1,
+    "power_consumption": -1500,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [],
+    "outputs": []
+  },
+  {
+    "id": "r_solar_panel_01",
+    "name": "Produces Power",
+    "machine_id": "m_solar_panel",
+    "cycle_time": 1,
+    "power_consumption": -200,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [],
+    "outputs": []
+  },
+  {
+    "id": "r_solar_panel2_01",
+    "name": "Produces Power",
+    "machine_id": "m_solar_panel2",
+    "cycle_time": 1,
+    "power_consumption": -575,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [],
+    "outputs": []
+  },
+  {
+    "id": "r_solar_panel3_01",
+    "name": "Produces Power",
+    "machine_id": "m_solar_panel3",
+    "cycle_time": 1,
+    "power_consumption": -3400,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [],
+    "outputs": []
+  },
+  {
+    "id": "r_solar_farm1_01",
+    "name": "Produces Power",
+    "machine_id": "m_solar_farm1",
+    "cycle_time": 1,
+    "power_consumption": -80000,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [],
+    "outputs": []
+  },
+  {
+    "id": "r_4_panel_solar_01",
+    "name": "Produces Power",
+    "machine_id": "m_4_panel_solar",
+    "cycle_time": 1,
+    "power_consumption": -68965.51,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [],
+    "outputs": []
+  },
+  {
+    "id": "r_rtg_01",
+    "name": "Produces Power",
+    "machine_id": "m_rtg",
+    "cycle_time": 1,
+    "power_consumption": -1,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [],
     "outputs": []
   },
   {

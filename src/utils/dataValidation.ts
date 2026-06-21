@@ -303,6 +303,62 @@ export function validateRecipe(
     });
   }
 
+  const validatePowerEffects = (field: string, value: unknown) => {
+    if (value === undefined) {
+      return;
+    }
+
+    if (!Array.isArray(value)) {
+      errors.push({
+        field,
+        message: 'Power effects must be an array when present',
+      });
+      return;
+    }
+
+    value.forEach((effect: unknown, idx: number) => {
+      if (!effect || typeof effect !== 'object') {
+        errors.push({
+          field: `${field}[${idx}]`,
+          message: 'Power effect must be a valid object',
+        });
+        return;
+      }
+
+      const typedEffect = effect as Record<string, unknown>;
+      if (typedEffect.power_type !== 'MV' && typedEffect.power_type !== 'HV') {
+        errors.push({
+          field: `${field}[${idx}].power_type`,
+          message: `Power effect type must be either "MV" or "HV" (got "${typedEffect.power_type}")`,
+        });
+      }
+
+      if (
+        typeof typedEffect.power_consumption !== 'number' ||
+        isNaN(typedEffect.power_consumption)
+      ) {
+        errors.push({
+          field: `${field}[${idx}].power_consumption`,
+          message: 'Power effect consumption must be a valid number',
+        });
+      }
+
+      if (
+        typedEffect.accounting !== undefined &&
+        typedEffect.accounting !== 'normal' &&
+        typedEffect.accounting !== 'production_delta'
+      ) {
+        errors.push({
+          field: `${field}[${idx}].accounting`,
+          message: `Power effect accounting must be either "normal" or "production_delta" (got "${typedEffect.accounting}")`,
+        });
+      }
+    });
+  };
+
+  validatePowerEffects('powerEffects', r.powerEffects);
+  validatePowerEffects('powerAccountingEffects', r.powerAccountingEffects);
+
   if (typeof r.pollution !== 'number' || isNaN(r.pollution)) {
     errors.push({
       field: 'pollution',

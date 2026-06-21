@@ -1,5 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
+import { roundTo } from '../../utils/precision';
 
 const FUEL_MAP: Record<string, { product_id: string; energy: number }> = {
   Coal: { product_id: 'p_coal', energy: 30000 },
@@ -34,7 +35,7 @@ const getCycleTime = (energy: number, extra: number = 0) => (settings: Record<st
 
 const getFuelQty = (energy: number) => (settings: Record<string, unknown>) => {
   const fuel = getFuel(settings);
-  return parseFloat((energy / fuel.energy).toFixed(6));
+  return roundTo(energy / fuel.energy, 6);
 };
 
 const commonResolveSettings = (productId: string) => {

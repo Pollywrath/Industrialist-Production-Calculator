@@ -8,6 +8,7 @@ import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 import { getSpecialRecipe } from '../data/registry';
 import { buildHandleId } from '../utils/idGenerator';
 import { isRecipeNode } from '../types/nodes';
+import { estimatePowerModelCount, getRecipePowerTotals } from '../utils/recipePower';
 
 export interface ProductDeficiencyGroup {
   productId: string;
@@ -76,9 +77,10 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
     );
     const flowResultState = useFlowResultStore.getState();
-    const resolvedProducts = flowResultState.resolvedProducts;
-    const results = flowResultState.results;
-    const edgeFlows = flowResultState.edgeFlows;
+    const isSolutionFresh = flowResultState.graphVersion === flowStore.graphVersion;
+    const resolvedProducts = isSolutionFresh ? flowResultState.resolvedProducts : {};
+    const results = isSolutionFresh ? flowResultState.results : new Map();
+    const edgeFlows = isSolutionFresh ? flowResultState.edgeFlows : {};
     const globalSettings = useGlobalSettingsStore.getState().settings;
 
     let totalConsumption = 0;
@@ -171,11 +173,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         }
       }
 
-      if (recipe.power_consumption > 0) {
-        totalConsumption += recipe.power_consumption * machineCount;
-      } else if (recipe.power_consumption < 0) {
-        totalProduction += Math.abs(recipe.power_consumption) * machineCount;
-      }
+      const powerTotals = getRecipePowerTotals(recipe, machineCount);
+      totalConsumption += powerTotals.consumption;
+      totalProduction += powerTotals.production;
 
       const pollutionMultiplier = sr?.pollutionIndependentOfMachineCount ? 1 : machineCount;
       netPollution += recipe.pollution * pollutionMultiplier;
@@ -186,14 +186,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       } else {
         baseModelCount = 1 + 2 * recipe.inputs.length + 2 * recipe.outputs.length;
 
-        if (recipe.power_consumption !== 0) {
-          if (recipe.power_type === 'HV') {
-            baseModelCount += 2;
-          } else if (recipe.power_type === 'MV') {
-            const absPower = Math.abs(recipe.power_consumption);
-            baseModelCount += Math.ceil(absPower / 1500000) * 2;
-          }
-        }
+        baseModelCount += estimatePowerModelCount(recipe);
       }
 
       totalModelCount += baseModelCount * roundedCount;
@@ -320,8 +313,14 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 }));
 
 export function initDashboardStore(): () => void {
-  const unsubFlow = useFlowStore.subscribe(
+  const unsubSolution = useFlowStore.subscribe(
     (s) => s.solutionVersion,
+    () => {
+      useDashboardStore.getState().recompute();
+    },
+  );
+  const unsubGraph = useFlowStore.subscribe(
+    (s) => s.graphVersion,
     () => {
       useDashboardStore.getState().recompute();
     },
@@ -355,7 +354,8 @@ export function initDashboardStore(): () => void {
   useDashboardStore.getState().recompute();
 
   return () => {
-    unsubFlow();
+    unsubSolution();
+    unsubGraph();
     unsubUI();
     unsubGlobalSettings();
   };

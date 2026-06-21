@@ -2299,21 +2299,6 @@
     "subcategory": "Item Extractor"
   },
   {
-    "id": "m_advanced_present_packing_machine",
-    "name": "Advanced Present Packing Machine",
-    "cost": 7500,
-    "tier": 1,
-    "size": {
-      "x": 20,
-      "y": 12
-    },
-    "variant": "none",
-    "limited": true,
-    "research": "",
-    "category": "Factory",
-    "subcategory": "Assembler"
-  },
-  {
     "id": "m_cat_assembler",
     "name": "Cat Assembler",
     "cost": 16180339,
@@ -2321,36 +2306,6 @@
     "size": {
       "x": 5,
       "y": 5
-    },
-    "variant": "none",
-    "limited": true,
-    "research": "",
-    "category": "Factory",
-    "subcategory": "Assembler"
-  },
-  {
-    "id": "m_industrial_present_packing_machine",
-    "name": "Industrial Present Packing Machine",
-    "cost": 7500,
-    "tier": 1,
-    "size": {
-      "x": 45,
-      "y": 25
-    },
-    "variant": "none",
-    "limited": true,
-    "research": "",
-    "category": "Factory",
-    "subcategory": "Assembler"
-  },
-  {
-    "id": "m_presents_packing_machine",
-    "name": "Presents Packing Machine",
-    "cost": 10000,
-    "tier": 2,
-    "size": {
-      "x": 9,
-      "y": 7
     },
     "variant": "none",
     "limited": true,

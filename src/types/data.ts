@@ -33,6 +33,13 @@ export interface Product {
 
 export type PowerType = 'MV' | 'HV';
 
+export interface RecipePowerEffect {
+  power_type: PowerType;
+  power_consumption: number;
+  label?: string;
+  accounting?: 'normal' | 'production_delta';
+}
+
 export interface RecipeInput {
   product_id: string;
   quantity: number;
@@ -63,6 +70,8 @@ export interface Recipe {
   cycle_time: number;
   power_consumption: number;
   power_type: PowerType;
+  powerEffects?: RecipePowerEffect[];
+  powerAccountingEffects?: RecipePowerEffect[];
   pollution: number;
   inputs: RecipeInput[];
   outputs: RecipeOutput[];

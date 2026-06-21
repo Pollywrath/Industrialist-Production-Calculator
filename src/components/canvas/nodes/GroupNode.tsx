@@ -14,6 +14,7 @@ import {
   formatPower,
   formatPollution,
 } from '../../../utils/unitFormatting';
+import { getRecipePowerTotals } from '../../../utils/recipePower';
 import {
   EMPTY_GROUP_HEIGHT,
   EMPTY_GROUP_WIDTH,
@@ -96,11 +97,7 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
         totalMachineCost += baseCost * roundedCount;
       }
 
-      if (recipe.power_consumption > 0) {
-        totalPower += recipe.power_consumption * machineCount;
-      } else if (recipe.power_consumption < 0) {
-        totalPower += recipe.power_consumption * machineCount;
-      }
+      totalPower += getRecipePowerTotals(recipe, machineCount).net;
 
       const pollutionMultiplier = sr?.pollutionIndependentOfMachineCount ? 1 : machineCount;
       totalPollution += recipe.pollution * pollutionMultiplier;

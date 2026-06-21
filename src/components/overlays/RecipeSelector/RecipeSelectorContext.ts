@@ -7,6 +7,7 @@ import {
   isPotentialHandleTypeMatch,
   isProductEntryMatch,
 } from './productMatch';
+import { hasRecipePowerProduction } from '../../../utils/recipePower';
 
 export interface RecipeSelectorState {
   stage: 'select' | 'recipes';
@@ -125,7 +126,7 @@ export function useRecipeSelectorFilters({
             inp.product_id !== 'any_fluid',
         );
 
-        const isPowerGenerator = (r.power_consumption ?? 0) < 0;
+        const isPowerGenerator = hasRecipePowerProduction(r);
         const producesHeat = r.outputs.some((out) => (out.temperature ?? 0) > 21);
         const hasSelectedExplicitInput = r.inputs.some(
           (inp) =>

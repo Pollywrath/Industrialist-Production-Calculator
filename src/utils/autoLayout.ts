@@ -1403,7 +1403,7 @@ async function layoutGraph(
       const layoutEdge = edgeMap.get(elkEdge.id);
       if (!layoutEdge) continue;
 
-      if (edgePath === 'bezier') {
+      if (edgePath === 'bezier' || edgePath === 'straight') {
         edgeUpdates.set(layoutEdge.id, { clearControlPoints: true });
         continue;
       }
@@ -1800,7 +1800,7 @@ export async function autoLayout(
   for (let i = 0; i < selfEdges.length; i++) {
     const edge = selfEdges[i];
 
-    if (edgePath === 'bezier') {
+    if (edgePath === 'bezier' || edgePath === 'straight') {
       edgeUpdates.set(edge.id, { clearControlPoints: true });
       continue;
     }

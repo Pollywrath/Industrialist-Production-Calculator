@@ -5,11 +5,11 @@ import { getSpecialRecipe } from '../../../data/registry';
 import { getNormalizedCycleTime } from '../../../utils/recipeComputation';
 import {
   formatPollution,
-  formatPower,
   formatTime,
   formatMachineCount,
   formatTemperature,
 } from '../../../utils/unitFormatting';
+import { formatRecipePowerLine } from '../../../utils/recipePower';
 import styles from './RecipeNode.module.css';
 
 interface RecipeNodeInfoProps {
@@ -76,11 +76,10 @@ export function RecipeNodeInfo({
               {formatTime(displayCycleTime)}
             </span>
           </div>
-          <div className={styles['recipe-node-info__stat']}>
+          <div className={`${styles['recipe-node-info__stat']} ${styles['recipe-node-info__stat--power']}`}>
             <span className={styles['recipe-node-info__stat-label']}>Power: </span>
             <span className={styles['recipe-node-info__stat-value']}>
-              {formatPower((recipe?.power_consumption ?? 0) * machineCount)}
-              {recipe?.power_type === 'HV' && ' HV'}
+              {recipe ? formatRecipePowerLine(recipe, machineCount) : '0 MF/s'}
             </span>
           </div>
           <div className={styles['recipe-node-info__stat']}>
