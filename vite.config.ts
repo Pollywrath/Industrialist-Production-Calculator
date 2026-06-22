@@ -14,9 +14,22 @@ export default defineConfig({
     'import.meta.env.VITE_ICON_VERSION': JSON.stringify(iconVersion),
   },
   plugins: [react(), babel({ presets: [reactCompilerPreset()] })],
-  build: {
+  worker: {
     rollupOptions: {
       output: {
+        entryFileNames: 'assets/[hash].js',
+        chunkFileNames: 'assets/[hash].js',
+        assetFileNames: 'assets/[hash][extname]',
+      },
+    },
+  },
+  build: {
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/[hash].js',
+        chunkFileNames: 'assets/[hash].js',
+        assetFileNames: 'assets/[hash][extname]',
         manualChunks(id) {
           if (id.includes('node_modules')) {
             if (id.includes('@xyflow')) {
