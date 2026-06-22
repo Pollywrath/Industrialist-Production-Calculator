@@ -29,7 +29,7 @@ export const lightning_rod_01: SpecialRecipe = {
       machine_id: 'm_lightning_rod',
       cycle_time: 1,
       power_consumption: -averagePower,
-      power_type: 'MV',
+      power_type: 'HV',
       pollution: 0,
       inputs: [],
       outputs: [],

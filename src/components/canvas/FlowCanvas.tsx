@@ -17,6 +17,7 @@ const FallbackSavesOverlay: React.ComponentType<Record<string, never>> = () => n
 const FallbackDataOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackThemeOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackMachineOverlay: React.ComponentType<Record<string, never>> = () => null;
+const FallbackHelpOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackLPSolverOverlay: React.ComponentType<Record<string, never>> = () => null;
 
 const LazyRecipeSelector = React.lazy(
@@ -88,6 +89,19 @@ const LazyMachineOverlay = React.lazy(
       }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
 );
 
+const LazyHelpOverlay = React.lazy(
+  () =>
+    import('../overlays/HelpOverlay')
+      .then((m) => {
+        overlayPrefetchCache.HelpOverlay = m.HelpOverlay;
+        return { default: m.HelpOverlay };
+      })
+      .catch((err) => {
+        console.warn('HelpOverlay chunk load failed.', err);
+        return { default: FallbackHelpOverlay };
+      }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
+);
+
 const LazyLPSolverOverlay = React.lazy(
   () =>
     import('../overlays/LPSolverOverlay/LPSolverOverlay')
@@ -108,6 +122,7 @@ export function FlowCanvas() {
   const isDataOverlayOpen = useUIStore((s) => s.isDataOverlayOpen);
   const isThemeOverlayOpen = useUIStore((s) => s.isThemeOverlayOpen);
   const isMachineOverlayOpen = useUIStore((s) => s.isMachineOverlayOpen);
+  const isHelpOverlayOpen = useUIStore((s) => s.isHelpOverlayOpen);
   const isLPSolverOpen = useUIStore((s) => s.isLPSolverOpen);
   const isTransformingStore = useUIStore((s) => s.isTransforming);
   const isZoomedOutStore = useUIStore((s) => s.isZoomedOut);
@@ -167,6 +182,13 @@ export function FlowCanvas() {
           .catch((err) => {
             console.warn('Failed to prefetch MachineOverlay chunk on idle:', err);
           }),
+        import('../overlays/HelpOverlay')
+          .then((m) => {
+            overlayPrefetchCache.HelpOverlay = m.HelpOverlay;
+          })
+          .catch((err) => {
+            console.warn('Failed to prefetch HelpOverlay chunk on idle:', err);
+          }),
         import('../overlays/LPSolverOverlay/LPSolverOverlay')
           .then((m) => {
             overlayPrefetchCache.LPSolverOverlay = m.LPSolverOverlay;
@@ -208,6 +230,7 @@ export function FlowCanvas() {
   const DataOverlay = overlayPrefetchCache.DataOverlay;
   const ThemeOverlay = overlayPrefetchCache.ThemeOverlay;
   const MachineOverlay = overlayPrefetchCache.MachineOverlay;
+  const HelpOverlay = overlayPrefetchCache.HelpOverlay;
   const LPSolverOverlay = overlayPrefetchCache.LPSolverOverlay;
 
   if (!isAutosaveLoaded) {
@@ -288,6 +311,14 @@ export function FlowCanvas() {
             }
           >
             <LazyMachineOverlay />
+          </Suspense>
+        ))}
+      {isHelpOverlayOpen &&
+        (HelpOverlay ? (
+          React.createElement(HelpOverlay)
+        ) : (
+          <Suspense fallback={<LoadingScreen title="HELP" subtitle="Loading help topics..." />}>
+            <LazyHelpOverlay />
           </Suspense>
         ))}
       {isLPSolverOpen &&

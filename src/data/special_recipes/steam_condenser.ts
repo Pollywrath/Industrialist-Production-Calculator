@@ -143,6 +143,7 @@ export const steam_condenser_01: SpecialRecipe = {
         {
           product_id: 'p_distilled_water',
           quantity: result.coolantFlow,
+          product_link_id: 'coolant',
         },
         {
           product_id: 'p_low_pressure_steam',
@@ -154,6 +155,7 @@ export const steam_condenser_01: SpecialRecipe = {
           product_id: 'p_distilled_water',
           quantity: result.coolantFlow,
           temperature: result.tCoolantOutput,
+          product_link_id: 'coolant',
         },
         {
           product_id: 'p_condensate',

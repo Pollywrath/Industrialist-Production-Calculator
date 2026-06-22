@@ -43,24 +43,24 @@ function formatWithPrefix(
 }
 
 export function formatPollution(value: number): string {
-  return formatWithPrefix(value, 1000, ['', 'k', 'M', 'G', 'T'], '%/hr', '', 3);
+  return formatWithPrefix(value, 1000, ['', 'k', 'M', 'G', 'T', 'P', 'E'], '%/hr', '', 3);
 }
 
 export function formatPower(value: number, isCapacity = false): string {
   const suffix = isCapacity ? 'MF' : 'MF/s';
-  return formatWithPrefix(value, 1000, ['', 'k', 'M', 'G', 'T'], suffix);
+  return formatWithPrefix(value, 1000, ['', 'k', 'M', 'G', 'T', 'P', 'E'], suffix);
 }
 
 export function formatTemperature(value: number): string {
-  return formatWithPrefix(value, 10000, ['', 'k', 'M', 'B', 'T'], '°C');
+  return formatWithPrefix(value, 10000, ['', 'k', 'M', 'B', 'T', 'Qa', 'Qi'], '°C');
 }
 
 export function formatCurrency(value: number): string {
-  return formatWithPrefix(value, 10000, ['', 'k', 'M', 'B', 'T'], '', '$');
+  return formatWithPrefix(value, 10000, ['', 'k', 'M', 'B', 'T', 'Qa', 'Qi'], '', '$');
 }
 
 export function formatRpMultiplier(value: number): string {
-  return formatWithPrefix(value, 10000, ['', 'k', 'M', 'B', 'T'], 'x');
+  return formatWithPrefix(value, 10000, ['', 'k', 'M', 'B', 'T', 'Qa', 'Qi'], 'x');
 }
 
 export function formatTime(seconds: number): string {
@@ -112,7 +112,7 @@ function formatWithCommasAndCounting(
     }
   }
 
-  const prefixes = ['', 'k', 'M', 'B', 'T'];
+  const prefixes = ['', 'k', 'M', 'B', 'T', 'Qa', 'Qi'];
   let scaled = absValue;
   let tier = 0;
 

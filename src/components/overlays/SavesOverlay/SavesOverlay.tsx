@@ -13,6 +13,7 @@ import {
   Plus,
   GitMerge,
   RefreshCw,
+  Replace,
 } from 'lucide-react';
 import { useUIStore } from '../../../stores/useUIStore';
 import type { SaveRecord } from '../../../types/saves';
@@ -186,6 +187,8 @@ function SavesOverlayModal() {
                         className={styles['action-btn']}
                         onClick={() => handleOverwriteLoad(record)}
                         disabled={pendingId === record.id}
+                        aria-label={`Load ${record.name}`}
+                        title="Load save"
                       >
                         {pendingId === record.id && pendingAction === 'load' ? (
                           <RefreshCw size={14} className={styles['spin']} />
@@ -197,6 +200,8 @@ function SavesOverlayModal() {
                         className={styles['action-btn']}
                         onClick={() => handleMergeLoad(record)}
                         disabled={pendingId === record.id}
+                        aria-label={`Merge ${record.name}`}
+                        title="Merge save"
                       >
                         {pendingId === record.id && pendingAction === 'merge' ? (
                           <RefreshCw size={14} className={styles['spin']} />
@@ -208,11 +213,13 @@ function SavesOverlayModal() {
                         className={styles['action-btn']}
                         onClick={() => handleOverwriteSave(record)}
                         disabled={pendingId === record.id}
+                        aria-label={`Overwrite ${record.name}`}
+                        title="Overwrite save with current canvas"
                       >
                         {pendingId === record.id && pendingAction === 'save' ? (
                           <RefreshCw size={14} className={styles['spin']} />
                         ) : (
-                          <RefreshCw size={14} />
+                          <Replace size={14} />
                         )}
                       </button>
                       {editingId === record.id ? (
@@ -223,6 +230,8 @@ function SavesOverlayModal() {
                             commitRename(record.id);
                           }}
                           disabled={pendingId === record.id}
+                          aria-label={`Confirm rename for ${record.name}`}
+                          title="Confirm rename"
                         >
                           {pendingId === record.id && pendingAction === 'rename' ? (
                             <RefreshCw size={14} className={styles['spin']} />
@@ -235,6 +244,8 @@ function SavesOverlayModal() {
                           className={styles['action-btn']}
                           onClick={() => startRename(record)}
                           disabled={pendingId === record.id}
+                          aria-label={`Rename ${record.name}`}
+                          title="Rename save"
                         >
                           <Edit2 size={14} />
                         </button>
@@ -243,6 +254,8 @@ function SavesOverlayModal() {
                         className={styles['action-btn']}
                         onClick={() => handleExportJson(record)}
                         disabled={pendingId === record.id}
+                        aria-label={`Export ${record.name}`}
+                        title="Export save JSON"
                       >
                         <Download size={14} />
                       </button>
@@ -250,6 +263,8 @@ function SavesOverlayModal() {
                         className={styles['action-btn']}
                         onClick={() => handleDeleteSave(record.id)}
                         disabled={pendingId === record.id}
+                        aria-label={`Delete ${record.name}`}
+                        title="Delete save"
                       >
                         {pendingId === record.id && pendingAction === 'delete' ? (
                           <RefreshCw size={14} className={styles['spin']} />

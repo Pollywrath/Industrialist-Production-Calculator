@@ -19,7 +19,8 @@ const settingDefinitions = {
     type: 'number' as const,
     label: 'Input Power',
     default: 100000,
-    min: 0
+    min: 0,
+    max: 240000000
   },
   coolant: {
     type: 'select' as const,
