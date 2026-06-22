@@ -3,6 +3,11 @@
 Visual production planning tool for the Industrialist game. Build flowcharts, calculate machine counts, and optimize factory layouts. Live app here:
 https://pollywrath.github.io/Industrialist-Production-Calculator/
 
+## Notice
+
+This site is no longer being updated. A new version of the calculator is available at:
+https://industrialist-calculator.pages.dev/
+
 ## Features
 
 - **Visual Planning**: Drag-and-drop recipe nodes with auto-balancing

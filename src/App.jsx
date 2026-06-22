@@ -56,6 +56,8 @@ const ModalLoadingFallback = () => (
 
 const nodeTypes = { custom: CustomNode };
 const edgeTypes = { custom: CustomEdge };
+const NEW_CALCULATOR_URL = 'https://industrialist-calculator.pages.dev/';
+const DEPRECATION_NOTICE_STORAGE_KEY = 'industrialist-deprecation-notice-dismissed';
 
 // Grid constants (Matching CustomNode.jsx and autoLayout.js)
 const NODE_WIDTH = 380;
@@ -120,6 +122,13 @@ function App() {
   const [nodes, setNodes, onNodesChangeBase] = useNodesState([]);
   const [edges, setEdges, onEdgesChangeBase] = useEdgesState([]);
   const [nodeId, setNodeId] = useState(0);
+  const [showDeprecationNotice, setShowDeprecationNotice] = useState(() => {
+    try {
+      return sessionStorage.getItem(DEPRECATION_NOTICE_STORAGE_KEY) !== 'true';
+    } catch {
+      return true;
+    }
+  });
   const [showRecipeSelector, setShowRecipeSelector] = useState(false);
   const [keepOverlayDuringTransition, setKeepOverlayDuringTransition] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -2354,6 +2363,15 @@ function App() {
     setFavoriteRecipes(prev => prev.includes(recipeId) ? prev.filter(id => id !== recipeId) : [...prev, recipeId]);
   };
 
+  const dismissDeprecationNotice = useCallback(() => {
+    try {
+      sessionStorage.setItem(DEPRECATION_NOTICE_STORAGE_KEY, 'true');
+    } catch {
+      // Ignore storage failures; closing should still hide the notice for this session.
+    }
+    setShowDeprecationNotice(false);
+  }, []);
+
   return (
     <div style={{ width: '100vw', height: '100vh' }}>
       <ReactFlow
@@ -2611,6 +2629,29 @@ function App() {
           </div>
         </Panel>
       </ReactFlow>
+
+      {showDeprecationNotice && (
+        <div className="deprecation-notice" role="status">
+          <div className="deprecation-notice-content">
+            <strong>This site is no longer being updated.</strong>
+            <span>
+              A new version of the calculator is available at{' '}
+              <a href={NEW_CALCULATOR_URL} target="_blank" rel="noopener noreferrer">
+                industrialist-calculator.pages.dev
+              </a>.
+            </span>
+          </div>
+          <button
+            type="button"
+            className="deprecation-notice-close"
+            onClick={dismissDeprecationNotice}
+            aria-label="Dismiss update notice"
+            title="Dismiss update notice"
+          >
+            x
+          </button>
+        </div>
+      )}
 
       <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={processImport} />
 

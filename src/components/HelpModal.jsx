@@ -1,6 +1,8 @@
 import React from 'react';
 import { TIPS } from './ComputeModal';
 
+const NEW_CALCULATOR_URL = 'https://industrialist-calculator.pages.dev/';
+
 const HelpModal = ({ onClose }) => {
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -8,6 +10,31 @@ const HelpModal = ({ onClose }) => {
         <h2 className="modal-title">Help & Controls</h2>
         
         <div className="modal-content" style={{ maxHeight: 'calc(85vh - 120px)', overflowY: 'auto', paddingRight: '10px' }}>
+          <div style={{
+            background: 'var(--bg-main)',
+            border: '2px solid var(--border-primary)',
+            borderRadius: 'var(--radius-md)',
+            padding: '16px',
+            marginBottom: '24px',
+            color: 'var(--text-secondary)',
+            fontSize: '14px',
+            lineHeight: 1.45
+          }}>
+            <div style={{ color: 'var(--text-primary)', fontWeight: 700, marginBottom: '6px' }}>
+              This site is no longer being updated.
+            </div>
+            <div>
+              A new version of the calculator is available at{' '}
+              <a
+                href={NEW_CALCULATOR_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'var(--color-primary)', fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: '3px' }}
+              >
+                industrialist-calculator.pages.dev
+              </a>.
+            </div>
+          </div>
           
           {/* Controls Section */}
           <div style={{ marginBottom: '30px' }}>

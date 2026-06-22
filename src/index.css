@@ -218,6 +218,72 @@ body {
 }
 
 /* ============================================================
+   DEPRECATION NOTICE
+   ============================================================ */
+.deprecation-notice {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(680px, calc(100vw - 32px));
+  padding: 14px 16px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+}
+
+.deprecation-notice-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: var(--font-size-base);
+  line-height: 1.35;
+}
+
+.deprecation-notice-content strong {
+  color: var(--text-primary);
+}
+
+.deprecation-notice-content a {
+  color: var(--color-primary);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.deprecation-notice-close {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-main);
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: var(--font-size-md);
+  font-weight: 700;
+  line-height: 1;
+  transition: all 0.2s;
+}
+
+.deprecation-notice-close:hover {
+  background: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+/* ============================================================
    MODALS
    ============================================================ */
 .modal-overlay {
