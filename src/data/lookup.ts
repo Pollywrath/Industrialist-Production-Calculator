@@ -316,6 +316,15 @@ export function rebuildActiveDatabase(
 
 export async function reloadDatabase(): Promise<void> {
   const overrides = await getDataOverrides();
+  const specialRecipeEdits = overrides
+    .filter((entry) => entry.id.startsWith('special_recipe:'))
+    .reduce((acc, entry) => {
+      const recipeId = entry.id.replace('special_recipe:', '');
+      acc[recipeId] = entry.data as unknown as SpecialRecipe;
+      return acc;
+    }, {} as Record<string, SpecialRecipe>);
+
+  setSpecialRecipeOverrides(specialRecipeEdits);
   rebuildActiveDatabase(overrides);
 }
 

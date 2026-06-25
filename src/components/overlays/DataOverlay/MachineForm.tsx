@@ -8,6 +8,11 @@ import {
   hasMachineOverride,
 } from '../../../data/lookup';
 import { useDataStore, overlayPendingEdit } from '../../../stores/useDataStore';
+import {
+  completeTutorialAction,
+  isTutorialActive,
+  useTutorialStore,
+} from '../../../stores/useTutorialStore';
 import { SearchDropdown } from '../../shared/SearchDropdown';
 import {
   CANONICAL_CATEGORY_MAP,
@@ -28,10 +33,12 @@ function MachineCostInput({
   value,
   onChange,
   defaultValue = 100,
+  dataTutorialDataField,
 }: {
   value: number | undefined;
   onChange: (value: number) => void;
   defaultValue?: number;
+  dataTutorialDataField?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -91,6 +98,7 @@ function MachineCostInput({
       className={styles['form-input']}
       placeholder="100.0 or infinity"
       title="Must be a positive float value or 'infinity'"
+      data-tutorial-data-field={dataTutorialDataField}
     />
   );
 }
@@ -156,18 +164,23 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
   ];
 
   const handleTierChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    updateMachinePendingEdit(selectedMachineId, { tier: parseInt(e.target.value, 10) });
+    const value = parseInt(e.target.value, 10);
+    if (!handleTutorialFieldChange('machine.tier', value)) return;
+    updateMachinePendingEdit(selectedMachineId, { tier: value });
   };
 
   const handleVariantChange = (newVal: string) => {
+    if (isTutorialActive()) return;
     updateMachinePendingEdit(selectedMachineId, { variant: newVal });
   };
 
   const handleLimitedChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (isTutorialActive()) return;
     updateMachinePendingEdit(selectedMachineId, { limited: e.target.checked });
   };
 
   const handleCategoryChange = (newCat: string) => {
+    if (!handleTutorialFieldChange('machine.category', newCat)) return;
     const updates: Partial<Machine> = { category: newCat };
     if (newCat !== 'Removed') {
       const nextSubs = CANONICAL_CATEGORY_MAP[newCat];
@@ -179,11 +192,22 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
   };
 
   const handleSubcategoryChange = (newSub: string) => {
+    if (!handleTutorialFieldChange('machine.subcategory', newSub)) return;
     updateMachinePendingEdit(selectedMachineId, { subcategory: newSub });
   };
 
   const handleResearchChange = (newRes: string) => {
+    if (isTutorialActive()) return;
     updateMachinePendingEdit(selectedMachineId, { research: newRes });
+  };
+
+  const handleTutorialFieldChange = (field: string, value: string | number | boolean) => {
+    if (isTutorialActive()) {
+      const action = useTutorialStore.getState().getCurrentStep()?.action;
+      if (action?.type !== 'data-field' || action.field !== field) return false;
+      return completeTutorialAction({ type: 'data-field', field, value });
+    }
+    return true;
   };
 
   const handleDelete = () => {
@@ -212,8 +236,12 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
           <label className={styles['form-label']}>Cost ($)</label>
           <MachineCostInput
             value={activeMachine.cost}
-            onChange={(val) => updateMachinePendingEdit(selectedMachineId, { cost: val })}
+            onChange={(val) => {
+              if (!handleTutorialFieldChange('machine.cost', val)) return;
+              updateMachinePendingEdit(selectedMachineId, { cost: val });
+            }}
             defaultValue={100}
+            dataTutorialDataField="machine.cost"
           />
         </div>
 
@@ -223,6 +251,7 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
             className={styles['form-select']}
             value={activeMachine.tier || 1}
             onChange={handleTierChange}
+            data-tutorial-data-field="machine.tier"
           >
             <option value={1}>Tier 1</option>
             <option value={2}>Tier 2</option>
@@ -238,9 +267,12 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
           <ValidatedNumberInput
             value={activeMachine.size?.x}
             onChange={(val) =>
-              updateMachinePendingEdit(selectedMachineId, {
+              {
+                if (!handleTutorialFieldChange('machine.size.x', val)) return;
+                updateMachinePendingEdit(selectedMachineId, {
                 size: { ...activeMachine.size, x: val } as MachineSize,
-              })
+                });
+              }
             }
             defaultValue={1}
             allowDecimals={false}
@@ -249,6 +281,7 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
             className={styles['form-input']}
             placeholder="1"
             title="Must be a positive integer (>= 1)"
+            dataTutorialDataField="machine.size.x"
           />
         </div>
 
@@ -257,9 +290,12 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
           <ValidatedNumberInput
             value={activeMachine.size?.y}
             onChange={(val) =>
-              updateMachinePendingEdit(selectedMachineId, {
+              {
+                if (!handleTutorialFieldChange('machine.size.y', val)) return;
+                updateMachinePendingEdit(selectedMachineId, {
                 size: { ...activeMachine.size, y: val } as MachineSize,
-              })
+                });
+              }
             }
             defaultValue={1}
             allowDecimals={false}
@@ -268,6 +304,7 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
             className={styles['form-input']}
             placeholder="1"
             title="Must be a positive integer (>= 1)"
+            dataTutorialDataField="machine.size.y"
           />
         </div>
       </div>
@@ -280,6 +317,7 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
             options={variantOptions}
             onChange={handleVariantChange}
             placeholder="Select Base Machine..."
+            dataTutorialDataField="machine.variant"
           />
         </div>
 
@@ -300,7 +338,10 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
                 type="checkbox"
                 className={styles['form-checkbox']}
                 checked={!!activeMachine.sandboxOnly}
-                onChange={(e) => updateMachinePendingEdit(selectedMachineId, { sandboxOnly: e.target.checked })}
+                onChange={(e) => {
+                  if (isTutorialActive()) return;
+                  updateMachinePendingEdit(selectedMachineId, { sandboxOnly: e.target.checked });
+                }}
               />
               <span className={styles['checkbox-label']}>Sandbox Only</span>
             </label>
@@ -309,7 +350,10 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
                 type="checkbox"
                 className={styles['form-checkbox']}
                 checked={!!activeMachine.sandboxPlusOnly}
-                onChange={(e) => updateMachinePendingEdit(selectedMachineId, { sandboxPlusOnly: e.target.checked })}
+                onChange={(e) => {
+                  if (isTutorialActive()) return;
+                  updateMachinePendingEdit(selectedMachineId, { sandboxPlusOnly: e.target.checked });
+                }}
               />
               <span className={styles['checkbox-label']}>Sandbox+ Only</span>
             </label>
@@ -324,6 +368,7 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
           options={categoryOptions}
           onChange={handleCategoryChange}
           placeholder="Select Category..."
+          dataTutorialDataField="machine.category"
         />
       </div>
 
@@ -334,6 +379,7 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
           options={subcategoryOptions}
           onChange={handleSubcategoryChange}
           placeholder="Select Subcategory..."
+          dataTutorialDataField="machine.subcategory"
         />
       </div>
 
@@ -344,6 +390,7 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
           options={researchOptions}
           onChange={handleResearchChange}
           placeholder="Select Required Research..."
+          dataTutorialDataField="machine.research"
         />
       </div>
     </GenericDataFormShell>

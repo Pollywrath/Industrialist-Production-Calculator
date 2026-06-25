@@ -111,31 +111,26 @@ export function matchVariant(appVariant: string, wikiVariant: string): boolean {
 
 export function matchPollution(appPollution: number, wikiPollutionStr: string): boolean {
   const cleanStr = wikiPollutionStr.trim().toLowerCase();
-  if (!cleanStr) return true; // Empty wiki field matches anything
+  if (!cleanStr) return true;
 
   if (cleanStr.includes('depends')) {
     return true;
   }
 
-  // Replace hyphens that are preceded by a digit (range separator) with a space
   const spacedStr = wikiPollutionStr.replace(/(\d)\s*-\s*(\d)/g, '$1 $2');
 
-  // Extract all numbers
   const numMatches = spacedStr.match(/-?\d+(?:\.\d+)?/g);
   if (!numMatches) return false;
 
   const numbers = numMatches.map(Number).filter(n => !isNaN(n));
   if (numbers.length === 0) return false;
 
-  // Check if appValue matches any of the numbers directly
   for (const num of numbers) {
     if (Math.abs(appPollution - num) < 1e-6) {
       return true;
     }
   }
 
-  // If there are at least two numbers and the original string had a range dash,
-  // check if appPollution falls within the range of the first two numbers
   if (numbers.length >= 2 && wikiPollutionStr.includes('-')) {
     const min = Math.min(numbers[0], numbers[1]);
     const max = Math.max(numbers[0], numbers[1]);

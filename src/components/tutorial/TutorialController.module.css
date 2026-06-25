@@ -1,0 +1,58 @@
+:global(.driver-popover.tutorial-popover) {
+  max-width: 340px;
+  color: var(--theme-color-text-secondary);
+  background: var(--theme-color-bg-secondary);
+  border: 1px solid var(--theme-color-border-primary);
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+:global(.driver-popover.tutorial-popover .driver-popover-title) {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--theme-color-text-primary);
+}
+
+:global(.driver-popover.tutorial-popover .driver-popover-description) {
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+:global(.driver-popover.tutorial-popover .driver-popover-footer button) {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-shadow: none;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+:global(body.driver-active.tutorial-canvas-interaction-enabled .driver-overlay),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .driver-overlay *) {
+  pointer-events: none;
+}
+
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow .react-flow__renderer),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow .react-flow__pane),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow .react-flow__viewport),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow .react-flow__nodes),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow .react-flow__node),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow .react-flow__edges),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow .react-flow__edge),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow .react-flow__edge *),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow .react-flow__handle),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-node-id]),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-rect-node-id]),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-rect-node-id] *),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-node-editor-button]),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-node-editor-button] *),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-group-node-id]),
+:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-group-node-id] *) {
+  pointer-events: auto;
+}
+
+:global(:not(body):has(>.driver-active-element)) {
+  overflow: visible !important;
+}

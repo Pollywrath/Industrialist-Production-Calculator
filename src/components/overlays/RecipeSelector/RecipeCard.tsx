@@ -18,6 +18,7 @@ import { formatRecipePowerLine } from '../../../utils/recipePower';
 import { Star } from 'lucide-react';
 import styles from './RecipeSelector.module.css';
 import { findBestProductMatch } from './productMatch';
+import { isTutorialActive } from '../../../stores/useTutorialStore';
 
 interface RecipeCardProps {
   recipe: Recipe;
@@ -103,13 +104,18 @@ export function RecipeCard({
   const pollutionMultiplier = sr?.pollutionIndependentOfMachineCount ? 1 : neededMachineCount;
 
   return (
-    <div className={styles['recipe-selector-card']} onClick={() => onAddRecipe(recipe.id)}>
+    <div
+      className={styles['recipe-selector-card']}
+      onClick={() => onAddRecipe(recipe.id)}
+      data-tutorial-recipe-card={recipe.id}
+    >
       <div className={styles['recipe-card-top']}>
         <div className={styles['recipe-card-top-left']}>
           <button
             className={`${styles['recipe-card-fav-btn']}${isFavorite ? ` ${styles['is-favorite']}` : ''}`}
             onClick={(e) => {
               e.stopPropagation();
+              if (isTutorialActive()) return;
               onToggleFavorite(recipe.id);
             }}
           >

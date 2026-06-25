@@ -1,6 +1,11 @@
 import type React from 'react';
 import { Save, Database, Palette, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+} from '../../stores/useTutorialStore';
 import styles from './OverlaysTray.module.css';
 
 interface OverlayButtonConfig {
@@ -30,6 +35,10 @@ export function OverlaysTray() {
   const toggleOverlaysMinimized = useUIStore((s) => s.toggleOverlaysMinimized);
 
   const handleClick = (id: 'saves' | 'data' | 'theme' | 'help') => {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'overlay', id })) {
+      return;
+    }
+
     if (id === 'saves') {
       setSavesOverlayOpen(!isSavesOverlayOpen);
     } else if (id === 'data') {
@@ -39,6 +48,7 @@ export function OverlaysTray() {
     } else if (id === 'help') {
       setHelpOverlayOpen(!isHelpOverlayOpen);
     }
+    completeTutorialAction({ type: 'overlay', id });
   };
 
   return (
@@ -58,6 +68,7 @@ export function OverlaysTray() {
                 key={btn.id}
                 className={`${styles['overlays-tray-button']} ${isActive ? styles['is-active'] : ''} ${btn.dividerBottom ? styles['has-divider-bottom'] : ''}`}
                 onClick={() => handleClick(btn.id)}
+                data-tutorial-overlay-id={btn.id}
               >
                 <Icon size={16} className={styles['overlays-tray-button-icon']} />
                 <span className={styles['overlays-tray-button-label']}>{btn.label}</span>
@@ -67,7 +78,13 @@ export function OverlaysTray() {
         </div>
       )}
 
-      <button className={styles['overlays-tray-bar']} onClick={toggleOverlaysMinimized}>
+      <button
+        className={styles['overlays-tray-bar']}
+        onClick={() => {
+          if (isTutorialActive()) return;
+          toggleOverlaysMinimized();
+        }}
+      >
         <span className={styles['overlays-tray-bar-text']}>
           {isOverlaysMinimized ? (
             <>

@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useDataStore } from '../../../stores/useDataStore';
 import { RecipesList } from './RecipesList';
 import { RecipeForm } from './RecipeForm';
 import styles from './RecipesTab.module.css';
 
 export function RecipesTab() {
-  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const selectedRecipeId = useDataStore((s) => s.selectedRecipeId);
+  const setSelectedRecipeId = useDataStore((s) => s.setSelectedRecipeId);
 
   return (
     <div className={styles['recipes-tab-container']}>

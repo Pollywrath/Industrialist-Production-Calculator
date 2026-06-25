@@ -10,6 +10,12 @@ import {
 import { buildVirtualModularMachines } from '../../../utils/modularMachineFactory';
 import type { Machine, Recipe } from '../../../types/data';
 import { useDataStore, overlayPendingEdit } from '../../../stores/useDataStore';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+  useTutorialStore,
+} from '../../../stores/useTutorialStore';
 import crudStyles from './DataCrud.module.css';
 import styles from './RecipesTab.module.css';
 
@@ -39,6 +45,7 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
   const [expandedMachines, setExpandedMachines] = useState<Set<string>>(new Set());
 
   const toggleMachineExpanded = (machineId: string) => {
+    if (isTutorialActive()) return;
     setExpandedMachines((prev) => {
       const next = new Set(prev);
       if (next.has(machineId)) {
@@ -51,6 +58,9 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
   };
 
   const handleAddNew = () => {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'data-add', entity: 'recipe' })) {
+      return;
+    }
     const newId = addRecipe('New Recipe');
     setExpandedMachines((prev) => {
       const next = new Set(prev);
@@ -58,6 +68,27 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
       return next;
     });
     onSelectRecipe(newId);
+    completeTutorialAction({ type: 'data-add', entity: 'recipe', id: newId });
+  };
+
+  const handleSearchChange = (value: string) => {
+    if (isTutorialActive()) {
+      const action = useTutorialStore.getState().getCurrentStep()?.action;
+      if (action?.type !== 'data-search' || action.entity !== 'recipe') return;
+    }
+    setSearchQuery(value);
+    completeTutorialAction({ type: 'data-search', entity: 'recipe', query: value });
+  };
+
+  const handleRecipeSelect = (id: string) => {
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({ type: 'data-select', entity: 'recipe', id })
+    ) {
+      return;
+    }
+    onSelectRecipe(id);
+    completeTutorialAction({ type: 'data-select', entity: 'recipe', id });
   };
 
   const compiledRecipes: Recipe[] = [];
@@ -180,12 +211,16 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
             className={crudStyles['search-input']}
             placeholder="Search recipes or machines..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            data-tutorial-data-search="recipe"
           />
           {searchQuery && (
             <button
               className={crudStyles['search-clear']}
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                if (isTutorialActive()) return;
+                setSearchQuery('');
+              }}
               title="Clear search"
             >
               <X size={12} />
@@ -196,6 +231,7 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
           className={crudStyles['btn-add']}
           onClick={handleAddNew}
           title="Add Custom Recipe"
+          data-tutorial-data-add="recipe"
         >
           <Plus size={16} />
         </button>
@@ -241,7 +277,8 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
                 data-new={isNew ? 'true' : undefined}
                 data-modified={isModified ? 'true' : undefined}
                 data-pending={isPending ? 'true' : undefined}
-                onClick={() => onSelectRecipe(recipe.id)}
+                data-tutorial-data-row={`recipe:${recipe.id}`}
+                onClick={() => handleRecipeSelect(recipe.id)}
               >
                 <div className={styles['recipe-row-left']}>
                   <span className={styles['recipe-name']}>{recipe.name}</span>

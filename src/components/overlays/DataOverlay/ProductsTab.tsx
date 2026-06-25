@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useDataStore } from '../../../stores/useDataStore';
 import { ProductsList } from './ProductsList';
 import { ProductForm } from './ProductForm';
 import styles from './ProductsTab.module.css';
 
 export function ProductsTab() {
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const selectedProductId = useDataStore((s) => s.selectedProductId);
+  const setSelectedProductId = useDataStore((s) => s.setSelectedProductId);
 
   return (
     <div className={styles['products-tab-container']}>

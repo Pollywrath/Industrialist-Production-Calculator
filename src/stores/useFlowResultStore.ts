@@ -10,6 +10,7 @@ interface FlowResultState {
   resolvedProducts: Record<string, string>;
   nodeRecipes: Record<string, Recipe>;
   graphVersion: number;
+  dataDbVersion: number;
   setResults: (
     results: FlowResults,
     edgeFlows: Record<string, number>,
@@ -18,6 +19,7 @@ interface FlowResultState {
     resolvedProducts: Record<string, string>,
     nodeRecipes: Record<string, Recipe>,
     graphVersion: number,
+    dataDbVersion: number,
   ) => void;
 }
 
@@ -97,7 +99,8 @@ const useFlowResultStore = create<FlowResultState>((set, get) => ({
   resolvedProducts: {},
   nodeRecipes: {},
   graphVersion: 0,
-  setResults: (newResults, newEdgeFlows, newEdgeTemps, newInputTemps, newResolvedProducts, newNodeRecipes, newGraphVersion) => {
+  dataDbVersion: 0,
+  setResults: (newResults, newEdgeFlows, newEdgeTemps, newInputTemps, newResolvedProducts, newNodeRecipes, newGraphVersion, newDataDbVersion) => {
     const oldState = get();
     const oldResults = oldState.results;
     let hasChanged = oldResults.size !== newResults.size;
@@ -119,8 +122,9 @@ const useFlowResultStore = create<FlowResultState>((set, get) => ({
     const resolvedProductsChanged = !areRecordsEqual(oldState.resolvedProducts, newResolvedProducts);
     const nodeRecipesChanged = !areRecordsEqual(oldState.nodeRecipes, newNodeRecipes);
     const graphVersionChanged = oldState.graphVersion !== newGraphVersion;
+    const dataDbVersionChanged = oldState.dataDbVersion !== newDataDbVersion;
 
-    if (hasChanged || edgeFlowsChanged || edgeTempsChanged || inputTempsChanged || resolvedProductsChanged || nodeRecipesChanged || graphVersionChanged) {
+    if (hasChanged || edgeFlowsChanged || edgeTempsChanged || inputTempsChanged || resolvedProductsChanged || nodeRecipesChanged || graphVersionChanged || dataDbVersionChanged) {
       set({
         results: updatedResults,
         edgeFlows: newEdgeFlows,
@@ -129,6 +133,7 @@ const useFlowResultStore = create<FlowResultState>((set, get) => ({
         resolvedProducts: newResolvedProducts,
         nodeRecipes: newNodeRecipes,
         graphVersion: newGraphVersion,
+        dataDbVersion: newDataDbVersion,
       });
     }
   },

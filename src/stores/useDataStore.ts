@@ -28,6 +28,16 @@ export interface PendingEdits {
   researches: Record<string, Partial<Research> & { _tombstone?: boolean; _isNew?: boolean }>;
 }
 
+export interface DataOverlayViewState {
+  mainTab: 'editing' | 'comparing';
+  editTab: 'products' | 'machines' | 'recipes' | 'researches';
+  selectedProductId: string | null;
+  selectedMachineId: string | null;
+  selectedRecipeId: string | null;
+  selectedResearchId: string | null;
+  searchQuery: string;
+}
+
 export function overlayPendingEdit<T extends { id: string }>(
   baseline: T | undefined,
   pending: (Partial<T> & { _tombstone?: boolean; _isNew?: boolean }) | undefined,
@@ -44,9 +54,23 @@ export function overlayPendingEdit<T extends { id: string }>(
 interface DataState {
   pendingEdits: PendingEdits;
   searchQuery: string;
+  dataOverlayMainTab: DataOverlayViewState['mainTab'];
+  dataOverlayEditTab: DataOverlayViewState['editTab'];
+  selectedProductId: string | null;
+  selectedMachineId: string | null;
+  selectedRecipeId: string | null;
+  selectedResearchId: string | null;
   dbVersion: number;
 
   setSearchQuery: (query: string) => void;
+  setDataOverlayMainTab: (tab: DataOverlayViewState['mainTab']) => void;
+  setDataOverlayEditTab: (tab: DataOverlayViewState['editTab']) => void;
+  setSelectedProductId: (id: string | null) => void;
+  setSelectedMachineId: (id: string | null) => void;
+  setSelectedRecipeId: (id: string | null) => void;
+  setSelectedResearchId: (id: string | null) => void;
+  captureDataOverlayView: () => DataOverlayViewState;
+  restoreDataOverlayView: (snapshot: DataOverlayViewState) => void;
   updateProductPendingEdit: (id: string, updates: Partial<Product>) => string;
   addProduct: (name?: string) => string;
   deleteProduct: (id: string) => void;
@@ -214,9 +238,43 @@ export const useDataStore = create<DataState>((set, get) => ({
     researches: {},
   },
   searchQuery: '',
+  dataOverlayMainTab: 'editing',
+  dataOverlayEditTab: 'products',
+  selectedProductId: null,
+  selectedMachineId: null,
+  selectedRecipeId: null,
+  selectedResearchId: null,
   dbVersion: 0,
 
   setSearchQuery: (query) => set({ searchQuery: query }),
+  setDataOverlayMainTab: (tab) => set({ dataOverlayMainTab: tab }),
+  setDataOverlayEditTab: (tab) => set({ dataOverlayEditTab: tab }),
+  setSelectedProductId: (id) => set({ selectedProductId: id }),
+  setSelectedMachineId: (id) => set({ selectedMachineId: id }),
+  setSelectedRecipeId: (id) => set({ selectedRecipeId: id }),
+  setSelectedResearchId: (id) => set({ selectedResearchId: id }),
+  captureDataOverlayView: () => {
+    const state = get();
+    return {
+      mainTab: state.dataOverlayMainTab,
+      editTab: state.dataOverlayEditTab,
+      selectedProductId: state.selectedProductId,
+      selectedMachineId: state.selectedMachineId,
+      selectedRecipeId: state.selectedRecipeId,
+      selectedResearchId: state.selectedResearchId,
+      searchQuery: state.searchQuery,
+    };
+  },
+  restoreDataOverlayView: (snapshot) =>
+    set({
+      dataOverlayMainTab: snapshot.mainTab,
+      dataOverlayEditTab: snapshot.editTab,
+      selectedProductId: snapshot.selectedProductId,
+      selectedMachineId: snapshot.selectedMachineId,
+      selectedRecipeId: snapshot.selectedRecipeId,
+      selectedResearchId: snapshot.selectedResearchId,
+      searchQuery: snapshot.searchQuery,
+    }),
 
   updateProductPendingEdit: (id, updates) => {
     let targetId = id;

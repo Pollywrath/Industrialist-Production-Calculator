@@ -10,6 +10,11 @@ import {
   formatTemperature,
 } from '../../../utils/unitFormatting';
 import { formatRecipePowerLine } from '../../../utils/recipePower';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+} from '../../../stores/useTutorialStore';
 import styles from './RecipeNode.module.css';
 
 interface RecipeNodeInfoProps {
@@ -20,6 +25,7 @@ interface RecipeNodeInfoProps {
   receivedTemp?: number | null;
   machineTier?: number;
   isTarget?: boolean;
+  nodeId: string;
 }
 
 export function RecipeNodeInfo({
@@ -30,6 +36,7 @@ export function RecipeNodeInfo({
   receivedTemp,
   machineTier = 1,
   isTarget = false,
+  nodeId,
 }: RecipeNodeInfoProps) {
   const rateMode = useUIStore((s) => s.rateMode);
   const displayCycleTime = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 0;
@@ -42,6 +49,12 @@ export function RecipeNodeInfo({
       return;
     }
     e.stopPropagation();
+    if (isTutorialActive()) {
+      if (!canPerformTutorialAction({ type: 'node-editor-open', nodeId })) return;
+      onOpenEditor();
+      completeTutorialAction({ type: 'node-editor-open', nodeId });
+      return;
+    }
     onOpenEditor();
   };
 
@@ -63,7 +76,11 @@ export function RecipeNodeInfo({
           </div>
         </div>
       )}
-      <button className={styles['recipe-node-info__top-right-btn']} onClick={handleBtnClick}>
+      <button
+        className={styles['recipe-node-info__top-right-btn']}
+        onClick={handleBtnClick}
+        data-tutorial-node-editor-button={nodeId}
+      >
         <Ellipsis size={14} />
       </button>
       <div className={styles['recipe-node-info__title']}>{displayName}</div>

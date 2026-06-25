@@ -24,6 +24,11 @@ import {
 } from '../../utils/unitFormatting';
 import { VirtualList } from '../shared/VirtualList';
 import { ValidatedNumberInput } from '../shared/ValidatedNumberInput';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+} from '../../stores/useTutorialStore';
 import styles from './DashboardPanels.module.css';
 
 interface DiagnosticVirtualItem {
@@ -67,8 +72,19 @@ export function DashboardPanels() {
     excessesMap,
   } = useDashboardStore();
 
-  const handleNodeClick = (nodeId?: string) => {
+  const handleNodeClick = (
+    nodeId: string | undefined,
+    status?: 'deficiency' | 'excess',
+    productId?: string,
+  ) => {
     if (!nodeId) return;
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({ type: 'dashboard-diagnostic', status, productId, nodeId })
+    ) {
+      return;
+    }
+
     const nodes = useFlowStore.getState().nodes;
     const node = nodes.find((n) => n.id === nodeId);
     if (!node) return;
@@ -85,6 +101,7 @@ export function DashboardPanels() {
       const x = targetNode.position.x + (targetNode.measured?.width ?? targetNode.width ?? 200) / 2;
       const y = targetNode.position.y + (targetNode.measured?.height ?? targetNode.height ?? 120) / 2;
       setCenter(x, y, { zoom: 1.2 });
+      completeTutorialAction({ type: 'dashboard-diagnostic', status, productId, nodeId });
     }
   };
 
@@ -100,6 +117,21 @@ export function DashboardPanels() {
       }
       return next;
     });
+  };
+
+  const handleDiagnosticHeaderClick = (
+    status: 'deficiency' | 'excess',
+    productId: string,
+    key: string,
+  ) => {
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({ type: 'dashboard-diagnostic', status, productId })
+    ) {
+      return;
+    }
+    toggleProductExpanded(key);
+    completeTutorialAction({ type: 'dashboard-diagnostic', status, productId });
   };
 
   const flatDeficiencies: DiagnosticVirtualItem[] = [];
@@ -172,7 +204,13 @@ export function DashboardPanels() {
   return (
     <div className={styles['dashboard-container']}>
       <div className={styles['panel']}>
-        <button className={styles['panel-header']} onClick={toggleStatsMinimized}>
+        <button
+          className={styles['panel-header']}
+          onClick={() => {
+            if (isTutorialActive()) return;
+            toggleStatsMinimized();
+          }}
+        >
           <span className={styles['panel-header-title']}>
             <Activity className={styles['panel-header-icon']} size={12} />
             Production Stats
@@ -262,7 +300,13 @@ export function DashboardPanels() {
       </div>
 
       <div className={styles['panel']}>
-        <button className={styles['panel-header']} onClick={toggleExtendedMinimized}>
+        <button
+          className={styles['panel-header']}
+          onClick={() => {
+            if (isTutorialActive()) return;
+            toggleExtendedMinimized();
+          }}
+        >
           <span className={styles['panel-header-title']}>
             <AlertTriangle className={styles['panel-header-icon']} size={12} />
             More Stats
@@ -294,7 +338,7 @@ export function DashboardPanels() {
             </div>
 
             <div className={styles['diagnostic-section-title']}>Deficiencies (Shortages)</div>
-            <div className={styles['diagnostic-container']}>
+            <div className={styles['diagnostic-container']} data-tutorial-dashboard="outputs">
               {flatDeficiencies.length === 0 ? (
                 <div className={styles['empty-message']}>No shortages detected</div>
               ) : (
@@ -308,7 +352,15 @@ export function DashboardPanels() {
                     item.type === 'header' ? (
                       <div
                         className={styles['diagnostic-row-header']}
-                        onClick={() => toggleProductExpanded(`def-${item.productId}`)}
+                        onClick={() =>
+                          handleDiagnosticHeaderClick(
+                            'deficiency',
+                            item.productId,
+                            `def-${item.productId}`,
+                          )
+                        }
+                        data-tutorial-diagnostic-status="deficiency"
+                        data-tutorial-diagnostic-product={item.productId}
                       >
                         <div className={styles['diagnostic-header-left']}>
                           {item.isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
@@ -326,7 +378,10 @@ export function DashboardPanels() {
                     ) : (
                       <div
                         className={styles['diagnostic-row-node']}
-                        onClick={() => handleNodeClick(item.nodeId)}
+                        onClick={() => handleNodeClick(item.nodeId, 'deficiency', item.productId)}
+                        data-tutorial-diagnostic-status="deficiency"
+                        data-tutorial-diagnostic-product={item.productId}
+                        data-tutorial-diagnostic-node={item.nodeId}
                       >
                         <span className={styles['diagnostic-node-indent']}>|- {item.nodeName}</span>
                         <div className={styles['diagnostic-node-right']}>
@@ -361,7 +416,15 @@ export function DashboardPanels() {
                     item.type === 'header' ? (
                       <div
                         className={styles['diagnostic-row-header']}
-                        onClick={() => toggleProductExpanded(`exc-${item.productId}`)}
+                        onClick={() =>
+                          handleDiagnosticHeaderClick(
+                            'excess',
+                            item.productId,
+                            `exc-${item.productId}`,
+                          )
+                        }
+                        data-tutorial-diagnostic-status="excess"
+                        data-tutorial-diagnostic-product={item.productId}
                       >
                         <div className={styles['diagnostic-header-left']}>
                           {item.isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
@@ -382,7 +445,10 @@ export function DashboardPanels() {
                     ) : (
                       <div
                         className={styles['diagnostic-row-node']}
-                        onClick={() => handleNodeClick(item.nodeId)}
+                        onClick={() => handleNodeClick(item.nodeId, 'excess', item.productId)}
+                        data-tutorial-diagnostic-status="excess"
+                        data-tutorial-diagnostic-product={item.productId}
+                        data-tutorial-diagnostic-node={item.nodeId}
                       >
                         <span className={styles['diagnostic-node-indent']}>|- {item.nodeName}</span>
                         <div className={styles['diagnostic-node-right']}>

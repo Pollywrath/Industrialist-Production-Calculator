@@ -9,6 +9,7 @@ export interface ConfirmOptions {
   confirmLabel?: string;
   cancelLabel?: string;
   intent?: 'success' | 'info' | 'error';
+  showCancel?: boolean;
 }
 
 interface UIState {
@@ -29,6 +30,7 @@ interface UIState {
   preselectedNodeId: string | null;
   preselectedHandleIndex: number | null;
   rateMode: RateMode;
+  nodeEditorOpenId: string | null;
 
   toggleControlsMinimized: () => void;
   toggleOverlaysMinimized: () => void;
@@ -38,6 +40,7 @@ interface UIState {
   pushOverride: (id: CanvasToggleId) => void;
   popOverride: (id: CanvasToggleId) => void;
   cycleRateMode: () => void;
+  setNodeEditorOpenId: (id: string | null) => void;
   setRecipeSelectorOpen: (
     isOpen: boolean,
     preselectedProductId?: string | null,
@@ -92,6 +95,7 @@ const useUIStore = create<UIState>((set) => ({
   preselectedNodeId: null,
   preselectedHandleIndex: null,
   rateMode: 'second',
+  nodeEditorOpenId: null,
 
   toggleControlsMinimized: () =>
     set((state) => ({ isControlsMinimized: !state.isControlsMinimized })),
@@ -120,6 +124,7 @@ const useUIStore = create<UIState>((set) => ({
       const nextIndex = (currentIndex + 1) % modes.length;
       return { rateMode: modes[nextIndex] };
     }),
+  setNodeEditorOpenId: (id) => set({ nodeEditorOpenId: id }),
   setRecipeSelectorOpen: (
     isOpen,
     preselectedProductId = null,

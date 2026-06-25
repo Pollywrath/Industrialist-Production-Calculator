@@ -3,7 +3,10 @@ import { createStore } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { SEARCH_DEBOUNCE_MS } from '../../shared/layoutConstants';
 import { RecipeSelectorContext, type RecipeSelectorState } from './RecipeSelectorContext';
-import { getProduct } from '../../../data/lookup';
+import {
+  createInitialRecipeSelectorTutorialSnapshot,
+  registerRecipeSelectorTutorialStore,
+} from './recipeSelectorTutorialBridge';
 
 interface RecipeSelectorProviderProps {
   children: React.ReactNode;
@@ -19,26 +22,10 @@ export function RecipeSelectorProvider({
   const [store] = useState(() =>
     createStore(
       subscribeWithSelector<RecipeSelectorState>((set) => ({
-        stage: preselectedProductId ? 'recipes' : 'select',
-        selectedId: preselectedProductId,
-        activeTab: 'product',
-        searchQuery: '',
-        debouncedSearch: '',
-        productSortField: 'name',
-        productSortOrder: 'asc',
-        machineSortField: 'name',
-        machineSortOrder: 'asc',
-        productTypeFilter: 'All',
-        machineTierFilter: 'All',
-        machineCategoryFilter: 'All',
-        machineSubcategoryFilter: 'All',
-        filterProducers:
-          preselectedProductId && preselectedSourceSide ? preselectedSourceSide === 'input' : true,
-        filterConsumers:
-          preselectedProductId && preselectedSourceSide ? preselectedSourceSide === 'output' : true,
-        filterSellTrash:
-          preselectedProductId ? (getProduct(preselectedProductId)?.sell_price ?? 0) < 0 : false,
-        filterHeatPower: false,
+        ...createInitialRecipeSelectorTutorialSnapshot(
+          preselectedProductId,
+          preselectedSourceSide,
+        ),
 
         setActiveTab: (activeTab) => set({ activeTab }),
         setSearchQuery: (searchQuery) => set({ searchQuery }),
@@ -74,7 +61,8 @@ export function RecipeSelectorProvider({
             stage: 'recipes',
             filterProducers: true,
             filterConsumers: true,
-            filterSellTrash: (getProduct(id)?.sell_price ?? 0) < 0,
+            filterSellTrash:
+              createInitialRecipeSelectorTutorialSnapshot(id, null).filterSellTrash,
             filterHeatPower: false,
           }),
         handleBack: () =>
@@ -108,6 +96,8 @@ export function RecipeSelectorProvider({
       unsubscribe();
     };
   }, [store]);
+
+  useEffect(() => registerRecipeSelectorTutorialStore(store), [store]);
 
   return <RecipeSelectorContext.Provider value={store}>{children}</RecipeSelectorContext.Provider>;
 }

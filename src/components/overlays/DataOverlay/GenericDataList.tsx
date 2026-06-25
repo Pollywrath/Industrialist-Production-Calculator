@@ -13,6 +13,12 @@ import {
 } from '../../../data/lookup';
 import type { Product, Machine, Research } from '../../../types/data';
 import { useDataStore, overlayPendingEdit } from '../../../stores/useDataStore';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+  useTutorialStore,
+} from '../../../stores/useTutorialStore';
 import styles from './DataCrud.module.css';
 
 interface GenericDataListProps {
@@ -71,6 +77,9 @@ export function GenericDataList({ type, selectedId, onSelect }: GenericDataListP
   filteredItems.sort((a, b) => a.id.localeCompare(b.id));
 
   const handleAddNew = () => {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'data-add', entity: type })) {
+      return;
+    }
     const newId =
       type === 'product'
         ? addProduct('New Product')
@@ -78,6 +87,24 @@ export function GenericDataList({ type, selectedId, onSelect }: GenericDataListP
           ? addMachine('New Machine')
           : addResearch('New Research');
     onSelect(newId);
+    completeTutorialAction({ type: 'data-add', entity: type, id: newId });
+  };
+
+  const handleSearchChange = (value: string) => {
+    if (isTutorialActive()) {
+      const action = useTutorialStore.getState().getCurrentStep()?.action;
+      if (action?.type !== 'data-search' || action.entity !== type) return;
+    }
+    setSearchQuery(value);
+    completeTutorialAction({ type: 'data-search', entity: type, query: value });
+  };
+
+  const handleSelect = (id: string) => {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'data-select', entity: type, id })) {
+      return;
+    }
+    onSelect(id);
+    completeTutorialAction({ type: 'data-select', entity: type, id });
   };
 
   const labelPlural =
@@ -94,12 +121,16 @@ export function GenericDataList({ type, selectedId, onSelect }: GenericDataListP
             className={styles['search-input']}
             placeholder={`Search ${labelPlural}...`}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            data-tutorial-data-search={type}
           />
           {searchQuery && (
             <button
               className={styles['search-clear']}
-              onClick={() => setSearchQuery('')}
+              onClick={() => {
+                if (isTutorialActive()) return;
+                setSearchQuery('');
+              }}
               title="Clear search"
             >
               <X size={12} />
@@ -110,6 +141,7 @@ export function GenericDataList({ type, selectedId, onSelect }: GenericDataListP
           className={styles['btn-add']}
           onClick={handleAddNew}
           title={`Add Custom ${labelSingle}`}
+          data-tutorial-data-add={type}
         >
           <Plus size={16} />
         </button>
@@ -146,7 +178,8 @@ export function GenericDataList({ type, selectedId, onSelect }: GenericDataListP
                 data-new={isNew ? 'true' : undefined}
                 data-modified={isModified ? 'true' : undefined}
                 data-pending={isPending ? 'true' : undefined}
-                onClick={() => onSelect(item.id)}
+                data-tutorial-data-row={`${type}:${item.id}`}
+                onClick={() => handleSelect(item.id)}
               >
                 <div className={styles['item-row-header']}>
                   <div className={styles['item-name']}>{item.name}</div>

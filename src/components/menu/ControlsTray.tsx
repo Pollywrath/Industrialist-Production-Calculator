@@ -21,6 +21,11 @@ import { useFlowStore } from '../../stores/useFlowStore';
 import { useEdgeThemeStore } from '../../stores/useEdgeThemeStore';
 import { isRatioOptimizerRunning } from '../../solver/ratioOptimizer';
 import { isRecipeNode } from '../../types/nodes';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+} from '../../stores/useTutorialStore';
 import styles from './ControlsTray.module.css';
 
 interface ButtonConfig {
@@ -141,24 +146,41 @@ export function ControlsTray() {
   const isAddGroupMode = isMultiSelectMode;
 
   const handleButtonClick = (btn: ButtonConfig) => {
+    if (isTutorialActive()) {
+      const tutorialEvent =
+        btn.id === 'add_recipe' && isAddGroupMode
+          ? ({ type: 'group-create' } as const)
+          : ({ type: 'control', id: btn.id } as const);
+      if (!canPerformTutorialAction(tutorialEvent)) {
+        return;
+      }
+    }
+
     if (btn.id === 'add_recipe') {
       if (isAddGroupMode) {
         if (!hasGroupableSelection) return;
-        createGroupFromSelection();
+        const groupId = createGroupFromSelection();
         const uiState = useUIStore.getState();
         useUIStore.setState({
           activeToggleId: uiState.activeToggleId === 'multi_select' ? null : uiState.activeToggleId,
           temporaryOverrides: uiState.temporaryOverrides.filter((id) => id !== 'multi_select'),
         });
+        if (groupId) {
+          completeTutorialAction({ type: 'group-create', groupId });
+        }
         return;
       }
       setRecipeSelectorOpen(true);
+      completeTutorialAction({ type: 'control', id: 'add_recipe' });
     } else if (btn.id === 'delete_mode') {
       toggleButton('delete_mode');
+      completeTutorialAction({ type: 'control', id: btn.id });
     } else if (btn.id === 'multi_select') {
       toggleButton('multi_select');
+      completeTutorialAction({ type: 'control', id: btn.id });
     } else if (btn.id === 'target') {
       toggleButton('target');
+      completeTutorialAction({ type: 'control', id: btn.id });
     } else if (btn.id === 'machine_toggle') {
       setMachineOverlayOpen(!isMachineOverlayOpen);
     } else if (btn.id === 'compute') {
@@ -185,6 +207,7 @@ export function ControlsTray() {
         return;
       }
       useUIStore.getState().setIsLPSolverOpen(true);
+      completeTutorialAction({ type: 'control', id: 'compute' });
     } else if (btn.id === 'coming_soon') {
       void useUIStore.getState().confirm({
         title: 'Coming Soon',
@@ -210,6 +233,7 @@ export function ControlsTray() {
           const didApply = applyAutoLayoutResult(nodes, edges, layoutGraphVersion);
           if (didApply) {
             useUIStore.getState().requestFitView();
+            completeTutorialAction({ type: 'control', id: 'layout' });
           }
         })
         .catch((error) => {
@@ -242,7 +266,13 @@ export function ControlsTray() {
 
   return (
     <div className={styles['controls-tray-container']}>
-      <button className={styles['controls-tray-bar']} onClick={toggleMinimized}>
+      <button
+        className={styles['controls-tray-bar']}
+        onClick={() => {
+          if (isTutorialActive()) return;
+          toggleMinimized();
+        }}
+      >
         <span className={styles['controls-tray-bar-text']}>
           {isMinimized ? (
             <>
@@ -292,6 +322,7 @@ export function ControlsTray() {
                 className={`${styles['controls-tray-button']} type-${btn.type} ${isToggled ? styles['is-active'] : ''} ${btn.dividerRight ? styles['has-divider-right'] : ''} ${btn.dividerBottom ? styles['has-divider-bottom'] : ''}`}
                 onClick={() => handleButtonClick(btn)}
                 disabled={isDisabled}
+                data-tutorial-control-id={btn.id}
               >
                 <Icon size={16} className={styles['controls-tray-button-icon']} />
                 <span className={styles['controls-tray-button-label']}>{label}</span>

@@ -10,6 +10,12 @@ import { mergeSaveIntoCanvas } from '../../../persistence/graphMerge';
 import { nextSaveId } from '../../../utils/idGenerator';
 import { exportCanvasAsPng, exportRecordAsJson } from '../../../services/canvasExportService';
 import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+  useTutorialStore,
+} from '../../../stores/useTutorialStore';
+import {
   SavesOverlayContext,
   type SavesOverlayState,
   type SaveStatus,
@@ -76,9 +82,12 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
             }
           },
 
-          handleCreateSave: async () => {
+          handleCreateSave: async (source) => {
             const state = get();
             if (!state.newSaveName.trim()) return;
+            if (isTutorialActive() && !canPerformTutorialAction({ type: 'save-create', source })) {
+              return;
+            }
 
             setStatusWithTimeout(
               { type: 'pending', message: 'Writing save file...' },
@@ -98,9 +107,11 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
 
             const success = await saveSave(record);
             if (success) {
+              useTutorialStore.getState().registerSaveCreated(record.id);
               set({ newSaveName: '' });
               setStatusWithTimeout({ type: 'success', message: 'Save created successfully!' });
               await get().refreshSaves();
+              completeTutorialAction({ type: 'save-create', source });
             } else {
               setStatusWithTimeout({
                 type: 'error',
@@ -293,10 +304,24 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
                       message: 'Save imported successfully!',
                     });
                     await get().refreshSaves();
+                    void useUIStore.getState().confirm({
+                      title: 'IMPORT SUCCESSFUL',
+                      message: `Save file "${record.name}" has been successfully imported.`,
+                      confirmLabel: 'OK',
+                      showCancel: false,
+                      intent: 'success',
+                    });
                   } else {
                     setStatusWithTimeout({
                       type: 'error',
                       message: 'Failed to store imported save. Storage quota exceeded.',
+                    });
+                    void useUIStore.getState().confirm({
+                      title: 'IMPORT FAILED',
+                      message: 'Failed to store the imported save. Browser storage quota may be exceeded.',
+                      confirmLabel: 'OK',
+                      showCancel: false,
+                      intent: 'error',
                     });
                   }
                 } else {
@@ -304,11 +329,25 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
                     type: 'error',
                     message: 'Invalid save file format. Missing data payload.',
                   });
+                  void useUIStore.getState().confirm({
+                    title: 'IMPORT FAILED',
+                    message: 'Invalid save file format. The file is missing the required data payload.',
+                    confirmLabel: 'OK',
+                    showCancel: false,
+                    intent: 'error',
+                  });
                 }
               } catch {
                 setStatusWithTimeout({
                   type: 'error',
                   message: 'Malformed JSON file. Import failed.',
+                });
+                void useUIStore.getState().confirm({
+                  title: 'IMPORT FAILED',
+                  message: 'Malformed JSON file. The file is not a valid JSON save file.',
+                  confirmLabel: 'OK',
+                  showCancel: false,
+                  intent: 'error',
                 });
               }
               e.target.value = '';
@@ -317,6 +356,13 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
               setStatusWithTimeout({
                 type: 'error',
                 message: 'Failed to read file from filesystem.',
+              });
+              void useUIStore.getState().confirm({
+                title: 'IMPORT FAILED',
+                message: 'Failed to read the file from the filesystem.',
+                confirmLabel: 'OK',
+                showCancel: false,
+                intent: 'error',
               });
               e.target.value = '';
             };

@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense, useEffect, useRef } from 'react';
 import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { ControlsTray } from '../menu/ControlsTray';
 import { OverlaysTray } from '../menu/OverlaysTray';
@@ -9,6 +9,12 @@ import { useAutosave } from '../../persistence/useAutosave';
 import { overlayPrefetchCache } from './overlayPrefetchCache';
 import { initRatioOptimizerWorker } from '../../solver/ratioOptimizer';
 import { ASSET_VERSION } from '../../data/productIcons';
+import { TutorialController } from '../tutorial/TutorialController';
+import { useTutorialStore } from '../../stores/useTutorialStore';
+import {
+  FIRST_PRODUCTION_CHAIN_PROMPT_KEY,
+  FIRST_PRODUCTION_CHAIN_TUTORIAL_ID,
+} from '../../tutorials/firstProductionChain';
 
 import styles from './FlowCanvas.module.css';
 
@@ -128,6 +134,7 @@ export function FlowCanvas() {
   const isZoomedOutStore = useUIStore((s) => s.isZoomedOut);
   const isExporting = useUIStore((s) => s.isExporting);
   const isAutosaveLoaded = useUIStore((s) => s.isAutosaveLoaded);
+  const promptShownRef = useRef(false);
 
   const isZoomedOut = !isExporting && isZoomedOutStore;
   const isTransforming = !isExporting && isTransformingStore;
@@ -225,6 +232,31 @@ export function FlowCanvas() {
     initRatioOptimizerWorker();
   }, []);
 
+  useEffect(() => {
+    if (!isAutosaveLoaded || promptShownRef.current) return;
+    promptShownRef.current = true;
+
+    if (localStorage.getItem(FIRST_PRODUCTION_CHAIN_PROMPT_KEY)) return;
+
+    void useUIStore
+      .getState()
+      .confirm({
+        title: 'First Production Chain Tutorial',
+        message: 'Would you like to walk through building your first Gearbox production chain?',
+        confirmLabel: 'START TUTORIAL',
+        cancelLabel: 'SKIP',
+        intent: 'info',
+      })
+      .then((confirmed) => {
+        localStorage.setItem(FIRST_PRODUCTION_CHAIN_PROMPT_KEY, 'seen');
+        if (confirmed) {
+          void useTutorialStore
+            .getState()
+            .startTutorial(FIRST_PRODUCTION_CHAIN_TUTORIAL_ID, 'first-visit');
+        }
+      });
+  }, [isAutosaveLoaded]);
+
   const RecipeSelector = overlayPrefetchCache.RecipeSelector;
   const SavesOverlay = overlayPrefetchCache.SavesOverlay;
   const DataOverlay = overlayPrefetchCache.DataOverlay;
@@ -259,6 +291,7 @@ export function FlowCanvas() {
       <ControlsTray />
       <OverlaysTray />
       <DashboardPanels />
+      <TutorialController />
       {isRecipeSelectorOpen &&
         (RecipeSelector ? (
           React.createElement(RecipeSelector)

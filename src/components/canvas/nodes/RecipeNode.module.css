@@ -362,6 +362,18 @@
   pointer-events: auto;
 }
 
+.recipe-node-io__handle-shell {
+  position: absolute;
+  width: calc(var(--theme-handle-size) * 3);
+  height: calc(var(--theme-handle-size) * 3);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.recipe-node-io__handle-shell :global(.react-flow__handle) {
+  pointer-events: auto;
+}
+
 .recipe-node-io__link-lines {
   position: absolute;
   z-index: 2;

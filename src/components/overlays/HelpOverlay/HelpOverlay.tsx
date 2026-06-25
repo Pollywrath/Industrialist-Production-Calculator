@@ -19,6 +19,11 @@ import {
   Zap,
 } from 'lucide-react';
 import { useUIStore } from '../../../stores/useUIStore';
+import { useTutorialStore } from '../../../stores/useTutorialStore';
+import type { TutorialId } from '../../../tutorials/types';
+import { FIRST_PRODUCTION_CHAIN_TUTORIAL_ID } from '../../../tutorials/firstProductionChain';
+import { GROUPS_TUTORIAL_ID } from '../../../tutorials/groupsTutorial';
+import { DATA_OVERLAY_TUTORIAL_ID } from '../../../tutorials/dataOverlayTutorial';
 import styles from './HelpOverlay.module.css';
 
 type HelpTabId = 'start' | 'controls' | 'troubleshooting';
@@ -39,6 +44,8 @@ interface HelpArticle {
   title: string;
   summary: string;
   Icon: ComponentType<{ size?: number; className?: string }>;
+  hasTutorial?: boolean;
+  tutorialId?: TutorialId;
   keywords: string[];
   sections: HelpSection[];
 }
@@ -56,6 +63,7 @@ const HELP_ARTICLES: HelpArticle[] = [
     title: 'First Production Chain',
     summary: 'A first canvas walkthrough using Gearbox as the example product.',
     Icon: Target,
+    tutorialId: FIRST_PRODUCTION_CHAIN_TUTORIAL_ID,
     keywords: [
       'first run',
       'gearbox',
@@ -326,6 +334,7 @@ const HELP_ARTICLES: HelpArticle[] = [
     title: 'Groups',
     summary: 'Creating groups, editing labels, collapsing, and using proxy handles.',
     Icon: Group,
+    tutorialId: GROUPS_TUTORIAL_ID,
     keywords: [
       'groups',
       'group',
@@ -438,6 +447,7 @@ const HELP_ARTICLES: HelpArticle[] = [
     title: 'Data Overlay',
     summary: 'Editing app data and comparing it against wiki buckets.',
     Icon: Database,
+    tutorialId: DATA_OVERLAY_TUTORIAL_ID,
     keywords: [
       'data',
       'data manager',
@@ -659,6 +669,11 @@ function HelpOverlayModal() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedArticleId, setSelectedArticleId] = useState('');
 
+  const startTutorial = (tutorialId: TutorialId) => {
+    setHelpOverlayOpen(false);
+    void useTutorialStore.getState().startTutorial(tutorialId, 'help');
+  };
+
   const query = searchQuery.trim().toLowerCase();
   const visibleArticles = HELP_ARTICLES.filter((article) => {
     if (query) return articleMatches(article, query);
@@ -727,11 +742,14 @@ function HelpOverlayModal() {
                     onClick={() => setSelectedArticleId(article.id)}
                   >
                     <Icon size={16} className={styles['article-icon']} />
-                      <span className={styles['article-card-text']}>
-                        <span className={styles['article-card-header']}>
-                          <span className={styles['article-card-title']}>{article.title}</span>
-                        </span>
-                        <span className={styles['article-card-summary']}>{article.summary}</span>
+                    <span className={styles['article-card-text']}>
+                      <span className={styles['article-card-header']}>
+                        <span className={styles['article-card-title']}>{article.title}</span>
+                        {(article.hasTutorial || article.tutorialId) && (
+                          <span className={styles['tutorial-badge']}>Tutorial</span>
+                        )}
+                      </span>
+                      <span className={styles['article-card-summary']}>{article.summary}</span>
                     </span>
                   </button>
                 );
@@ -747,8 +765,19 @@ function HelpOverlayModal() {
                   <div className={styles['article-detail-title-block']}>
                     <div className={styles['article-detail-title-row']}>
                       <h2 className={styles['article-detail-title']}>{selectedArticle.title}</h2>
+                      {(selectedArticle.hasTutorial || selectedArticle.tutorialId) && (
+                        <span className={styles['tutorial-badge']}>Tutorial</span>
+                      )}
                     </div>
                     <p className={styles['article-detail-summary']}>{selectedArticle.summary}</p>
+                    {selectedArticle.tutorialId && (
+                      <button
+                        className={styles['tutorial-start-btn']}
+                        onClick={() => startTutorial(selectedArticle.tutorialId!)}
+                      >
+                        Start Tutorial
+                      </button>
+                    )}
                   </div>
                 </div>
                 <div className={styles['article-sections']}>

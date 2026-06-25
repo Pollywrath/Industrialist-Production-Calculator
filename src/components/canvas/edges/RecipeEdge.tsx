@@ -13,6 +13,7 @@ import { type EdgeControlPoint, type RecipeEdgeData } from '../../../types/edges
 import { useEdgeThemeStore } from '../../../stores/useEdgeThemeStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { getEffectiveToggleId, useUIStore } from '../../../stores/useUIStore';
+import { parseHandleId } from '../../../utils/idGenerator';
 import styles from './RecipeEdge.module.css';
 
 const EDGE_INTERACTION_WIDTH = 8;
@@ -326,6 +327,10 @@ export function RecipeEdge({
   targetY,
   sourcePosition,
   targetPosition,
+  source,
+  target,
+  sourceHandleId,
+  targetHandleId,
   markerEnd,
   selected,
   data,
@@ -744,6 +749,8 @@ export function RecipeEdge({
     showOrthogonalHandle && activeOrthSegment
       ? hoveredOrthHandlePoint ?? activeOrthSegment.midpoint
       : null;
+  const sourceHandleParsed = sourceHandleId ? parseHandleId(sourceHandleId) : null;
+  const targetHandleParsed = targetHandleId ? parseHandleId(targetHandleId) : null;
 
   return (
     <Fragment>
@@ -751,6 +758,10 @@ export function RecipeEdge({
         id={id}
         path={edgePath}
         markerEnd={markerEnd}
+        data-tutorial-edge-source={source}
+        data-tutorial-edge-target={target}
+        data-tutorial-edge-source-index={sourceHandleParsed?.index}
+        data-tutorial-edge-target-index={targetHandleParsed?.index}
         className={`${styles['edge-path']} ${styles[`line-style-${lineStyle}`]}`}
         style={{
           stroke: selected

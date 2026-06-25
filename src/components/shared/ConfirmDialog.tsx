@@ -37,9 +37,11 @@ export function ConfirmDialog() {
         </div>
 
         <div className={styles['confirm-footer']}>
-          <button className={styles['confirm-btn']} onClick={() => closeConfirm(false)}>
-            {options.cancelLabel || 'CANCEL'}
-          </button>
+          {options.showCancel !== false && (
+            <button className={styles['confirm-btn']} onClick={() => closeConfirm(false)}>
+              {options.cancelLabel || 'CANCEL'}
+            </button>
+          )}
           <button
             className={`${styles['confirm-btn']} ${styles[options.intent || 'info']}`}
             onClick={() => closeConfirm(true)}

@@ -100,7 +100,7 @@ function SettingItem({
         : '';
 
   return (
-    <div className={styles['node-editor-group']}>
+    <div className={styles['node-editor-group']} data-tutorial-node-editor={`setting-${settingKey}`}>
       <label>{labelText}</label>
       {def.type === 'number' && (
         <ValidatedNumberInput

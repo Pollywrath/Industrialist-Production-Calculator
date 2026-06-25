@@ -21,6 +21,12 @@ import { useFlowStore } from '../../stores/useFlowStore';
 import { useFlowResultStore } from '../../stores/useFlowResultStore';
 import { useEdgeThemeStore } from '../../stores/useEdgeThemeStore';
 import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+  useTutorialStore,
+} from '../../stores/useTutorialStore';
 import { useFlowSolver } from '../../hooks/useFlowSolver';
 import { parseHandleId } from '../../utils/idGenerator';
 import { SNAP_GRID, GRID_DOT_SIZE } from '../shared/layoutConstants';
@@ -32,6 +38,7 @@ import {
 } from '../../utils/groupBounds';
 import type { GroupBounds, GroupMemberBounds } from '../../utils/groupBounds';
 import previewStyles from './GroupBoundsPreview.module.css';
+import { TUTORIAL_DRIVER_REFRESH_EVENT } from '../tutorial/tutorialHighlightUtils';
 
 const nodeTypes = {
   recipe: RecipeNode,
@@ -43,6 +50,82 @@ const edgeTypes = {
 };
 
 const CATMULL_SEGMENT_SAMPLES = 16;
+const REACT_FLOW_MIN_ZOOM = 0.15;
+const REACT_FLOW_MAX_ZOOM = 2;
+const TUTORIAL_DRIVER_REFRESH_INTERVAL_MS = 80;
+let tutorialDriverRefreshFrame: number | null = null;
+let tutorialDriverRefreshTimeout: number | null = null;
+let tutorialDriverLastRefreshAt = 0;
+
+function requestTutorialDriverRefresh() {
+  if (!isTutorialActive() || typeof window === 'undefined') {
+    return;
+  }
+
+  const now = window.performance.now();
+  const elapsed = now - tutorialDriverLastRefreshAt;
+  if (elapsed < TUTORIAL_DRIVER_REFRESH_INTERVAL_MS) {
+    if (tutorialDriverRefreshTimeout != null) return;
+
+    tutorialDriverRefreshTimeout = window.setTimeout(() => {
+      tutorialDriverRefreshTimeout = null;
+      requestTutorialDriverRefresh();
+    }, TUTORIAL_DRIVER_REFRESH_INTERVAL_MS - elapsed);
+    return;
+  }
+
+  if (tutorialDriverRefreshFrame != null) return;
+
+  tutorialDriverRefreshFrame = window.requestAnimationFrame(() => {
+    tutorialDriverRefreshFrame = null;
+    if (!isTutorialActive()) return;
+
+    tutorialDriverLastRefreshAt = window.performance.now();
+    window.dispatchEvent(new Event(TUTORIAL_DRIVER_REFRESH_EVENT));
+  });
+}
+
+function isEditableTarget(target: EventTarget | null): target is HTMLElement {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable;
+}
+
+function canUseTutorialTextInput(e: KeyboardEvent): boolean {
+  if (!isEditableTarget(e.target)) return false;
+  if (e.key === 'Escape' || e.key === 'Tab' || e.key === 'Enter') return false;
+
+  const action = useTutorialStore.getState().getCurrentStep()?.action;
+  if (!action) return false;
+
+  if (action.type === 'selector-search') {
+    return !!e.target.closest('[data-tutorial-selector-search]');
+  }
+
+  if (action.type === 'save-name') {
+    return !!e.target.closest('[data-tutorial-save="name"]');
+  }
+
+  if (action.type === 'node-editor-machine-count') {
+    return !!e.target.closest('[data-tutorial-node-editor="machine-count"]');
+  }
+
+  if (action.type === 'node-editor-setting') {
+    const editorField = e.target.closest('[data-tutorial-node-editor]');
+    return editorField?.getAttribute('data-tutorial-node-editor') === `setting-${action.key}`;
+  }
+
+  if (action.type === 'data-search') {
+    const dataSearch = e.target.closest('[data-tutorial-data-search]');
+    return dataSearch?.getAttribute('data-tutorial-data-search') === action.entity;
+  }
+
+  if (action.type === 'data-field') {
+    const dataField = e.target.closest('[data-tutorial-data-field]');
+    return dataField?.getAttribute('data-tutorial-data-field') === action.field;
+  }
+
+  return false;
+}
 
 function isFiniteControlPoint(value: unknown): value is EdgeControlPoint {
   if (!value || typeof value !== 'object') return false;
@@ -210,7 +293,36 @@ function resolveHandleCenter(
   };
 }
 
-const onNodeClick = (_event: React.MouseEvent, node: CanvasNode) => {
+const onNodeClick = (event: React.MouseEvent, node: CanvasNode) => {
+  if (isTutorialActive()) {
+    const currentAction = useTutorialStore.getState().getCurrentStep()?.action;
+    if (
+      currentAction?.type === 'node-multi-select' &&
+      isRecipeNode(node) &&
+      canPerformTutorialAction({ type: 'node-multi-select', nodeId: node.id })
+    ) {
+      event.stopPropagation();
+      if (node.data.isMultiSelected) return;
+      const flowStore = useFlowStore.getState();
+      flowStore.toggleNodeSelection(node.id);
+      const selectedNodeIds = useFlowStore.getState().nodes
+        .filter((currentNode) => isRecipeNode(currentNode) && currentNode.data.isMultiSelected)
+        .map((currentNode) => currentNode.id);
+      completeTutorialAction({ type: 'node-multi-select', nodeIds: selectedNodeIds });
+      return;
+    }
+
+    if (
+      isRecipeNode(node) &&
+      canPerformTutorialAction({ type: 'target-node', nodeId: node.id })
+    ) {
+      event.stopPropagation();
+      useFlowStore.getState().updateNodeData(node.id, { isTarget: true });
+      completeTutorialAction({ type: 'target-node', nodeId: node.id });
+    }
+    return;
+  }
+
   const toggleId = getEffectiveToggleId(useUIStore.getState());
   if (toggleId === 'delete_mode') {
     useFlowStore.getState().deleteNode(node.id);
@@ -498,6 +610,8 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
     if (batchDrag.nodeIds.length > 1) {
       moveNodesFromSnapshots(batchDrag.startPositions, deltaX, deltaY);
     }
+
+    requestTutorialDriverRefresh();
   };
 
   const handleNodeDragStop = (_event: React.MouseEvent, _node: Node, draggedNodes: Node[]) => {
@@ -506,6 +620,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
     batchDragRef.current = null;
     hideGroupBoundsPreview(groupBoundsPreviewRef.current);
     commitDragStop(nodeIds);
+    requestTutorialDriverRefresh();
   };
 
   const handleSelectionDragStart = (_event: React.MouseEvent, draggedNodes: Node[]) => {
@@ -514,6 +629,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
 
   const handleSelectionDragStop = (_event: React.MouseEvent, draggedNodes: Node[]) => {
     commitDragStop(draggedNodes.map((draggedNode) => draggedNode.id));
+    requestTutorialDriverRefresh();
   };
 
   const handleNodesChange: typeof onNodesChange = (changes) => {
@@ -544,6 +660,11 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   };
 
   const onEdgeClick = (event: React.MouseEvent, edge: Edge) => {
+    if (isTutorialActive()) {
+      event.stopPropagation();
+      return;
+    }
+
     const toggleId = getEffectiveToggleId(useUIStore.getState());
     if (toggleId === 'delete_mode') {
       event.stopPropagation();
@@ -553,6 +674,8 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
 
   const onEdgeDoubleClick = (event: React.MouseEvent, clickedEdge: Edge) => {
     event.stopPropagation();
+    if (isTutorialActive()) return;
+
     const flowStore = useFlowStore.getState();
     const nextPoint = screenToFlowPosition({
       x: event.clientX,
@@ -604,6 +727,39 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
     flowStore.setEdges(nextEdges, { visualOnly: true });
   };
 
+  const handleConnect = (connection: Connection) => {
+    if (isTutorialActive()) {
+      const sourceParsed = connection.sourceHandle ? parseHandleId(connection.sourceHandle) : null;
+      const targetParsed = connection.targetHandle ? parseHandleId(connection.targetHandle) : null;
+      const event = {
+        type: 'edge-connect' as const,
+        sourceNodeId: sourceParsed?.nodeId ?? connection.source,
+        sourceIndex: sourceParsed?.index ?? -1,
+        targetNodeId: targetParsed?.nodeId ?? connection.target,
+        targetIndex: targetParsed?.index ?? -1,
+      };
+      if (!canPerformTutorialAction(event)) return;
+      onConnect(connection);
+      const didCreateOrFindEdge = useFlowStore.getState().edges.some((edge) => {
+        const edgeSource = edge.sourceHandle ? parseHandleId(edge.sourceHandle) : null;
+        const edgeTarget = edge.targetHandle ? parseHandleId(edge.targetHandle) : null;
+        if (!edgeSource || !edgeTarget) return false;
+        return (
+          edgeSource.nodeId === event.sourceNodeId &&
+          edgeTarget.nodeId === event.targetNodeId &&
+          edgeSource.index === event.sourceIndex &&
+          edgeTarget.index === event.targetIndex
+        );
+      });
+      if (didCreateOrFindEdge) {
+        completeTutorialAction(event);
+      }
+      return;
+    }
+
+    onConnect(connection);
+  };
+
   return (
     <ReactFlow
       nodes={nodes}
@@ -612,7 +768,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       edgeTypes={edgeTypes}
       onNodesChange={handleNodesChange}
       onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
+      onConnect={handleConnect}
       onNodeDragStart={handleNodeDragStart}
       onNodeDrag={handleNodeDrag}
       onNodeDragStop={handleNodeDragStop}
@@ -626,15 +782,21 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       snapGrid={SNAP_GRID}
       elevateNodesOnSelect={true}
       fitView={true}
-      minZoom={0.15}
+      minZoom={REACT_FLOW_MIN_ZOOM}
+      maxZoom={REACT_FLOW_MAX_ZOOM}
+      connectOnClick={false}
       onMove={(_e, viewport) => {
         const nextZoomedOut = viewport.zoom < 0.35;
         if (nextZoomedOut !== useUIStore.getState().isZoomedOut) {
           useUIStore.getState().setIsZoomedOut(nextZoomedOut);
         }
+        requestTutorialDriverRefresh();
       }}
       onMoveStart={() => useUIStore.getState().setIsTransforming(true)}
-      onMoveEnd={() => useUIStore.getState().setIsTransforming(false)}
+      onMoveEnd={() => {
+        useUIStore.getState().setIsTransforming(false);
+        requestTutorialDriverRefresh();
+      }}
       onlyRenderVisibleElements={nodes.length > 250 && !isZoomedOut}
       deleteKeyCode={null}
       selectionKeyCode={null}
@@ -647,7 +809,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
             ? ConnectionLineType.Straight
             : ConnectionLineType.SmoothStep
       }
-    >
+      >
       <ViewportPortal>
         <div
           ref={groupBoundsPreviewRef}
@@ -673,6 +835,11 @@ export function FlowViewport() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const uiStore = useUIStore.getState();
+      if (isTutorialActive()) {
+        if (canUseTutorialTextInput(e)) return;
+        e.preventDefault();
+        return;
+      }
       if (uiStore.isRecipeSelectorOpen) return;
 
       const target = e.target as HTMLElement;
@@ -715,6 +882,11 @@ export function FlowViewport() {
 
     const handleKeyUp = (e: KeyboardEvent) => {
       const uiStore = useUIStore.getState();
+      if (isTutorialActive()) {
+        if (canUseTutorialTextInput(e)) return;
+        e.preventDefault();
+        return;
+      }
       if (uiStore.isRecipeSelectorOpen) return;
 
       if (e.key === 'Alt') {

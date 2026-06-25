@@ -16,6 +16,11 @@ import {
   Replace,
 } from 'lucide-react';
 import { useUIStore } from '../../../stores/useUIStore';
+import {
+  completeTutorialAction,
+  isTutorialActive,
+  useTutorialStore,
+} from '../../../stores/useTutorialStore';
 import type { SaveRecord } from '../../../types/saves';
 import { VirtualList } from '../../shared/VirtualList';
 import { SavesOverlayProvider } from './SavesOverlayProvider';
@@ -60,8 +65,22 @@ function SavesOverlayModal() {
   const handleExportJson = useSavesOverlayStore((s) => s.handleExportJson);
   const handleExportPng = useSavesOverlayStore((s) => s.handleExportPng);
 
+  const handleClose = () => {
+    if (isTutorialActive()) return;
+    setSavesOverlayOpen(false);
+  };
+
+  const handleSaveNameChange = (value: string) => {
+    if (isTutorialActive()) {
+      const action = useTutorialStore.getState().getCurrentStep()?.action;
+      if (action?.type !== 'save-name') return;
+    }
+    setNewSaveName(value);
+    completeTutorialAction({ type: 'save-name', value });
+  };
+
   return createPortal(
-    <div className={styles['saves-overlay']} onClick={() => setSavesOverlayOpen(false)}>
+    <div className={styles['saves-overlay']} onClick={handleClose}>
       <div className={styles['saves-modal']} onClick={(e) => e.stopPropagation()}>
         <div className={styles['saves-header']}>
           <div className={styles['saves-title']} id="saves-dialog-title">
@@ -78,7 +97,10 @@ function SavesOverlayModal() {
             />
             <button
               className={styles['saves-import-icon']}
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => {
+                if (isTutorialActive()) return;
+                fileInputRef.current?.click();
+              }}
               disabled={status.type === 'pending'}
             >
               {status.type === 'pending' && pendingAction === 'import' ? (
@@ -87,7 +109,7 @@ function SavesOverlayModal() {
                 <Upload size={18} />
               )}
             </button>
-            <button className={styles['saves-close']} onClick={() => setSavesOverlayOpen(false)}>
+            <button className={styles['saves-close']} onClick={handleClose}>
               <X size={18} />
             </button>
           </div>
@@ -98,14 +120,18 @@ function SavesOverlayModal() {
             type="text"
             placeholder="Save name..."
             value={newSaveName}
-            onChange={(e) => setNewSaveName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleCreateSave()}
+            onChange={(e) => handleSaveNameChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') void handleCreateSave('keyboard');
+            }}
             className={styles['saves-input']}
+            data-tutorial-save="name"
           />
           <button
             className={`${styles['saves-btn']} ${styles['primary']}`}
-            onClick={handleCreateSave}
+            onClick={() => void handleCreateSave('button')}
             disabled={!newSaveName.trim() || status.type === 'pending'}
+            data-tutorial-save="create"
           >
             {status.type === 'pending' && pendingAction === 'create' ? (
               <>
@@ -126,7 +152,10 @@ function SavesOverlayModal() {
           </button>
           <button
             className={styles['saves-btn']}
-            onClick={handleExportPng}
+            onClick={() => {
+              if (isTutorialActive()) return;
+              void handleExportPng();
+            }}
             disabled={status.type === 'pending'}
           >
             {status.type === 'pending' && pendingAction === 'export_png' ? (

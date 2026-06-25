@@ -1,12 +1,19 @@
 import type { ComponentType, ReactNode } from 'react';
 import { Trash2, RotateCcw } from 'lucide-react';
+import { getDataOverrides } from '../../../persistence/idb';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+  useTutorialStore,
+} from '../../../stores/useTutorialStore';
 import styles from './DataCrud.module.css';
 
 interface GenericDataFormShellProps {
   entityId: string | null;
   activeEntity: { id: string; name: string } | null;
   isModified: boolean;
-  onRestore?: () => void;
+  onRestore?: () => void | Promise<void>;
   onDelete?: () => void;
   onNameChange?: (name: string) => void;
   entityLabel: string;
@@ -27,6 +34,50 @@ export function GenericDataFormShell({
   children,
   isReadOnly = false,
 }: GenericDataFormShellProps) {
+  const entityKey =
+    entityLabel === 'Product'
+      ? 'product'
+      : entityLabel === 'Machine'
+        ? 'machine'
+        : entityLabel === 'Recipe' || entityLabel === 'Special Recipe'
+          ? 'recipe'
+          : 'research';
+
+  const handleNameChange = (name: string) => {
+    const field = `${entityKey}.name`;
+    if (isTutorialActive()) {
+      const action = useTutorialStore.getState().getCurrentStep()?.action;
+      if (action?.type !== 'data-field' || action.field !== field) return;
+    }
+    onNameChange?.(name);
+    completeTutorialAction({ type: 'data-field', field, value: name });
+  };
+
+  const handleRestore = async () => {
+    if (!entityId) return;
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({ type: 'data-restore', entity: entityKey, id: entityId })
+    ) {
+      return;
+    }
+    await onRestore?.();
+    if (isTutorialActive()) {
+      const dataOverrides = await getDataOverrides();
+      completeTutorialAction({
+        type: 'data-restore',
+        entity: entityKey,
+        id: entityId,
+        dataOverrides,
+      });
+    }
+  };
+
+  const handleDelete = () => {
+    if (isTutorialActive()) return;
+    onDelete?.();
+  };
+
   const emptyState = (
     <div className={styles['empty-detail']}>
       <EmptyIcon className={styles['empty-icon']} size={40} strokeWidth={1} />
@@ -67,10 +118,11 @@ export function GenericDataFormShell({
               type="text"
               className={isReadOnly ? styles['form-input-readonly'] : styles['form-input']}
               value={activeEntity.name || ''}
-              onChange={(e) => onNameChange?.(e.target.value)}
+              onChange={(e) => handleNameChange(e.target.value)}
               placeholder={`e.g. New ${entityLabel}`}
               maxLength={64}
               disabled={isReadOnly}
+              data-tutorial-data-field={`${entityKey}.name`}
             />
           </div>
 
@@ -81,8 +133,9 @@ export function GenericDataFormShell({
               {isModified ? (
                 <button
                   className={styles['btn-restore']}
-                  onClick={onRestore}
+                  onClick={() => void handleRestore()}
                   title="Restore this entry back to its baseline default configuration"
+                  data-tutorial-data-restore={`${entityKey}:${entityId}`}
                 >
                   <RotateCcw size={14} />
                   Restore Baseline Defaults
@@ -90,7 +143,7 @@ export function GenericDataFormShell({
               ) : (
                 <button
                   className={styles['btn-delete']}
-                  onClick={onDelete}
+                  onClick={handleDelete}
                   title={`Delete Custom ${entityLabel}`}
                 >
                   <Trash2 size={14} />

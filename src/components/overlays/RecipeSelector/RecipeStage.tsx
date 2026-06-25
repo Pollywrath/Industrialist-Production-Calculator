@@ -9,6 +9,12 @@ import { useUIStore } from '../../../stores/useUIStore';
 import { useDataStore } from '../../../stores/useDataStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { useRecipeSelectorFilters } from './RecipeSelectorContext';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+  useTutorialStore,
+} from '../../../stores/useTutorialStore';
 
 interface RecipeStageProps {
   clickedRateInfo: { clickedPerSecondRate: number } | null;
@@ -32,6 +38,14 @@ export function RecipeStage({
   const oreNodesEnabled = useGlobalSettingsStore((s) => s.settings.oreNodesEnabled);
   const showVariantLimited = useGlobalSettingsStore((s) => s.settings.showVariantLimited);
   const difficulty = useGlobalSettingsStore((s) => s.settings.difficulty);
+  const tutorialRecipeCardId = useTutorialStore((s) => {
+    if (!s.activeTutorialId) return null;
+    const step = s.getCurrentStep();
+    if (!step) return null;
+    if (step.highlight.kind === 'recipe-card') return step.highlight.recipeId;
+    if (step.action.type === 'selector-recipe') return step.action.recipeId;
+    return null;
+  });
 
   const unlockedRecipes = allRecipes.filter((r) => {
     const machine = getMachine(r.machine_id);
@@ -84,6 +98,32 @@ export function RecipeStage({
 
   const rateMode = useUIStore((s) => s.rateMode);
   const setRecipeSelectorOpen = useUIStore((s) => s.setRecipeSelectorOpen);
+
+  const handleClose = () => {
+    if (isTutorialActive()) return;
+    setRecipeSelectorOpen(false);
+  };
+
+  const handleBackClick = () => {
+    if (isTutorialActive()) return;
+    handleBack();
+  };
+
+  const handleFilterClick = (
+    filter: 'producer' | 'consumer' | 'outlet' | 'heatPower',
+    currentValue: boolean,
+    setter: (value: boolean) => void,
+  ) => {
+    const nextValue = !currentValue;
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({ type: 'selector-filter', filter, value: nextValue })
+    ) {
+      return;
+    }
+    setter(nextValue);
+    completeTutorialAction({ type: 'selector-filter', filter, value: nextValue });
+  };
 
   const [favorites, setFavorites] = useState<Set<string>>(() => {
     try {
@@ -145,7 +185,7 @@ export function RecipeStage({
     <>
       <div className={styles['recipe-selector-header']}>
         <div className={styles['recipe-selector-back-nav']}>
-          <button className={styles['recipe-selector-back-btn']} onClick={handleBack}>
+          <button className={styles['recipe-selector-back-btn']} onClick={handleBackClick}>
             <ArrowLeft size={14} className={styles['back-btn-icon']} />
             <span className={styles['back-btn-text']}>
               Back to {activeTab === 'product' ? 'Products' : 'Machines'}
@@ -162,38 +202,45 @@ export function RecipeStage({
         </div>
         <button
           className={styles['recipe-selector-close']}
-          onClick={() => setRecipeSelectorOpen(false)}
+          onClick={handleClose}
         >
           <X size={16} />
         </button>
       </div>
 
       {activeTab === 'product' && (
-        <div className={styles['recipe-selector-phase2-filters']}>
+        <div
+          className={styles['recipe-selector-phase2-filters']}
+          data-tutorial-selector-filter-row="product"
+        >
           <button
             className={`${styles['recipe-selector-filter-btn']} ${filterProducers ? styles['is-active'] : ''}`}
-            onClick={() => setFilterProducers(!filterProducers)}
+            onClick={() => handleFilterClick('producer', filterProducers, setFilterProducers)}
+            data-tutorial-selector-filter="producer"
           >
             <span className={`${styles['filter-btn-dot']} ${styles['producer']}`} />
             Producer
           </button>
           <button
             className={`${styles['recipe-selector-filter-btn']} ${filterConsumers ? styles['is-active'] : ''}`}
-            onClick={() => setFilterConsumers(!filterConsumers)}
+            onClick={() => handleFilterClick('consumer', filterConsumers, setFilterConsumers)}
+            data-tutorial-selector-filter="consumer"
           >
             <span className={`${styles['filter-btn-dot']} ${styles['consumer']}`} />
             Consumer
           </button>
           <button
             className={`${styles['recipe-selector-filter-btn']} ${filterSellTrash ? styles['is-active'] : ''}`}
-            onClick={() => setFilterSellTrash(!filterSellTrash)}
+            onClick={() => handleFilterClick('outlet', filterSellTrash, setFilterSellTrash)}
+            data-tutorial-selector-filter="outlet"
           >
             <span className={`${styles['filter-btn-dot']} ${styles['sell']}`} />
             Outlet
           </button>
           <button
             className={`${styles['recipe-selector-filter-btn']} ${filterHeatPower ? styles['is-active'] : ''}`}
-            onClick={() => setFilterHeatPower(!filterHeatPower)}
+            onClick={() => handleFilterClick('heatPower', filterHeatPower, setFilterHeatPower)}
+            data-tutorial-selector-filter="heatPower"
           >
             <span className={`${styles['filter-btn-dot']} ${styles['heat']}`} />
             Power & Heat
@@ -210,6 +257,7 @@ export function RecipeStage({
             itemHeight={136}
             height={activeTab === 'product' ? 488 : 540}
             overscan={5}
+            scrollToKey={tutorialRecipeCardId}
             getKey={(recipe) => recipe.id}
             className={styles['recipe-selector-table-viewport']}
           >

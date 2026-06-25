@@ -19,6 +19,12 @@ import { useNodeEditorStore, NodeEditorContext } from './NodeEditorContext';
 import { SettingsEditor } from './SettingsEditor';
 import { getSpecialRecipe } from '../../../data/registry';
 import { isRecipeNode } from '../../../types/nodes';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+  useTutorialStore,
+} from '../../../stores/useTutorialStore';
 
 interface NodeEditorProps {
   recipe: Recipe;
@@ -136,6 +142,13 @@ function NodeEditorModal({
   };
 
   const handleSaveLocal = () => {
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({ type: 'node-editor-apply', mode: 'local' })
+    ) {
+      return;
+    }
+
     const {
       settings,
       clampedInputs,
@@ -162,6 +175,7 @@ function NodeEditorModal({
       );
     });
     onClose();
+    completeTutorialAction({ type: 'node-editor-apply', mode: 'local' });
   };
 
   const initialMachineCount = initialData.machineCount;
@@ -170,6 +184,12 @@ function NodeEditorModal({
 
   const handleSavePropagated = () => {
     if (isPropagationDisabled) return;
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({ type: 'node-editor-apply', mode: 'chain' })
+    ) {
+      return;
+    }
 
     const {
       settings,
@@ -229,18 +249,51 @@ function NodeEditorModal({
       setNodesAndEdges(updatedNodes, nextEdges);
     });
     onClose();
+    completeTutorialAction({ type: 'node-editor-apply', mode: 'chain' });
+  };
+
+  const handleClose = () => {
+    if (isTutorialActive()) return;
+    onClose();
+  };
+
+  const handleTabClick = (tab: 'count' | 'settings') => {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'node-editor-tab', tab })) {
+      return;
+    }
+    setActiveTab(tab);
+    completeTutorialAction({ type: 'node-editor-tab', tab });
+  };
+
+  const handleMachineCountInput = (value: string) => {
+    if (isTutorialActive()) {
+      const action = useTutorialStore.getState().getCurrentStep()?.action;
+      if (action?.type !== 'node-editor-machine-count') return;
+    }
+    handleMachineCountChange(value);
+    completeTutorialAction({
+      type: 'node-editor-machine-count',
+      nodeId,
+      value: Number(value),
+    });
   };
 
   return createPortal(
-    <div className={styles['node-editor-overlay']} onClick={onClose}>
+    <div className={styles['node-editor-overlay']} onClick={handleClose}>
       <div className={styles['node-editor-modal']} onClick={(e) => e.stopPropagation()}>
         <div className={styles['node-editor-header']}>
           <h2 id="node-editor-dialog-title">Node Editor</h2>
           <div className={styles['node-editor-header-actions']}>
-            <button className={styles['node-editor-btn-icon']} onClick={handleResetHandles}>
+            <button
+              className={styles['node-editor-btn-icon']}
+              onClick={() => {
+                if (isTutorialActive()) return;
+                handleResetHandles();
+              }}
+            >
               <RotateCcw size={18} />
             </button>
-            <button className={styles['node-editor-btn-icon']} onClick={onClose}>
+            <button className={styles['node-editor-btn-icon']} onClick={handleClose}>
               <X size={18} />
             </button>
           </div>
@@ -250,14 +303,16 @@ function NodeEditorModal({
           <div className={styles['node-editor-tabs']}>
             <button
               className={`${styles['node-editor-tab']} ${activeTab === 'count' ? styles['is-active'] : ''}`}
-              onClick={() => setActiveTab('count')}
+              onClick={() => handleTabClick('count')}
+              data-tutorial-node-editor="count-tab"
             >
               Count & Handles
             </button>
             {hasSettings && (
               <button
                 className={`${styles['node-editor-tab']} ${activeTab === 'settings' ? styles['is-active'] : ''}`}
-                onClick={() => setActiveTab('settings')}
+                onClick={() => handleTabClick('settings')}
+                data-tutorial-node-editor="settings-tab"
               >
                 Settings
               </button>
@@ -272,9 +327,10 @@ function NodeEditorModal({
                   type="text"
                   inputMode="decimal"
                   value={machineCountStr}
-                  onChange={(e) => handleMachineCountChange(e.target.value)}
+                  onChange={(e) => handleMachineCountInput(e.target.value)}
                   onBlur={handleMachineCountBlur}
                   className={styles['node-editor-input']}
+                  data-tutorial-node-editor="machine-count"
                 />
               </div>
 
@@ -291,16 +347,21 @@ function NodeEditorModal({
         </div>
 
         <div className={styles['node-editor-footer']}>
-          <button className={styles['node-editor-btn-secondary']} onClick={onClose}>
+          <button className={styles['node-editor-btn-secondary']} onClick={handleClose}>
             Cancel
           </button>
-          <button className={styles['node-editor-btn-primary']} onClick={handleSaveLocal}>
+          <button
+            className={styles['node-editor-btn-primary']}
+            onClick={handleSaveLocal}
+            data-tutorial-node-editor="apply-local"
+          >
             Apply
           </button>
           <button
             className={styles['node-editor-btn-propagate']}
             disabled={isPropagationDisabled}
             onClick={handleSavePropagated}
+            data-tutorial-node-editor="apply-chain"
           >
             Apply to Chain
           </button>

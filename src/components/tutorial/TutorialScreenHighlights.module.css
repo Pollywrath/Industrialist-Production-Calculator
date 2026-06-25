@@ -1,0 +1,25 @@
+.layer {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  pointer-events: none;
+}
+
+.rect {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--theme-color-warning);
+  border-radius: 6px;
+  outline: 3px solid var(--theme-color-warning-translucent);
+  outline-offset: 0;
+  pointer-events: none;
+}
+
+.edge {
+  fill: none;
+  stroke: var(--theme-color-warning);
+  stroke-width: 4;
+  stroke-linecap: square;
+  stroke-dasharray: 10 6;
+  pointer-events: none;
+}

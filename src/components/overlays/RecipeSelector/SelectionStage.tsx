@@ -1,4 +1,4 @@
-import type { RefObject } from 'react';
+import { useEffect, type RefObject } from 'react';
 import { X, Package, Droplet } from 'lucide-react';
 import type { Product, Machine } from '../../../types/data';
 import { SortableSelectorTable, type ColumnConfig } from '../../shared/SortableSelectorTable';
@@ -18,6 +18,12 @@ import { useUIStore } from '../../../stores/useUIStore';
 import { useDataStore } from '../../../stores/useDataStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { useRecipeSelectorStore } from './RecipeSelectorContext';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+  useTutorialStore,
+} from '../../../stores/useTutorialStore';
 
 const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multiplier'>[] = [
   {
@@ -102,6 +108,7 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
     setActiveTab,
     searchQuery,
     setSearchQuery,
+    debouncedSearch,
     clearSearch,
     productTypeFilter,
     setProductTypeFilter,
@@ -117,6 +124,7 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
       setActiveTab: s.setActiveTab,
       searchQuery: s.searchQuery,
       setSearchQuery: s.setSearchQuery,
+      debouncedSearch: s.debouncedSearch,
       clearSearch: s.clearSearch,
       productTypeFilter: s.productTypeFilter,
       setProductTypeFilter: s.setProductTypeFilter,
@@ -131,10 +139,48 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
 
   const setRecipeSelectorOpen = useUIStore((s) => s.setRecipeSelectorOpen);
 
+  useEffect(() => {
+    if (!isTutorialActive()) return;
+    const action = useTutorialStore.getState().getCurrentStep()?.action;
+    if (action?.type !== 'selector-search') return;
+    completeTutorialAction({ type: 'selector-search', query: debouncedSearch });
+  }, [debouncedSearch]);
+
   const availableSubcategories =
     machineCategoryFilter === 'All'
       ? UNIQUE_SUBCATEGORIES
       : (CANONICAL_CATEGORY_MAP[machineCategoryFilter] || []).slice().sort();
+
+  const handleClose = () => {
+    if (isTutorialActive()) return;
+    setRecipeSelectorOpen(false);
+  };
+
+  const handleProductTab = () => {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'selector-tab', tab: 'product' })) {
+      return;
+    }
+    setActiveTab('product');
+    clearSearch();
+    completeTutorialAction({ type: 'selector-tab', tab: 'product' });
+  };
+
+  const handleMachineTab = () => {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'selector-tab', tab: 'machine' })) {
+      return;
+    }
+    setActiveTab('machine');
+    clearSearch();
+    completeTutorialAction({ type: 'selector-tab', tab: 'machine' });
+  };
+
+  const handleSearchChange = (value: string) => {
+    if (isTutorialActive()) {
+      const action = useTutorialStore.getState().getCurrentStep()?.action;
+      if (action?.type !== 'selector-search') return;
+    }
+    setSearchQuery(value);
+  };
 
   return (
     <>
@@ -142,26 +188,22 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
         <div className={styles['recipe-selector-tabs']}>
           <button
             className={`${styles['recipe-selector-tab']} ${activeTab === 'product' ? styles['is-active'] : ''}`}
-            onClick={() => {
-              setActiveTab('product');
-              clearSearch();
-            }}
+            onClick={handleProductTab}
+            data-tutorial-selector-tab="product"
           >
             Search by Product
           </button>
           <button
             className={`${styles['recipe-selector-tab']} ${activeTab === 'machine' ? styles['is-active'] : ''}`}
-            onClick={() => {
-              setActiveTab('machine');
-              clearSearch();
-            }}
+            onClick={handleMachineTab}
+            data-tutorial-selector-tab="machine"
           >
             Search by Machine
           </button>
         </div>
         <button
           className={styles['recipe-selector-close']}
-          onClick={() => setRecipeSelectorOpen(false)}
+          onClick={handleClose}
         >
           <X size={16} />
         </button>
@@ -176,10 +218,17 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
               className={styles['recipe-selector-input']}
               placeholder="Search products by name..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              data-tutorial-selector-search="product"
             />
             {searchQuery && (
-              <button className={styles['recipe-selector-search-clear']} onClick={clearSearch}>
+              <button
+                className={styles['recipe-selector-search-clear']}
+                onClick={() => {
+                  if (isTutorialActive()) return;
+                  clearSearch();
+                }}
+              >
                 <X size={12} />
               </button>
             )}
@@ -190,7 +239,10 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
             <select
               className={styles['recipe-selector-select']}
               value={productTypeFilter}
-              onChange={(e) => setProductTypeFilter(e.target.value as 'All' | 'Item' | 'Fluid')}
+              onChange={(e) => {
+                if (isTutorialActive()) return;
+                setProductTypeFilter(e.target.value as 'All' | 'Item' | 'Fluid');
+              }}
             >
               <option value="All">All Types</option>
               <option value="Item">Item</option>
@@ -208,10 +260,17 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
                 className={styles['recipe-selector-input']}
                 placeholder="Search machines by name..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                data-tutorial-selector-search="machine"
               />
               {searchQuery && (
-                <button className={styles['recipe-selector-search-clear']} onClick={clearSearch}>
+                <button
+                  className={styles['recipe-selector-search-clear']}
+                  onClick={() => {
+                    if (isTutorialActive()) return;
+                    clearSearch();
+                  }}
+                >
                   <X size={12} />
                 </button>
               )}
@@ -226,7 +285,10 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
               <select
                 className={styles['recipe-selector-select']}
                 value={machineTierFilter}
-                onChange={(e) => setMachineTierFilter(e.target.value)}
+                onChange={(e) => {
+                  if (isTutorialActive()) return;
+                  setMachineTierFilter(e.target.value);
+                }}
               >
                 <option value="All">All Tiers</option>
                 {uniqueTiers.map((t) => (
@@ -243,6 +305,7 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
                 className={styles['recipe-selector-select']}
                 value={machineCategoryFilter}
                 onChange={(e) => {
+                  if (isTutorialActive()) return;
                   const newCat = e.target.value;
                   setMachineCategoryFilter(newCat);
                   if (newCat !== 'All') {
@@ -268,7 +331,10 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
               <select
                 className={styles['recipe-selector-select']}
                 value={machineSubcategoryFilter}
-                onChange={(e) => setMachineSubcategoryFilter(e.target.value)}
+                onChange={(e) => {
+                  if (isTutorialActive()) return;
+                  setMachineSubcategoryFilter(e.target.value);
+                }}
               >
                 <option value="All">All Subcategories</option>
                 {availableSubcategories.map((sub) => (
@@ -322,16 +388,28 @@ function ProductList() {
 
   const filteredProducts = sortItems(list, productSortField, productSortOrder);
 
+  const handleProductSelect = (id: string) => {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'selector-product', productId: id })) {
+      return;
+    }
+    handleSelectItem(id);
+    completeTutorialAction({ type: 'selector-product', productId: id });
+  };
+
   return (
     <SortableSelectorTable
       items={filteredProducts}
       columns={PRODUCT_COLUMNS}
       sortField={productSortField}
       sortOrder={productSortOrder}
-      onSort={handleProductSort}
-      onSelectItem={handleSelectItem}
+      onSort={(field) => {
+        if (isTutorialActive()) return;
+        handleProductSort(field);
+      }}
+      onSelectItem={handleProductSelect}
       emptyMessage="No products match your criteria."
       height={PRODUCT_TABLE_VIEW_HEIGHT}
+      getRowProps={(product) => ({ 'data-tutorial-product-row': product.id })}
     />
   );
 }
@@ -423,8 +501,14 @@ function MachineList() {
       columns={MACHINE_COLUMNS}
       sortField={machineSortField}
       sortOrder={machineSortOrder}
-      onSort={handleMachineSort}
-      onSelectItem={handleSelectItem}
+      onSort={(field) => {
+        if (isTutorialActive()) return;
+        handleMachineSort(field);
+      }}
+      onSelectItem={(id) => {
+        if (isTutorialActive()) return;
+        handleSelectItem(id);
+      }}
       emptyMessage="No machines match your criteria."
       height={MACHINE_TABLE_VIEW_HEIGHT}
     />

@@ -8,6 +8,7 @@ interface VirtualListProps<T> {
   overscan?: number;
   className?: string;
   style?: React.CSSProperties;
+  scrollToKey?: string | number | null;
   getKey: (item: T, index: number) => string | number;
   children: (item: T, index: number) => React.ReactNode;
 }
@@ -19,6 +20,7 @@ export function VirtualList<T>({
   overscan = 5,
   className = '',
   style = {},
+  scrollToKey = null,
   getKey,
   children,
 }: VirtualListProps<T>) {
@@ -26,6 +28,13 @@ export function VirtualList<T>({
 
   const scrollTopRef = useRef(0);
   const rafIdRef = useRef<number | null>(null);
+  const lastScrollToRef = useRef<{
+    key: string | number;
+    index: number;
+    top: number;
+    itemHeight: number;
+    height: number;
+  } | null>(null);
 
   const [range, setRange] = useState(() => {
     const start = 0;
@@ -47,7 +56,9 @@ export function VirtualList<T>({
         items.length > 0
           ? Math.min(items.length - 1, Math.ceil((top + height) / itemHeight) + overscan)
           : -1;
-      setRange({ start, end });
+      setRange((current) =>
+        current.start === start && current.end === end ? current : { start, end },
+      );
     });
   };
 
@@ -60,9 +71,63 @@ export function VirtualList<T>({
         items.length > 0
           ? Math.min(items.length - 1, Math.ceil((top + height) / itemHeight) + overscan)
           : -1;
-      setRange({ start, end });
+      setRange((current) =>
+        current.start === start && current.end === end ? current : { start, end },
+      );
     }
   }, [items.length, height, itemHeight, overscan]);
+
+  useEffect(() => {
+    if (scrollToKey === null) return;
+
+    const el = containerRef.current;
+    if (!el) return;
+
+    let targetIndex = -1;
+    for (let i = 0; i < items.length; i++) {
+      if (getKey(items[i], i) === scrollToKey) {
+        targetIndex = i;
+        break;
+      }
+    }
+
+    if (targetIndex === -1) return;
+
+    const centeredOffset = Math.max(0, Math.floor((height - itemHeight) / 2));
+    const maxScrollTop = Math.max(0, items.length * itemHeight - height);
+    const nextTop = Math.min(maxScrollTop, Math.max(0, targetIndex * itemHeight - centeredOffset));
+    const lastScrollTo = lastScrollToRef.current;
+    if (
+      lastScrollTo &&
+      lastScrollTo.key === scrollToKey &&
+      lastScrollTo.index === targetIndex &&
+      lastScrollTo.top === nextTop &&
+      lastScrollTo.itemHeight === itemHeight &&
+      lastScrollTo.height === height &&
+      Math.abs(el.scrollTop - nextTop) < 1
+    ) {
+      return;
+    }
+
+    el.scrollTop = nextTop;
+    scrollTopRef.current = nextTop;
+    lastScrollToRef.current = {
+      key: scrollToKey,
+      index: targetIndex,
+      top: nextTop,
+      itemHeight,
+      height,
+    };
+
+    const start = Math.max(0, Math.floor(nextTop / itemHeight) - overscan);
+    const end =
+      items.length > 0
+        ? Math.min(items.length - 1, Math.ceil((nextTop + height) / itemHeight) + overscan)
+        : -1;
+    setRange((current) =>
+      current.start === start && current.end === end ? current : { start, end },
+    );
+  }, [getKey, height, itemHeight, items, overscan, scrollToKey]);
 
   useEffect(() => {
     return () => {

@@ -1,10 +1,16 @@
-import { type CSSProperties, useState, useEffect } from 'react';
+import { type CSSProperties, useEffect } from 'react';
 import { useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import { ChevronDown, ChevronRight, Ellipsis } from 'lucide-react';
 import { getEffectiveToggleId, useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
+import { useDataStore } from '../../../stores/useDataStore';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+} from '../../../stores/useTutorialStore';
 import { isRecipeNode } from '../../../types/nodes';
 import type { GroupNodeType, RecipeNodeType } from '../../../types/nodes';
 import { getMachine, resolveActiveRecipe } from '../../../data/lookup';
@@ -30,10 +36,20 @@ import { useShallow } from 'zustand/react/shallow';
 const EMPTY_GROUP_MEMBER_IDS: string[] = [];
 
 export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>) {
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const isEditorOpen = useUIStore((s) => s.nodeEditorOpenId === id);
+  const setIsEditorOpen = (open: boolean) => {
+    useUIStore.setState({ nodeEditorOpenId: open ? id : null });
+  };
   const updateGroupNodeData = useFlowStore((s) => s.updateGroupNodeData);
   const updateNodeInternals = useUpdateNodeInternals();
   const globalSettings = useGlobalSettingsStore((s) => s.settings);
+  const dbVersion = useDataStore((s) => s.dbVersion);
+  const flowResultGraphVersion = useFlowResultStore((s) => s.graphVersion);
+  const flowResultDataDbVersion = useFlowResultStore((s) => s.dataDbVersion);
+  const currentGraphVersion = useFlowStore((s) => s.graphVersion);
+  const hasFreshSolveSnapshot =
+    flowResultGraphVersion === currentGraphVersion &&
+    flowResultDataDbVersion === dbVersion;
 
   const memberNodes = useFlowStore(
     useShallow((s) => {
@@ -78,7 +94,9 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
     memberNodes.forEach((node, index) => {
       if (!isRecipeNode(node)) return;
       const recipe =
-        memberRecipes[index] ?? resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id);
+        hasFreshSolveSnapshot
+          ? memberRecipes[index] ?? resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id)
+          : resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id) ?? memberRecipes[index];
       if (!recipe) return;
       const sr = getSpecialRecipe(recipe.id);
       const machine = getMachine(recipe.machine_id);
@@ -113,10 +131,14 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
         <div
           className={recipeStyles['recipe-node']}
           style={{ '--node-height': `${displayHeight}px` } as React.CSSProperties}
+          data-tutorial-node-id={id}
+          data-db-version={dbVersion}
         >
           <div className={recipeStyles['recipe-node-info']}>
             <button
               className={`${recipeStyles['recipe-node-info__top-right-btn']} nodrag`}
+              data-tutorial-group-node-id={id}
+              data-tutorial-group-part="edit"
               onClick={(e) => {
                 const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
                 if (isDeleteMode) {
@@ -125,6 +147,7 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
                   return;
                 }
                 e.stopPropagation();
+                if (isTutorialActive()) return;
                 setIsEditorOpen(true);
               }}
             >
@@ -158,6 +181,8 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
               <div className={recipeStyles['recipe-node-info__col--right']}>
                 <button
                   className={`${styles['group-node__expand-trigger']} nodrag`}
+                  data-tutorial-group-node-id={id}
+                  data-tutorial-group-part="expand"
                   onClick={(e) => {
                     const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
                     if (isDeleteMode) {
@@ -166,7 +191,14 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
                       return;
                     }
                     e.stopPropagation();
+                    if (
+                      isTutorialActive() &&
+                      !canPerformTutorialAction({ type: 'group-expand', groupId: id })
+                    ) {
+                      return;
+                    }
                     updateGroupNodeData(id, { collapsed: false });
+                    completeTutorialAction({ type: 'group-expand', groupId: id });
                   }}
                 >
                   <span className={styles['group-node__expand-label']}>EXPAND</span>
@@ -198,11 +230,18 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
 
   return (
     <>
-      <div className={styles['group-node']} style={style}>
+      <div
+        className={styles['group-node']}
+        style={style}
+        data-tutorial-node-id={id}
+        data-db-version={dbVersion}
+      >
         <div className={styles['group-node__boundary']}>
           <div className={styles['group-node__header']}>
             <button
               className={styles['group-node__bar']}
+              data-tutorial-group-node-id={id}
+              data-tutorial-group-part="bar"
               onClick={(event) => {
                 const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
                 if (isDeleteMode) {
@@ -211,8 +250,15 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
                   return;
                 }
                 event.stopPropagation();
+                if (
+                  isTutorialActive() &&
+                  !canPerformTutorialAction({ type: 'group-collapse', groupId: id })
+                ) {
+                  return;
+                }
                 if (!data.collapsed) {
                   updateGroupNodeData(id, { collapsed: true });
+                  completeTutorialAction({ type: 'group-collapse', groupId: id });
                 }
               }}
             >
@@ -223,6 +269,8 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
             </button>
             <button
               className={`${styles['group-node__edit-button']} nodrag`}
+              data-tutorial-group-node-id={id}
+              data-tutorial-group-part="edit"
               onClick={(event) => {
                 const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
                 if (isDeleteMode) {
@@ -231,6 +279,7 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
                   return;
                 }
                 event.stopPropagation();
+                if (isTutorialActive()) return;
                 setIsEditorOpen(true);
               }}
             >

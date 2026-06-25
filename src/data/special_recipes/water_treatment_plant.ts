@@ -42,7 +42,7 @@ export const water_treatment_plant_01: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0,
       inputs: [
-        { product_id: 'p_water', quantity: 64 },
+        { product_id: 'p_water', quantity: outputQuantity },
         { product_id: 'p_steam', quantity: 90 },
       ],
       outputs: [
@@ -74,7 +74,7 @@ export const water_treatment_plant_02: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0,
       inputs: [
-        { product_id: 'p_condensate', quantity: 64 },
+        { product_id: 'p_condensate', quantity: outputQuantity },
         { product_id: 'p_steam', quantity: 90 },
       ],
       outputs: [
@@ -106,7 +106,7 @@ export const water_treatment_plant_03: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0,
       inputs: [
-        { product_id: 'p_contaminated_water', quantity: 64 },
+        { product_id: 'p_contaminated_water', quantity: outputQuantity },
         { product_id: 'p_steam', quantity: 90 },
       ],
       outputs: [

@@ -9,6 +9,12 @@ import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
+import { useDataStore } from '../../../stores/useDataStore';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+} from '../../../stores/useTutorialStore';
 import {
   getNormalizedCycleTime,
   calculateMachineCountFromRate,
@@ -48,6 +54,7 @@ interface ProxyFlowInfo {
 
 interface GroupNodeIORectProps {
   refVal: HandleRef;
+  nodeId: string;
   width: number;
   label: string;
   totalQty: number;
@@ -56,6 +63,7 @@ interface GroupNodeIORectProps {
 
 function GroupNodeIORect({
   refVal,
+  nodeId,
   width,
   label,
   totalQty,
@@ -66,6 +74,9 @@ function GroupNodeIORect({
       <div
         className={`${styles['recipe-node-io__rect']} ${styles[`recipe-node-io__rect--${refVal.side}`]}`}
         style={{ '--rect-width': `${width}px` } as React.CSSProperties}
+        data-tutorial-rect-node-id={nodeId}
+        data-tutorial-rect-side={refVal.side}
+        data-tutorial-rect-index={refVal.index}
         onClick={(e) => {
           if (getEffectiveToggleId(useUIStore.getState()) === 'delete_mode') return;
           e.stopPropagation();
@@ -105,34 +116,45 @@ function GroupNodeIOHandle({
   const handleTypeClass = handleDataType
     ? ` ${styles[`recipe-node-io__handle--${handleDataType}`]}`
     : '';
+  const wrapperStyle = {
+    top,
+    ...(refVal.side === 'input'
+      ? { left: 'var(--theme-handle-left)', transform: 'var(--theme-handle-transform-left)' }
+      : {
+          right: 'var(--theme-handle-right)',
+          transform: 'var(--theme-handle-transform-right)',
+        }),
+  } as React.CSSProperties;
 
   return (
-    <Handle
-      type={refVal.side === 'input' ? 'target' : 'source'}
-      position={position}
-      id={handleId}
-      className={`${styles['recipe-node-io__handle']} ${styles[`recipe-node-io__handle--${refVal.side}`]}${
-        isFlipped ? ` ${styles['recipe-node-io__handle--flipped']}` : ''
-      }${handleTypeClass}`}
-      data-handle-type={handleDataType || undefined}
-      style={{
-        top,
-        width: 'var(--theme-handle-size)',
-        height: 'var(--theme-handle-size)',
-        position: 'var(--theme-handle-position)' as 'absolute',
-        ...(refVal.side === 'input'
-          ? { left: 'var(--theme-handle-left)', transform: 'var(--theme-handle-transform-left)' }
-          : {
-              right: 'var(--theme-handle-right)',
-              transform: 'var(--theme-handle-transform-right)',
-            }),
-      }}
-      onClick={(e) => onSquareClick(e, handleId)}
-      onDoubleClick={(e) => {
-        e.stopPropagation();
-        onDoubleClick(refVal);
-      }}
-    />
+    <div className={styles['recipe-node-io__handle-shell']} style={wrapperStyle}>
+      <Handle
+        type={refVal.side === 'input' ? 'target' : 'source'}
+        position={position}
+        id={handleId}
+        className={`${styles['recipe-node-io__handle']} ${styles[`recipe-node-io__handle--${refVal.side}`]}${
+          isFlipped ? ` ${styles['recipe-node-io__handle--flipped']}` : ''
+        }${handleTypeClass}`}
+        data-handle-type={handleDataType || undefined}
+        data-tutorial-handle-id={handleId}
+        data-tutorial-handle-node-id={nodeId}
+        data-tutorial-handle-side={refVal.side}
+        data-tutorial-handle-index={refVal.index}
+        style={{
+          width: 'var(--theme-handle-size)',
+          height: 'var(--theme-handle-size)',
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+        }}
+        onClick={(e) => onSquareClick(e, handleId)}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          onDoubleClick(refVal);
+        }}
+      />
+    </div>
   );
 }
 
@@ -141,7 +163,14 @@ export function GroupNodeIO({
   inputProxyHandleIds,
   outputProxyHandleIds,
 }: GroupNodeIOProps) {
+  const dbVersion = useDataStore((s) => s.dbVersion);
   const rateMode = useUIStore((s) => s.rateMode);
+  const flowResultGraphVersion = useFlowResultStore((s) => s.graphVersion);
+  const flowResultDataDbVersion = useFlowResultStore((s) => s.dataDbVersion);
+  const currentGraphVersion = useFlowStore((s) => s.graphVersion);
+  const hasFreshSolveSnapshot =
+    flowResultGraphVersion === currentGraphVersion &&
+    flowResultDataDbVersion === dbVersion;
   const proxyNodes = useFlowStore(
     useShallow((s): Array<CanvasNode | undefined> => {
       const values: Array<CanvasNode | undefined> = [];
@@ -185,6 +214,49 @@ export function GroupNodeIO({
       return values;
     }),
   );
+  const pendingProductNames = useDataStore(
+    useShallow((s) => {
+      const names: Record<string, string> = {};
+      const collectProduct = (handleId: string, index: number): void => {
+        const parsed = parseHandleId(handleId);
+        if (!parsed) return;
+        const internalNode = proxyNodes[index];
+        if (!isRecipeNode(internalNode)) return;
+        const flowDataIndex = index * 3;
+        const committedRecipe = proxyFlowData[flowDataIndex + 1] as Recipe | undefined;
+        const recipe = hasFreshSolveSnapshot
+          ? committedRecipe
+          : resolveActiveRecipe(
+              internalNode.data.recipeId,
+              internalNode.data.settings,
+              internalNode.id,
+            ) ?? committedRecipe;
+        const list = parsed.side === 'input' ? recipe?.inputs : recipe?.outputs;
+        const entry = list?.[parsed.index];
+        const staleResolvedProduct = (proxyFlowData[flowDataIndex + 2] as string | undefined) ?? '';
+        const productId =
+          (hasFreshSolveSnapshot ? staleResolvedProduct : '') || entry?.product_id || '';
+        if (!productId || names[productId] !== undefined) return;
+        const pending = s.pendingEdits.products[productId];
+        if (pending?._tombstone) {
+          names[productId] = productId;
+        } else if (typeof pending?.name === 'string') {
+          names[productId] = pending.name;
+        }
+      };
+
+      for (let i = 0; i < inputProxyHandleIds.length; i++) {
+        collectProduct(inputProxyHandleIds[i], i);
+      }
+      for (let i = 0; i < outputProxyHandleIds.length; i++) {
+        collectProduct(outputProxyHandleIds[i], inputProxyHandleIds.length + i);
+      }
+      return names;
+    }),
+  );
+
+  const getDisplayProductName = (productId: string): string =>
+    pendingProductNames[productId] ?? getProductName(productId);
 
   const leftHandles = inputProxyHandleIds.map((_, index) => ({ side: 'input' as const, index }));
   const rightHandles = outputProxyHandleIds.map((_, index) => ({ side: 'output' as const, index }));
@@ -217,6 +289,18 @@ export function GroupNodeIO({
     ref.side === 'input' ? ref.index : inputProxyHandleIds.length + ref.index;
 
   const handleRectClick = (ref: HandleRef) => {
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({
+        type: 'node-rect',
+        nodeId,
+        side: ref.side,
+        index: ref.index,
+      })
+    ) {
+      return;
+    }
+
     const internalHandleId =
       ref.side === 'input'
         ? inputProxyHandleIds[ref.index]
@@ -254,10 +338,21 @@ export function GroupNodeIO({
       useUIStore
         .getState()
         .setRecipeSelectorOpen(true, productIdToPass, parsed.side, parsed.nodeId, parsed.index);
+      completeTutorialAction({
+        type: 'node-rect',
+        nodeId,
+        side: ref.side,
+        index: ref.index,
+      });
     }
   };
 
   const handleSquareClick = (e: React.MouseEvent, handleId: string) => {
+    if (isTutorialActive()) {
+      e.stopPropagation();
+      return;
+    }
+
     const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
     if (isDeleteMode) {
       e.stopPropagation();
@@ -266,6 +361,18 @@ export function GroupNodeIO({
   };
 
   const handleDoubleClick = (ref: HandleRef) => {
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({
+        type: 'node-handle-double',
+        nodeId,
+        side: ref.side,
+        index: ref.index,
+      })
+    ) {
+      return;
+    }
+
     const { nodes, edges, nodesMap: latestNodesMap } = useFlowStore.getState();
     const internalHandleId =
       ref.side === 'input'
@@ -315,6 +422,12 @@ export function GroupNodeIO({
 
     const newMachineCount = calculateMachineCountFromRate(targetRate, recipe.cycle_time, q);
     useFlowStore.getState().updateNodeData(parsed.nodeId, { machineCount: newMachineCount });
+    completeTutorialAction({
+      type: 'node-handle-double',
+      nodeId,
+      side: ref.side,
+      index: ref.index,
+    });
   };
 
   const getProxyFlowInfo = (ref: HandleRef): ProxyFlowInfo => {
@@ -337,13 +450,19 @@ export function GroupNodeIO({
 
     const flowDataIndex = proxyIndex * 3;
     const flowResult = proxyFlowData[flowDataIndex] as NodeFlowResult | undefined;
-    const recipe = proxyFlowData[flowDataIndex + 1] as Recipe | undefined;
+    const committedRecipe = proxyFlowData[flowDataIndex + 1] as Recipe | undefined;
+    const recipe = hasFreshSolveSnapshot
+      ? committedRecipe
+      : resolveActiveRecipe(internalNode.data.recipeId, internalNode.data.settings, internalNode.id) ??
+        committedRecipe;
     const scaleFactor = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 1;
 
-    const resolvedProduct = (proxyFlowData[flowDataIndex + 2] as string | undefined) ?? '';
-    const label = getProductName(resolvedProduct);
+    const staleResolvedProduct = (proxyFlowData[flowDataIndex + 2] as string | undefined) ?? '';
     const list = parsed.side === 'input' ? recipe?.inputs : recipe?.outputs;
     const entry = list?.[parsed.index];
+    const resolvedProduct =
+      (hasFreshSolveSnapshot ? staleResolvedProduct : '') || entry?.product_id || '';
+    const label = getDisplayProductName(resolvedProduct);
     const override = getRecipeEntryHandleType(entry);
     const handleDataType =
       override ??
@@ -397,6 +516,7 @@ export function GroupNodeIO({
   return (
     <div
       className={styles['recipe-node-io']}
+      data-db-version={dbVersion}
       style={{ '--io-area-height': `${ioAreaHeight}px` } as React.CSSProperties}
     >
       <div
@@ -418,6 +538,7 @@ export function GroupNodeIO({
                 <GroupNodeIORect
                   key={`left-${refVal.index}`}
                   refVal={refVal}
+                  nodeId={nodeId}
                   width={leftWidth}
                   label={info.label}
                   totalQty={info.rate}
@@ -440,6 +561,7 @@ export function GroupNodeIO({
                 <GroupNodeIORect
                   key={`right-${refVal.index}`}
                   refVal={refVal}
+                  nodeId={nodeId}
                   width={rightWidth}
                   label={info.label}
                   totalQty={info.rate}

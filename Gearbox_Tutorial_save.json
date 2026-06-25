@@ -1,0 +1,996 @@
+{
+  "id": "save-mqrlt5w3-0",
+  "name": "Gearbox Tutorial",
+  "timestamp": 1782277170195,
+  "data": {
+    "version": 2,
+    "nodes": [
+      {
+        "id": "n-mqrln7xh-0",
+        "type": "recipe",
+        "recipeId": "r_craft_assembler_06",
+        "machineCount": 30,
+        "inputOrder": [
+          1,
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 4446,
+          "y": 273
+        },
+        "settings": {},
+        "isTarget": true
+      },
+      {
+        "id": "n-mqrlnms4-1",
+        "type": "recipe",
+        "recipeId": "r_craft_assembler_05",
+        "machineCount": 30,
+        "inputOrder": [
+          1,
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 3952,
+          "y": 247
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlodtg-2",
+        "type": "recipe",
+        "recipeId": "r_roller_03",
+        "machineCount": 16,
+        "inputOrder": [
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 3458,
+          "y": 299
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlogxq-3",
+        "type": "recipe",
+        "recipeId": "r_roller_04",
+        "machineCount": 32,
+        "inputOrder": [
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 3458,
+          "y": 52
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlojfg-4",
+        "type": "recipe",
+        "recipeId": "r_press_03",
+        "machineCount": 32,
+        "inputOrder": [
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 2964,
+          "y": 52
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlom5o-5",
+        "type": "recipe",
+        "recipeId": "r_blast_furnace_02",
+        "machineCount": 10,
+        "inputOrder": [
+          1,
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 2470,
+          "y": 195
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlp4dp-6",
+        "type": "recipe",
+        "recipeId": "r_blast_furnace_03",
+        "machineCount": 10,
+        "inputOrder": [
+          1,
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 1976,
+          "y": 104
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlp76d-7",
+        "type": "recipe",
+        "recipeId": "r_coal_drill_01",
+        "machineCount": 53.28,
+        "inputOrder": [],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 1482,
+          "y": 247
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlpekd-8",
+        "type": "recipe",
+        "recipeId": "r_grinder_03",
+        "machineCount": 20.210526315789,
+        "inputOrder": [
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 1482,
+          "y": 0
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlphb1-9",
+        "type": "recipe",
+        "recipeId": "r_iron_drill_01",
+        "machineCount": 80.842105263158,
+        "inputOrder": [],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 988,
+          "y": 0
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlpslw-a",
+        "type": "recipe",
+        "recipeId": "r_industrial_plastic_molder_02",
+        "machineCount": 8,
+        "inputOrder": [
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 3952,
+          "y": 572
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlpw32-b",
+        "type": "recipe",
+        "recipeId": "r_plastic_production_facility_01",
+        "machineCount": 6,
+        "inputOrder": [
+          1,
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 3458,
+          "y": 546
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlq0zi-c",
+        "type": "recipe",
+        "recipeId": "r_plastic_refinery_02",
+        "machineCount": 2,
+        "inputOrder": [
+          1,
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 2964,
+          "y": 520
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlq39q-d",
+        "type": "recipe",
+        "recipeId": "r_oxidation_plant_01",
+        "machineCount": 0.666666666667,
+        "inputOrder": [
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 2470,
+          "y": 520
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlq5yk-e",
+        "type": "recipe",
+        "recipeId": "r_plastic_refinery_01",
+        "machineCount": 4,
+        "inputOrder": [
+          1,
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 1976,
+          "y": 494
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlq7rx-f",
+        "type": "recipe",
+        "recipeId": "r_oil_rig_01",
+        "machineCount": 8.333333333333,
+        "inputOrder": [],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 1482,
+          "y": 741
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlqaz3-g",
+        "type": "recipe",
+        "recipeId": "r_water_pump2_01",
+        "machineCount": 0.666666666667,
+        "inputOrder": [],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 1482,
+          "y": 494
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlqecd-h",
+        "type": "recipe",
+        "recipeId": "r_steam_cracking_plant_01",
+        "machineCount": 1.333333333333,
+        "inputOrder": [
+          1,
+          0
+        ],
+        "outputOrder": [
+          0,
+          1
+        ],
+        "position": {
+          "x": 2470,
+          "y": 767
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlqq3p-i",
+        "type": "recipe",
+        "recipeId": "r_oxidation_plant_02",
+        "machineCount": 1.111111111111,
+        "inputOrder": [
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 2964,
+          "y": 819
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlr1xq-j",
+        "type": "recipe",
+        "recipeId": "r_oil_rig_01",
+        "machineCount": 7.407407407407,
+        "inputOrder": [],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 1976,
+          "y": 1092
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlr4m6-k",
+        "type": "recipe",
+        "recipeId": "r_boiler_01",
+        "machineCount": 0.740740740741,
+        "inputOrder": [
+          0,
+          1
+        ],
+        "outputOrder": [
+          0,
+          1
+        ],
+        "position": {
+          "x": 1976,
+          "y": 793
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlrmj9-l",
+        "type": "recipe",
+        "recipeId": "r_gas_burner_01",
+        "machineCount": 0.074074074074,
+        "inputOrder": [
+          1,
+          0
+        ],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 1482,
+          "y": 988
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlrxce-m",
+        "type": "recipe",
+        "recipeId": "r_water_pump2_01",
+        "machineCount": 0.37037037037,
+        "inputOrder": [],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 988,
+          "y": 741
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlrzgl-n",
+        "type": "recipe",
+        "recipeId": "r_gas_refinery_01",
+        "machineCount": 0.037037037037,
+        "inputOrder": [
+          0
+        ],
+        "outputOrder": [
+          1,
+          0
+        ],
+        "position": {
+          "x": 988,
+          "y": 988
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrls0uw-o",
+        "type": "recipe",
+        "recipeId": "r_condenser_01",
+        "machineCount": 0.111111111111,
+        "inputOrder": [
+          0
+        ],
+        "outputOrder": [
+          0,
+          1,
+          2
+        ],
+        "position": {
+          "x": 494,
+          "y": 910
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrls2dz-p",
+        "type": "recipe",
+        "recipeId": "r_natural_gas_well_01",
+        "machineCount": 0.222222222222,
+        "inputOrder": [],
+        "outputOrder": [
+          0
+        ],
+        "position": {
+          "x": 0,
+          "y": 962
+        },
+        "settings": {}
+      },
+      {
+        "id": "n-mqrlss6q-q",
+        "type": "recipe",
+        "recipeId": "r_van_depot_01",
+        "machineCount": 1.882352941176,
+        "inputOrder": [
+          0
+        ],
+        "outputOrder": [],
+        "position": {
+          "x": 4940,
+          "y": 299
+        },
+        "settings": {}
+      }
+    ],
+    "edges": [
+      {
+        "id": "e-mqrlnms5-0",
+        "source": "n-mqrlnms4-1",
+        "sourceIndex": 0,
+        "target": "n-mqrln7xh-0",
+        "targetIndex": 1
+      },
+      {
+        "id": "e-mqrlodtg-1",
+        "source": "n-mqrlodtg-2",
+        "sourceIndex": 0,
+        "target": "n-mqrlnms4-1",
+        "targetIndex": 0
+      },
+      {
+        "id": "e-mqrlogxq-2",
+        "source": "n-mqrlogxq-3",
+        "sourceIndex": 0,
+        "target": "n-mqrlnms4-1",
+        "targetIndex": 1,
+        "orthogonalTurns": [
+          {
+            "x": 3876,
+            "y": 208
+          },
+          {
+            "x": 3876,
+            "y": 403
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlojfg-3",
+        "source": "n-mqrlojfg-4",
+        "sourceIndex": 0,
+        "target": "n-mqrlogxq-3",
+        "targetIndex": 0
+      },
+      {
+        "id": "e-mqrlom5p-4",
+        "source": "n-mqrlom5o-5",
+        "sourceIndex": 0,
+        "target": "n-mqrlodtg-2",
+        "targetIndex": 0,
+        "orthogonalTurns": [
+          {
+            "x": 2888,
+            "y": 377
+          },
+          {
+            "x": 2888,
+            "y": 455
+          }
+        ]
+      },
+      {
+        "id": "e-mqrloxnh-5",
+        "source": "n-mqrlom5o-5",
+        "sourceIndex": 0,
+        "target": "n-mqrlojfg-4",
+        "targetIndex": 0,
+        "orthogonalTurns": [
+          {
+            "x": 2888,
+            "y": 377
+          },
+          {
+            "x": 2888,
+            "y": 208
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlp4dq-6",
+        "source": "n-mqrlp4dp-6",
+        "sourceIndex": 0,
+        "target": "n-mqrlom5o-5",
+        "targetIndex": 1,
+        "orthogonalTurns": [
+          {
+            "x": 2394,
+            "y": 286
+          },
+          {
+            "x": 2394,
+            "y": 351
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlp76d-7",
+        "source": "n-mqrlp76d-7",
+        "sourceIndex": 0,
+        "target": "n-mqrlp4dp-6",
+        "targetIndex": 0,
+        "orthogonalTurns": [
+          {
+            "x": 1900,
+            "y": 403
+          },
+          {
+            "x": 1900,
+            "y": 312
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlpaz8-8",
+        "source": "n-mqrlp76d-7",
+        "sourceIndex": 0,
+        "target": "n-mqrlom5o-5",
+        "targetIndex": 0
+      },
+      {
+        "id": "e-mqrlpekd-9",
+        "source": "n-mqrlpekd-8",
+        "sourceIndex": 0,
+        "target": "n-mqrlp4dp-6",
+        "targetIndex": 1,
+        "orthogonalTurns": [
+          {
+            "x": 1915,
+            "y": 156
+          },
+          {
+            "x": 1915,
+            "y": 260
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlphb1-a",
+        "source": "n-mqrlphb1-9",
+        "sourceIndex": 0,
+        "target": "n-mqrlpekd-8",
+        "targetIndex": 0
+      },
+      {
+        "id": "e-mqrlpslx-b",
+        "source": "n-mqrlpslw-a",
+        "sourceIndex": 0,
+        "target": "n-mqrln7xh-0",
+        "targetIndex": 0,
+        "orthogonalTurns": [
+          {
+            "x": 4370,
+            "y": 728
+          },
+          {
+            "x": 4370,
+            "y": 481
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlpw32-c",
+        "source": "n-mqrlpw32-b",
+        "sourceIndex": 0,
+        "target": "n-mqrlpslw-a",
+        "targetIndex": 0
+      },
+      {
+        "id": "e-mqrlq0zi-d",
+        "source": "n-mqrlq0zi-c",
+        "sourceIndex": 0,
+        "target": "n-mqrlpw32-b",
+        "targetIndex": 1
+      },
+      {
+        "id": "e-mqrlq39q-e",
+        "source": "n-mqrlq39q-d",
+        "sourceIndex": 0,
+        "target": "n-mqrlq0zi-c",
+        "targetIndex": 1
+      },
+      {
+        "id": "e-mqrlq5yk-f",
+        "source": "n-mqrlq5yk-e",
+        "sourceIndex": 0,
+        "target": "n-mqrlq39q-d",
+        "targetIndex": 0
+      },
+      {
+        "id": "e-mqrlq7rx-g",
+        "source": "n-mqrlq7rx-f",
+        "sourceIndex": 0,
+        "target": "n-mqrlq5yk-e",
+        "targetIndex": 0,
+        "orthogonalTurns": [
+          {
+            "x": 1930,
+            "y": 897
+          },
+          {
+            "x": 1930,
+            "y": 702
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlqaz3-h",
+        "source": "n-mqrlqaz3-g",
+        "sourceIndex": 0,
+        "target": "n-mqrlq5yk-e",
+        "targetIndex": 1
+      },
+      {
+        "id": "e-mqrlqecd-i",
+        "source": "n-mqrlqecd-h",
+        "sourceIndex": 0,
+        "target": "n-mqrlq0zi-c",
+        "targetIndex": 0,
+        "orthogonalTurns": [
+          {
+            "x": 2903,
+            "y": 923
+          },
+          {
+            "x": 2903,
+            "y": 728
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlqq3p-j",
+        "source": "n-mqrlqecd-h",
+        "sourceIndex": 1,
+        "target": "n-mqrlqq3p-i",
+        "targetIndex": 0
+      },
+      {
+        "id": "e-mqrlqs6u-k",
+        "source": "n-mqrlqq3p-i",
+        "sourceIndex": 0,
+        "target": "n-mqrlpw32-b",
+        "targetIndex": 0,
+        "orthogonalTurns": [
+          {
+            "x": 3382,
+            "y": 975
+          },
+          {
+            "x": 3382,
+            "y": 754
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlr1xq-l",
+        "source": "n-mqrlr1xq-j",
+        "sourceIndex": 0,
+        "target": "n-mqrlqecd-h",
+        "targetIndex": 0,
+        "orthogonalTurns": [
+          {
+            "x": 2424,
+            "y": 1248
+          },
+          {
+            "x": 2424,
+            "y": 975
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlr4m6-m",
+        "source": "n-mqrlr4m6-k",
+        "sourceIndex": 1,
+        "target": "n-mqrlqecd-h",
+        "targetIndex": 1,
+        "orthogonalTurns": [
+          {
+            "x": 2409,
+            "y": 1001
+          },
+          {
+            "x": 2409,
+            "y": 923
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlrhf2-n",
+        "source": "n-mqrlr4m6-k",
+        "sourceIndex": 0,
+        "target": "n-mqrlr4m6-k",
+        "targetIndex": 1,
+        "orthogonalTurns": [
+          {
+            "x": 2375,
+            "y": 949
+          },
+          {
+            "x": 2375,
+            "y": 1066
+          },
+          {
+            "x": 1938,
+            "y": 1066
+          },
+          {
+            "x": 1938,
+            "y": 1001
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlrmj9-o",
+        "source": "n-mqrlrmj9-l",
+        "sourceIndex": 0,
+        "target": "n-mqrlr4m6-k",
+        "targetIndex": 0,
+        "orthogonalTurns": [
+          {
+            "x": 1945,
+            "y": 1170
+          },
+          {
+            "x": 1945,
+            "y": 949
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlrxce-p",
+        "source": "n-mqrlrxce-m",
+        "sourceIndex": 0,
+        "target": "n-mqrlrmj9-l",
+        "targetIndex": 1,
+        "orthogonalTurns": [
+          {
+            "x": 1406,
+            "y": 897
+          },
+          {
+            "x": 1406,
+            "y": 1144
+          }
+        ]
+      },
+      {
+        "id": "e-mqrlrzgl-q",
+        "source": "n-mqrlrzgl-n",
+        "sourceIndex": 0,
+        "target": "n-mqrlrmj9-l",
+        "targetIndex": 0
+      },
+      {
+        "id": "e-mqrls0ux-r",
+        "source": "n-mqrls0uw-o",
+        "sourceIndex": 2,
+        "target": "n-mqrlrzgl-n",
+        "targetIndex": 0
+      },
+      {
+        "id": "e-mqrls2dz-s",
+        "source": "n-mqrls2dz-p",
+        "sourceIndex": 0,
+        "target": "n-mqrls0uw-o",
+        "targetIndex": 0
+      },
+      {
+        "id": "e-mqrlss6q-t",
+        "source": "n-mqrln7xh-0",
+        "sourceIndex": 0,
+        "target": "n-mqrlss6q-q",
+        "targetIndex": 0
+      }
+    ],
+    "globalSettings": {
+      "global_pollution": 0,
+      "difficulty": "sandbox",
+      "unlockedResearchIds": [
+        "s_production_production",
+        "s_production_coal_extracting",
+        "s_production_water_pump",
+        "s_production_copper_extracting",
+        "s_production_oil_extraction",
+        "s_production_modular_tree_farm",
+        "s_production_water_pump_2",
+        "s_production_electric_furnace_and_molding",
+        "s_production_oil_refining",
+        "s_production_sawmill",
+        "s_production_water_filtering",
+        "s_production_iron_extracting",
+        "s_production_press",
+        "s_production_diesel_refining",
+        "s_production_craft_assembler",
+        "s_production_paper_mill",
+        "s_production_industrial_sawmill",
+        "s_production_grinder",
+        "s_production_research_station_1",
+        "s_production_research_station_2",
+        "s_production_roller",
+        "s_production_quarry",
+        "s_production_industrial_diesel_refining",
+        "s_production_advanced_oil_refining",
+        "s_production_natural_gas_well",
+        "s_production_research_station_3",
+        "s_production_advanced_copper_extraction",
+        "s_production_advanced_coal_extraction",
+        "s_production_steel",
+        "s_production_brick_production",
+        "s_production_chemical_reactor",
+        "s_production_industrial_firebox",
+        "s_production_oil_fracking",
+        "s_production_gas_refining",
+        "s_production_plastics",
+        "s_production_satellite_dishes",
+        "s_production_mineshaft_drill",
+        "s_production_concrete_production",
+        "s_production_advanced_processing",
+        "s_production_large_oil_rig",
+        "s_production_lng_plant",
+        "s_production_plastic_molding",
+        "s_production_electrolysis_plant",
+        "s_production_foundry",
+        "s_production_press_mk2",
+        "s_production_roller_mk2",
+        "s_production_radioactive_waste_storage",
+        "s_production_industrial_electric_furnace",
+        "s_production_industrial_roller",
+        "s_production_alloyer",
+        "s_production_pressurized_water_filter",
+        "s_production_air_separation_unit",
+        "s_production_industrial_plastic_molding",
+        "s_production_water_bottling",
+        "s_production_ore_enrichment_facility",
+        "s_production_grinder_mk2",
+        "s_production_blast_furnace_mk2",
+        "s_production_gold_refining",
+        "s_production_gold_acid_refinery",
+        "s_production_advanced_oxidation_plant",
+        "s_production_centrifuge",
+        "s_production_lithium",
+        "s_production_research_station_4",
+        "s_production_charger",
+        "s_production_advanced_chemical_plant",
+        "s_production_precision_assembler",
+        "s_production_advanced_assembler",
+        "s_production_logic_assembler",
+        "s_energy_energy",
+        "s_energy_renewables",
+        "s_energy_hand_crank",
+        "s_energy_solar_panel_1",
+        "s_energy_coal_generator",
+        "s_energy_low_capacity_infrastructure",
+        "s_energy_wind_turbine_1",
+        "s_energy_compact_coal_generator",
+        "s_energy_boiler",
+        "s_energy_turbines",
+        "s_energy_lv_pole",
+        "s_energy_energy_storage",
+        "s_energy_solar_panel_2",
+        "s_energy_wind_turbine_2",
+        "s_energy_geothermal_plant",
+        "s_energy_electric_water_heater",
+        "s_energy_gasoline_generator",
+        "s_energy_large_turbines",
+        "s_energy_firebox",
+        "s_energy_diesel_generator",
+        "s_energy_medium_capacity_infrastructure",
+        "s_energy_rusty_battery",
+        "s_energy_solar_panel_3",
+        "s_energy_wind_turbine_3",
+        "s_energy_large_diesel_engine",
+        "s_energy_modular_diesel_engines",
+        "s_energy_gas_burner",
+        "s_energy_power_rate_calculator",
+        "s_energy_mv_poles",
+        "s_energy_breaker",
+        "s_energy_mv_battery",
+        "s_energy_solar_farm_1",
+        "s_energy_large_scale_power_production",
+        "s_energy_advanced_mv_pole",
+        "s_energy_double_mv_battery",
+        "s_energy_coal_power_plant",
+        "s_energy_modular_turbines",
+        "s_energy_high_capacity_infrastructure",
+        "s_energy_nuclear_power_plant",
+        "s_energy_power_rate_calculator_2",
+        "s_energy_hmv_tower",
+        "s_energy_breaker_box",
+        "s_energy_hv_battery",
+        "s_energy_extreme_capacity_infrastructure",
+        "s_energy_advanced_power_controls",
+        "s_energy_power_rate_calculator_3",
+        "s_energy_hv_pole",
+        "s_energy_hv_battery_mk2",
+        "s_energy_advanced_hv_power_controls",
+        "s_utility_utility",
+        "s_utility_pollution",
+        "s_utility_logic",
+        "s_utility_transportation",
+        "s_utility_silos_and_tanks",
+        "s_utility_pipes",
+        "s_utility_liquid_burner_dump",
+        "s_utility_scrubber",
+        "s_utility_advanced_logic",
+        "s_utility_liquid_truck_depot",
+        "s_utility_truck_depot",
+        "s_utility_small_item_storage_silo",
+        "s_utility_small_fluid_storage_silo",
+        "s_utility_better_item_pipes",
+        "s_utility_intersection_pipes",
+        "s_utility_better_fluid_pipes",
+        "s_utility_large_liquid_truck_depot",
+        "s_utility_van_depot",
+        "s_utility_medium_item_storage_silo",
+        "s_utility_medium_fluid_storage_silo",
+        "s_utility_long_pipes",
+        "s_utility_better_intersection_pipes",
+        "s_utility_long_fluid_pipes",
+        "s_utility_large_liquid_pipes",
+        "s_utility_huge_truck_depot",
+        "s_utility_gold_item_storage_silo",
+        "s_utility_gold_fluid_storage_silo",
+        "s_utility_item_overflow_gate",
+        "s_utility_valve_control",
+        "s_utility_liquid_overflow_gate",
+        "s_utility_large_liquid_valve_control",
+        "s_utility_cold_bypass_pipe"
+      ],
+      "oreNodesEnabled": true,
+      "showVariantLimited": true
+    }
+  }
+}

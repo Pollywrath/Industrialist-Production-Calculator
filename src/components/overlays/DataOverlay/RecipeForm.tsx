@@ -8,6 +8,12 @@ import {
 import { getSpecialRecipe } from '../../../data/registry';
 import { buildVirtualModularMachines } from '../../../utils/modularMachineFactory';
 import { useDataStore, overlayPendingEdit } from '../../../stores/useDataStore';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+  useTutorialStore,
+} from '../../../stores/useTutorialStore';
 import { GenericDataFormShell } from './GenericDataFormShell';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
 import { SearchDropdown } from '../../shared/SearchDropdown';
@@ -106,6 +112,15 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
     onSelectRecipe(null);
   };
 
+  const handleTutorialFieldChange = (field: string, value: string | number | boolean) => {
+    if (isTutorialActive()) {
+      const action = useTutorialStore.getState().getCurrentStep()?.action;
+      if (action?.type !== 'data-field' || action.field !== field) return false;
+      return completeTutorialAction({ type: 'data-field', field, value });
+    }
+    return true;
+  };
+
   const handleInputChange = (idx: number, updates: Partial<RecipeInput>) => {
     const nextInputs = [...(activeRecipe.inputs || [])];
     nextInputs[idx] = { ...nextInputs[idx], ...updates };
@@ -125,10 +140,17 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
   };
 
   const handleAddInput = () => {
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({ type: 'data-command', id: 'recipe.add-input' })
+    ) {
+      return;
+    }
     const nextInputs = [...(activeRecipe.inputs || [])];
     const defaultProduct = getAllProducts()[0]?.id || 'p_water';
     nextInputs.push({ product_id: defaultProduct, quantity: 1, variable: false });
     updateRecipePendingEdit(selectedRecipeId, { inputs: nextInputs });
+    completeTutorialAction({ type: 'data-command', id: 'recipe.add-input' });
   };
 
   const handleRemoveInput = (idx: number) => {
@@ -155,10 +177,17 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
   };
 
   const handleAddOutput = () => {
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({ type: 'data-command', id: 'recipe.add-output' })
+    ) {
+      return;
+    }
     const nextOutputs = [...(activeRecipe.outputs || [])];
     const defaultProduct = getAllProducts()[0]?.id || 'p_water';
     nextOutputs.push({ product_id: defaultProduct, quantity: 1, temperature: 18, variable: false, voidable: false });
     updateRecipePendingEdit(selectedRecipeId, { outputs: nextOutputs });
+    completeTutorialAction({ type: 'data-command', id: 'recipe.add-output' });
   };
 
   const handleRemoveOutput = (idx: number) => {
@@ -226,12 +255,14 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
               value={activeRecipe.machine_id}
               options={machineOptions}
               onChange={(val) => {
+                if (!handleTutorialFieldChange('recipe.machine_id', val)) return;
                 const nextId = updateRecipePendingEdit(selectedRecipeId, { machine_id: val });
                 if (nextId && nextId !== selectedRecipeId) {
                   onSelectRecipe(nextId);
                 }
               }}
               placeholder="Select Machine..."
+              dataTutorialDataField="recipe.machine_id"
             />
           )}
         </div>
@@ -240,13 +271,17 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
           <label className={crudStyles['form-label']}>Power Consumption (W)</label>
           <ValidatedNumberInput
             value={activeRecipe.power_consumption}
-            onChange={(val) => updateRecipePendingEdit(selectedRecipeId, { power_consumption: val })}
+            onChange={(val) => {
+              if (!handleTutorialFieldChange('recipe.power_consumption', val)) return;
+              updateRecipePendingEdit(selectedRecipeId, { power_consumption: val });
+            }}
             defaultValue={100}
             allowDecimals={true}
             allowNegatives={false}
             min={0}
             className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
             disabled={isSpecial}
+            dataTutorialDataField="recipe.power_consumption"
           />
         </div>
       </div>
@@ -256,13 +291,17 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
           <label className={crudStyles['form-label']}>Cycle Time (seconds)</label>
           <ValidatedNumberInput
             value={activeRecipe.cycle_time}
-            onChange={(val) => updateRecipePendingEdit(selectedRecipeId, { cycle_time: val })}
+            onChange={(val) => {
+              if (!handleTutorialFieldChange('recipe.cycle_time', val)) return;
+              updateRecipePendingEdit(selectedRecipeId, { cycle_time: val });
+            }}
             defaultValue={1}
             allowDecimals={true}
             allowNegatives={false}
             min={0.01}
             className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
             disabled={isSpecial}
+            dataTutorialDataField="recipe.cycle_time"
           />
         </div>
 
@@ -271,7 +310,10 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
           <select
             className={isSpecial ? crudStyles['form-select-readonly'] : crudStyles['form-select']}
             value={activeRecipe.power_type || 'MV'}
-            onChange={(e) => updateRecipePendingEdit(selectedRecipeId, { power_type: e.target.value as 'MV' | 'HV' })}
+            onChange={(e) => {
+              if (isTutorialActive()) return;
+              updateRecipePendingEdit(selectedRecipeId, { power_type: e.target.value as 'MV' | 'HV' });
+            }}
             disabled={isSpecial}
           >
             <option value="MV">MV Tier</option>
@@ -284,12 +326,16 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
         <label className={crudStyles['form-label']}>Base Pollution Rate</label>
         <ValidatedNumberInput
           value={activeRecipe.pollution}
-          onChange={(val) => updateRecipePendingEdit(selectedRecipeId, { pollution: val })}
+          onChange={(val) => {
+            if (!handleTutorialFieldChange('recipe.pollution', val)) return;
+            updateRecipePendingEdit(selectedRecipeId, { pollution: val });
+          }}
           defaultValue={0}
           allowDecimals={true}
           allowNegatives={true}
           className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
           disabled={isSpecial}
+          dataTutorialDataField="recipe.pollution"
         />
       </div>
 
@@ -318,6 +364,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
               className={styles['btn-add-io']}
               onClick={handleAddInput}
               title="Add Input Product"
+              data-tutorial-data-command="recipe.add-input"
             >
               <Plus size={12} /> Add Input
             </button>
@@ -345,27 +392,40 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                     <SearchDropdown
                       value={input.product_id}
                       options={productOptions}
-                      onChange={(val) => handleInputChange(idx, { product_id: val })}
+                      onChange={(val) => {
+                        const field = `recipe.input.${idx}.product_id`;
+                        if (!handleTutorialFieldChange(field, val)) return;
+                        handleInputChange(idx, { product_id: val });
+                      }}
+                      dataTutorialDataField={`recipe.input.${idx}.product_id`}
                     />
                   )}
                 </div>
                 <div className={styles['col-quantity']}>
                   <ValidatedNumberInput
                     value={input.quantity}
-                    onChange={(val) => handleInputChange(idx, { quantity: val })}
+                    onChange={(val) => {
+                      const field = `recipe.input.${idx}.quantity`;
+                      if (!handleTutorialFieldChange(field, val)) return;
+                      handleInputChange(idx, { quantity: val });
+                    }}
                     defaultValue={1}
                     allowDecimals={true}
                     allowNegatives={false}
                     min={0.0001}
                     className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
                     disabled={isSpecial}
+                    dataTutorialDataField={`recipe.input.${idx}.quantity`}
                   />
                 </div>
                 <div className={styles['col-handle-type']}>
                   <select
                     className={styles['io-handle-type-select']}
                     value={input.handle_type ?? 'auto'}
-                    onChange={(e) => handleInputHandleTypeChange(idx, e.target.value)}
+                    onChange={(e) => {
+                      if (isTutorialActive()) return;
+                      handleInputHandleTypeChange(idx, e.target.value);
+                    }}
                     disabled={isSpecial}
                     title="Recipe handle type"
                   >
@@ -378,7 +438,10 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                   <input
                     type="checkbox"
                     checked={!!input.variable}
-                    onChange={(e) => handleInputChange(idx, { variable: e.target.checked })}
+                    onChange={(e) => {
+                      if (isTutorialActive()) return;
+                      handleInputChange(idx, { variable: e.target.checked });
+                    }}
                     disabled={isSpecial}
                   />
                 </div>
@@ -387,7 +450,10 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                     <button
                       type="button"
                       className={styles['btn-remove-io']}
-                      onClick={() => handleRemoveInput(idx)}
+                      onClick={() => {
+                        if (isTutorialActive()) return;
+                        handleRemoveInput(idx);
+                      }}
                       title="Remove Input"
                     >
                       <Trash2 size={12} />
@@ -409,6 +475,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
               className={styles['btn-add-io']}
               onClick={handleAddOutput}
               title="Add Output Product"
+              data-tutorial-data-command="recipe.add-output"
             >
               <Plus size={12} /> Add Output
             </button>
@@ -438,26 +505,39 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                     <SearchDropdown
                       value={output.product_id}
                       options={productOptions}
-                      onChange={(val) => handleOutputChange(idx, { product_id: val })}
+                      onChange={(val) => {
+                        const field = `recipe.output.${idx}.product_id`;
+                        if (!handleTutorialFieldChange(field, val)) return;
+                        handleOutputChange(idx, { product_id: val });
+                      }}
+                      dataTutorialDataField={`recipe.output.${idx}.product_id`}
                     />
                   )}
                 </div>
                 <div className={styles['col-quantity']}>
                   <ValidatedNumberInput
                     value={output.quantity}
-                    onChange={(val) => handleOutputChange(idx, { quantity: val })}
+                    onChange={(val) => {
+                      const field = `recipe.output.${idx}.quantity`;
+                      if (!handleTutorialFieldChange(field, val)) return;
+                      handleOutputChange(idx, { quantity: val });
+                    }}
                     defaultValue={1}
                     allowDecimals={true}
                     allowNegatives={false}
                     min={0.0001}
                     className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
                     disabled={isSpecial}
+                    dataTutorialDataField={`recipe.output.${idx}.quantity`}
                   />
                 </div>
                 <div className={styles['col-temp']}>
                   <ValidatedNumberInput
                     value={output.temperature}
-                    onChange={(val) => handleOutputChange(idx, { temperature: val })}
+                    onChange={(val) => {
+                      if (isTutorialActive()) return;
+                      handleOutputChange(idx, { temperature: val });
+                    }}
                     defaultValue={18}
                     allowDecimals={true}
                     allowNegatives={true}
@@ -469,7 +549,10 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                   <select
                     className={styles['io-handle-type-select']}
                     value={output.handle_type ?? 'auto'}
-                    onChange={(e) => handleOutputHandleTypeChange(idx, e.target.value)}
+                    onChange={(e) => {
+                      if (isTutorialActive()) return;
+                      handleOutputHandleTypeChange(idx, e.target.value);
+                    }}
                     disabled={isSpecial}
                     title="Recipe handle type"
                   >
@@ -482,7 +565,10 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                   <input
                     type="checkbox"
                     checked={!!output.variable}
-                    onChange={(e) => handleOutputChange(idx, { variable: e.target.checked })}
+                    onChange={(e) => {
+                      if (isTutorialActive()) return;
+                      handleOutputChange(idx, { variable: e.target.checked });
+                    }}
                     disabled={isSpecial}
                   />
                 </div>
@@ -490,7 +576,10 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                   <input
                     type="checkbox"
                     checked={!!output.voidable}
-                    onChange={(e) => handleOutputChange(idx, { voidable: e.target.checked })}
+                    onChange={(e) => {
+                      if (isTutorialActive()) return;
+                      handleOutputChange(idx, { voidable: e.target.checked });
+                    }}
                     disabled={isSpecial}
                   />
                 </div>
@@ -499,7 +588,10 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                     <button
                       type="button"
                       className={styles['btn-remove-io']}
-                      onClick={() => handleRemoveOutput(idx)}
+                      onClick={() => {
+                        if (isTutorialActive()) return;
+                        handleRemoveOutput(idx);
+                      }}
                       title="Remove Output"
                     >
                       <Trash2 size={12} />

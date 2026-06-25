@@ -16,6 +16,11 @@ import { RecipeSelectorProvider } from './RecipeSelectorProvider';
 import { useRecipeSelectorStore } from './RecipeSelectorContext';
 import { createGraphResolutionContext } from '../../../utils/graphResolutionContext';
 import { isRecipeNode } from '../../../types/nodes';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+} from '../../../stores/useTutorialStore';
 
 function getClickedPerSecondRate(
   sourceSide: 'input' | 'output' | null,
@@ -140,6 +145,13 @@ function RecipeSelectorModal() {
   const clickedRateInfo = derivedRate !== null ? { clickedPerSecondRate: derivedRate } : null;
 
   const handleAddRecipe = (recipeId: string) => {
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({ type: 'selector-recipe', recipeId })
+    ) {
+      return;
+    }
+
     const defaultRecipe = resolveActiveRecipe(recipeId);
     if (!defaultRecipe) return;
 
@@ -184,10 +196,21 @@ function RecipeSelectorModal() {
 
     setNodesAndEdges([...cleanNodes, newNode], nextEdges);
     setRecipeSelectorOpen(false);
+    completeTutorialAction({
+      type: 'selector-recipe',
+      recipeId,
+      nodeId: newNode.id,
+    });
   };
 
   return createPortal(
-    <div className={styles['recipe-selector-overlay']} onClick={() => setRecipeSelectorOpen(false)}>
+    <div
+      className={styles['recipe-selector-overlay']}
+      onClick={() => {
+        if (isTutorialActive()) return;
+        setRecipeSelectorOpen(false);
+      }}
+    >
       <div className={styles['recipe-selector-modal']} onClick={(e) => e.stopPropagation()}>
         {stage === 'select' ? (
           <SelectionStage inputRef={inputRef} />

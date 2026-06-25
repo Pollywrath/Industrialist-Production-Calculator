@@ -2,6 +2,11 @@ import type { ChangeEvent } from 'react';
 import { Box } from 'lucide-react';
 import { getProduct, hasProductOverride } from '../../../data/lookup';
 import { useDataStore, overlayPendingEdit } from '../../../stores/useDataStore';
+import {
+  completeTutorialAction,
+  isTutorialActive,
+  useTutorialStore,
+} from '../../../stores/useTutorialStore';
 import { GenericDataFormShell } from './GenericDataFormShell';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
 import styles from './DataCrud.module.css';
@@ -44,7 +49,17 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
   }
 
   const handleTypeChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    if (isTutorialActive()) return;
     updateProductPendingEdit(selectedProductId, { type: e.target.value as 'Item' | 'Fluid' });
+  };
+
+  const handleTutorialFieldChange = (field: string, value: string | number | boolean) => {
+    if (isTutorialActive()) {
+      const action = useTutorialStore.getState().getCurrentStep()?.action;
+      if (action?.type !== 'data-field' || action.field !== field) return false;
+      return completeTutorialAction({ type: 'data-field', field, value });
+    }
+    return true;
   };
 
   const handleDelete = () => {
@@ -72,12 +87,16 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
         <label className={styles['form-label']}>Sell Cost ($)</label>
         <ValidatedNumberInput
           value={activeProduct.sell_price}
-          onChange={(val) => updateProductPendingEdit(selectedProductId, { sell_price: val })}
+          onChange={(val) => {
+            if (!handleTutorialFieldChange('product.sell_price', val)) return;
+            updateProductPendingEdit(selectedProductId, { sell_price: val });
+          }}
           defaultValue={0}
           allowDecimals={true}
           allowNegatives={true}
           className={styles['form-input']}
           placeholder="0.0"
+          dataTutorialDataField="product.sell_price"
         />
       </div>
 
@@ -85,7 +104,10 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
         <label className={styles['form-label']}>Research Point Multiplier</label>
         <ValidatedNumberInput
           value={activeProduct.rp_multiplier}
-          onChange={(val) => updateProductPendingEdit(selectedProductId, { rp_multiplier: val })}
+          onChange={(val) => {
+            if (!handleTutorialFieldChange('product.rp_multiplier', val)) return;
+            updateProductPendingEdit(selectedProductId, { rp_multiplier: val });
+          }}
           defaultValue={1}
           allowDecimals={true}
           allowNegatives={false}
@@ -93,6 +115,7 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
           className={styles['form-input']}
           placeholder="1.0"
           title="Must be a positive float value (>= 0)"
+          dataTutorialDataField="product.rp_multiplier"
         />
       </div>
 
@@ -101,7 +124,10 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
           <input
             type="checkbox"
             checked={!!activeProduct.profit}
-            onChange={(e) => updateProductPendingEdit(selectedProductId, { profit: e.target.checked })}
+            onChange={(e) => {
+              if (isTutorialActive()) return;
+              updateProductPendingEdit(selectedProductId, { profit: e.target.checked });
+            }}
           />
           Good to Sell (Profit)
         </label>
@@ -112,7 +138,10 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
           <input
             type="checkbox"
             checked={!!activeProduct.research}
-            onChange={(e) => updateProductPendingEdit(selectedProductId, { research: e.target.checked })}
+            onChange={(e) => {
+              if (isTutorialActive()) return;
+              updateProductPendingEdit(selectedProductId, { research: e.target.checked });
+            }}
           />
           Good for Research
         </label>

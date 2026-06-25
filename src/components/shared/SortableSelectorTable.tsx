@@ -41,6 +41,7 @@ interface SortableSelectorTableProps<T extends { id: string }, K extends string>
   onSelectItem: (id: string) => void;
   emptyMessage: string;
   height?: number;
+  getRowProps?: (item: T) => Record<string, string>;
 }
 
 export function SortableSelectorTable<T extends { id: string }, K extends string>({
@@ -52,6 +53,7 @@ export function SortableSelectorTable<T extends { id: string }, K extends string
   onSelectItem,
   emptyMessage,
   height = 450,
+  getRowProps,
 }: SortableSelectorTableProps<T, K>) {
   return (
     <>
@@ -86,6 +88,7 @@ export function SortableSelectorTable<T extends { id: string }, K extends string
             <div
               onClick={() => onSelectItem(item.id)}
               className={`${styles['recipe-selector-row']} ${styles['clickable-row']}`}
+              {...getRowProps?.(item)}
             >
               {columns.map((col, index) => {
                 const isFirst = index === 0;

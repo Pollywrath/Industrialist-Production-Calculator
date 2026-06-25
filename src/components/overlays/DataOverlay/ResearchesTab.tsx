@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useDataStore } from '../../../stores/useDataStore';
 import { ResearchesList } from './ResearchesList';
 import { ResearchForm } from './ResearchForm';
 import styles from './ResearchesTab.module.css';
 
 export function ResearchesTab() {
-  const [selectedResearchId, setSelectedResearchId] = useState<string | null>(null);
+  const selectedResearchId = useDataStore((s) => s.selectedResearchId);
+  const setSelectedResearchId = useDataStore((s) => s.setSelectedResearchId);
 
   return (
     <div className={styles['researches-tab-container']}>

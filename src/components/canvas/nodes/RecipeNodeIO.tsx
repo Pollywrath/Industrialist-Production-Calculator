@@ -7,6 +7,12 @@ import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
+import { useDataStore } from '../../../stores/useDataStore';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+} from '../../../stores/useTutorialStore';
 import {
   getRateMultiplier,
   calculateMachineCountFromRate,
@@ -197,8 +203,9 @@ interface RecipeNodeIORectProps {
   machineCount: number;
   multiplier: number;
   onClick: (ref: HandleRef) => void;
-  resolvedProductId: string;
+  label: string;
   actualFlow: number;
+  nodeId: string;
 }
 
 function RecipeNodeIORect({
@@ -208,21 +215,24 @@ function RecipeNodeIORect({
   machineCount,
   multiplier,
   onClick,
-  resolvedProductId,
+  label,
   actualFlow,
+  nodeId,
 }: RecipeNodeIORectProps) {
   const qty = resolveQuantity(refVal, recipe);
   const list = refVal.side === 'input' ? recipe?.inputs : recipe?.outputs;
   const entry = list?.[refVal.index];
   const isVariable = !!entry?.variable;
   const totalQty = isVariable ? actualFlow : qty * machineCount * multiplier;
-  const label = getProductName(resolvedProductId);
 
   return (
     <div className={styles['recipe-node-io__rect-wrapper']}>
       <div
-        className={`${styles['recipe-node-io__rect']} ${styles[`recipe-node-io__rect--${refVal.side}`]}`}
+        className={`${styles['recipe-node-io__rect']} ${styles[`recipe-node-io__rect--${refVal.side}`]} nodrag`}
         style={{ '--rect-width': `${width}px` } as React.CSSProperties}
+        data-tutorial-rect-node-id={nodeId}
+        data-tutorial-rect-side={refVal.side}
+        data-tutorial-rect-index={refVal.index}
         onClick={(e) => {
           if (getEffectiveToggleId(useUIStore.getState()) === 'delete_mode') return;
           e.stopPropagation();
@@ -244,7 +254,7 @@ interface RecipeNodeIOHandleProps {
   top: number;
   position: Position;
   handleDataType: HandleDataType | '';
-  onSquareClick: (e: React.MouseEvent, handleId: string) => void;
+  onSquareClick: (e: React.MouseEvent, ref: HandleRef, handleId: string) => void;
   onDoubleClick: (ref: HandleRef) => void;
 }
 
@@ -262,34 +272,45 @@ function RecipeNodeIOHandle({
   const handleTypeClass = handleDataType
     ? ` ${styles[`recipe-node-io__handle--${handleDataType}`]}`
     : '';
+  const wrapperStyle = {
+    top,
+    ...(refVal.side === 'input'
+      ? { left: 'var(--theme-handle-left)', transform: 'var(--theme-handle-transform-left)' }
+      : {
+          right: 'var(--theme-handle-right)',
+          transform: 'var(--theme-handle-transform-right)',
+        }),
+  } as React.CSSProperties;
 
   return (
-    <Handle
-      type={refVal.side === 'input' ? 'target' : 'source'}
-      position={position}
-      id={handleId}
-      className={`${styles['recipe-node-io__handle']} ${styles[`recipe-node-io__handle--${refVal.side}`]}${
-        isFlipped ? ` ${styles['recipe-node-io__handle--flipped']}` : ''
-      }${handleTypeClass}`}
-      data-handle-type={handleDataType || undefined}
-      style={{
-        top,
-        width: 'var(--theme-handle-size)',
-        height: 'var(--theme-handle-size)',
-        position: 'var(--theme-handle-position)' as 'absolute',
-        ...(refVal.side === 'input'
-          ? { left: 'var(--theme-handle-left)', transform: 'var(--theme-handle-transform-left)' }
-          : {
-              right: 'var(--theme-handle-right)',
-              transform: 'var(--theme-handle-transform-right)',
-            }),
-      }}
-      onClick={(e) => onSquareClick(e, handleId)}
-      onDoubleClick={(e) => {
-        e.stopPropagation();
-        onDoubleClick(refVal);
-      }}
-    />
+    <div className={styles['recipe-node-io__handle-shell']} style={wrapperStyle}>
+      <Handle
+        type={refVal.side === 'input' ? 'target' : 'source'}
+        position={position}
+        id={handleId}
+        className={`${styles['recipe-node-io__handle']} ${styles[`recipe-node-io__handle--${refVal.side}`]}${
+          isFlipped ? ` ${styles['recipe-node-io__handle--flipped']}` : ''
+        }${handleTypeClass}`}
+        data-handle-type={handleDataType || undefined}
+        data-tutorial-handle-id={handleId}
+        data-tutorial-handle-node-id={nodeId}
+        data-tutorial-handle-side={refVal.side}
+        data-tutorial-handle-index={refVal.index}
+        style={{
+          width: 'var(--theme-handle-size)',
+          height: 'var(--theme-handle-size)',
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+        }}
+        onClick={(e) => onSquareClick(e, refVal, handleId)}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          onDoubleClick(refVal);
+        }}
+      />
+    </div>
   );
 }
 
@@ -300,10 +321,17 @@ export function RecipeNodeIO({
   nodeId,
   machineCount,
 }: RecipeNodeIOProps) {
+  const dbVersion = useDataStore((s) => s.dbVersion);
   const rateMode = useUIStore((s) => s.rateMode);
   const multiplier = recipe ? getRateMultiplier(recipe.cycle_time, rateMode) : 1;
   const scaleFactor = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 1;
   const flowResult = useFlowResultStore((s) => s.results.get(nodeId));
+  const flowResultGraphVersion = useFlowResultStore((s) => s.graphVersion);
+  const flowResultDataDbVersion = useFlowResultStore((s) => s.dataDbVersion);
+  const currentGraphVersion = useFlowStore((s) => s.graphVersion);
+  const hasFreshSolveSnapshot =
+    flowResultGraphVersion === currentGraphVersion &&
+    flowResultDataDbVersion === dbVersion;
   const resolvedProducts = useFlowResultStore(
     useShallow((s) => {
       const all = s.resolvedProducts;
@@ -372,13 +400,26 @@ export function RecipeNodeIO({
     if (override) return override;
 
     const handleId = buildHandleId(nodeId, ref.side, ref.index);
+    const fallbackProductId = getRecipeEntryProductId(recipe, ref.side, ref.index) || '';
     const productId =
-      resolvedProducts[handleId] || getRecipeEntryProductId(recipe, ref.side, ref.index) || '';
+      (hasFreshSolveSnapshot ? resolvedProducts[handleId] : '') || fallbackProductId;
     return productTypeToHandleDataType(getProduct(productId)?.type) ?? '';
   };
 
   const handleRectClick = (ref: HandleRef) => {
     if (!recipe) return;
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({
+        type: 'node-rect',
+        nodeId,
+        side: ref.side,
+        index: ref.index,
+      })
+    ) {
+      return;
+    }
+
     const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
     const entry = list[ref.index];
     if (entry) {
@@ -398,7 +439,22 @@ export function RecipeNodeIO({
     }
   };
 
-  const handleSquareClick = (e: React.MouseEvent, handleId: string) => {
+  const handleSquareClick = (e: React.MouseEvent, ref: HandleRef, handleId: string) => {
+    if (isTutorialActive()) {
+      e.stopPropagation();
+      if (
+        canPerformTutorialAction({
+          type: 'node-rect',
+          nodeId,
+          side: ref.side,
+          index: ref.index,
+        })
+      ) {
+        handleRectClick(ref);
+      }
+      return;
+    }
+
     const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
     if (isDeleteMode) {
       e.stopPropagation();
@@ -408,6 +464,18 @@ export function RecipeNodeIO({
 
   const handleDoubleClick = (ref: HandleRef) => {
     if (!recipe) return;
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({
+        type: 'node-handle-double',
+        nodeId,
+        side: ref.side,
+        index: ref.index,
+      })
+    ) {
+      return;
+    }
+
     const list = ref.side === 'input' ? recipe.inputs : recipe.outputs;
     const entry = list[ref.index];
     if (!entry) return;
@@ -441,11 +509,18 @@ export function RecipeNodeIO({
     if (q <= 0) return;
     const newMachineCount = calculateMachineCountFromRate(targetRate, recipe.cycle_time, q);
     useFlowStore.getState().updateNodeData(nodeId, { machineCount: newMachineCount });
+    completeTutorialAction({
+      type: 'node-handle-double',
+      nodeId,
+      side: ref.side,
+      index: ref.index,
+    });
   };
 
   return (
     <div
       className={styles['recipe-node-io']}
+      data-db-version={dbVersion}
       style={{ '--io-area-height': `${ioAreaHeight}px` } as React.CSSProperties}
     >
       <div
@@ -463,12 +538,16 @@ export function RecipeNodeIO({
           >
             {leftHandles.map((refVal) => {
               const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
+              const fallbackProductId = getRecipeEntryProductId(recipe, refVal.side, refVal.index) || '';
               const actualFlow = flowResult
                 ? ((refVal.side === 'input'
                     ? flowResult.inputFlows[refVal.index]?.connected
                     : flowResult.outputFlows[refVal.index]?.connected) ?? 0)
                 : 0;
               const actualFlowScaled = actualFlow * scaleFactor;
+              const productId =
+                (hasFreshSolveSnapshot ? resolvedProducts[handleId] : '') || fallbackProductId;
+              const label = getProductName(productId);
               return (
                 <RecipeNodeIORect
                   key={`left-${refVal.index}`}
@@ -478,8 +557,9 @@ export function RecipeNodeIO({
                   machineCount={machineCount}
                   multiplier={multiplier}
                   onClick={handleRectClick}
-                  resolvedProductId={resolvedProducts[handleId] ?? ''}
+                  label={label}
                   actualFlow={actualFlowScaled}
+                  nodeId={nodeId}
                 />
               );
             })}
@@ -494,12 +574,16 @@ export function RecipeNodeIO({
           >
             {rightHandles.map((refVal) => {
               const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
+              const fallbackProductId = getRecipeEntryProductId(recipe, refVal.side, refVal.index) || '';
               const actualFlow = flowResult
                 ? ((refVal.side === 'input'
                     ? flowResult.inputFlows[refVal.index]?.connected
                     : flowResult.outputFlows[refVal.index]?.connected) ?? 0)
                 : 0;
               const actualFlowScaled = actualFlow * scaleFactor;
+              const productId =
+                (hasFreshSolveSnapshot ? resolvedProducts[handleId] : '') || fallbackProductId;
+              const label = getProductName(productId);
               return (
                 <RecipeNodeIORect
                   key={`right-${refVal.index}`}
@@ -509,8 +593,9 @@ export function RecipeNodeIO({
                   machineCount={machineCount}
                   multiplier={multiplier}
                   onClick={handleRectClick}
-                  resolvedProductId={resolvedProducts[handleId] ?? ''}
+                  label={label}
                   actualFlow={actualFlowScaled}
+                  nodeId={nodeId}
                 />
               );
             })}

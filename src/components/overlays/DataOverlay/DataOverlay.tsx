@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Database,
@@ -13,6 +12,12 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useDataStore } from '../../../stores/useDataStore';
+import { getDataOverrides } from '../../../persistence/idb';
+import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+} from '../../../stores/useTutorialStore';
 import { ProductsTab } from './ProductsTab';
 import { MachinesTab } from './MachinesTab';
 import { RecipesTab } from './RecipesTab';
@@ -30,10 +35,10 @@ export function DataOverlay() {
 
 function DataOverlayModal() {
   const setDataOverlayOpen = useUIStore((s) => s.setDataOverlayOpen);
-  const [activeMainTab, setActiveMainTab] = useState<'editing' | 'comparing'>('editing');
-  const [activeEditTab, setActiveEditTab] = useState<
-    'products' | 'machines' | 'recipes' | 'researches'
-  >('products');
+  const activeMainTab = useDataStore((s) => s.dataOverlayMainTab);
+  const activeEditTab = useDataStore((s) => s.dataOverlayEditTab);
+  const setActiveMainTab = useDataStore((s) => s.setDataOverlayMainTab);
+  const setActiveEditTab = useDataStore((s) => s.setDataOverlayEditTab);
 
   const pendingEdits = useDataStore((s) => s.pendingEdits);
   const discardEdits = useDataStore((s) => s.discardEdits);
@@ -46,7 +51,42 @@ function DataOverlayModal() {
     Object.keys(pendingEdits.recipes).length > 0 ||
     Object.keys(pendingEdits.researches).length > 0;
 
+  const handleClose = () => {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'data-close' })) return;
+    setDataOverlayOpen(false);
+    completeTutorialAction({ type: 'data-close' });
+  };
+
+  const handleMainTabClick = (tab: 'editing' | 'comparing') => {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'data-main-tab', tab })) return;
+    setActiveMainTab(tab);
+    completeTutorialAction({ type: 'data-main-tab', tab });
+  };
+
+  const handleEditTabClick = (tab: 'products' | 'machines' | 'recipes' | 'researches') => {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'data-edit-tab', tab })) return;
+    setActiveEditTab(tab);
+    completeTutorialAction({ type: 'data-edit-tab', tab });
+  };
+
+  const handleSaveEdits = async () => {
+    if (!hasUnsavedEdits) return;
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'data-save' })) return;
+    await saveEdits();
+    const nextPending = useDataStore.getState().pendingEdits;
+    const stillHasUnsavedEdits =
+      Object.keys(nextPending.products).length > 0 ||
+      Object.keys(nextPending.machines).length > 0 ||
+      Object.keys(nextPending.recipes).length > 0 ||
+      Object.keys(nextPending.researches).length > 0;
+    if (!stillHasUnsavedEdits && isTutorialActive()) {
+      const dataOverrides = await getDataOverrides();
+      completeTutorialAction({ type: 'data-save', dataOverrides });
+    }
+  };
+
   const handleRestoreDefaults = async () => {
+    if (isTutorialActive()) return;
     const tabNameMap = {
       products: 'Products',
       machines: 'Machines',
@@ -68,14 +108,14 @@ function DataOverlayModal() {
   };
 
   return createPortal(
-    <div className={styles['data-overlay']} onClick={() => setDataOverlayOpen(false)}>
+    <div className={styles['data-overlay']} onClick={handleClose}>
       <div className={styles['data-modal']} onClick={(e) => e.stopPropagation()}>
         <div className={styles['data-header']}>
           <div className={styles['data-title']}>
             <Database size={18} />
             <span>Data Manager</span>
           </div>
-          <button className={styles['data-close']} onClick={() => setDataOverlayOpen(false)}>
+          <button className={styles['data-close']} onClick={handleClose} data-tutorial-data-close="true">
             <X size={18} />
           </button>
         </div>
@@ -85,7 +125,8 @@ function DataOverlayModal() {
             className={`${styles['tab-btn-main']} ${
               activeMainTab === 'editing' ? styles['is-active'] : ''
             }`}
-            onClick={() => setActiveMainTab('editing')}
+            onClick={() => handleMainTabClick('editing')}
+            data-tutorial-data-main-tab="editing"
           >
             <Edit3 size={14} />
             <span>EDITING</span>
@@ -94,7 +135,8 @@ function DataOverlayModal() {
             className={`${styles['tab-btn-main']} ${
               activeMainTab === 'comparing' ? styles['is-active'] : ''
             }`}
-            onClick={() => setActiveMainTab('comparing')}
+            onClick={() => handleMainTabClick('comparing')}
+            data-tutorial-data-main-tab="comparing"
           >
             <GitCompare size={14} />
             <span>COMPARING</span>
@@ -111,7 +153,8 @@ function DataOverlayModal() {
                   className={`${styles['tab-btn-sub']} ${
                     activeEditTab === 'products' ? styles['is-active'] : ''
                   }`}
-                  onClick={() => setActiveEditTab('products')}
+                  onClick={() => handleEditTabClick('products')}
+                  data-tutorial-data-edit-tab="products"
                 >
                   <Package size={13} />
                   <span>PRODUCTS</span>
@@ -120,7 +163,8 @@ function DataOverlayModal() {
                   className={`${styles['tab-btn-sub']} ${
                     activeEditTab === 'machines' ? styles['is-active'] : ''
                   }`}
-                  onClick={() => setActiveEditTab('machines')}
+                  onClick={() => handleEditTabClick('machines')}
+                  data-tutorial-data-edit-tab="machines"
                 >
                   <Cpu size={13} />
                   <span>MACHINES</span>
@@ -129,7 +173,8 @@ function DataOverlayModal() {
                   className={`${styles['tab-btn-sub']} ${
                     activeEditTab === 'recipes' ? styles['is-active'] : ''
                   }`}
-                  onClick={() => setActiveEditTab('recipes')}
+                  onClick={() => handleEditTabClick('recipes')}
+                  data-tutorial-data-edit-tab="recipes"
                 >
                   <ClipboardList size={13} />
                   <span>RECIPES</span>
@@ -138,7 +183,8 @@ function DataOverlayModal() {
                   className={`${styles['tab-btn-sub']} ${
                     activeEditTab === 'researches' ? styles['is-active'] : ''
                   }`}
-                  onClick={() => setActiveEditTab('researches')}
+                  onClick={() => handleEditTabClick('researches')}
+                  data-tutorial-data-edit-tab="researches"
                 >
                   <FlaskConical size={13} />
                   <span>RESEARCHES</span>
@@ -176,6 +222,7 @@ function DataOverlayModal() {
                 !hasUnsavedEdits ? styles['is-disabled'] : ''
               }`}
               onClick={() => {
+                if (isTutorialActive()) return;
                 if (hasUnsavedEdits) discardEdits();
               }}
               disabled={!hasUnsavedEdits}
@@ -185,11 +232,10 @@ function DataOverlayModal() {
             <button
               className={`${styles['btn-save']} ${!hasUnsavedEdits ? styles['is-disabled'] : ''}`}
               onClick={async () => {
-                if (hasUnsavedEdits) {
-                  await saveEdits();
-                }
+                await handleSaveEdits();
               }}
               disabled={!hasUnsavedEdits}
+              data-tutorial-data-save="changes"
             >
               Save Changes
             </button>

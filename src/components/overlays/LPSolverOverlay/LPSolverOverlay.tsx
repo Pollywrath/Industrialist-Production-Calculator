@@ -3,6 +3,11 @@ import { createPortal } from 'react-dom';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import {
+  canPerformTutorialAction,
+  completeTutorialAction,
+  isTutorialActive,
+} from '../../../stores/useTutorialStore';
+import {
   solveRatios,
   cancelRatioOptimizer,
   type RatioOptimizerSession,
@@ -126,6 +131,7 @@ export function LPSolverOverlay() {
         setProposedPollutionTotal(propPollution);
 
         setSolverState('results');
+        completeTutorialAction({ type: 'solver-results' });
       })
       .catch((err: unknown) => {
         if (isDisposed) return;
@@ -157,6 +163,7 @@ export function LPSolverOverlay() {
   if (!isLPSolverOpen) return null;
 
   const handleCancel = () => {
+    if (isTutorialActive()) return;
     if (sessionRef.current) {
       cancelRatioOptimizer();
       sessionRef.current = null;
@@ -166,6 +173,7 @@ export function LPSolverOverlay() {
   };
 
   const handleApply = () => {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'solver-apply' })) return;
     const flowStore = useFlowStore.getState();
     flowStore.runTransaction(() => {
       Object.entries(proposedMachineCounts).forEach(([nodeId, count]) => {
@@ -174,6 +182,7 @@ export function LPSolverOverlay() {
     });
     resetViewState();
     setIsLPSolverOpen(false);
+    completeTutorialAction({ type: 'solver-apply' });
   };
 
   const formatStopwatch = (ms: number): string => {
@@ -263,7 +272,7 @@ export function LPSolverOverlay() {
 
   return createPortal(
     <div className={styles['solver-overlay']}>
-      <div className={styles['solver-modal']} data-state={solverState}>
+      <div className={styles['solver-modal']} data-state={solverState} data-tutorial-solver="modal">
         {solverState === 'solving' && (
           <div className={styles['solving-container']}>
             <div className={styles['spinner-wrapper']}>
@@ -429,7 +438,7 @@ export function LPSolverOverlay() {
               </button>
               {changes.length > 0 && (
                 <button className={styles['action-btn-primary']} onClick={handleApply}>
-                  Apply Changes
+                  <span data-tutorial-solver="apply">Apply Changes</span>
                 </button>
               )}
             </div>

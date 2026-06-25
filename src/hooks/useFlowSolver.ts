@@ -14,6 +14,7 @@ export function useFlowSolver(): void {
   useEffect(() => {
     function recompute(runToken: number) {
       const { nodes, edges, graphVersion } = useFlowStore.getState();
+      const dataDbVersion = useDataStore.getState().dbVersion;
       const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
       if (runToken !== runTokenRef.current) return;
 
@@ -25,7 +26,7 @@ export function useFlowSolver(): void {
 
       if (recipeNodes.length === 0) {
         if (runToken !== runTokenRef.current) return;
-        useFlowResultStore.getState().setResults(new Map(), {}, {}, {}, {}, {}, graphVersion);
+        useFlowResultStore.getState().setResults(new Map(), {}, {}, {}, {}, {}, graphVersion, dataDbVersion);
         useFlowStore.getState().markSolutionCommitted();
         return;
       }
@@ -36,7 +37,7 @@ export function useFlowSolver(): void {
         globalSettings,
       );
       if (runToken !== runTokenRef.current) return;
-      useFlowResultStore.getState().setResults(results, edgeFlows, edgeTemps, inputTemps, resolvedProducts, nodeRecipes, graphVersion);
+      useFlowResultStore.getState().setResults(results, edgeFlows, edgeTemps, inputTemps, resolvedProducts, nodeRecipes, graphVersion, dataDbVersion);
       useFlowStore.getState().markSolutionCommitted();
     }
 

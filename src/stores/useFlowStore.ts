@@ -92,7 +92,7 @@ interface FlowState {
   ) => void;
   toggleNodeSelection: (nodeId: string) => void;
   clearNodeSelection: () => void;
-  createGroupFromSelection: () => void;
+  createGroupFromSelection: () => string | null;
 
   onNodesChange: OnNodesChange<CanvasNode>;
   onEdgesChange: OnEdgesChange;
@@ -1234,7 +1234,7 @@ const useFlowStore = create(
           }
         }
 
-        if (selectedNodes.length === 0) return;
+        if (selectedNodes.length === 0) return null;
 
         const groupId = nextNodeId();
         const inputProxyHandleIds: string[] = [];
@@ -1258,7 +1258,7 @@ const useFlowStore = create(
         }
 
         const bounds = computeBoundsFromMembers(selectedMemberBounds);
-        if (!bounds) return;
+        if (!bounds) return null;
 
         const groupLabel = buildGroupLabelFromExternalOutputs(
           selectedIds,
@@ -1318,6 +1318,8 @@ const useFlowStore = create(
         if (!isApplyingHistory && transactionDepth === 0) {
           pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, nextNodes, state.edges));
         }
+
+        return groupId;
       },
 
       onNodesChange: (changes) => {
@@ -1671,22 +1673,7 @@ const useFlowStore = create(
         const shouldUpdateNodes = nodesChanged || nextNodes !== state.nodes;
         const shouldUpdateEdges = edgesChanged || nextEdges !== state.edges;
         if (!shouldUpdateNodes && !shouldUpdateEdges) return true;
-
-        const nodeIndexUpdate = shouldUpdateNodes
-          ? (() => {
-              const nextIndexes = createNodeIndexes(nextNodes);
-              return {
-                nodes: nextNodes,
-                nodesMap: nextIndexes.nodesMap,
-                groupMemberIds: nextIndexes.groupMemberIds,
-              };
-            })()
-          : {};
-
-        set({
-          ...nodeIndexUpdate,
-          ...(shouldUpdateEdges ? { edges: nextEdges } : {}),
-        });
+        get().setNodesAndEdges(nextNodes, nextEdges);
 
         return true;
       },

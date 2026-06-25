@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useEffect, Suspense } from 'react';
 import { useUpdateNodeInternals, type NodeProps } from '@xyflow/react';
 import type { RecipeNodeType } from '../../../types/nodes';
 import { getMachineName, getMachine, resolveActiveRecipe } from '../../../data/lookup';
@@ -6,6 +6,7 @@ import { RecipeNodeInfo } from './RecipeNodeInfo';
 import { RecipeNodeIO } from './RecipeNodeIO';
 import styles from './RecipeNode.module.css';
 import { useUIStore } from '../../../stores/useUIStore';
+import { useFlowStore } from '../../../stores/useFlowStore';
 import { LoadingScreen } from '../../shared/LoadingScreen';
 import { overlayPrefetchCache, type NodeEditorProps } from '../overlayPrefetchCache';
 
@@ -38,19 +39,27 @@ import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { getSpecialRecipe } from '../../../data/registry';
 
 export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const isEditorOpen = useUIStore((s) => s.nodeEditorOpenId === id);
+  const setIsEditorOpen = (open: boolean) => {
+    useUIStore.setState({ nodeEditorOpenId: open ? id : null });
+  };
   const updateNodeInternals = useUpdateNodeInternals();
   const NodeEditor = overlayPrefetchCache.NodeEditor;
 
   const dbVersion = useDataStore((s) => s.dbVersion);
 
-  useEffect(() => {
-    updateNodeInternals(id);
-  }, [id, data.inputOrder, data.outputOrder, updateNodeInternals]);
-
   const committedRecipe = useFlowResultStore((s) => s.nodeRecipes[id]);
-  const recipe =
-    committedRecipe ?? (dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings, id) : undefined);
+  const liveRecipe =
+    dbVersion !== -1 ? resolveActiveRecipe(data.recipeId, data.settings, id) : undefined;
+  const flowResultGraphVersion = useFlowResultStore((s) => s.graphVersion);
+  const flowResultDataDbVersion = useFlowResultStore((s) => s.dataDbVersion);
+  const currentGraphVersion = useFlowStore((s) => s.graphVersion);
+  const hasFreshSolveSnapshot =
+    flowResultGraphVersion === currentGraphVersion &&
+    flowResultDataDbVersion === dbVersion;
+  const recipe = hasFreshSolveSnapshot
+    ? committedRecipe ?? liveRecipe
+    : liveRecipe ?? committedRecipe;
 
   const inputTempsMap = useFlowResultStore((s) => s.inputTemps[id]);
   let receivedTemp: number | null = null;
@@ -95,6 +104,25 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   const computedHeight = BASE_INFO_HEIGHT + ioAreaHeight + BOTTOM_PADDING;
   const displayHeight = height ?? computedHeight;
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const frame = window.requestAnimationFrame(() => {
+      updateNodeInternals(id);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
+  }, [
+    id,
+    data.inputOrder,
+    data.outputOrder,
+    data.recipeId,
+    displayHeight,
+    updateNodeInternals,
+  ]);
+
   return (
     <>
       <div
@@ -102,6 +130,7 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
         style={{ '--node-height': `${displayHeight}px` } as React.CSSProperties}
         data-target={data.isTarget ? 'true' : undefined}
         data-multi-selected={data.isMultiSelected ? 'true' : undefined}
+        data-tutorial-node-id={id}
       >
         <RecipeNodeInfo
           recipe={recipe}
@@ -114,6 +143,7 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
           }}
           receivedTemp={receivedTemp}
           isTarget={!!data.isTarget}
+          nodeId={id}
         />
         <RecipeNodeIO
           leftHandles={leftHandles}

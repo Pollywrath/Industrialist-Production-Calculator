@@ -8,6 +8,8 @@ export interface SaveStatus {
   message: string;
 }
 
+export type SaveCreateSource = 'button' | 'keyboard';
+
 export interface SavesOverlayState {
   saves: SaveRecord[];
   newSaveName: string;
@@ -32,7 +34,7 @@ export interface SavesOverlayState {
   clearStatus: () => void;
 
   refreshSaves: () => Promise<void>;
-  handleCreateSave: () => Promise<void>;
+  handleCreateSave: (source: SaveCreateSource) => Promise<void>;
   handleOverwriteLoad: (record: SaveRecord) => Promise<void>;
   handleMergeLoad: (record: SaveRecord) => Promise<void>;
   handleOverwriteSave: (record: SaveRecord) => Promise<void>;

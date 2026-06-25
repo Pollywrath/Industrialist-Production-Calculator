@@ -14,6 +14,7 @@ interface ValidatedNumberInputProps {
   className?: string;
   title?: string;
   disabled?: boolean;
+  dataTutorialDataField?: string;
 }
 
 export function ValidatedNumberInput({
@@ -29,6 +30,7 @@ export function ValidatedNumberInput({
   className,
   title,
   disabled = false,
+  dataTutorialDataField,
 }: ValidatedNumberInputProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -106,6 +108,7 @@ export function ValidatedNumberInput({
       className={className}
       title={title}
       disabled={disabled}
+      data-tutorial-data-field={dataTutorialDataField}
     />
   );
 }
