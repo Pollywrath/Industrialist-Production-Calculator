@@ -25,8 +25,9 @@ import { FIRST_PRODUCTION_CHAIN_TUTORIAL_ID } from '../../../tutorials/firstProd
 import { GROUPS_TUTORIAL_ID } from '../../../tutorials/groupsTutorial';
 import { DATA_OVERLAY_TUTORIAL_ID } from '../../../tutorials/dataOverlayTutorial';
 import styles from './HelpOverlay.module.css';
+import { ALL_TIPS } from './tips';
 
-type HelpTabId = 'start' | 'controls' | 'troubleshooting';
+type HelpTabId = 'start' | 'controls' | 'troubleshooting' | 'tips';
 
 interface HelpTab {
   id: HelpTabId;
@@ -54,6 +55,7 @@ const HELP_TABS: HelpTab[] = [
   { id: 'start', label: 'Start' },
   { id: 'controls', label: 'Controls' },
   { id: 'troubleshooting', label: 'Troubleshoot' },
+  { id: 'tips', label: 'Tips' },
 ];
 
 const HELP_ARTICLES: HelpArticle[] = [
@@ -637,6 +639,20 @@ const HELP_ARTICLES: HelpArticle[] = [
           'Run Compute or wait for the canvas solve after changing connected temperatures or flow rates.',
           'A zero distilled water result can be valid when the solved steam flow or condensation conditions are not met.',
         ],
+      },
+    ],
+  },
+  {
+    id: 'calculator-tips',
+    tabId: 'tips',
+    title: 'Tips & Hints',
+    summary: 'A compilation of useful canvas tips, solver hints, and shortcut keys.',
+    Icon: Zap,
+    keywords: ['tips', 'hints', 'tricks', 'shortcuts', 'alt', 'ctrl', 'shift', 'balancer', 'sinks'],
+    sections: [
+      {
+        title: 'Useful Tips',
+        items: ALL_TIPS,
       },
     ],
   },

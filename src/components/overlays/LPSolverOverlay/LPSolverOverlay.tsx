@@ -20,14 +20,7 @@ import { formatPower, formatPollution } from '../../../utils/unitFormatting';
 import { getRecipeNetPower } from '../../../utils/recipePower';
 import { isRecipeNode } from '../../../types/nodes';
 import styles from './LPSolverOverlay.module.css';
-
-const TIPS = [
-  "Set target nodes to anchor the optimization and prevent the factory from shutting down.",
-  "Sinks represent maximum capacity limits and are resolved based on active network flow.",
-  "Connected waste dumps and burners will automatically receive excess waste products.",
-  "Unconnected input ports are ignored by the optimizer to prevent shutting down nodes.",
-  "SCIP WASM solves high-precision models in the background to keep the interface smooth."
-];
+import { ALL_TIPS } from '../HelpOverlay/tips';
 
 interface NodeChange {
   id: string;
@@ -43,6 +36,7 @@ export function LPSolverOverlay() {
   const [solverState, setSolverState] = useState<'solving' | 'results' | 'failed'>('solving');
   const [elapsedMs, setElapsedMs] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
+  const [shuffledTips, setShuffledTips] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
   const [failureDiagnostics, setFailureDiagnostics] = useState<RatioFailureDiagnostics | null>(null);
   const [changes, setChanges] = useState<NodeChange[]>([]);
@@ -60,13 +54,22 @@ export function LPSolverOverlay() {
     if (!isLPSolverOpen) return;
     let isDisposed = false;
 
+    // Shuffle the tips using Fisher-Yates algorithm
+    const tipsCopy = [...ALL_TIPS];
+    for (let i = tipsCopy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [tipsCopy[i], tipsCopy[j]] = [tipsCopy[j], tipsCopy[i]];
+    }
+    setShuffledTips(tipsCopy);
+    setTipIndex(0);
+
     startTimeRef.current = performance.now();
     const timerInterval = setInterval(() => {
       setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
     }, 50);
 
     const tipsInterval = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % TIPS.length);
+      setTipIndex((prev) => (prev + 1) % tipsCopy.length);
     }, 5000);
 
     const { nodes: canvasNodes, edges } = useFlowStore.getState();
@@ -283,7 +286,7 @@ export function LPSolverOverlay() {
             </div>
             <div className={styles['tip-box']}>
               <div className={styles['tip-label']}>TIPS & HINTS</div>
-              <p className={styles['tip-text']}>{TIPS[tipIndex]}</p>
+              <p className={styles['tip-text']}>{shuffledTips[tipIndex] || ALL_TIPS[0]}</p>
             </div>
             <button className={styles['action-btn-danger']} onClick={handleCancel}>
               Cancel Computation
