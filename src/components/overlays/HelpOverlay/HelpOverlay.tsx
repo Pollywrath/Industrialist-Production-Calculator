@@ -6,6 +6,7 @@ import {
   Gauge,
   Group,
   HelpCircle,
+  History,
   LayoutDashboard,
   MousePointerSquareDashed,
   Network,
@@ -25,9 +26,17 @@ import { FIRST_PRODUCTION_CHAIN_TUTORIAL_ID } from '../../../tutorials/firstProd
 import { GROUPS_TUTORIAL_ID } from '../../../tutorials/groupsTutorial';
 import { DATA_OVERLAY_TUTORIAL_ID } from '../../../tutorials/dataOverlayTutorial';
 import styles from './HelpOverlay.module.css';
-import { ALL_TIPS } from './tips';
+import { CATEGORIZED_TIPS } from './tips';
+import changelogData from './changelog.json';
 
-type HelpTabId = 'start' | 'controls' | 'troubleshooting' | 'tips';
+const ICON_MAP: Record<string, ComponentType<{ size?: number; className?: string }>> = {
+  MousePointerSquareDashed,
+  Zap,
+  Settings,
+  Save,
+};
+
+type HelpTabId = 'start' | 'controls' | 'troubleshooting' | 'tips' | 'changelog';
 
 interface HelpTab {
   id: HelpTabId;
@@ -56,9 +65,10 @@ const HELP_TABS: HelpTab[] = [
   { id: 'controls', label: 'Controls' },
   { id: 'troubleshooting', label: 'Troubleshoot' },
   { id: 'tips', label: 'Tips' },
+  { id: 'changelog', label: 'Changelog' },
 ];
 
-const HELP_ARTICLES: HelpArticle[] = [
+const BASE_HELP_ARTICLES: HelpArticle[] = [
   {
     id: 'starter-gearbox-canvas',
     tabId: 'start',
@@ -123,7 +133,7 @@ const HELP_ARTICLES: HelpArticle[] = [
     ],
     sections: [
       {
-        title: 'Visible Parts',
+        title: 'Scale/Sinks',
         items: [
           'Input rows are on the left side of a recipe node and output rows are on the right side.',
           'Rows show product names, rates in the selected rate mode, and temperature labels when the recipe exposes temperature data.',
@@ -642,20 +652,71 @@ const HELP_ARTICLES: HelpArticle[] = [
       },
     ],
   },
-  {
-    id: 'calculator-tips',
-    tabId: 'tips',
-    title: 'Tips & Hints',
-    summary: 'A compilation of useful canvas tips, solver hints, and shortcut keys.',
-    Icon: Zap,
-    keywords: ['tips', 'hints', 'tricks', 'shortcuts', 'alt', 'ctrl', 'shift', 'balancer', 'sinks'],
+  ...CATEGORIZED_TIPS.map((cat) => ({
+    id: cat.id,
+    tabId: 'tips' as const,
+    title: cat.title,
+    summary: cat.summary,
+    Icon: ICON_MAP[cat.icon] || Zap,
+    keywords: ['tips', 'hints', 'tricks', ...cat.title.toLowerCase().split(' ')],
     sections: [
       {
-        title: 'Useful Tips',
-        items: ALL_TIPS,
+        title: cat.title,
+        items: cat.tips,
       },
     ],
-  },
+  })),
+];
+
+interface ChangelogCommit {
+  hash: string;
+  version: string;
+  minor: number;
+  minorName?: string;
+  patch: number;
+  date?: string;
+  subject: string;
+  items: string[];
+}
+
+const typedChangelogData = changelogData as ChangelogCommit[];
+
+const commitsByMinor = new Map<number, ChangelogCommit[]>();
+for (let i = 0; i < typedChangelogData.length; i++) {
+  const commit = typedChangelogData[i];
+  if (!commitsByMinor.has(commit.minor)) {
+    commitsByMinor.set(commit.minor, []);
+  }
+  commitsByMinor.get(commit.minor)!.push(commit);
+}
+
+const CHANGELOG_ARTICLES: HelpArticle[] = [];
+const sortedMinors = Array.from(commitsByMinor.keys()).sort((a, b) => b - a);
+
+for (let i = 0; i < sortedMinors.length; i++) {
+  const minor = sortedMinors[i];
+  const commits = commitsByMinor.get(minor)!;
+  commits.sort((a, b) => a.patch - b.patch);
+
+  const minorName = commits[0]?.minorName || `Version 0.${minor}.x Updates`;
+
+  CHANGELOG_ARTICLES.push({
+    id: `changelog-v0${minor}`,
+    tabId: 'changelog',
+    title: `v0.${minor}.x: ${minorName}`,
+    summary: `Version 0.${minor}.x updates including ${minorName.toLowerCase()} and other changes.`,
+    Icon: History,
+    keywords: ['changelog', 'version', 'updates', 'history', 'release', 'notes', 'commit', `v0.${minor}.x`, ...minorName.toLowerCase().split(' ')],
+    sections: commits.map(c => ({
+      title: c.date ? `${c.version} (${c.date})` : c.version,
+      items: c.items
+    }))
+  });
+}
+
+const HELP_ARTICLES: HelpArticle[] = [
+  ...BASE_HELP_ARTICLES,
+  ...CHANGELOG_ARTICLES
 ];
 
 function articleMatches(article: HelpArticle, query: string): boolean {

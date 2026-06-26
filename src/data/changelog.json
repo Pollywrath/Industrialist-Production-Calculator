@@ -1,0 +1,884 @@
+[
+  {
+    "hash": "1e9f093",
+    "version": "v0.0.0",
+    "minor": 0,
+    "minorName": "Initial Canvas & Base Configuration",
+    "patch": 0,
+    "date": "2026-05-09",
+    "subject": "Initial commit",
+    "items": [
+      "Initialized the project repository and configured the open-source license."
+    ]
+  },
+  {
+    "hash": "b1678c2",
+    "version": "v0.0.1",
+    "minor": 0,
+    "minorName": "Initial Canvas & Base Configuration",
+    "patch": 1,
+    "date": "2026-05-09",
+    "subject": "base calc and canvas",
+    "items": [
+      "Scaffolded the base calculator canvas with an interactive node-based recipe layout.",
+      "Configured basic input and output handles on recipe nodes for connection routing.",
+      "Imported baseline game database configurations for products, machines, and recipes.",
+      "Integrated the SCIP linear programming solver compiling to WebAssembly inside the browser.",
+      "Configured local storage persistence to auto-save canvas progress."
+    ]
+  },
+  {
+    "hash": "cdc5182",
+    "version": "v0.0.2",
+    "minor": 0,
+    "minorName": "Initial Canvas & Base Configuration",
+    "patch": 2,
+    "date": "2026-05-09",
+    "subject": "some fixes",
+    "items": [
+      "Fixed early canvas drawing offsets and recipe node rendering layout bugs.",
+      "Enhanced the Node Editor UI controls layout and improved the Help controls tray.",
+      "Optimized recipe selector search tabs for filtering by machine and product type."
+    ]
+  },
+  {
+    "hash": "730942b",
+    "version": "v0.0.3",
+    "minor": 0,
+    "minorName": "Initial Canvas & Base Configuration",
+    "patch": 3,
+    "date": "2026-05-11",
+    "subject": "fixes 2",
+    "items": [
+      "Refactored canvas panning, zooming, and node dragging event handlers into clean, isolated layers.",
+      "Restructured node input/output port layout for improved clarity and interaction target bounds.",
+      "Resolved canvas mouse-focus conflicts and updated the controls tray interface."
+    ]
+  },
+  {
+    "hash": "a91d0e3",
+    "version": "v0.0.4",
+    "minor": 0,
+    "minorName": "Initial Canvas & Base Configuration",
+    "patch": 4,
+    "date": "2026-05-13",
+    "subject": "feat: implement recipe selector interface and flow solver architecture",
+    "items": [
+      "Implemented the multi-step Recipe Selector browsing overlay with search and category filters.",
+      "Added and preloaded the official application logo (`induslogo.webp`) to optimize loading performance.",
+      "Designed a startup loading spinner and introduced the background scaffolding for the flow solver pipeline."
+    ]
+  },
+  {
+    "hash": "89251ff",
+    "version": "v0.0.5",
+    "minor": 0,
+    "minorName": "Initial Canvas & Base Configuration",
+    "patch": 5,
+    "date": "2026-05-15",
+    "subject": "saves manager, need to do some cleaning",
+    "items": [
+      "Introduced the Saves Manager, supporting local slot saves, JSON file export, and file imports.",
+      "Developed the graph merge utility to combine saved layout configurations into the active canvas.",
+      "Added PNG image export functionality for downloading canvas snapshots.",
+      "Configured IndexedDB to automatically back up active workspace state on changes."
+    ]
+  },
+  {
+    "hash": "4f6ecb6",
+    "version": "v0.0.6",
+    "minor": 0,
+    "minorName": "Initial Canvas & Base Configuration",
+    "patch": 6,
+    "date": "2026-05-15",
+    "subject": "Apply canvas panning fixes",
+    "items": [
+      "Resolved canvas panning conflicts where viewport drags interfered with node selection events.",
+      "Optimized viewport rendering performance using flat CAD boxes during high-speed pan/zoom actions.",
+      "Configured coordinated viewport culling to only render visible elements when node counts exceed 250.",
+      "Improved PNG export layout calculations and bounding box crop accuracy."
+    ]
+  },
+  {
+    "hash": "7c1cfe2",
+    "version": "v0.0.7",
+    "minor": 0,
+    "minorName": "Initial Canvas & Base Configuration",
+    "patch": 7,
+    "date": "2026-05-16",
+    "subject": "indicators for save overlay buttons",
+    "items": [
+      "Added pending loading spinners and action disable states to Save Manager buttons to prevent double operations.",
+      "Implemented visual indicators to highlight unsaved changes in the active canvas slot."
+    ]
+  },
+  {
+    "hash": "4bd1631",
+    "version": "v0.0.8",
+    "minor": 0,
+    "minorName": "Initial Canvas & Base Configuration",
+    "patch": 8,
+    "date": "2026-05-17",
+    "subject": "panels",
+    "items": [
+      "Introduced the floating dashboard panels to display live graph stats and select node details.",
+      "Integrated node display state reactions to special recipe configurations, such as high-voltage tags."
+    ]
+  },
+  {
+    "hash": "324ef45",
+    "version": "v0.0.9",
+    "minor": 0,
+    "minorName": "Initial Canvas & Base Configuration",
+    "patch": 9,
+    "date": "2026-05-17",
+    "subject": "Product and Machine Editor",
+    "items": [
+      "Introduced the lazy-loaded Data Overlay containing the Product and Machine Editor forms.",
+      "Created custom fields to view, add, modify, or restore products and machines to baseline settings."
+    ]
+  },
+  {
+    "hash": "b7e40bc",
+    "version": "v0.0.10",
+    "minor": 0,
+    "minorName": "Initial Canvas & Base Configuration",
+    "patch": 10,
+    "date": "2026-05-19",
+    "subject": "research editor",
+    "items": [
+      "Added the Research and Technology Prerequisites editor tab to the Data Overlay.",
+      "Implemented visual locked/unlocked indicator badges on canvas recipe nodes.",
+      "Optimized layout performance by forcing recipe nodes into flat, compact styles when zoomed out below 35%.",
+      "Linked node heights dynamically to CSS variables and configured reactive updates for global pollution settings."
+    ]
+  },
+  {
+    "hash": "023adb7",
+    "version": "v0.1.0",
+    "minor": 1,
+    "minorName": "Wildcards, Temperatures & Sinks",
+    "patch": 0,
+    "date": "2026-05-21",
+    "subject": "some stuff, wildcard handles",
+    "items": [
+      "Introduced wildcard connection ports typed as `any_fluid` or `any_item` to accept any compatible product of that category.",
+      "Implemented connection verification logic to resolve wildcard port types and validate product compatibility before linking.",
+      "Refactored the styling and layout of Data Overlay form lists."
+    ]
+  },
+  {
+    "hash": "c179211",
+    "version": "v0.1.1",
+    "minor": 1,
+    "minorName": "Wildcards, Temperatures & Sinks",
+    "patch": 1,
+    "date": "2026-05-22",
+    "subject": "some fixes, alloyer yah",
+    "items": [
+      "Added a dedicated temperature display badge to recipe nodes to show live thermal metrics.",
+      "Imported base recipe formulas and configuration details for the Alloyer machine.",
+      "Improved connection verification routines to correctly resolve and allow links to wildcard handles.",
+      "Restructured the layout of the dashboard side stats panel."
+    ]
+  },
+  {
+    "hash": "1464763",
+    "version": "v0.1.2",
+    "minor": 1,
+    "minorName": "Wildcards, Temperatures & Sinks",
+    "patch": 2,
+    "date": "2026-05-22",
+    "subject": "variable quantity and wildcard handle",
+    "items": [
+      "Implemented variable-quantity sink handles representing dynamic flow limits rather than fixed rates.",
+      "Overhauled Boiler, Alloyer, and Air Separation Unit configurations to integrate variable-quantity handles.",
+      "Enabled canvas snap-to-grid alignment rules."
+    ]
+  },
+  {
+    "hash": "e6c83d0",
+    "version": "v0.1.3",
+    "minor": 1,
+    "minorName": "Wildcards, Temperatures & Sinks",
+    "patch": 3,
+    "date": "2026-05-23",
+    "subject": "fixes again",
+    "items": [
+      "Added a descriptive capacity warning label to variable-quantity handles inside the Node Editor IO panel.",
+      "Fixed state conflicts in the Node Editor and corrected handle selection parameters inside the Recipe Selector.",
+      "Configured HTML preloading rules for the application logo to accelerate initial asset paint."
+    ]
+  },
+  {
+    "hash": "747f041",
+    "version": "v0.1.4",
+    "minor": 1,
+    "minorName": "Wildcards, Temperatures & Sinks",
+    "patch": 4,
+    "date": "2026-05-24",
+    "subject": "boilerrrrrrrrrrrrr",
+    "items": [
+      "Implemented the Boiler special recipe formula, dynamically computing steam temperatures based on fuel inputs.",
+      "Exposed temperature target adjustments and fuel selection menus in the Node Editor for Boiler nodes.",
+      "Added research requirement controls to the Data Overlay Research form."
+    ]
+  },
+  {
+    "hash": "a81580a",
+    "version": "v0.1.5",
+    "minor": 1,
+    "minorName": "Wildcards, Temperatures & Sinks",
+    "patch": 5,
+    "date": "2026-05-24",
+    "subject": "iconssssssssss",
+    "items": [
+      "Integrated `.webp` graphical icons for products across recipe nodes, selection list items, and stats panels."
+    ]
+  },
+  {
+    "hash": "55675e3",
+    "version": "v0.2.0",
+    "minor": 2,
+    "minorName": "Dynamic Formulas & History States",
+    "patch": 0,
+    "date": "2026-05-24",
+    "subject": "special recipesssssssss",
+    "items": [
+      "Introduced the dynamic Special Recipe system, enabling formula-based inputs and outputs for custom machines.",
+      "Added 'Good to Sell (Profit)' and 'Good for Research' checkboxes to the Product Editor.",
+      "Updated the Recipe Selector to display dynamic input/output previews for special recipes."
+    ]
+  },
+  {
+    "hash": "9b7711f",
+    "version": "v0.2.1",
+    "minor": 2,
+    "minorName": "Dynamic Formulas & History States",
+    "patch": 1,
+    "date": "2026-05-24",
+    "subject": "support for recipe possible inputs and outputs",
+    "items": [
+      "Added support for optional input and output ports that toggle dynamically based on machine settings.",
+      "Configured potential port configurations for the Industrial Firebox and Logic Assembler.",
+      "Enhanced Recipe Selector searches to match products indexed as potential or optional inputs/outputs."
+    ]
+  },
+  {
+    "hash": "ff66b0c",
+    "version": "v0.2.2",
+    "minor": 2,
+    "minorName": "Dynamic Formulas & History States",
+    "patch": 2,
+    "date": "2026-05-25",
+    "subject": "special recipes almost complete, rahhhhhh",
+    "items": [
+      "Added an explanatory text description panel to the Node Editor for special recipe nodes.",
+      "Completed the baseline formulas for the Alloyer, Air Separation Unit, and Coal Liquefaction Plant.",
+      "Refined computed input/output previews shown on recipe lookup cards."
+    ]
+  },
+  {
+    "hash": "0eabf65",
+    "version": "v0.2.3",
+    "minor": 2,
+    "minorName": "Dynamic Formulas & History States",
+    "patch": 3,
+    "date": "2026-05-25",
+    "subject": "somewhat working heat exchangerssss",
+    "items": [
+      "Implemented steady-state thermodynamic formulas for the Heat Exchanger and Vertical Heat Exchanger.",
+      "Configured nodes to display live thermal outputs derived from coolant and fluid inputs.",
+      "Cleaned up obsolete and duplicate entries inside `recipes.json`."
+    ]
+  },
+  {
+    "hash": "c3b15b7",
+    "version": "v0.2.4",
+    "minor": 2,
+    "minorName": "Dynamic Formulas & History States",
+    "patch": 4,
+    "date": "2026-05-25",
+    "subject": "tree flippin farm",
+    "items": [
+      "Developed upstream and downstream dependency highlighting in the Recipe Selector.",
+      "Improved product pre-selection filters to correctly resolve special recipe variants.",
+      "Polished thermodynamic math constants in the Heat Exchanger modules."
+    ]
+  },
+  {
+    "hash": "08835de",
+    "version": "v0.2.5",
+    "minor": 2,
+    "minorName": "Dynamic Formulas & History States",
+    "patch": 5,
+    "date": "2026-05-26",
+    "subject": "fxies",
+    "items": [
+      "Overhauled the central data lookup and registry system to solve lookup data sync bugs.",
+      "Fixed layout rendering errors and step navigation in the Recipe Selector cards."
+    ]
+  },
+  {
+    "hash": "39e29f6",
+    "version": "v0.2.6",
+    "minor": 2,
+    "minorName": "Dynamic Formulas & History States",
+    "patch": 6,
+    "date": "2026-05-26",
+    "subject": "yes",
+    "items": [
+      "Established the central Flow Solver pipeline loop, orchestrating graph construction, flow allocation, and temperature propagation in a deterministic sequence."
+    ]
+  },
+  {
+    "hash": "b1ede72",
+    "version": "v0.2.7",
+    "minor": 2,
+    "minorName": "Dynamic Formulas & History States",
+    "patch": 7,
+    "date": "2026-05-26",
+    "subject": "some \"fixes\"",
+    "items": [
+      "Refactored the Flow Solver pipeline modules, dividing responsibilities between modules to guarantee correct computations on complex loops.",
+      "Extended wildcard type checks and potential port filtering inside the Recipe Selector."
+    ]
+  },
+  {
+    "hash": "37cd7f7",
+    "version": "v0.2.8",
+    "minor": 2,
+    "minorName": "Dynamic Formulas & History States",
+    "patch": 8,
+    "date": "2026-05-27",
+    "subject": "smol change",
+    "items": [
+      "Added special recipe structures for the Liquid Burner and Liquid Dump.",
+      "Resolved edge-case errors in the graph building module of the solver.",
+      "Fixed recipe card labels and connection handle layout alignments."
+    ]
+  },
+  {
+    "hash": "e2d07c5",
+    "version": "v0.2.9",
+    "minor": 2,
+    "minorName": "Dynamic Formulas & History States",
+    "patch": 9,
+    "date": "2026-05-27",
+    "subject": "fixes to solvers and utils apparently",
+    "items": [
+      "Reorganized the codebase filesystem layout, moving helpers and utilities into distinct modules.",
+      "Fixed solver graph building bugs and set up prefetch caching structures."
+    ]
+  },
+  {
+    "hash": "f0a4c6a",
+    "version": "v0.2.10",
+    "minor": 2,
+    "minorName": "Dynamic Formulas & History States",
+    "patch": 10,
+    "date": "2026-05-27",
+    "subject": "icon immutability",
+    "items": [
+      "Configured browser caching policies for product icons to prevent redundant network fetches and speed up modal loading states.",
+      "Appended cache-busting version parameters to asset URLs to ensure prompt loading of new icons."
+    ]
+  },
+  {
+    "hash": "85d6552",
+    "version": "v0.2.11",
+    "minor": 2,
+    "minorName": "Dynamic Formulas & History States",
+    "patch": 11,
+    "date": "2026-05-28",
+    "subject": "undo/redooo",
+    "items": [
+      "Built the canvas history manager to support global undo and redo actions.",
+      "Integrated Undo/Redo trigger buttons into the main canvas toolbar and mapped them to standard keyboard shortcuts."
+    ]
+  },
+  {
+    "hash": "0fb0e70",
+    "version": "v0.3.0",
+    "minor": 3,
+    "minorName": "Theme Customization & Custom Bezier/Orthogonal Edges",
+    "patch": 0,
+    "date": "2026-05-28",
+    "subject": "theme editorrrrr",
+    "items": [
+      "Introduced the Theme Editor panel to allow live customization of canvas backgrounds, borders, and typography.",
+      "Migrated styles to a CSS variable-based token system and defined a default dark mode theme."
+    ]
+  },
+  {
+    "hash": "638a6ba",
+    "version": "v0.3.1",
+    "minor": 3,
+    "minorName": "Theme Customization & Custom Bezier/Orthogonal Edges",
+    "patch": 1,
+    "date": "2026-05-28",
+    "subject": "catmul roms on bezier curve edges yeeaaaaaaa",
+    "items": [
+      "Implemented Catmull-Rom Bezier curves for smooth curved canvas edge rendering.",
+      "Enabled adding, dragging, and deleting custom control points directly on edges to adjust routing.",
+      "Saved edge control points and curves in the slot database and added edge options to the Theme Editor."
+    ]
+  },
+  {
+    "hash": "4d971b0",
+    "version": "v0.3.2",
+    "minor": 3,
+    "minorName": "Theme Customization & Custom Bezier/Orthogonal Edges",
+    "patch": 2,
+    "date": "2026-05-28",
+    "subject": "adjustable orthogonal edges ye",
+    "items": [
+      "Enabled segment dragging on orthogonal right-angle connection paths.",
+      "Restricted segment edits to perpendicular bounds to maintain correct orthogonal path geometry.",
+      "Saved custom orthogonal waypoint layouts inside the active workspace slot."
+    ]
+  },
+  {
+    "hash": "5f0544a",
+    "version": "v0.4.0",
+    "minor": 4,
+    "minorName": "SCIP Optimizer & Special Recipe Refactoring",
+    "patch": 0,
+    "date": "2026-05-28",
+    "subject": "some updates to formulas",
+    "items": [
+      "Corrected formula rates and constants for the Air Separation Unit, Alloyer, Geothermal Well, Liquid Dump, Steam Cracking Plant, and Truck Depot.",
+      "Improved unit formatting helper scripts."
+    ]
+  },
+  {
+    "hash": "ef6522c",
+    "version": "v0.4.1",
+    "minor": 4,
+    "minorName": "SCIP Optimizer & Special Recipe Refactoring",
+    "patch": 1,
+    "date": "2026-05-29",
+    "subject": "layout",
+    "items": [
+      "Implemented the initial Auto Layout tool using the ELK layout engine to organize nodes left-to-right.",
+      "Added support for orthogonal edge path generation when running layouts."
+    ]
+  },
+  {
+    "hash": "e72f190",
+    "version": "v0.4.2",
+    "minor": 4,
+    "minorName": "SCIP Optimizer & Special Recipe Refactoring",
+    "patch": 2,
+    "date": "2026-05-29",
+    "subject": "improvements to auto layout",
+    "items": [
+      "Improved the Auto Layout engine with a two-pass strategy to reduce crossing and organize vertical spacing.",
+      "Configured the layout calculator to adjust node distances according to edge styling preferences."
+    ]
+  },
+  {
+    "hash": "4155747",
+    "version": "v0.4.3",
+    "minor": 4,
+    "minorName": "SCIP Optimizer & Special Recipe Refactoring",
+    "patch": 3,
+    "date": "2026-05-29",
+    "subject": "lp solverrrrrr",
+    "items": [
+      "Introduced the LP Solver overlay panel, using the SCIP solver running inside a background WebWorker.",
+      "Preloaded the solver WebAssembly binary on startup to ensure zero interface delay on execution.",
+      "Wired solver output state directly to target node machine counts and edge highlight classes."
+    ]
+  },
+  {
+    "hash": "586b34e",
+    "version": "v0.4.4",
+    "minor": 4,
+    "minorName": "SCIP Optimizer & Special Recipe Refactoring",
+    "patch": 4,
+    "date": "2026-05-29",
+    "subject": "machine toggles, still have to add tiers and specific machine checkboxes",
+    "items": [
+      "Introduced the lazy-loaded Machine Overlay panel, allowing users to browse the machine research tree and stats.",
+      "Laid down the groundwork for tier selection filters and toggles."
+    ]
+  },
+  {
+    "hash": "0cea155",
+    "version": "v0.4.5",
+    "minor": 4,
+    "minorName": "SCIP Optimizer & Special Recipe Refactoring",
+    "patch": 5,
+    "date": "2026-05-30",
+    "subject": "MDEs",
+    "items": [
+      "Completed the Modular Diesel Engine special recipe, implementing dynamic formulas for cylinder count, crankshaft load, and fuel consumption rates."
+    ]
+  },
+  {
+    "hash": "75cd050",
+    "version": "v0.4.6",
+    "minor": 4,
+    "minorName": "SCIP Optimizer & Special Recipe Refactoring",
+    "patch": 6,
+    "date": "2026-05-30",
+    "subject": "mambo",
+    "items": [
+      "Refactored the internal Boiler special recipe formula module to simplify calculations.",
+      "Integrated research unlocks and global difficulty modifiers into the Machine Overlay filters.",
+      "Added special recipe output previewing inside the Settings Editor panel."
+    ]
+  },
+  {
+    "hash": "cc5da95",
+    "version": "v0.4.7",
+    "minor": 4,
+    "minorName": "SCIP Optimizer & Special Recipe Refactoring",
+    "patch": 7,
+    "date": "2026-05-30",
+    "subject": "recipe car name",
+    "items": [
+      "Fixed recipe card name display issues in the Recipe Selector modal."
+    ]
+  },
+  {
+    "hash": "a7c79d2",
+    "version": "v0.4.8",
+    "minor": 4,
+    "minorName": "SCIP Optimizer & Special Recipe Refactoring",
+    "patch": 8,
+    "date": "2026-05-31",
+    "subject": "fixes \"\"",
+    "items": [
+      "Resolved bugs across edge rendering, node info boxes, toolbar buttons, and overlay panels.",
+      "Added flowing dash animations to active edges on the canvas to indicate material flow directions."
+    ]
+  },
+  {
+    "hash": "c863f9e",
+    "version": "v0.4.9",
+    "minor": 4,
+    "minorName": "SCIP Optimizer & Special Recipe Refactoring",
+    "patch": 9,
+    "date": "2026-06-05",
+    "subject": "multi-select",
+    "items": [
+      "Added multi-select support using Ctrl/Cmd-clicks or the toolbar selector toggle.",
+      "Enabled dragging multiple selected nodes together and added a count badge to the toolbar."
+    ]
+  },
+  {
+    "hash": "e1fa718",
+    "version": "v0.5.0",
+    "minor": 5,
+    "minorName": "Group Nodes, Collapsed States & Nested Layouts",
+    "patch": 0,
+    "date": "2026-06-05",
+    "subject": "foundation for group nodes",
+    "items": [
+      "Laid down the structural foundation for Group Nodes and integrated them into the canvas, database schema, and solver.",
+      "Configured basic connection checks on proxy container boundaries."
+    ]
+  },
+  {
+    "hash": "88e0401",
+    "version": "v0.5.1",
+    "minor": 5,
+    "minorName": "Group Nodes, Collapsed States & Nested Layouts",
+    "patch": 1,
+    "date": "2026-06-06",
+    "subject": "expanded group nodes, todo collapsed",
+    "items": [
+      "Developed the expanded Group Node wrapper rendering child nodes inside a bounding box.",
+      "Added the Group Editor overlay panel to rename groups and manage child nodes.",
+      "Added the 'Add Group' action to the controls tray and displayed group bounding previews during drag actions."
+    ]
+  },
+  {
+    "hash": "6e02a63",
+    "version": "v0.5.2",
+    "minor": 5,
+    "minorName": "Group Nodes, Collapsed States & Nested Layouts",
+    "patch": 2,
+    "date": "2026-06-06",
+    "subject": "collapsed group node",
+    "items": [
+      "Implemented the collapsed mode for Group Nodes, hiding internal layouts behind a single compact proxy block.",
+      "Routed external connections correctly through group proxy ports to internal node ports."
+    ]
+  },
+  {
+    "hash": "65c81a0",
+    "version": "v0.5.3",
+    "minor": 5,
+    "minorName": "Group Nodes, Collapsed States & Nested Layouts",
+    "patch": 3,
+    "date": "2026-06-06",
+    "subject": "fixes to group nodes",
+    "items": [
+      "Fixed group node bugs to ensure nodes insert correctly into existing groups.",
+      "Updated the dashboard panels to support group nodes."
+    ]
+  },
+  {
+    "hash": "43efef5",
+    "version": "v0.5.4",
+    "minor": 5,
+    "minorName": "Group Nodes, Collapsed States & Nested Layouts",
+    "patch": 4,
+    "date": "2026-06-06",
+    "subject": "muhahaeheaheahe better auto layout respecting group nodes and shi",
+    "items": [
+      "Overhauled the Auto Layout module to treat expanded group nodes as atomic bounding boxes.",
+      "Configured auto layout to position child nodes inside group boundaries and route edges around groups."
+    ]
+  },
+  {
+    "hash": "464688d",
+    "version": "v0.6.0",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 0,
+    "date": "2026-06-06",
+    "subject": "recipe editor, yeah, special recipe read only for now",
+    "items": [
+      "Added the Recipes Editor tab to the Data Overlay to manage recipe items, inputs, and outputs.",
+      "Configured special recipes as read-only lists and added a 'Restore Baseline Defaults' button for resets."
+    ]
+  },
+  {
+    "hash": "54ffc5d",
+    "version": "v0.6.1",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 1,
+    "date": "2026-06-07",
+    "subject": "comparators",
+    "items": [
+      "Created proxy backend API endpoints to fetch official database tables from the Industrialist wiki.",
+      "Added initial UI structures for the Data Comparator tab inside the Data Overlay."
+    ]
+  },
+  {
+    "hash": "4bb86d0",
+    "version": "v0.6.2",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 2,
+    "date": "2026-06-07",
+    "subject": "cache of buckets",
+    "items": [
+      "Implemented local IndexedDB caching for wiki comparator data to enable instantaneous loads.",
+      "Added cache staleness warnings and background freshness checks when offline."
+    ]
+  },
+  {
+    "hash": "2fc0076",
+    "version": "v0.6.3",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 3,
+    "date": "2026-06-08",
+    "subject": "data comparators",
+    "items": [
+      "Expanded the Data Comparator UI into an interactive side-by-side diff view for products, machines, and recipes.",
+      "Grouped changes by diff status and implemented virtualized lists to handle large comparator datasets.",
+      "Corrected multiple database entries inside `products.json` and `recipes.json` based on comparator findings."
+    ]
+  },
+  {
+    "hash": "c2a16bc",
+    "version": "v0.6.4",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 4,
+    "date": "2026-06-08",
+    "subject": "finished comparator",
+    "items": [
+      "Completed the Data Comparator UI with filter tabs, difference badge counts, and expand/collapse toggle rows.",
+      "Consolidated and cleaned up styles inside the Data Overlay stylesheets."
+    ]
+  },
+  {
+    "hash": "5609288",
+    "version": "v0.6.5",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 5,
+    "date": "2026-06-08",
+    "subject": "some reductions",
+    "items": [
+      "Consolidated tab-specific stylesheets inside the Data Overlay into a single shared stylesheet to improve design consistency."
+    ]
+  },
+  {
+    "hash": "00245b0",
+    "version": "v0.6.6",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 6,
+    "date": "2026-06-09",
+    "subject": "lp solver reductions",
+    "items": [
+      "Enhanced the LP Solver failure logging to generate detailed root cause diagnostic reports.",
+      "Outputs human-readable diagnostics such as 'Deficient feedback loop' or 'Connected product mismatch' with flow details.",
+      "Refactored LP Solver files into modular segments (`lpModel`, `lpPayload`, `lpSolution`, `lpTypes`)."
+    ]
+  },
+  {
+    "hash": "e6d0b6f",
+    "version": "v0.6.7",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 7,
+    "date": "2026-06-12",
+    "subject": "some fixes, variant recipes also",
+    "items": [
+      "Added variant recipe support, enabling machine nodes to switch between recipe configurations (e.g. fuel types) inside the settings panel.",
+      "Configured group node proxy ports to render product labels, flow rates, and connections dynamically from active member nodes.",
+      "Polished the Machine Editor form in the Data Overlay to support additional parameters."
+    ]
+  },
+  {
+    "hash": "2d54ac7",
+    "version": "v0.6.8",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 8,
+    "date": "2026-06-13",
+    "subject": "fixes to auto layout",
+    "items": [
+      "Improved Auto Layout stability by isolating group and recipe nodes into separate layers during layout execution.",
+      "Memoized connection resolution contexts and edge lists to optimize rendering speeds."
+    ]
+  },
+  {
+    "hash": "c5e0092",
+    "version": "v0.6.9",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 9,
+    "date": "2026-06-14",
+    "subject": "nearly done variants",
+    "items": [
+      "Completed the variant recipe resolution system and handle type validation checks.",
+      "Configured connections to reject invalid wire configurations (e.g., solid output linked to fluid input).",
+      "Initialized the ratio optimizer solver worker during startup execution."
+    ]
+  },
+  {
+    "hash": "4ab0bfa",
+    "version": "v0.6.10",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 10,
+    "date": "2026-06-20",
+    "subject": "temp mins, performance fixes, and a working cpp calc!!!!!!!!",
+    "items": [
+      "Established absolute zero (-273.15°C) as the global minimum bound for temperature input fields.",
+      "Completed the Coal Power Plant (CPP) special recipe calculator, resolving burn rates and efficiency configurations.",
+      "Optimized connection validation on larger layouts by implementing validation context caching."
+    ]
+  },
+  {
+    "hash": "45a751c",
+    "version": "v0.6.11",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 11,
+    "date": "2026-06-20",
+    "subject": "turbine fixes",
+    "items": [
+      "Corrected the Modular Turbine special recipe calculations for fuel consumption and power output rates.",
+      "Fixed fuel percentage math inside the Coal Power Plant calculator."
+    ]
+  },
+  {
+    "hash": "87fb87a",
+    "version": "v0.6.12",
+    "minor": 6,
+    "minorName": "Recipes Editor & Data Comparator",
+    "patch": 12,
+    "date": "2026-06-22",
+    "subject": "a few more recipes",
+    "items": [
+      "Expanded the machine database to include Hand Pump, Energy Wheel, and Hand Crank items.",
+      "Implemented node and edge power generation/consumption display metrics on the canvas.",
+      "Modified power display tags to handle text wrapping."
+    ]
+  },
+  {
+    "hash": "5a106e9",
+    "version": "v0.7.0",
+    "minor": 7,
+    "minorName": "Interactive Tutorials, Shuffled Tips & SEO Optimization",
+    "patch": 0,
+    "date": "2026-06-22",
+    "subject": "stuff",
+    "items": [
+      "Configured public asset sitemap.xml and robots.txt files for search engine indexing.",
+      "Added SEO metadata headers, og:image thumbnails, and description metadata tag fields to index.html.",
+      "Updated Vite bundle output directories."
+    ]
+  },
+  {
+    "hash": "0120ba6",
+    "version": "v0.7.1",
+    "minor": 7,
+    "minorName": "Interactive Tutorials, Shuffled Tips & SEO Optimization",
+    "patch": 1,
+    "date": "2026-06-22",
+    "subject": "help overlay",
+    "items": [
+      "Added the searchable, tab-indexed Help Overlay containing Start, Controls, and Troubleshoot sections.",
+      "Implemented keyword searching and collapsible sections across all help items.",
+      "Wrote background idle handlers to prefetch overlay articles for instant drawer transitions."
+    ]
+  },
+  {
+    "hash": "903dd5d",
+    "version": "v0.7.2",
+    "minor": 7,
+    "minorName": "Interactive Tutorials, Shuffled Tips & SEO Optimization",
+    "patch": 2,
+    "date": "2026-06-25",
+    "subject": "ongod, tutorials",
+    "items": [
+      "Introduced the interactive, step-by-step Guided Tutorial system with three distinct learning paths.",
+      "Created custom guides for First Production Chain, Groups/Collapsed layouts (including a pre-built Gearbox flow), and the Data Overlay.",
+      "Developed the tutorial overlay highlight elements and configured automatic startup prompts for first-time visitors."
+    ]
+  },
+  {
+    "hash": "f6d63dc",
+    "version": "v0.7.3",
+    "minor": 7,
+    "minorName": "Interactive Tutorials, Shuffled Tips & SEO Optimization",
+    "patch": 3,
+    "date": "2026-06-25",
+    "subject": "tips",
+    "items": [
+      "Added a dedicated Tips & Hints tab to the Help panel to compile shortcuts, solver behaviors, and design workflow advice.",
+      "Centralized tips into a single, reusable list and replaced inline tips in the LP Solver panel with this shared source.",
+      "Implemented a Fisher-Yates shuffle routine to randomize tips shown on the solver loading screens."
+    ]
+  },
+  {
+    "hash": "9e8fa8a",
+    "version": "v0.7.4",
+    "minor": 7,
+    "minorName": "Interactive Tutorials, Shuffled Tips & SEO Optimization",
+    "patch": 4,
+    "date": "2026-06-26",
+    "subject": "feat: automate version history generation and merge baseline summaries - Move static version history data out of HelpOverlay.tsx and dynamically compile to src/data/changelog.json - Implement automated git log compilation script scripts/generateChangelog.cjs mapped to predev/prebuild hooks - Update scripts/changelog_baseline.json with detailed, user-facing descriptions for all 64 historical commits - Add dynamic minor-release series header mapping (e.g. Group Nodes, Collapsed States & Nested Layouts) - Bump package version to v0.7.4 to keep package version in sync with commit patch level - Remove deprecated scripts/generateChangelog.js file to resolve ES Module scope conflicts",
+    "items": [
+      "Move static version history data out of HelpOverlay.tsx and dynamically compile to src/data/changelog.json",
+      "Implement automated git log compilation script scripts/generateChangelog.cjs mapped to predev/prebuild hooks",
+      "Update scripts/changelog_baseline.json with detailed, user-facing descriptions for all 64 historical commits",
+      "Add dynamic minor-release series header mapping (e.g. Group Nodes, Collapsed States & Nested Layouts)",
+      "Bump package version to v0.7.4 to keep package version in sync with commit patch level",
+      "Remove deprecated scripts/generateChangelog.js file to resolve ES Module scope conflicts"
+    ]
+  }
+]

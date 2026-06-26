@@ -54,7 +54,6 @@ export function LPSolverOverlay() {
     if (!isLPSolverOpen) return;
     let isDisposed = false;
 
-    // Shuffle the tips using Fisher-Yates algorithm
     const tipsCopy = [...ALL_TIPS];
     for (let i = tipsCopy.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -355,15 +354,15 @@ export function LPSolverOverlay() {
 
                   {failureDiagnostics.rootCauses.length === 0 &&
                     failureDiagnostics.likelyRootNodeIds.length > 0 && (
-                    <div className={styles['diagnostic-group']}>
-                      <div className={styles['diagnostic-title']}>Likely upstream causes</div>
-                      <ul className={styles['diagnostic-list']}>
-                        {failureDiagnostics.likelyRootNodeIds.slice(0, 4).map((nodeId) => (
-                          <li key={`root-${nodeId}`}>{formatNodeLabel(nodeId)}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                      <div className={styles['diagnostic-group']}>
+                        <div className={styles['diagnostic-title']}>Likely upstream causes</div>
+                        <ul className={styles['diagnostic-list']}>
+                          {failureDiagnostics.likelyRootNodeIds.slice(0, 4).map((nodeId) => (
+                            <li key={`root-${nodeId}`}>{formatNodeLabel(nodeId)}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                 </div>
               )}
             </div>
