@@ -286,3 +286,27 @@
   border: 1px solid var(--theme-color-border-primary);
   border-radius: 4px;
 }
+
+.save-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge-custom-data {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--theme-color-warning);
+  border: 1px solid var(--theme-color-warning);
+  padding: 1px 4px;
+  border-radius: 2px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  height: fit-content;
+  line-height: 1;
+  vertical-align: middle;
+  user-select: none;
+}

@@ -876,5 +876,22 @@
       "Expanded all historical version summaries in the Help panel with detailed, comprehensive release notes.",
       "Resolved application package bundle loading and type resolution issues."
     ]
+  },
+  {
+    "hash": "f8a5d3c",
+    "version": "v0.7.5",
+    "minor": 7,
+    "minorName": "Interactive Tutorials, Shuffled Tips & SEO Optimization",
+    "patch": 5,
+    "date": "2026-06-26",
+    "subject": "feat: bundle database overrides in saves, add custom filter, and resolve lint bugs",
+    "items": [
+      "Added a 'Show Custom Only' checkbox to filter custom and modified records inside the Data Manager.",
+      "Bundled active custom database overrides directly inside slot saves and JSON exports.",
+      "Added a 'CUSTOM DB' warning badge on saves in the Save Manager list.",
+      "Implemented a three-way load/merge confirm dialog to choose Load Data & Canvas, Load Canvas Only, or Abort.",
+      "Integrated database override validation upon loading custom saves, falling back to canvas-only if invalid.",
+      "Resolved multiple ESLint react-hooks/refs, set-state-in-effect, and typescript-eslint/no-explicit-any compilation errors."
+    ]
   }
 ]

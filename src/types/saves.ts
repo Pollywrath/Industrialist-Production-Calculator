@@ -49,6 +49,7 @@ export interface SaveData {
   nodes: SavedNode[];
   edges: SavedEdge[];
   globalSettings?: GlobalSettings;
+  dataOverrides?: { id: string; data: Record<string, unknown> }[];
 }
 
 export interface SaveRecord {

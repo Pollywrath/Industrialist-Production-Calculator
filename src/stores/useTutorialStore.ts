@@ -664,6 +664,7 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
     useDataStore.setState((state) => ({
       pendingEdits: filterPendingEditsForTutorial(state.pendingEdits, scoped.affected),
       searchQuery: '',
+      customOnly: false,
       dataOverlayMainTab: 'editing',
       dataOverlayEditTab: 'products',
       selectedProductId: null,

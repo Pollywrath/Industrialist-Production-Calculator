@@ -36,6 +36,7 @@ export interface DataOverlayViewState {
   selectedRecipeId: string | null;
   selectedResearchId: string | null;
   searchQuery: string;
+  customOnly: boolean;
 }
 
 export function overlayPendingEdit<T extends { id: string }>(
@@ -54,6 +55,7 @@ export function overlayPendingEdit<T extends { id: string }>(
 interface DataState {
   pendingEdits: PendingEdits;
   searchQuery: string;
+  customOnly: boolean;
   dataOverlayMainTab: DataOverlayViewState['mainTab'];
   dataOverlayEditTab: DataOverlayViewState['editTab'];
   selectedProductId: string | null;
@@ -63,6 +65,7 @@ interface DataState {
   dbVersion: number;
 
   setSearchQuery: (query: string) => void;
+  setCustomOnly: (customOnly: boolean) => void;
   setDataOverlayMainTab: (tab: DataOverlayViewState['mainTab']) => void;
   setDataOverlayEditTab: (tab: DataOverlayViewState['editTab']) => void;
   setSelectedProductId: (id: string | null) => void;
@@ -238,6 +241,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     researches: {},
   },
   searchQuery: '',
+  customOnly: false,
   dataOverlayMainTab: 'editing',
   dataOverlayEditTab: 'products',
   selectedProductId: null,
@@ -247,6 +251,7 @@ export const useDataStore = create<DataState>((set, get) => ({
   dbVersion: 0,
 
   setSearchQuery: (query) => set({ searchQuery: query }),
+  setCustomOnly: (customOnly) => set({ customOnly }),
   setDataOverlayMainTab: (tab) => set({ dataOverlayMainTab: tab }),
   setDataOverlayEditTab: (tab) => set({ dataOverlayEditTab: tab }),
   setSelectedProductId: (id) => set({ selectedProductId: id }),
@@ -263,6 +268,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       selectedRecipeId: state.selectedRecipeId,
       selectedResearchId: state.selectedResearchId,
       searchQuery: state.searchQuery,
+      customOnly: state.customOnly,
     };
   },
   restoreDataOverlayView: (snapshot) =>
@@ -274,6 +280,7 @@ export const useDataStore = create<DataState>((set, get) => ({
       selectedRecipeId: snapshot.selectedRecipeId,
       selectedResearchId: snapshot.selectedResearchId,
       searchQuery: snapshot.searchQuery,
+      customOnly: snapshot.customOnly,
     }),
 
   updateProductPendingEdit: (id, updates) => {

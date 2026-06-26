@@ -203,7 +203,12 @@ function SavesOverlayModal() {
                           className={styles['rename-input']}
                         />
                       ) : (
-                        <span className={styles['save-card-title']}>{record.name}</span>
+                        <div className={styles['save-card-title-row']}>
+                          <span className={styles['save-card-title']}>{record.name}</span>
+                          {record.data.dataOverrides && record.data.dataOverrides.length > 0 && (
+                            <span className={styles['badge-custom-data']}>CUSTOM DB</span>
+                          )}
+                        </div>
                       )}
                       <div className={styles['save-card-meta']}>
                         <span>{new Date(record.timestamp).toLocaleString()}</span>

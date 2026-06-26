@@ -39,6 +39,8 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
   const pendingEdits = useDataStore((s) => s.pendingEdits);
   const searchQuery = useDataStore((s) => s.searchQuery);
   const setSearchQuery = useDataStore((s) => s.setSearchQuery);
+  const customOnly = useDataStore((s) => s.customOnly);
+  const setCustomOnly = useDataStore((s) => s.setCustomOnly);
   const addRecipe = useDataStore((s) => s.addRecipe);
   const dbVersion = useDataStore((s) => s.dbVersion);
 
@@ -107,6 +109,21 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
     compiledRecipes.push(...newItems);
   }
 
+  let displayRecipes = compiledRecipes;
+  if (customOnly) {
+    displayRecipes = compiledRecipes.filter((recipe) => {
+      const isSavedNew = !isBaselineRecipe(recipe.id);
+      const isNew = !!(pendingEdits.recipes[recipe.id]?._isNew || isSavedNew);
+      const isPending = !!(
+        pendingEdits.recipes[recipe.id] &&
+        !pendingEdits.recipes[recipe.id]?._isNew &&
+        !pendingEdits.recipes[recipe.id]?._tombstone
+      );
+      const isModified = hasRecipeOverride(recipe.id);
+      return isNew || isPending || isModified;
+    });
+  }
+
   const machines: Machine[] = [];
   if (dbVersion !== -1) {
     const baseMachines = getAllMachines();
@@ -118,7 +135,7 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
   const query = searchQuery.toLowerCase().trim();
   const recipeGroups = new Map<string, Recipe[]>();
 
-  compiledRecipes.forEach((recipe) => {
+  displayRecipes.forEach((recipe) => {
     const mId = recipe.machine_id || 'unassigned';
     let group = recipeGroups.get(mId);
     if (!group) {
@@ -203,6 +220,20 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
 
   return (
     <div className={crudStyles['sidebar-pane']}>
+      <div className={crudStyles['sidebar-filter-header']}>
+        <label className={crudStyles['sidebar-filter-label']}>
+          <input
+            type="checkbox"
+            className={crudStyles['form-checkbox']}
+            checked={customOnly}
+            onChange={(e) => {
+              if (isTutorialActive()) return;
+              setCustomOnly(e.target.checked);
+            }}
+          />
+          <span>Show Custom Only</span>
+        </label>
+      </div>
       <div className={crudStyles['sidebar-toolbar']}>
         <div className={crudStyles['search-box']}>
           <Search className={crudStyles['search-icon']} size={14} />
@@ -241,7 +272,7 @@ export function RecipesList({ selectedRecipeId, onSelectRecipe }: RecipesListPro
         <VirtualList<RecipeVirtualItem>
           items={virtualItems}
           itemHeight={36}
-          height={500}
+          height={460}
           getKey={(item) => item.key}
         >
           {(item) => {

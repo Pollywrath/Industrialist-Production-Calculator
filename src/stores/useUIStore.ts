@@ -10,6 +10,7 @@ export interface ConfirmOptions {
   cancelLabel?: string;
   intent?: 'success' | 'info' | 'error';
   showCancel?: boolean;
+  threeWay?: boolean;
 }
 
 interface UIState {
@@ -67,14 +68,17 @@ interface UIState {
   setIsLPSolverOpen: (isOpen: boolean) => void;
   confirmQueue: {
     options: ConfirmOptions;
-    resolve: (confirmed: boolean) => void;
+    resolve: (val: 'confirm' | 'cancel' | 'close' | boolean) => void;
   }[];
   confirmDialog: {
     options: ConfirmOptions;
-    resolve: (confirmed: boolean) => void;
+    resolve: (val: 'confirm' | 'cancel' | 'close' | boolean) => void;
   } | null;
-  confirm: (options: ConfirmOptions) => Promise<boolean>;
-  closeConfirm: (confirmed: boolean) => void;
+  confirm: {
+    (options: ConfirmOptions & { threeWay: true }): Promise<'confirm' | 'cancel' | 'close'>;
+    (options: ConfirmOptions): Promise<boolean>;
+  };
+  closeConfirm: (status: 'confirm' | 'cancel' | 'close' | boolean) => void;
 }
 
 const useUIStore = create<UIState>((set) => ({
@@ -185,13 +189,13 @@ const useUIStore = create<UIState>((set) => ({
   setIsLPSolverOpen: (isOpen) => set({ isLPSolverOpen: isOpen }),
   confirmQueue: [],
   confirmDialog: null,
-  confirm: (options) => {
-    return new Promise((resolve) => {
+  confirm: ((options: ConfirmOptions) => {
+    return new Promise<'confirm' | 'cancel' | 'close' | boolean>((resolve) => {
       set((state) => {
         const newRequest = {
           options,
-          resolve: (confirmed: boolean) => {
-            resolve(confirmed);
+          resolve: (val: 'confirm' | 'cancel' | 'close' | boolean) => {
+            resolve(val);
           },
         };
         const nextQueue = [...state.confirmQueue, newRequest];
@@ -202,11 +206,19 @@ const useUIStore = create<UIState>((set) => ({
         };
       });
     });
-  },
-  closeConfirm: (confirmed) => {
+  }) as UIState['confirm'],
+  closeConfirm: (status) => {
     set((state) => {
       if (state.confirmDialog) {
-        state.confirmDialog.resolve(confirmed);
+        let resolvedValue: 'confirm' | 'cancel' | 'close' | boolean;
+        if (state.confirmDialog.options.threeWay) {
+          if (status === true || status === 'confirm') resolvedValue = 'confirm';
+          else if (status === 'cancel') resolvedValue = 'cancel';
+          else resolvedValue = 'close';
+        } else {
+          resolvedValue = status === true || status === 'confirm';
+        }
+        state.confirmDialog.resolve(resolvedValue);
       }
       const nextQueue = state.confirmQueue.filter((req) => req !== state.confirmDialog);
       const nextActive = nextQueue.length > 0 ? nextQueue[0] : null;

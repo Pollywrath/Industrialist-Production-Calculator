@@ -3,7 +3,15 @@ import { createStore } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
-import { getSaves, saveSave, deleteSave, renameSave } from '../../../persistence/idb';
+import { useDataStore } from '../../../stores/useDataStore';
+import {
+  getSaves,
+  saveSave,
+  deleteSave,
+  renameSave,
+  batchSaveDataOverrides,
+  getDataOverrides,
+} from '../../../persistence/idb';
 import type { SaveRecord } from '../../../types/saves';
 import { serializeCanvas, deserializeCanvas } from '../../../persistence/transformer';
 import { mergeSaveIntoCanvas } from '../../../persistence/graphMerge';
@@ -16,6 +24,18 @@ import {
   useTutorialStore,
 } from '../../../stores/useTutorialStore';
 import {
+  validateProduct,
+  validateMachine,
+  validateRecipe,
+  validateResearch,
+} from '../../../utils/dataValidation';
+import {
+  getDefaultProducts,
+  getDefaultMachines,
+  getDefaultResearches,
+  reloadDatabase,
+} from '../../../data/lookup';
+import {
   SavesOverlayContext,
   type SavesOverlayState,
   type SaveStatus,
@@ -25,6 +45,131 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 interface SavesOverlayProviderProps {
   children: React.ReactNode;
+}
+
+function validateSaveOverrides(
+  overrides: { id: string; data: Record<string, unknown> }[]
+): { valid: boolean; errorMessages: string[] } {
+  const errorMessages: string[] = [];
+
+  const productIds = new Set<string>(getDefaultProducts().map((p) => p.id));
+  const machineIds = new Set<string>(getDefaultMachines().map((m) => m.id));
+  const researchIds = new Set<string>(getDefaultResearches().map((r) => r.id));
+
+  for (let i = 0; i < overrides.length; i++) {
+    const entry = overrides[i];
+    const prefixIdx = entry.id.indexOf(':');
+    if (prefixIdx === -1) continue;
+    const prefix = entry.id.substring(0, prefixIdx + 1);
+    const cleanId = entry.id.substring(prefixIdx + 1);
+
+    if (entry.data._tombstone || entry.data.category === 'Removed') {
+      if (prefix === 'product:') productIds.delete(cleanId);
+      if (prefix === 'machine:') machineIds.delete(cleanId);
+      if (prefix === 'research:') researchIds.delete(cleanId);
+    } else {
+      if (prefix === 'product:') productIds.add(cleanId);
+      if (prefix === 'machine:') machineIds.add(cleanId);
+      if (prefix === 'research:') researchIds.add(cleanId);
+    }
+  }
+
+  for (let i = 0; i < overrides.length; i++) {
+    const entry = overrides[i];
+    if (entry.data._tombstone) {
+      continue;
+    }
+
+    const prefixIdx = entry.id.indexOf(':');
+    if (prefixIdx === -1) continue;
+    const prefix = entry.id.substring(0, prefixIdx + 1);
+    const cleanId = entry.id.substring(prefixIdx + 1);
+
+    const dataWithId = { ...entry.data, id: cleanId };
+
+    if (prefix === 'product:') {
+      const res = validateProduct(dataWithId);
+      if (!res.valid) {
+        res.errors.forEach((err) => {
+          errorMessages.push(`[Product ${cleanId}] ${err.field}: ${err.message}`);
+        });
+      }
+    } else if (prefix === 'machine:') {
+      const res = validateMachine(dataWithId, researchIds, machineIds);
+      if (!res.valid) {
+        res.errors.forEach((err) => {
+          errorMessages.push(`[Machine ${cleanId}] ${err.field}: ${err.message}`);
+        });
+      }
+    } else if (prefix === 'recipe:') {
+      const res = validateRecipe(dataWithId, productIds, machineIds);
+      if (!res.valid) {
+        res.errors.forEach((err) => {
+          errorMessages.push(`[Recipe ${cleanId}] ${err.field}: ${err.message}`);
+        });
+      }
+    } else if (prefix === 'research:') {
+      const res = validateResearch(dataWithId);
+      if (!res.valid) {
+        res.errors.forEach((err) => {
+          errorMessages.push(`[Research ${cleanId}] ${err.field}: ${err.message}`);
+        });
+      }
+    }
+  }
+
+  return {
+    valid: errorMessages.length === 0,
+    errorMessages,
+  };
+}
+
+async function processSaveCustomData(record: SaveRecord): Promise<boolean> {
+  const overrides = record.data.dataOverrides;
+  if (!overrides || overrides.length === 0) {
+    return true;
+  }
+
+  const loadCustomData = await useUIStore.getState().confirm({
+    title: 'CUSTOM DATABASE OVERRIDES',
+    message: `This save contains custom database overrides. Would you like to load both the canvas and the custom database overrides, or load the canvas only?`,
+    confirmLabel: 'LOAD DATA & CANVAS',
+    cancelLabel: 'LOAD CANVAS ONLY',
+    intent: 'info',
+    threeWay: true,
+  });
+
+  if (loadCustomData === 'close') {
+    return false;
+  }
+
+  if (loadCustomData === 'confirm') {
+    const validation = validateSaveOverrides(overrides);
+    if (validation.valid) {
+      const saveSuccess = await batchSaveDataOverrides(overrides);
+      if (saveSuccess) {
+        await reloadDatabase();
+        useDataStore.setState((state) => ({ dbVersion: state.dbVersion + 1 }));
+      } else {
+        console.warn('Failed to batch save data overrides to IndexedDB.');
+      }
+    } else {
+      const errorDetails = validation.errorMessages.slice(0, 10).join('\n');
+      const suffix =
+        validation.errorMessages.length > 10
+          ? `\n...and ${validation.errorMessages.length - 10} more errors.`
+          : '';
+      await useUIStore.getState().confirm({
+        title: 'INVALID CUSTOM DATA',
+        message: `The custom database overrides in this save file are invalid and could not be loaded. Falling back to loading the canvas only.\n\nErrors:\n${errorDetails}${suffix}`,
+        confirmLabel: 'LOAD CANVAS ONLY',
+        showCancel: false,
+        intent: 'error',
+      });
+    }
+  }
+
+  return true;
 }
 
 export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
@@ -96,7 +241,8 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
             );
             await delay(200);
             const { nodes, edges } = useFlowStore.getState();
-            const data = serializeCanvas(nodes, edges);
+            const overrides = await getDataOverrides();
+            const data = serializeCanvas(nodes, edges, overrides);
 
             const record: SaveRecord = {
               id: nextSaveId(),
@@ -122,6 +268,9 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
 
           handleOverwriteLoad: async (record) => {
             try {
+              const proceed = await processSaveCustomData(record);
+              if (!proceed) return;
+
               setStatusWithTimeout(
                 { type: 'pending', message: 'Loading save...' },
                 record.id,
@@ -143,6 +292,9 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
 
           handleMergeLoad: async (record) => {
             try {
+              const proceed = await processSaveCustomData(record);
+              if (!proceed) return;
+
               setStatusWithTimeout(
                 { type: 'pending', message: 'Merging save...' },
                 record.id,
@@ -191,7 +343,8 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
             );
             await delay(200);
             const { nodes, edges } = useFlowStore.getState();
-            const data = serializeCanvas(nodes, edges);
+            const overrides = await getDataOverrides();
+            const data = serializeCanvas(nodes, edges, overrides);
 
             const updatedRecord: SaveRecord = {
               ...record,

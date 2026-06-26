@@ -33,6 +33,8 @@ export function GenericDataList({ type, selectedId, onSelect }: GenericDataListP
   const pendingEdits = useDataStore((s) => s.pendingEdits);
   const searchQuery = useDataStore((s) => s.searchQuery);
   const setSearchQuery = useDataStore((s) => s.setSearchQuery);
+  const customOnly = useDataStore((s) => s.customOnly);
+  const setCustomOnly = useDataStore((s) => s.setCustomOnly);
   const addProduct = useDataStore((s) => s.addProduct);
   const addMachine = useDataStore((s) => s.addMachine);
   const addResearch = useDataStore((s) => s.addResearch);
@@ -68,8 +70,36 @@ export function GenericDataList({ type, selectedId, onSelect }: GenericDataListP
   ) as DataEntity[];
   compiledItems.push(...newItems);
 
+  let displayItems = compiledItems;
+  if (customOnly) {
+    displayItems = compiledItems.filter((item) => {
+      const isSavedNew =
+        type === 'product'
+          ? !isBaselineProduct(item.id)
+          : type === 'machine'
+            ? !isBaselineMachine(item.id)
+            : !isBaselineResearch(item.id);
+      const isNew = !!(pendingSubset[item.id]?._isNew || isSavedNew);
+      const isPending = !!(
+        pendingSubset[item.id] &&
+        !pendingSubset[item.id]?._isNew &&
+        !pendingSubset[item.id]?._tombstone
+      );
+      const isModified =
+        dbVersion !== -1
+          ? type === 'product'
+            ? hasProductOverride(item.id)
+            : type === 'machine'
+              ? hasMachineOverride(item.id)
+              : hasResearchOverride(item.id)
+          : false;
+
+      return isNew || isPending || isModified;
+    });
+  }
+
   const query = searchQuery.toLowerCase().trim();
-  const filteredItems = compiledItems.filter((item) => {
+  const filteredItems = displayItems.filter((item) => {
     if (!query) return true;
     return item.id.toLowerCase().includes(query) || item.name.toLowerCase().includes(query);
   });
@@ -113,6 +143,20 @@ export function GenericDataList({ type, selectedId, onSelect }: GenericDataListP
 
   return (
     <div className={styles['sidebar-pane']}>
+      <div className={styles['sidebar-filter-header']}>
+        <label className={styles['sidebar-filter-label']}>
+          <input
+            type="checkbox"
+            className={styles['form-checkbox']}
+            checked={customOnly}
+            onChange={(e) => {
+              if (isTutorialActive()) return;
+              setCustomOnly(e.target.checked);
+            }}
+          />
+          <span>Show Custom Only</span>
+        </label>
+      </div>
       <div className={styles['sidebar-toolbar']}>
         <div className={styles['search-box']}>
           <Search className={styles['search-icon']} size={14} />
@@ -148,7 +192,7 @@ export function GenericDataList({ type, selectedId, onSelect }: GenericDataListP
       </div>
 
       <div className={styles['list-viewport']}>
-        <VirtualList items={filteredItems} itemHeight={44} height={500} getKey={(item) => item.id}>
+        <VirtualList items={filteredItems} itemHeight={44} height={460} getKey={(item) => item.id}>
           {(item) => {
             const isSelected = selectedId === item.id;
             const isSavedNew =

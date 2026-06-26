@@ -229,15 +229,40 @@ export function migrateSaveData(rawData: unknown): SaveData {
     };
   }
 
+  let dataOverrides: { id: string; data: Record<string, unknown> }[] | undefined;
+  if (Array.isArray(data.dataOverrides)) {
+    dataOverrides = [];
+    for (let i = 0; i < data.dataOverrides.length; i++) {
+      const entry = data.dataOverrides[i];
+      if (
+        entry &&
+        typeof entry === 'object' &&
+        typeof entry.id === 'string' &&
+        entry.data &&
+        typeof entry.data === 'object'
+      ) {
+        dataOverrides.push({
+          id: entry.id,
+          data: entry.data as Record<string, unknown>,
+        });
+      }
+    }
+  }
+
   return {
     version,
     nodes,
     edges,
     globalSettings,
+    dataOverrides,
   };
 }
 
-export function serializeCanvas(nodes: CanvasNode[], edges: Edge[]): SaveData {
+export function serializeCanvas(
+  nodes: CanvasNode[],
+  edges: Edge[],
+  allOverrides?: { id: string; data: Record<string, unknown> }[],
+): SaveData {
   const savedNodes: SavedNode[] = [];
   for (let i = 0; i < nodes.length; i++) {
     const n = nodes[i];
@@ -305,6 +330,7 @@ export function serializeCanvas(nodes: CanvasNode[], edges: Edge[]): SaveData {
     nodes: savedNodes,
     edges: savedEdges,
     globalSettings,
+    dataOverrides: allOverrides && allOverrides.length > 0 ? allOverrides : undefined,
   };
 }
 

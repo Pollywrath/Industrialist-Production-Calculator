@@ -12,7 +12,7 @@ export function ConfirmDialog() {
   const { options } = confirmDialog;
 
   return createPortal(
-    <div className={styles['confirm-overlay']} onClick={() => closeConfirm(false)}>
+    <div className={styles['confirm-overlay']} onClick={() => closeConfirm('close')}>
       <div className={styles['confirm-modal']} onClick={(e) => e.stopPropagation()}>
         <div className={styles['confirm-header']}>
           <div className={styles['confirm-title']}>
@@ -27,7 +27,7 @@ export function ConfirmDialog() {
             )}
             <span>{options.title}</span>
           </div>
-          <button className={styles['confirm-close']} onClick={() => closeConfirm(false)}>
+          <button className={styles['confirm-close']} onClick={() => closeConfirm('close')}>
             <X size={18} />
           </button>
         </div>
@@ -38,13 +38,13 @@ export function ConfirmDialog() {
 
         <div className={styles['confirm-footer']}>
           {options.showCancel !== false && (
-            <button className={styles['confirm-btn']} onClick={() => closeConfirm(false)}>
+            <button className={styles['confirm-btn']} onClick={() => closeConfirm('cancel')}>
               {options.cancelLabel || 'CANCEL'}
             </button>
           )}
           <button
             className={`${styles['confirm-btn']} ${styles[options.intent || 'info']}`}
-            onClick={() => closeConfirm(true)}
+            onClick={() => closeConfirm('confirm')}
           >
             {options.confirmLabel || 'CONFIRM'}
           </button>

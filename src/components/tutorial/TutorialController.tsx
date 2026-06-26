@@ -3,7 +3,7 @@ import { driver, type AllowedButtons, type Driver, type Popover } from 'driver.j
 import 'driver.js/dist/driver.css';
 import styles from './TutorialController.module.css';
 if (typeof window !== 'undefined') {
-  (window as any).__tutorialStyles = styles;
+  (window as Window & { __tutorialStyles?: typeof styles }).__tutorialStyles = styles;
 }
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useUIStore } from '../../stores/useUIStore';

@@ -600,6 +600,14 @@ export function getDefaultMachines(): Machine[] {
   return defaultMachines;
 }
 
+export function getDefaultRecipes(): Recipe[] {
+  return defaultRecipes;
+}
+
+export function getDefaultResearches(): Research[] {
+  return defaultResearches;
+}
+
 export function isBaselineProduct(id: string): boolean {
   return defaultProducts.some((p) => p.id === id);
 }

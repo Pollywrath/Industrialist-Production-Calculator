@@ -13,7 +13,7 @@ import {
   DATA_OVERLAY_TUTORIAL_STEPS,
   DATA_TUTORIAL_RESET_OVERRIDE_IDS,
 } from './dataOverlayTutorial';
-import gearboxTutorialSaveRaw from '../../Gearbox_Tutorial_save.json?raw';
+import gearboxTutorialSaveRaw from './Gearbox_Tutorial_save.json?raw';
 
 export interface TutorialDataScope {
   recipeIds?: readonly string[];

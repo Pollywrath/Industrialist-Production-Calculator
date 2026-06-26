@@ -35,8 +35,8 @@ export function LPSolverOverlay() {
 
   const [solverState, setSolverState] = useState<'solving' | 'results' | 'failed'>('solving');
   const [elapsedMs, setElapsedMs] = useState(0);
-  const [tipIndex, setTipIndex] = useState(0);
   const [shuffledTips, setShuffledTips] = useState<string[]>([]);
+  const [tipIndex, setTipIndex] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   const [failureDiagnostics, setFailureDiagnostics] = useState<RatioFailureDiagnostics | null>(null);
   const [changes, setChanges] = useState<NodeChange[]>([]);
@@ -54,13 +54,16 @@ export function LPSolverOverlay() {
     if (!isLPSolverOpen) return;
     let isDisposed = false;
 
-    const tipsCopy = [...ALL_TIPS];
-    for (let i = tipsCopy.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [tipsCopy[i], tipsCopy[j]] = [tipsCopy[j], tipsCopy[i]];
-    }
-    setShuffledTips(tipsCopy);
-    setTipIndex(0);
+    Promise.resolve().then(() => {
+      if (isDisposed) return;
+      const tipsCopy = [...ALL_TIPS];
+      for (let i = tipsCopy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [tipsCopy[i], tipsCopy[j]] = [tipsCopy[j], tipsCopy[i]];
+      }
+      setShuffledTips(tipsCopy);
+      setTipIndex(0);
+    });
 
     startTimeRef.current = performance.now();
     const timerInterval = setInterval(() => {
@@ -68,7 +71,7 @@ export function LPSolverOverlay() {
     }, 50);
 
     const tipsInterval = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % tipsCopy.length);
+      setTipIndex((prev) => (prev + 1) % ALL_TIPS.length);
     }, 5000);
 
     const { nodes: canvasNodes, edges } = useFlowStore.getState();

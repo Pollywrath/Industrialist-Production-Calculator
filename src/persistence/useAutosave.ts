@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useFlowStore } from '../stores/useFlowStore';
 import { useUIStore } from '../stores/useUIStore';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
-import { getAutosave, saveAutosave } from './idb';
+import { getAutosave, saveAutosave, getDataOverrides } from './idb';
 import { serializeCanvas, deserializeCanvas } from './transformer';
 
 export function useAutosave(): void {
@@ -75,8 +75,12 @@ export function useAutosave(): void {
       isSaving = true;
       const capturedVersion = dirtyVersion;
       const { nodes, edges } = useFlowStore.getState();
-      const data = serializeCanvas(nodes, edges);
-      saveAutosave(data)
+
+      getDataOverrides()
+        .then((overrides) => {
+          const data = serializeCanvas(nodes, edges, overrides);
+          return saveAutosave(data);
+        })
         .then(() => {
           if (dirtyVersion === capturedVersion) {
             lastSavedVersion = capturedVersion;
@@ -92,10 +96,14 @@ export function useAutosave(): void {
 
     const handleBeforeUnload = () => {
       const { nodes, edges } = useFlowStore.getState();
-      const data = serializeCanvas(nodes, edges);
-      saveAutosave(data).catch((err) => {
-        console.warn('Failed to commit autosave beforeunload:', err);
-      });
+      getDataOverrides()
+        .then((overrides) => {
+          const data = serializeCanvas(nodes, edges, overrides);
+          return saveAutosave(data);
+        })
+        .catch((err) => {
+          console.warn('Failed to commit autosave beforeunload:', err);
+        });
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
