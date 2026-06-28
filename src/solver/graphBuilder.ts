@@ -50,8 +50,9 @@ export function buildSolverGraph(
             const sourceOutput = sourceRecipe.outputs[sourceParsed.index];
             if (!sourceOutput) continue;
             const sourceMultiplier = getRateMultiplier(sourceRecipe.cycle_time, 'second');
+            const sourceScale = sourceOutput.independentOfMachineCount ? 1 : (sourceNode.data.machineCount ?? 1);
             const sourceRate =
-              sourceOutput.quantity * (sourceNode.data.machineCount ?? 1) * sourceMultiplier;
+              sourceOutput.quantity * sourceScale * sourceMultiplier;
             totalFlow += sourceRate;
           } else {
             const targetNode = nodesMap.get(edge.target);
@@ -70,8 +71,9 @@ export function buildSolverGraph(
             const targetInput = targetRecipe.inputs[targetParsed.index];
             if (!targetInput) continue;
             const targetMultiplier = getRateMultiplier(targetRecipe.cycle_time, 'second');
+            const targetScale = targetInput.independentOfMachineCount ? 1 : (targetNode.data.machineCount ?? 1);
             const targetRate =
-              targetInput.quantity * (targetNode.data.machineCount ?? 1) * targetMultiplier;
+              targetInput.quantity * targetScale * targetMultiplier;
             totalFlow += targetRate;
           }
         }
@@ -98,7 +100,8 @@ export function buildSolverGraph(
     const inputs = recipe.inputs.map((inp, idx) => {
       const hasConn = helpers.hasConnection('input', idx);
       const isVariable = !!inp.variable;
-      const rate = isVariable && !hasConn ? 0 : inp.quantity * machineCount * multiplier;
+      const scale = inp.independentOfMachineCount ? 1 : machineCount;
+      const rate = isVariable && !hasConn ? 0 : inp.quantity * scale * multiplier;
       return {
         productId: helpers.resolveProduct('input', idx),
         rate,
@@ -108,7 +111,8 @@ export function buildSolverGraph(
     const outputs = recipe.outputs.map((out, idx) => {
       const hasConn = helpers.hasConnection('output', idx);
       const isVariable = !!out.variable;
-      const rate = isVariable && !hasConn ? 0 : out.quantity * machineCount * multiplier;
+      const scale = out.independentOfMachineCount ? 1 : machineCount;
+      const rate = isVariable && !hasConn ? 0 : out.quantity * scale * multiplier;
       return {
         productId: helpers.resolveProduct('output', idx),
         rate,

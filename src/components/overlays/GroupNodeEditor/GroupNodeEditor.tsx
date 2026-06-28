@@ -115,7 +115,8 @@ function buildProxyItems(
 
     const productId = resolvedProducts[handleId] ?? helpers.resolveProduct(side, parsed.index);
     const multiplier = getRateMultiplier(recipe.cycle_time, rateMode);
-    const rate = entry.quantity * multiplier * node.data.machineCount;
+    const scale = entry.independentOfMachineCount ? 1 : node.data.machineCount;
+    const rate = entry.quantity * multiplier * scale;
     items[i] = {
       handleId,
       label: getProductName(productId),

@@ -101,7 +101,9 @@ export function RecipeCard({
   }
 
   const sr = getSpecialRecipe(initialRecipe.id);
-  const pollutionMultiplier = sr?.pollutionIndependentOfMachineCount ? 1 : neededMachineCount;
+  const pollutionMultiplier = (recipe.pollutionIndependentOfMachineCount || sr?.pollutionIndependentOfMachineCount)
+    ? 1
+    : neededMachineCount;
 
   return (
     <div
@@ -145,6 +147,7 @@ export function RecipeCard({
           <div className={`${styles['recipe-card-col']} ${styles['recipe-card-col-inputs']}`}>
             {recipe.inputs.map((inp, idx) => {
               const productName = getProductName(inp.product_id);
+              const scale = inp.independentOfMachineCount ? 1 : neededMachineCount;
               return (
                 <div key={`${inp.product_id}-${idx}`} className={styles['recipe-card-io-item']}>
                   <div className={styles['recipe-card-io-square-wrapper']}>
@@ -152,7 +155,7 @@ export function RecipeCard({
                       <ProductIcon key={inp.product_id} productId={inp.product_id} productName={productName} />
                     </div>
                     <span className={styles['recipe-card-io-quantity']}>
-                      {formatQuantity(inp.quantity * multiplier * neededMachineCount)}
+                      {formatQuantity(inp.quantity * multiplier * scale)}
                     </span>
                   </div>
                   <span className={styles['recipe-card-io-name']}>{productName}</span>
@@ -181,6 +184,7 @@ export function RecipeCard({
           <div className={`${styles['recipe-card-col']} ${styles['recipe-card-col-outputs']}`}>
             {recipe.outputs.map((out, idx) => {
               const productName = getProductName(out.product_id);
+              const scale = out.independentOfMachineCount ? 1 : neededMachineCount;
               return (
                 <div key={`${out.product_id}-${idx}`} className={styles['recipe-card-io-item']}>
                   <div className={styles['recipe-card-io-square-wrapper']}>
@@ -188,7 +192,7 @@ export function RecipeCard({
                       <ProductIcon key={out.product_id} productId={out.product_id} productName={productName} />
                     </div>
                     <span className={styles['recipe-card-io-quantity']}>
-                      {formatQuantity(out.quantity * multiplier * neededMachineCount)}
+                      {formatQuantity(out.quantity * multiplier * scale)}
                     </span>
                   </div>
                   <span className={styles['recipe-card-io-name']}>{productName}</span>

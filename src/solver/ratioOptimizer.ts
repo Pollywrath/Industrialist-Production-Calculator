@@ -202,7 +202,8 @@ export function buildRatioOptimizerPayload(
         const targetInput = targetRecipe.inputs[targetParsed.index];
         const targetProductId = getResolvedPortProduct(edge.target, 'input', targetParsed.index);
         if (sourceProductId !== targetProductId) return false;
-        return !!targetInput?.variable;
+        const targetIsSinkNode = targetRecipe.outputs.length === 0;
+        return !!targetInput?.variable || targetIsSinkNode;
       });
 
       return {

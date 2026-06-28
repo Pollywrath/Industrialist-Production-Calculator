@@ -45,8 +45,8 @@ export const underground_waste_facility_01: SpecialRecipe = {
       inputs: [
         { product_id: item1, quantity: 240, variable: true },
         { product_id: fluid1, quantity: 240, variable: true },
-        { product_id: 'p_concrete_block', quantity: concreteQuantity},
-        { product_id: 'p_lead_ingot', quantity: leadQuantity},
+        { product_id: 'p_concrete_block', quantity: concreteQuantity, independentOfMachineCount: true },
+        { product_id: 'p_lead_ingot', quantity: leadQuantity, independentOfMachineCount: true },
       ],
       outputs: [],
     };

@@ -157,7 +157,7 @@ export function buildMPS(nodes: RatioOptimizerNode[], connections: RatioOptimize
 
       const excessVar = registerVar(`excess_${node.id}_${outputIndex}`);
       if (out.hasSinkConnection) {
-        addObjCoeff(excessVar, 1e6);
+        addObjCoeff(excessVar, 1e8);
       }
 
       const rowName = registerRow(`flow_out_${node.id}_${outputIndex}`, 'E', 0);
@@ -186,7 +186,9 @@ export function buildMPS(nodes: RatioOptimizerNode[], connections: RatioOptimize
         addRowTerm(rowName, mVar, -inp.quantity);
       } else {
         const deficitVar = registerVar(`deficit_${node.id}_${inputIndex}`);
-        addObjCoeff(deficitVar, 1e12);
+        const isSinkNode = node.outputs.length === 0 || node.inputs.some((inp) => inp.isSink);
+        const penalty = isSinkNode ? 1e4 : 1e12;
+        addObjCoeff(deficitVar, penalty);
 
         const rowName = registerRow(`flow_in_${node.id}_${inputIndex}`, 'E', 0);
         incomingVarNames.forEach((fVar) => addRowTerm(rowName, fVar, 1));

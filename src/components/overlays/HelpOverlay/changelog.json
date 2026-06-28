@@ -893,5 +893,20 @@
       "Integrated database override validation upon loading custom saves, falling back to canvas-only if invalid.",
       "Resolved multiple ESLint react-hooks/refs, set-state-in-effect, and typescript-eslint/no-explicit-any compilation errors."
     ]
+  },
+  {
+    "hash": "a4d3e2f",
+    "version": "v0.7.6",
+    "minor": 7,
+    "minorName": "Interactive Tutorials, Shuffled Tips & SEO Optimization",
+    "patch": 6,
+    "date": "2026-06-28",
+    "subject": "feat: optimize sink priority solver weights and machine scaling rules",
+    "items": [
+      "Generalized sink node detection in the LP solver to identify nodes with zero outputs (e.g. Exhaust Stack, Burners, Dumps, and Generators) or variable inputs.",
+      "Implemented scoped deficit penalty weights: standard recipe deficits are penalized at 1e12, sink-connected excesses at 1e8, and auxiliary sink inputs (e.g. UWF inputs) at 1e4.",
+      "Added scaling independence settings for special recipes to bypass machine count multipliers on specific ports (e.g. UWF inputs).",
+      "Updated RecipeNodeIO handle coordinates to correctly handle machine count scaling bypass."
+    ]
   }
 ]

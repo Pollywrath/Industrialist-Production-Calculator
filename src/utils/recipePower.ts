@@ -34,8 +34,10 @@ export function getRecipePowerTotals(recipe: Recipe, machineCount = 1): RecipePo
   let production = 0;
   let net = 0;
 
+  const actualMachineCount = recipe.powerIndependentOfMachineCount ? 1 : machineCount;
+
   for (let i = 0; i < effects.length; i++) {
-    const power = effects[i].power_consumption * machineCount;
+    const power = effects[i].power_consumption * actualMachineCount;
     net += power;
     if (effects[i].accounting === 'production_delta') {
       production += power;
@@ -67,6 +69,7 @@ function groupEffects(effects: RecipePowerEffect[], predicate: (effect: RecipePo
 }
 
 export function formatRecipePowerLine(recipe: Recipe, machineCount = 1): string {
+  const actualMachineCount = recipe.powerIndependentOfMachineCount ? 1 : machineCount;
   const effects = getRecipePowerEffects(recipe).filter((effect) => effect.power_consumption !== 0);
 
   if (effects.length === 0) {
@@ -75,7 +78,7 @@ export function formatRecipePowerLine(recipe: Recipe, machineCount = 1): string 
 
   if (effects.length === 1) {
     const effect = effects[0];
-    const powerText = formatPower(effect.power_consumption * machineCount);
+    const powerText = formatPower(effect.power_consumption * actualMachineCount);
     return effect.power_type === 'HV' ? `${powerText} HV` : powerText;
   }
 
@@ -83,19 +86,19 @@ export function formatRecipePowerLine(recipe: Recipe, machineCount = 1): string 
   const producers = groupEffects(effects, (effect) => effect.power_consumption < 0);
 
   if (consumers.length === 1 && producers.length === 1) {
-    return `${formatEffect(consumers[0], machineCount)} > ${formatEffect(producers[0], machineCount)}`;
+    return `${formatEffect(consumers[0], actualMachineCount)} > ${formatEffect(producers[0], actualMachineCount)}`;
   }
 
   if (consumers.length === 0 && producers.length > 0) {
-    return producers.map((effect) => formatEffect(effect, machineCount)).join(' + ');
+    return producers.map((effect) => formatEffect(effect, actualMachineCount)).join(' + ');
   }
 
   if (producers.length === 0 && consumers.length > 0) {
-    return consumers.map((effect) => formatEffect(effect, machineCount)).join(' + ');
+    return consumers.map((effect) => formatEffect(effect, actualMachineCount)).join(' + ');
   }
 
-  const consumeText = consumers.map((effect) => formatEffect(effect, machineCount)).join(' + ');
-  const produceText = producers.map((effect) => formatEffect(effect, machineCount)).join(' + ');
+  const consumeText = consumers.map((effect) => formatEffect(effect, actualMachineCount)).join(' + ');
+  const produceText = producers.map((effect) => formatEffect(effect, actualMachineCount)).join(' + ');
   return `Consumes ${consumeText} | Produces ${produceText}`;
 }
 

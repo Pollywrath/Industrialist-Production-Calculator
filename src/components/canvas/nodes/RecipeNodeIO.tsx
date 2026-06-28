@@ -223,7 +223,8 @@ function RecipeNodeIORect({
   const list = refVal.side === 'input' ? recipe?.inputs : recipe?.outputs;
   const entry = list?.[refVal.index];
   const isVariable = !!entry?.variable;
-  const totalQty = isVariable ? actualFlow : qty * machineCount * multiplier;
+  const scale = entry?.independentOfMachineCount ? 1 : machineCount;
+  const totalQty = isVariable ? actualFlow : qty * scale * multiplier;
 
   return (
     <div className={styles['recipe-node-io__rect-wrapper']}>

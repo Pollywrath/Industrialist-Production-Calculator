@@ -46,6 +46,7 @@ export interface RecipeInput {
   handle_type?: HandleDataType;
   product_link_id?: string;
   variable?: boolean;
+  independentOfMachineCount?: boolean;
 }
 
 export interface RecipeOutput {
@@ -56,6 +57,7 @@ export interface RecipeOutput {
   product_link_id?: string;
   voidable?: boolean;
   variable?: boolean;
+  independentOfMachineCount?: boolean;
 }
 
 export interface RecipeRuntimeState {
@@ -79,6 +81,8 @@ export interface Recipe {
   isSellTrash?: boolean;
   potential_inputs?: string[];
   potential_outputs?: string[];
+  powerIndependentOfMachineCount?: boolean;
+  pollutionIndependentOfMachineCount?: boolean;
 }
 
 export interface Research {

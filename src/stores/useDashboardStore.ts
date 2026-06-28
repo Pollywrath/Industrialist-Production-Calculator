@@ -177,7 +177,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       totalConsumption += powerTotals.consumption;
       totalProduction += powerTotals.production;
 
-      const pollutionMultiplier = sr?.pollutionIndependentOfMachineCount ? 1 : machineCount;
+      const pollutionMultiplier = (recipe.pollutionIndependentOfMachineCount || sr?.pollutionIndependentOfMachineCount) ? 1 : machineCount;
       netPollution += recipe.pollution * pollutionMultiplier;
 
       let baseModelCount: number;

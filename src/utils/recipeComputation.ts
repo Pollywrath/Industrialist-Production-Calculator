@@ -53,7 +53,8 @@ export function computeQuantityMap(
       const entry = recipe.inputs[idx];
       if (entry) {
         const baseQty = entry.quantity * multiplier;
-        map[key] = machineCount > 0 ? toPlainString(cleanFlow(baseQty * machineCount), 8) : '';
+        const scale = entry.independentOfMachineCount ? 1 : machineCount;
+        map[key] = machineCount > 0 ? toPlainString(cleanFlow(baseQty * scale), 8) : '';
       }
     }
   });
@@ -66,7 +67,8 @@ export function computeQuantityMap(
       const entry = recipe.outputs[idx];
       if (entry) {
         const baseQty = entry.quantity * multiplier;
-        map[key] = machineCount > 0 ? toPlainString(cleanFlow(baseQty * machineCount), 8) : '';
+        const scale = entry.independentOfMachineCount ? 1 : machineCount;
+        map[key] = machineCount > 0 ? toPlainString(cleanFlow(baseQty * scale), 8) : '';
       }
     }
   });
