@@ -20,7 +20,7 @@ export const m_truck_depot_01: SpecialRecipe = {
       power_consumption: 0,
       power_type: 'MV',
       pollution: 0.06,
-      inputs: [{ product_id: resolvedItem, quantity: 10, variable: true }],
+      inputs: [{ product_id: resolvedItem, quantity: 10 }],
       outputs: [],
     };
 

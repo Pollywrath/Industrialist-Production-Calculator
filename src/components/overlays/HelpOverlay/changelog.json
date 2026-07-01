@@ -908,5 +908,19 @@
       "Added scaling independence settings for special recipes to bypass machine count multipliers on specific ports (e.g. UWF inputs).",
       "Updated RecipeNodeIO handle coordinates to correctly handle machine count scaling bypass."
     ]
+  },
+  {
+    "hash": "e63a8d4",
+    "version": "v0.7.7",
+    "minor": 7,
+    "minorName": "Interactive Tutorials, Shuffled Tips & SEO Optimization",
+    "patch": 7,
+    "date": "2026-07-01",
+    "subject": "feat: standardize depot and single-input burner/dump/incinerator recipe semantics",
+    "items": [
+      "Converted all depot special recipes to fixed constant quantities, keeping their dynamic product resolution.",
+      "Converted single-input burners, dumps, and incinerators to constant quantities and removed their machine count independence settings.",
+      "Configured the Item Dump special recipe with dual variable inputs, flow-dependent pollution, and machine-count independence matching the Liquid Dump."
+    ]
   }
 ]

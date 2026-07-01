@@ -21,7 +21,6 @@ export const big_liquid_burner_01: SpecialRecipe = {
   name: 'Burn Fluid',
   machine_id: 'm_big_liquid_burner',
   isSellTrash: true,
-  pollutionIndependentOfMachineCount: true,
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
     let resolvedFluid = 'any_fluid';
@@ -29,8 +28,7 @@ export const big_liquid_burner_01: SpecialRecipe = {
       resolvedFluid = helpers.resolveProduct('input', 0) || 'any_fluid';
     }
 
-    const flow = helpers?.getFlowRate?.('input', 0) ?? 120;
-    const pollution = calculatePollution(resolvedFluid, flow);
+    const pollution = calculatePollution(resolvedFluid, 120);
 
     const recipe: Recipe = {
       id: 'r_big_liquid_burner_01',
@@ -40,7 +38,7 @@ export const big_liquid_burner_01: SpecialRecipe = {
       power_consumption: 0,
       power_type: 'MV',
       pollution,
-      inputs: [{ product_id: resolvedFluid, quantity: 120, variable: true }],
+      inputs: [{ product_id: resolvedFluid, quantity: 120 }],
       outputs: [],
     };
 

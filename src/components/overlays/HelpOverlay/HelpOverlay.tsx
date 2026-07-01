@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from 'react';
+import { useState, type ComponentType, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
   AlertTriangle,
@@ -7,6 +7,7 @@ import {
   Group,
   HelpCircle,
   History,
+  Info,
   LayoutDashboard,
   MousePointerSquareDashed,
   Network,
@@ -36,7 +37,7 @@ const ICON_MAP: Record<string, ComponentType<{ size?: number; className?: string
   Save,
 };
 
-type HelpTabId = 'start' | 'controls' | 'troubleshooting' | 'tips' | 'changelog';
+type HelpTabId = 'start' | 'controls' | 'troubleshooting' | 'tips' | 'changelog' | 'credits';
 
 interface HelpTab {
   id: HelpTabId;
@@ -45,7 +46,8 @@ interface HelpTab {
 
 interface HelpSection {
   title: string;
-  items: string[];
+  items: ReactNode[];
+  listStyle?: 'ordered' | 'unordered' | 'none';
 }
 
 interface HelpArticle {
@@ -66,6 +68,7 @@ const HELP_TABS: HelpTab[] = [
   { id: 'troubleshooting', label: 'Troubleshoot' },
   { id: 'tips', label: 'Tips' },
   { id: 'changelog', label: 'Changelog' },
+  { id: 'credits', label: 'Credits' },
 ];
 
 const BASE_HELP_ARTICLES: HelpArticle[] = [
@@ -666,6 +669,73 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       },
     ],
   })),
+  {
+    id: 'about-credits',
+    tabId: 'credits',
+    title: 'About & Credits',
+    summary: 'Developer credits, game asset attributions, and contact links.',
+    Icon: Info,
+    keywords: ['about', 'credits', 'attributions', 'authors', 'creators', 'pollywrath', 'mamytema', 'license', 'wiki', 'contact', 'support', 'github'],
+    sections: [
+      {
+        title: 'Project Info',
+        listStyle: 'none',
+        items: [
+          <span key="project-desc">
+            Industrialist Calculator is an interactive, flowchart-based calculator and factory solver for the Roblox game <strong>Industrialist</strong>. It is designed to help players design layouts, calculate production rates, and optimize factory setups.
+          </span>,
+        ],
+      },
+      {
+        title: 'Credits & Attributions',
+        listStyle: 'unordered',
+        items: [
+          <span key="creator">
+            Created and maintained by <strong>Pollywrath</strong> (
+            <a
+              href="https://github.com/pollywrath"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles['help-link']}
+            >
+              GitHub Profile
+            </a>
+            ).
+          </span>,
+          <span key="game-ip">
+            All recipe data, machine stats, and formulas are based on the Roblox game <strong>Industrialist</strong> by <strong>Mamytema Studios</strong>.
+          </span>,
+          <span key="wiki-assets">
+            Icons and sprites are sourced from the official <strong>Industrialist Wiki</strong> and are used under the <strong>Creative Commons CC BY-NC-SA 4.0</strong> license.
+          </span>,
+          <span key="scip-solve">
+            The LP Solver uses a WebAssembly build of the <strong>SCIP Optimization Suite</strong> (licensed under Apache 2.0), adapted from Jacob Strieb's Poker Chipper repository.
+          </span>,
+        ],
+      },
+      {
+        title: 'Contact & Support',
+        listStyle: 'unordered',
+        items: [
+          <span key="repo-link">
+            Submit bug reports, feature requests, or view the source code on the official{' '}
+            <a
+              href="https://github.com/Pollywrath/Industrialist-Production-Calculator"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles['help-link']}
+            >
+              GitHub Repository
+            </a>
+            .
+          </span>,
+          <span key="feedback">
+            Feedback and pull requests are welcome! Please open a GitHub issue to discuss potential changes.
+          </span>,
+        ],
+      },
+    ],
+  },
 ];
 
 interface ChangelogCommit {
@@ -861,11 +931,27 @@ function HelpOverlayModal() {
                   {selectedArticle.sections.map((section) => (
                     <section key={section.title} className={styles['article-section']}>
                       <h3 className={styles['section-title']}>{section.title}</h3>
-                      <ol className={styles['section-list']}>
-                        {section.items.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ol>
+                      {section.listStyle === 'none' ? (
+                        <div className={styles['section-text-container']}>
+                          {section.items.map((item, idx) => (
+                            <div key={idx} className={styles['section-text-item']}>
+                              {item}
+                            </div>
+                          ))}
+                        </div>
+                      ) : section.listStyle === 'unordered' ? (
+                        <ul className={styles['section-list-unordered']}>
+                          {section.items.map((item, idx) => (
+                            <li key={idx}>{item}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <ol className={styles['section-list']}>
+                          {section.items.map((item, idx) => (
+                            <li key={idx}>{item}</li>
+                          ))}
+                        </ol>
+                      )}
                     </section>
                   ))}
                 </div>

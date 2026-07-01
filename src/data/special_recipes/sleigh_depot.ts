@@ -20,7 +20,7 @@ export const m_sleigh_depot_01: SpecialRecipe = {
       power_consumption: 0,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: resolvedItem, quantity: 111, variable: true }],
+      inputs: [{ product_id: resolvedItem, quantity: 111 }],
       outputs: [],
     };
 

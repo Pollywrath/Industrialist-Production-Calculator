@@ -21,7 +21,7 @@ export const large_liquid_truck_depot_01: SpecialRecipe = {
       power_consumption: 0,
       power_type: 'MV',
       pollution: 0.48,
-      inputs: [{ product_id: resolvedFluid, quantity: 4000, variable: true }],
+      inputs: [{ product_id: resolvedFluid, quantity: 4000 }],
       outputs: [],
     };
 

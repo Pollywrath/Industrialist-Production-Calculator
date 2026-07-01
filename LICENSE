@@ -19,24 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
---------------------------------------------------------------------------------
-
-DISCLAIMER & IP EXCEPTIONS
-
-1. Game Assets & Data:
-All game names, recipe configurations, machine formulas, and product values associated with the game "Industrialist" are the sole intellectual property of the game's developers (Mamytema Studios). These assets and data are used in this project for non-commercial community purposes with no intent to infringe.
-
-2. Unofficial Community Project:
-This calculator is an unofficial fan-made utility. It is not endorsed by, affiliated with, or associated with the game's creators.
-
-3. Sprites, Icons, and Logo (CC BY-NC-SA 4.0):
-Sprites and graphical icons included in this repository (e.g., under public/icons/ and public/induslogo.webp) are sourced from the Industrialist Wiki (industrialist.miraheze.org), operated by Mamytema Studios. These assets are licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0).
-These files are NOT covered by the MIT License above. Any forks, redistributions, or alternative hosting configurations of this project must attribute the source, remain non-commercial, and distribute these assets under the same CC BY-NC-SA 4.0 license.
-
-4. Rights Holder Inquiries & Takedown Requests:
-If you are a copyright holder and have concerns regarding the inclusion of any particular data or assets in this project, please open a GitHub issue, and I will respond and comply with removal requests promptly.
-
-5. SCIP WebAssembly Solver (Apache 2.0):
-The compiled WebAssembly files under public/scip/ are a browser-compatible build of the SCIP Optimization Suite, adapted from Jacob Strieb's "Poker Chipper" repository (github.com/jstrieb/poker-chipper) with minor modifications to support dynamic WebAssembly memory growth. The underlying SCIP Optimization Suite is licensed under the Apache License 2.0.
-https://www.apache.org/licenses/LICENSE-2.0

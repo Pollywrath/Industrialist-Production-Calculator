@@ -6,7 +6,6 @@ export const incinerator_01: SpecialRecipe = {
   name: 'Burn Item',
   machine_id: 'm_incinerator',
   isSellTrash: true,
-  pollutionIndependentOfMachineCount: true,
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
     let resolvedFluid = 'any_item';
@@ -14,8 +13,7 @@ export const incinerator_01: SpecialRecipe = {
       resolvedFluid = helpers.resolveProduct('input', 0) || 'any_item';
     }
 
-    const flow = helpers?.getFlowRate?.('input', 0) ?? 40;
-    const pollution = 0.18 * flow;
+    const pollution = 0.18 * 40;
 
     const recipe: Recipe = {
       id: 'r_incinerator_01',
@@ -25,7 +23,7 @@ export const incinerator_01: SpecialRecipe = {
       power_consumption: 0,
       power_type: 'MV',
       pollution,
-      inputs: [{ product_id: resolvedFluid, quantity: 40, variable: true }],
+      inputs: [{ product_id: resolvedFluid, quantity: 40 }],
       outputs: [],
     };
 
