@@ -30,17 +30,17 @@ const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multipl
     field: 'name',
     label: 'Name',
     widthClass: 'col-50',
-    renderCell: (p) => (
+    Cell: ({item}) => (
       <div className={styles['cell-flex-container']}>
-        {p.type === 'Fluid' ? (
+        {item.type === 'Fluid' ? (
           <Droplet size={14} className={styles['fluid-icon']} />
         ) : (
           <Package size={14} className={styles['item-icon']} />
         )}
         <span
-          className={`${styles['cell-ellipsis-text']} ${p.type === 'Fluid' ? styles['fluid-text'] : styles['item-text']}`}
+          className={`${styles['cell-ellipsis-text']} ${item.type === 'Fluid' ? styles['fluid-text'] : styles['item-text']}`}
         >
-          {p.name}
+          {item.name}
         </span>
       </div>
     ),
@@ -49,9 +49,9 @@ const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multipl
     field: 'sell_price',
     label: 'Sell Price',
     widthClass: 'col-25',
-    renderCell: (p) => (
-      <span className={p.sell_price < 0 ? styles['sell-price-negative'] : (p.profit ? styles['sell-price-profit'] : '')}>
-        {formatCurrency(p.sell_price)}
+    Cell: ({item}) => (
+      <span className={item.sell_price < 0 ? styles['sell-price-negative'] : (item.profit ? styles['sell-price-profit'] : '')}>
+        {formatCurrency(item.sell_price)}
       </span>
     ),
   },
@@ -59,9 +59,9 @@ const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multipl
     field: 'rp_multiplier',
     label: 'RP Multiplier',
     widthClass: 'col-25',
-    renderCell: (p) => (
-      <span className={p.research ? styles['rp-mult-research'] : ''}>
-        {formatRpMultiplier(p.rp_multiplier)}
+    Cell: ({item}) => (
+      <span className={item.research ? styles['rp-mult-research'] : ''}>
+        {formatRpMultiplier(item.rp_multiplier)}
       </span>
     ),
   },
@@ -72,14 +72,14 @@ const MACHINE_COLUMNS: ColumnConfig<Machine, 'name' | 'cost'>[] = [
     field: 'name',
     label: 'Name',
     widthClass: 'col-70',
-    renderCell: (m) => {
-      const SubIcon = getTaxonomyIcon(m.category, m.subcategory);
-      const tierClass = styles[`tier-${m.tier}`] || '';
+    Cell: ({item}) => {
+      const SubIcon = getTaxonomyIcon(item.category, item.subcategory);
+      const tierClass = styles[`tier-${item.tier}`] || '';
       return (
         <div className={`${styles['cell-flex-container']} ${tierClass}`}>
-          <span className={styles['tier-badge']}>{toRomanNumeral(m.tier)}</span>
+          <span className={styles['tier-badge']}>{toRomanNumeral(item.tier)}</span>
           <SubIcon size={14} className={styles['machine-subicon']} />
-          <span className={styles['machine-name-text']}>{m.name}</span>
+          <span className={styles['machine-name-text']}>{item.name}</span>
         </div>
       );
     },
@@ -88,7 +88,7 @@ const MACHINE_COLUMNS: ColumnConfig<Machine, 'name' | 'cost'>[] = [
     field: 'cost',
     label: 'Machine Cost',
     widthClass: 'col-30',
-    renderCell: (m) => formatCurrency(m.cost),
+    Cell: ({item}) => formatCurrency(item.cost),
   },
 ];
 
