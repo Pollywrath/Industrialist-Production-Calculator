@@ -79,7 +79,7 @@ export const vertical_heat_exchanger_distilled_water: SpecialRecipe = {
       name: 'Distilled Water Coolant',
       machine_id: 'm_vertical_heat_exchanger',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 0,
       inputs: [
@@ -155,7 +155,7 @@ export const vertical_heat_exchanger_contaminated_water: SpecialRecipe = {
       name: 'Contaminated Water Coolant',
       machine_id: 'm_vertical_heat_exchanger',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 0,
       inputs: [

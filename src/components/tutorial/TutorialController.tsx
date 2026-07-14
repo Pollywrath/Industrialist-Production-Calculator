@@ -212,18 +212,11 @@ export function TutorialController() {
       element,
       disableActiveInteraction: isTutorialFlowHighlight(step.highlight)
         ? false
-        : step.disableActiveInteraction ?? (step.action.type === 'continue'),
+        : (step.disableActiveInteraction ?? step.action.type === 'continue'),
       popover: buildPopover(step, currentStepIndex === 0),
     });
     syncDriverCanvasInteractivity();
-  }, [
-    activeTutorialId,
-    currentStepIndex,
-    aliases,
-    retryNonce,
-    getCurrentStep,
-    getNodeId,
-  ]);
+  }, [activeTutorialId, currentStepIndex, aliases, retryNonce, getCurrentStep, getNodeId]);
 
   return <TutorialScreenHighlights />;
 }

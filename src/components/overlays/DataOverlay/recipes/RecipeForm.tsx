@@ -185,7 +185,13 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
     }
     const nextOutputs = [...(activeRecipe.outputs || [])];
     const defaultProduct = getAllProducts()[0]?.id || 'p_water';
-    nextOutputs.push({ product_id: defaultProduct, quantity: 1, temperature: 18, variable: false, voidable: false });
+    nextOutputs.push({
+      product_id: defaultProduct,
+      quantity: 1,
+      temperature: 18,
+      variable: false,
+      voidable: false,
+    });
     updateRecipePendingEdit(selectedRecipeId, { outputs: nextOutputs });
     completeTutorialAction({ type: 'data-command', id: 'recipe.add-output' });
   };
@@ -216,7 +222,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
           onSelectRecipe(nextId);
         }
       }}
-      entityLabel={isSpecial ? "Special Recipe" : "Recipe"}
+      entityLabel={isSpecial ? 'Special Recipe' : 'Recipe'}
       EmptyIcon={ClipboardList}
       isReadOnly={isSpecial}
     >
@@ -227,8 +233,9 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
             <span>Special Formula Recipe</span>
           </div>
           <p className={styles['alert-message']}>
-            This recipe's inputs, outputs, cycle times, power consumptions, and pollutions are dynamically
-            calculated by its mathematical code formula. They cannot be statically overridden in the database.
+            This recipe's inputs, outputs, cycle times, power uses, and pollutions are dynamically
+            calculated by its mathematical code formula. They cannot be statically overridden in the
+            database.
           </p>
         </div>
       )}
@@ -268,12 +275,12 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
         </div>
 
         <div className={crudStyles['form-group']}>
-          <label className={crudStyles['form-label']}>Power Consumption (W)</label>
+          <label className={crudStyles['form-label']}>Power Use (W)</label>
           <ValidatedNumberInput
-            value={activeRecipe.power_consumption}
+            value={activeRecipe.power_use}
             onChange={(val) => {
-              if (!handleTutorialFieldChange('recipe.power_consumption', val)) return;
-              updateRecipePendingEdit(selectedRecipeId, { power_consumption: val });
+              if (!handleTutorialFieldChange('recipe.power_use', val)) return;
+              updateRecipePendingEdit(selectedRecipeId, { power_use: val });
             }}
             defaultValue={100}
             allowDecimals={true}
@@ -281,7 +288,7 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
             min={0}
             className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
             disabled={isSpecial}
-            dataTutorialDataField="recipe.power_consumption"
+            dataTutorialDataField="recipe.power_use"
           />
         </div>
       </div>
@@ -312,7 +319,9 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
             value={activeRecipe.power_type || 'MV'}
             onChange={(e) => {
               if (isTutorialActive()) return;
-              updateRecipePendingEdit(selectedRecipeId, { power_type: e.target.value as 'MV' | 'HV' });
+              updateRecipePendingEdit(selectedRecipeId, {
+                power_type: e.target.value as 'MV' | 'HV',
+              });
             }}
             disabled={isSpecial}
           >
@@ -413,7 +422,9 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                     allowDecimals={true}
                     allowNegatives={false}
                     min={0.0001}
-                    className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
+                    className={
+                      isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']
+                    }
                     disabled={isSpecial}
                     dataTutorialDataField={`recipe.input.${idx}.quantity`}
                   />
@@ -526,7 +537,9 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                     allowDecimals={true}
                     allowNegatives={false}
                     min={0.0001}
-                    className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
+                    className={
+                      isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']
+                    }
                     disabled={isSpecial}
                     dataTutorialDataField={`recipe.output.${idx}.quantity`}
                   />
@@ -541,7 +554,9 @@ export function RecipeForm({ selectedRecipeId, onSelectRecipe }: RecipeFormProps
                     defaultValue={18}
                     allowDecimals={true}
                     allowNegatives={true}
-                    className={isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']}
+                    className={
+                      isSpecial ? crudStyles['form-input-readonly'] : crudStyles['form-input']
+                    }
                     disabled={isSpecial}
                   />
                 </div>

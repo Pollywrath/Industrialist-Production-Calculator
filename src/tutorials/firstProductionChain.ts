@@ -1,7 +1,6 @@
 import type { TutorialStep } from './types';
 
-export const FIRST_PRODUCTION_CHAIN_PROMPT_KEY =
-  'industrialist_first_production_chain_prompt_v1';
+export const FIRST_PRODUCTION_CHAIN_PROMPT_KEY = 'industrialist_first_production_chain_prompt_v1';
 
 export const FIRST_PRODUCTION_CHAIN_COMPLETED_KEY =
   'industrialist_first_production_chain_completed_v1';
@@ -77,7 +76,8 @@ export const FIRST_PRODUCTION_CHAIN_STEPS: TutorialStep[] = [
   {
     id: 'explain-recipe-card',
     title: 'Recipe Card',
-    description: 'Recipe cards show the machine, inputs, outputs, cycle time, power, and pollution.',
+    description:
+      'Recipe cards show the machine, inputs, outputs, cycle time, power, and pollution.',
     highlight: { kind: 'recipe-card', recipeId: 'r_craft_assembler_06' },
     action: { type: 'continue' },
     disableActiveInteraction: true,

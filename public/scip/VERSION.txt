@@ -1,0 +1,16 @@
+SCIP Optimization Suite: 10.0.2
+Source: https://github.com/scipopt/scip/releases/download/v10.0.2/scipoptsuite-10.0.2.tgz
+SHA256: eecc29f31e8c8a3089c95ef99dd310d05e1546ba40f4ff36551d75a5f5c47073
+Built with: Emscripten emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.2 (7a2d97d627ff4945eae28847ce0387ac52b92c09)
+PaPILO requested: ON
+PaPILO support: ON
+PaPILO source: https://github.com/scipopt/papilo/archive/refs/tags/v3.0.0.tar.gz
+PaPILO SHA256: 04e2437c41404782fa31cd74a881b475d75a6e692e4c88a24bf48cf5d263a93d
+Pthreads requested: ON
+Pthread pool size: 4
+oneTBB requested: ON
+oneTBB source: https://github.com/oneapi-src/oneTBB/archive/refs/tags/v2021.13.0.tar.gz
+oneTBB SHA256: 3ad5dd08954b39d113dc5b3f8a8dc6dc1fd5250032b7c491eb07aed5c94133e1
+Third-party licenses SHA256: 5b2b91e8e7cfd594f1124dbede2a6f2c115c2b2215b589baf351097bbc75ca98
+Industrialist native ratio wrapper: ON
+Industrialist native ABI: 2

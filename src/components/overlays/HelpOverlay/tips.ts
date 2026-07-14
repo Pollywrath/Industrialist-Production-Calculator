@@ -20,8 +20,8 @@ export const CATEGORIZED_TIPS: TipCategory[] = [
       'Dragging a node while multiple recipe nodes are selected moves the entire selected batch together.',
       'Large graphs automatically swap detailed nodes to flat colored CAD boxes when zoomed out to bypass expensive DOM rendering.',
       'Group nodes together using Multi-select and clicking Add Group to simplify your canvas and utilize compact proxy handles.',
-      'Single-click any input or output row to open the Recipe Selector pre-filtered to that specific product on the selected side.'
-    ]
+      'Single-click any input or output row to open the Recipe Selector pre-filtered to that specific product on the selected side.',
+    ],
   },
   {
     id: 'tips-solver',
@@ -31,14 +31,14 @@ export const CATEGORIZED_TIPS: TipCategory[] = [
     tips: [
       'Set target nodes using the Target tool or Shift-click to anchor the linear programming optimization.',
       'Sinks (variable inputs/outputs) represent maximum capacity limits; they are resolved dynamically up to that limit based on connected flow.',
-      'Double-click a connected input or output handle to automatically balance that node\'s machine count to the active network flow.',
+      "Double-click a connected input or output handle to automatically balance that node's machine count to the active network flow.",
       'Unconnected input ports are ignored by the optimizer to prevent shutting down downstream nodes during partial builds.',
       'The LP Solver evaluates the entire recipe network in the background and proposes optimal machine counts for all nodes.',
       'Waste products (like excess fluid or byproducts) can be routed to waste dumps or burners to prevent the system from backing up.',
-      'The systemic balancer\'s rate solver uses a synchronous numerical Golden-Section search running exactly 40 iterations for absolute precision.',
+      "The systemic balancer's rate solver uses a synchronous numerical Golden-Section search running exactly 40 iterations for absolute precision.",
       'The solver does not propagate materials or temperatures through effectively zero-flow edges.',
-      'The solver pipeline runs iterative loops to resolve flow-dependent special recipe rates until stable convergence is reached.'
-    ]
+      'The solver pipeline runs iterative loops to resolve flow-dependent special recipe rates until stable convergence is reached.',
+    ],
   },
   {
     id: 'tips-recipes',
@@ -49,10 +49,10 @@ export const CATEGORIZED_TIPS: TipCategory[] = [
       'Open the Node Editor settings to adjust temperature, water inputs, or coolant settings for boilers and heat exchangers.',
       'Reset Handles in the Node Editor restores the recipe handle order back to its default layout.',
       'Apply to Chain in the Node Editor automatically scales all connected upstream and downstream nodes based on the machine count ratio.',
-      'Sinks (variable handles) display \'(Sets max sink capacity, not current flow)\' in the Node Editor to indicate capacity semantics.',
+      "Sinks (variable handles) display '(Sets max sink capacity, not current flow)' in the Node Editor to indicate capacity semantics.",
       'The Node Editor Settings tab appears only for recipes backed by a special recipe definition.',
-      'Special recipe files like heat exchanger and vertical heat exchanger are fully self-contained to allow independent modification.'
-    ]
+      'Special recipe files like heat exchanger and vertical heat exchanger are fully self-contained to allow independent modification.',
+    ],
   },
   {
     id: 'tips-saves',
@@ -66,9 +66,9 @@ export const CATEGORIZED_TIPS: TipCategory[] = [
       'Research new technologies in the Machines Overlay to unlock advanced production tiers and recipe variations.',
       'Check the Diagnostics panel in More Stats to quickly find and center any nodes with shortages or excess byproducts.',
       'The save file acts as a pure, unopinionated data carrier, deferring clamping and settings validation to runtime solver evaluation.',
-      'The autosave system commits your layout to local storage every 5 seconds as a fail-safe backup.'
-    ]
-  }
+      'The autosave system commits your layout to local storage every 5 seconds as a fail-safe backup.',
+    ],
+  },
 ];
 
 export const ALL_TIPS: string[] = CATEGORIZED_TIPS.flatMap((cat) => cat.tips);

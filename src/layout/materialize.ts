@@ -51,12 +51,7 @@ export function collectLayoutedEdges(
   const children = graph.children ?? [];
   for (let i = 0; i < children.length; i++) {
     const child = children[i];
-    collectLayoutedEdges(
-      child,
-      edges,
-      offsetX + (child.x ?? 0),
-      offsetY + (child.y ?? 0),
-    );
+    collectLayoutedEdges(child, edges, offsetX + (child.x ?? 0), offsetY + (child.y ?? 0));
   }
 }
 

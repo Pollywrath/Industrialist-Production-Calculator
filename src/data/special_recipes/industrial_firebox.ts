@@ -28,10 +28,12 @@ const getFuel = (settings: Record<string, unknown>) => {
   return FUEL_MAP[fuelType] ?? FUEL_MAP['Coal'];
 };
 
-const getCycleTime = (energy: number, extra: number = 0) => (settings: Record<string, unknown>) => {
-  const fuel = getFuel(settings);
-  return Math.ceil(energy / fuel.energy) + extra;
-};
+const getCycleTime =
+  (energy: number, extra: number = 0) =>
+  (settings: Record<string, unknown>) => {
+    const fuel = getFuel(settings);
+    return Math.ceil(energy / fuel.energy) + extra;
+  };
 
 const getFuelQty = (energy: number) => (settings: Record<string, unknown>) => {
   const fuel = getFuel(settings);
@@ -63,7 +65,7 @@ export const industrial_firebox_01: SpecialRecipe = {
       name: 'Makes Sulfur Dioxide',
       machine_id: 'm_industrial_firebox',
       cycle_time: cycleTime,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
@@ -94,7 +96,7 @@ export const industrial_firebox_02: SpecialRecipe = {
       name: 'Makes Boron',
       machine_id: 'm_industrial_firebox',
       cycle_time: cycleTime,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
@@ -125,7 +127,7 @@ export const industrial_firebox_03: SpecialRecipe = {
       name: 'Heats Water',
       machine_id: 'm_industrial_firebox',
       cycle_time: cycleTime,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
@@ -156,7 +158,7 @@ export const industrial_firebox_04: SpecialRecipe = {
       name: 'Heats Filtered Water',
       machine_id: 'm_industrial_firebox',
       cycle_time: cycleTime,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
@@ -187,7 +189,7 @@ export const industrial_firebox_05: SpecialRecipe = {
       name: 'Heats Distilled Water',
       machine_id: 'm_industrial_firebox',
       cycle_time: cycleTime,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
@@ -218,7 +220,7 @@ export const industrial_firebox_06: SpecialRecipe = {
       name: 'Makes Water, Table Salt',
       machine_id: 'm_industrial_firebox',
       cycle_time: cycleTime,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
@@ -246,7 +248,7 @@ export const industrial_firebox_07: SpecialRecipe = {
       name: 'Makes Sodium Carbonate',
       machine_id: 'm_industrial_firebox',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 1.8,
       inputs: [

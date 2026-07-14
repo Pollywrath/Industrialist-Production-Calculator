@@ -50,10 +50,10 @@ const getComputedValues = (settings: Record<string, unknown>) => {
   const targetPower = interpolated.power;
   const targetRPM = Math.max(1, interpolated.rpm);
   const powerPerTick = (targetPower * (targetRPM + 1)) / targetRPM + targetPower;
-  const actualPowerProduction = Math.floor(powerPerTick * 33 * 0.25);
+  const actualPowerOutput = Math.floor(powerPerTick * 33 * 0.25);
   const waterOutputTemp = clamp(temp / 3, 40, 99);
 
-  return { actualPowerProduction, waterOutputTemp };
+  return { actualPowerOutput, waterOutputTemp };
 };
 
 export const small_turbine_01: SpecialRecipe = {
@@ -65,14 +65,14 @@ export const small_turbine_01: SpecialRecipe = {
   settings: settingDefinitions,
   inputTemperatureSettings,
   compute: (settings) => {
-    const { actualPowerProduction, waterOutputTemp } = getComputedValues(settings);
+    const { actualPowerOutput, waterOutputTemp } = getComputedValues(settings);
 
     const recipe: Recipe = {
       id: 'r_small_turbine_01',
       name: 'Makes Power. Makes Water',
       machine_id: 'm_small_turbine',
       cycle_time: 1,
-      power_consumption: -actualPowerProduction,
+      power_use: -actualPowerOutput,
       power_type: 'MV',
       pollution: 0,
       inputs: [{ product_id: 'p_steam', quantity: 18 }],

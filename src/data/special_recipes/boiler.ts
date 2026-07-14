@@ -170,7 +170,7 @@ export const boiler_standard: SpecialRecipe = {
         name: 'Standard',
         machine_id: 'm_boiler',
         cycle_time: 1,
-        power_consumption: 0,
+        power_use: 0,
         power_type: 'MV',
         pollution: 0,
         inputs: [
@@ -206,12 +206,10 @@ export const boiler_standard: SpecialRecipe = {
         name: 'Standard',
         machine_id: 'm_boiler',
         cycle_time: 1,
-        power_consumption: 0,
+        power_use: 0,
         power_type: 'MV',
         pollution: 0,
-        inputs: [
-          { product_id: 'p_water', quantity: 3 },
-        ],
+        inputs: [{ product_id: 'p_water', quantity: 3 }],
         outputs: [
           {
             product_id: 'p_steam',

@@ -130,7 +130,10 @@ export function GenericDataList({ type, selectedId, onSelect }: GenericDataListP
   };
 
   const handleSelect = (id: string) => {
-    if (isTutorialActive() && !canPerformTutorialAction({ type: 'data-select', entity: type, id })) {
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({ type: 'data-select', entity: type, id })
+    ) {
       return;
     }
     onSelect(id);

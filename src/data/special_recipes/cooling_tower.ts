@@ -29,7 +29,7 @@ export const cooling_tower_01: SpecialRecipe = {
       name: 'Cools Distilled Water',
       machine_id: 'm_cooling_tower',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 0,
       inputs: [{ product_id: 'p_distilled_water', quantity: 800 }],

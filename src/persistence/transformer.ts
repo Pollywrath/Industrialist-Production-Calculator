@@ -223,9 +223,12 @@ export function migrateSaveData(rawData: unknown): SaveData {
     globalSettings = {
       global_pollution: typeof gs.global_pollution === 'number' ? gs.global_pollution : 10,
       difficulty: typeof gs.difficulty === 'string' ? gs.difficulty : undefined,
-      unlockedResearchIds: Array.isArray(gs.unlockedResearchIds) ? gs.unlockedResearchIds.filter((x): x is string => typeof x === 'string') : undefined,
+      unlockedResearchIds: Array.isArray(gs.unlockedResearchIds)
+        ? gs.unlockedResearchIds.filter((x): x is string => typeof x === 'string')
+        : undefined,
       oreNodesEnabled: typeof gs.oreNodesEnabled === 'boolean' ? gs.oreNodesEnabled : undefined,
-      showVariantLimited: typeof gs.showVariantLimited === 'boolean' ? gs.showVariantLimited : undefined,
+      showVariantLimited:
+        typeof gs.showVariantLimited === 'boolean' ? gs.showVariantLimited : undefined,
     };
   }
 
@@ -395,7 +398,7 @@ export function deserializeCanvas(saveData: SaveData): {
         },
       });
     } else {
-      const groupId = sn.groupId ? idMap.get(sn.groupId) ?? sn.groupId : undefined;
+      const groupId = sn.groupId ? (idMap.get(sn.groupId) ?? sn.groupId) : undefined;
       nodes.push({
         id: finalId,
         type: 'recipe',
@@ -437,9 +440,11 @@ export function deserializeCanvas(saveData: SaveData): {
     if (!sourceNode || !targetNode) continue;
 
     const sourceRecipe =
-      resolveActiveRecipe(sourceNode.recipeId, sourceNode.settings) ?? getRecipe(sourceNode.recipeId);
+      resolveActiveRecipe(sourceNode.recipeId, sourceNode.settings) ??
+      getRecipe(sourceNode.recipeId);
     const targetRecipe =
-      resolveActiveRecipe(targetNode.recipeId, targetNode.settings) ?? getRecipe(targetNode.recipeId);
+      resolveActiveRecipe(targetNode.recipeId, targetNode.settings) ??
+      getRecipe(targetNode.recipeId);
 
     if (!sourceRecipe || !targetRecipe) continue;
 

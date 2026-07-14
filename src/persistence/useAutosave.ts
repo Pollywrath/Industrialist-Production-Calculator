@@ -61,11 +61,9 @@ export function useAutosave(): void {
       },
     );
 
-    const unsubGlobalSettings = useGlobalSettingsStore.subscribe(
-      () => {
-        dirtyVersion++;
-      }
-    );
+    const unsubGlobalSettings = useGlobalSettingsStore.subscribe(() => {
+      dirtyVersion++;
+    });
 
     const intervalId = setInterval(() => {
       if (document.hidden) return;

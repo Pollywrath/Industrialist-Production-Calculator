@@ -23,10 +23,7 @@ import {
 import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId, parseHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
-import {
-  getRecipeEntryHandleType,
-  productTypeToHandleDataType,
-} from '../../../utils/handleTypes';
+import { getRecipeEntryHandleType, productTypeToHandleDataType } from '../../../utils/handleTypes';
 import styles from './RecipeNode.module.css';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -169,8 +166,7 @@ export function GroupNodeIO({
   const flowResultDataDbVersion = useFlowResultStore((s) => s.dataDbVersion);
   const currentGraphVersion = useFlowStore((s) => s.graphVersion);
   const hasFreshSolveSnapshot =
-    flowResultGraphVersion === currentGraphVersion &&
-    flowResultDataDbVersion === dbVersion;
+    flowResultGraphVersion === currentGraphVersion && flowResultDataDbVersion === dbVersion;
   const proxyNodes = useFlowStore(
     useShallow((s): Array<CanvasNode | undefined> => {
       const values: Array<CanvasNode | undefined> = [];
@@ -226,11 +222,11 @@ export function GroupNodeIO({
         const committedRecipe = proxyFlowData[flowDataIndex + 1] as Recipe | undefined;
         const recipe = hasFreshSolveSnapshot
           ? committedRecipe
-          : resolveActiveRecipe(
+          : (resolveActiveRecipe(
               internalNode.data.recipeId,
               internalNode.data.settings,
               internalNode.id,
-            ) ?? committedRecipe;
+            ) ?? committedRecipe);
         const list = parsed.side === 'input' ? recipe?.inputs : recipe?.outputs;
         const entry = list?.[parsed.index];
         const staleResolvedProduct = (proxyFlowData[flowDataIndex + 2] as string | undefined) ?? '';
@@ -302,9 +298,7 @@ export function GroupNodeIO({
     }
 
     const internalHandleId =
-      ref.side === 'input'
-        ? inputProxyHandleIds[ref.index]
-        : outputProxyHandleIds[ref.index];
+      ref.side === 'input' ? inputProxyHandleIds[ref.index] : outputProxyHandleIds[ref.index];
     if (!internalHandleId) return;
 
     const parsed = parseHandleId(internalHandleId);
@@ -316,11 +310,7 @@ export function GroupNodeIO({
     const flowResultState = useFlowResultStore.getState();
     const recipe =
       flowResultState.nodeRecipes[internalNode.id] ??
-      resolveActiveRecipe(
-        internalNode.data.recipeId,
-        internalNode.data.settings,
-        internalNode.id,
-      );
+      resolveActiveRecipe(internalNode.data.recipeId, internalNode.data.settings, internalNode.id);
     if (!recipe) return;
 
     const list = parsed.side === 'input' ? recipe.inputs : recipe.outputs;
@@ -375,9 +365,7 @@ export function GroupNodeIO({
 
     const { nodes, edges, nodesMap: latestNodesMap } = useFlowStore.getState();
     const internalHandleId =
-      ref.side === 'input'
-        ? inputProxyHandleIds[ref.index]
-        : outputProxyHandleIds[ref.index];
+      ref.side === 'input' ? inputProxyHandleIds[ref.index] : outputProxyHandleIds[ref.index];
     if (!internalHandleId) return;
 
     const parsed = parseHandleId(internalHandleId);
@@ -403,7 +391,10 @@ export function GroupNodeIO({
     );
     if (!hasEdges) return;
 
-    const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+    const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
+      string,
+      unknown
+    >;
     const targetRate = calculateBalancedRate(
       parsed.nodeId,
       parsed,
@@ -453,8 +444,11 @@ export function GroupNodeIO({
     const committedRecipe = proxyFlowData[flowDataIndex + 1] as Recipe | undefined;
     const recipe = hasFreshSolveSnapshot
       ? committedRecipe
-      : resolveActiveRecipe(internalNode.data.recipeId, internalNode.data.settings, internalNode.id) ??
-        committedRecipe;
+      : (resolveActiveRecipe(
+          internalNode.data.recipeId,
+          internalNode.data.settings,
+          internalNode.id,
+        ) ?? committedRecipe);
     const scaleFactor = recipe ? getNormalizedCycleTime(recipe.cycle_time, rateMode) : 1;
 
     const staleResolvedProduct = (proxyFlowData[flowDataIndex + 2] as string | undefined) ?? '';

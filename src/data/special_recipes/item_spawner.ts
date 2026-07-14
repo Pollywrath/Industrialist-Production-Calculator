@@ -34,7 +34,7 @@ export const item_spawner_01: SpecialRecipe = {
       name: 'Item Spawner',
       machine_id: 'm_item_spawner',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 0,
       inputs: [],
@@ -51,4 +51,3 @@ export const item_spawner_01: SpecialRecipe = {
     return recipe;
   },
 };
-

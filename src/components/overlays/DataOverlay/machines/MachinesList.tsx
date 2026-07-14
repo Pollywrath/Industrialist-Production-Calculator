@@ -7,10 +7,6 @@ interface MachinesListProps {
 
 export function MachinesList({ selectedMachineId, onSelectMachine }: MachinesListProps) {
   return (
-    <GenericDataList
-      type="machine"
-      selectedId={selectedMachineId}
-      onSelect={onSelectMachine}
-    />
+    <GenericDataList type="machine" selectedId={selectedMachineId} onSelect={onSelectMachine} />
   );
 }

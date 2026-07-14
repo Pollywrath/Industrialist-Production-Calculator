@@ -15,7 +15,7 @@ function isSpecialRecipe(value: unknown): value is SpecialRecipe {
 
 const modules = import.meta.glob(
   ['./special_recipes/*.ts', '!./special_recipes/nuclear_power_plant.ts'],
-  { eager: true }
+  { eager: true },
 );
 
 const BASE_SPECIAL_RECIPES: Record<string, SpecialRecipe> = {};

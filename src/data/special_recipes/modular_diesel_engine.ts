@@ -19,8 +19,7 @@ const getCylMap = (cyl: number): number => {
   return sum;
 };
 
-const getSinFactor = (cyl: number): number =>
-  Math.abs(Math.sin(0.1 * cyl)) + 0.5 + 0.005 * cyl;
+const getSinFactor = (cyl: number): number => Math.abs(Math.sin(0.1 * cyl)) + 0.5 + 0.005 * cyl;
 
 const getEfficiencyBase = (crankshafts: number): number => {
   let base = 99;
@@ -61,7 +60,8 @@ export const modular_diesel_engine_01: SpecialRecipe = {
   id: 'r_modular_diesel_engine_01',
   name: 'Modular Diesel Engine',
   machine_id: 'm_modular_diesel_engine',
-  description: 'Modular diesel engine. Configure components. Throttle and AFR dictate target torque. Cylinders scale base torque, fuel, air, and exhaust. Crankshafts/Flywheels drive efficiency (reducing exhaust). Generators convert torque to power; too much torque per generator causes overload penalties.',
+  description:
+    'Modular diesel engine. Configure components. Throttle and AFR dictate target torque. Cylinders scale base torque, fuel, air, and exhaust. Crankshafts/Flywheels drive efficiency (reducing exhaust). Generators convert torque to power; too much torque per generator causes overload penalties.',
   potentialInputs: ['p_refined_diesel', 'p_diesel', 'p_poor_quality_diesel', 'p_crude_diesel'],
   potentialOutputs: [],
   resolveSettings: (productId: string) => {
@@ -124,7 +124,10 @@ export const modular_diesel_engine_01: SpecialRecipe = {
         const cylMap = getCylMap(cylinders);
         const torque = cylMap * (throttle / 100) * (14 / afr);
         const bestG = getBestGenerators(torque);
-        const currentPower = clamp(Math.floor(getTorqueMapSum(Math.ceil(torque / generators)) * 2.6), 0, Infinity) * 30 * generators;
+        const currentPower =
+          clamp(Math.floor(getTorqueMapSum(Math.ceil(torque / generators)) * 2.6), 0, Infinity) *
+          30 *
+          generators;
         return `Generators (Optimal: ${bestG}) - Power: ${formatPower(currentPower)}`;
       },
     },
@@ -146,8 +149,7 @@ export const modular_diesel_engine_01: SpecialRecipe = {
         const loadRatio = (torque + 1) / (cylMap + 1);
         const sinFactor = getSinFactor(cylinders);
 
-        const airTotal =
-          cylinders * (sinFactor * loadRatio * 30 * loadFactor + flywheels * 0.2);
+        const airTotal = cylinders * (sinFactor * loadRatio * 30 * loadFactor + flywheels * 0.2);
         const airInputs = Math.ceil(airTotal / 200);
         return `Air Inputs (Min: ${airInputs})`;
       },
@@ -173,13 +175,7 @@ export const modular_diesel_engine_01: SpecialRecipe = {
 
         const efficiency = getEfficiency(crankshafts, flywheels);
         const exhaustTotal =
-          cylinders *
-          loadRatio *
-          sinFactor *
-          30 *
-          loadFactor *
-          loadFactor *
-          (1 - efficiency / 100);
+          cylinders * loadRatio * sinFactor * 30 * loadFactor * loadFactor * (1 - efficiency / 100);
         const exhausts = Math.max(1, Math.ceil(exhaustTotal / 200));
         return `Exhausts (Min: ${exhausts}) (Affected by crankshaft count)`;
       },
@@ -268,7 +264,7 @@ export const modular_diesel_engine_01: SpecialRecipe = {
       name: `${cylinders} Cyl, ${afr}:${throttle} MDE`,
       machine_id: 'm_modular_diesel_engine',
       cycle_time: 1,
-      power_consumption: -roundTo(power, 6),
+      power_use: -roundTo(power, 6),
       power_type: 'MV',
       pollution: roundTo(0.648 * exhaustsSetting, 6),
       inputs: [{ product_id: FUEL_MAP[fuelType].product_id, quantity: roundTo(fuelUsage, 6) }],
@@ -322,6 +318,32 @@ export const modular_diesel_engine_01: SpecialRecipe = {
       crankshafts +
       sidewaysCrankshafts +
       flywheels
+    );
+  },
+  computeMachineSpace: (settings) => {
+    const cylinders = (settings.cylinders as number) ?? 32;
+    const crankshafts = (settings.crankshafts as number) ?? 20;
+    const sidewaysCrankshafts = (settings.sideways_crankshafts as number) ?? 1;
+    const flywheels = (settings.flywheels as number) ?? 0;
+    const generators = (settings.generators as number) ?? 2;
+    const airInputs = (settings.air_inputs as number) ?? 1;
+    const exhausts = (settings.exhausts as number) ?? 1;
+    const fuelInputs = (settings.fuel_inputs as number) ?? 1;
+    const area = (id: string) => {
+      const machine = getMachine(id);
+      return machine ? machine.size.x * machine.size.y : 0;
+    };
+
+    return (
+      area('m_diesel_engine_controller') +
+      area('m_diesel_engine_cylinder') * cylinders +
+      area('m_diesel_engine_generator') * generators +
+      area('m_diesel_engine_exhaust') * exhausts +
+      area('m_diesel_engine_fuel_input') * fuelInputs +
+      area('m_diesel_engine_air_input') * airInputs +
+      area('m_diesel_engine_crankshaft') * crankshafts +
+      area('m_diesel_engine_crankshaft_sideways') * sidewaysCrankshafts +
+      area('m_diesel_engine_flywheel') * flywheels
     );
   },
 };

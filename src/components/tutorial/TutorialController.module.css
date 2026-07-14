@@ -44,15 +44,32 @@
 :global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow .react-flow__edge *),
 :global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow .react-flow__handle),
 :global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-node-id]),
-:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-rect-node-id]),
-:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-rect-node-id] *),
-:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-node-editor-button]),
-:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-node-editor-button] *),
-:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-group-node-id]),
-:global(body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-group-node-id] *) {
+:global(
+  body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-rect-node-id]
+),
+:global(
+  body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-rect-node-id] *
+),
+:global(
+  body.driver-active.tutorial-canvas-interaction-enabled
+    .react-flow
+    [data-tutorial-node-editor-button]
+),
+:global(
+  body.driver-active.tutorial-canvas-interaction-enabled
+    .react-flow
+    [data-tutorial-node-editor-button]
+    *
+),
+:global(
+  body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-group-node-id]
+),
+:global(
+  body.driver-active.tutorial-canvas-interaction-enabled .react-flow [data-tutorial-group-node-id] *
+) {
   pointer-events: auto;
 }
 
-:global(:not(body):has(>.driver-active-element)) {
+:global(:not(body):has(> .driver-active-element)) {
   overflow: visible !important;
 }

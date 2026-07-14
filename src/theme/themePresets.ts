@@ -162,8 +162,7 @@ function resolvePerceivableEdgeStroke(colors: PresetColors): string {
 
 function buildOverrides(colors: PresetColors): ThemeOverrideMap {
   const overlayAlpha = colors.mode === 'dark' ? 0.86 : 0.72;
-  const hoverOverlay =
-    colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
+  const hoverOverlay = colors.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)';
   const translucentDark =
     colors.mode === 'dark' ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.55)';
   const borderLightTranslucent =

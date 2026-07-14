@@ -32,7 +32,12 @@ function getInsertionAnchorNode(
   sourceSide: 'input' | 'output' | null,
   handleIndex: number | null,
 ): CanvasNode {
-  if (!isRecipeNode(existingNode) || !existingNode.data.groupId || !sourceSide || handleIndex === null) {
+  if (
+    !isRecipeNode(existingNode) ||
+    !existingNode.data.groupId ||
+    !sourceSide ||
+    handleIndex === null
+  ) {
     return existingNode;
   }
 

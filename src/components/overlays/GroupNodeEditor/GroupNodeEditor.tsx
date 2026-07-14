@@ -189,9 +189,7 @@ export function GroupNodeEditor({ initialData, nodeId, onClose }: GroupNodeEdito
     })),
   );
   const [label, setLabel] = useState(initialData.label);
-  const [inputProxyHandleIds, setInputProxyHandleIds] = useState(
-    initialData.inputProxyHandleIds,
-  );
+  const [inputProxyHandleIds, setInputProxyHandleIds] = useState(initialData.inputProxyHandleIds);
   const [outputProxyHandleIds, setOutputProxyHandleIds] = useState(
     initialData.outputProxyHandleIds,
   );

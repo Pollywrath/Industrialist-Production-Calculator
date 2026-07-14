@@ -112,7 +112,13 @@ export const logic_assembler_01: SpecialRecipe = {
   machine_id: 'm_logic_assembler',
   settings: settingDefinitions,
   potentialOutputs: [...CHIP_STAGES.map((c) => c.productId), 'p_microchip_scrap'],
-  potentialInputs: ['p_logic_plate', 'p_copper_wire', 'p_semiconductor', 'p_gold_wire', 'p_machine_oil'],
+  potentialInputs: [
+    'p_logic_plate',
+    'p_copper_wire',
+    'p_semiconductor',
+    'p_gold_wire',
+    'p_machine_oil',
+  ],
   resolveSettings: (productId) => {
     if (productId === 'p_machine_oil') {
       return { has_machine_oil: 'Yes' };
@@ -149,7 +155,7 @@ export const logic_assembler_01: SpecialRecipe = {
       name: 'Logic Assembler',
       machine_id: 'm_logic_assembler',
       cycle_time: cycleTime,
-      power_consumption: 3000000,
+      power_use: 3000000,
       power_type: 'MV',
       pollution: 0,
       inputs: inputsList,

@@ -17,7 +17,10 @@ export function getProductConnectionTargetKey(conn: SolverConnection): string {
   return `${conn.targetNodeId}:input:${conn.targetInputIndex}`;
 }
 
-function createDisjointSet(size: number): { find: (x: number) => number; union: (x: number, y: number) => void } {
+function createDisjointSet(size: number): {
+  find: (x: number) => number;
+  union: (x: number, y: number) => void;
+} {
   const parent = new Int32Array(size);
   const rank = new Int32Array(size);
 

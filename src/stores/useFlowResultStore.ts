@@ -100,7 +100,16 @@ const useFlowResultStore = create<FlowResultState>((set, get) => ({
   nodeRecipes: {},
   graphVersion: 0,
   dataDbVersion: 0,
-  setResults: (newResults, newEdgeFlows, newEdgeTemps, newInputTemps, newResolvedProducts, newNodeRecipes, newGraphVersion, newDataDbVersion) => {
+  setResults: (
+    newResults,
+    newEdgeFlows,
+    newEdgeTemps,
+    newInputTemps,
+    newResolvedProducts,
+    newNodeRecipes,
+    newGraphVersion,
+    newDataDbVersion,
+  ) => {
     const oldState = get();
     const oldResults = oldState.results;
     let hasChanged = oldResults.size !== newResults.size;
@@ -119,12 +128,24 @@ const useFlowResultStore = create<FlowResultState>((set, get) => ({
     const edgeFlowsChanged = !areRecordsEqual(oldState.edgeFlows, newEdgeFlows);
     const edgeTempsChanged = !areRecordsEqual(oldState.edgeTemps, newEdgeTemps);
     const inputTempsChanged = !areInputTempsEqual(oldState.inputTemps, newInputTemps);
-    const resolvedProductsChanged = !areRecordsEqual(oldState.resolvedProducts, newResolvedProducts);
+    const resolvedProductsChanged = !areRecordsEqual(
+      oldState.resolvedProducts,
+      newResolvedProducts,
+    );
     const nodeRecipesChanged = !areRecordsEqual(oldState.nodeRecipes, newNodeRecipes);
     const graphVersionChanged = oldState.graphVersion !== newGraphVersion;
     const dataDbVersionChanged = oldState.dataDbVersion !== newDataDbVersion;
 
-    if (hasChanged || edgeFlowsChanged || edgeTempsChanged || inputTempsChanged || resolvedProductsChanged || nodeRecipesChanged || graphVersionChanged || dataDbVersionChanged) {
+    if (
+      hasChanged ||
+      edgeFlowsChanged ||
+      edgeTempsChanged ||
+      inputTempsChanged ||
+      resolvedProductsChanged ||
+      nodeRecipesChanged ||
+      graphVersionChanged ||
+      dataDbVersionChanged
+    ) {
       set({
         results: updatedResults,
         edgeFlows: newEdgeFlows,

@@ -20,7 +20,7 @@ export const incinerator_01: SpecialRecipe = {
       name: 'Burn Item',
       machine_id: 'm_incinerator',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution,
       inputs: [{ product_id: resolvedFluid, quantity: 40 }],

@@ -36,6 +36,10 @@ export interface WikiBucketCacheRecord {
 let dbPromise: Promise<IDBPDatabase<SavesDB> | null> | null = null;
 
 function getDB(): Promise<IDBPDatabase<SavesDB> | null> {
+  if (typeof indexedDB === 'undefined') {
+    return Promise.resolve(null);
+  }
+
   if (!dbPromise) {
     dbPromise = openDB<SavesDB>(DB_NAME, DB_VERSION, {
       upgrade(db, oldVersion) {

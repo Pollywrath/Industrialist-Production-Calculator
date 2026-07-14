@@ -34,7 +34,7 @@ export const alloyer_ferroaluminium: SpecialRecipe = {
       name: 'Makes Molten Ferroaluminium Alloy',
       machine_id: 'm_alloyer',
       cycle_time: cycleTime,
-      power_consumption: 150000,
+      power_use: 150000,
       power_type: 'MV',
       pollution: 0.324,
       inputs: [
@@ -70,7 +70,7 @@ export const alloyer_purple_gold: SpecialRecipe = {
       name: 'Makes Molten Purple Gold',
       machine_id: 'm_alloyer',
       cycle_time: cycleTime,
-      power_consumption: 150000,
+      power_use: 150000,
       power_type: 'MV',
       pollution: 0.324,
       inputs: [
@@ -106,7 +106,7 @@ export const alloyer_brass: SpecialRecipe = {
       name: 'Makes Liquid Brass',
       machine_id: 'm_alloyer',
       cycle_time: cycleTime,
-      power_consumption: 150000,
+      power_use: 150000,
       power_type: 'MV',
       pollution: 0.324,
       inputs: [

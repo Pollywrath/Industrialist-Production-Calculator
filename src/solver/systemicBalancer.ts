@@ -1,4 +1,9 @@
-import type { NodeFlowResult, ReactFlowEdge, ReactFlowNode, SolverConnection } from '../types/solver';
+import type {
+  NodeFlowResult,
+  ReactFlowEdge,
+  ReactFlowNode,
+  SolverConnection,
+} from '../types/solver';
 import type { Recipe } from '../types/data';
 import type { HandleRef } from '../types/nodes';
 import { buildHandleId, parseHandleId } from '../utils/idGenerator';
@@ -155,14 +160,16 @@ function solveAnalytically(
     const connection = connections[i];
     if (connection.sourceNodeId === nodeId) {
       const neighborRate =
-        flowResults.get(connection.targetNodeId)?.inputFlows[connection.targetInputIndex]?.rate ?? 0;
+        flowResults.get(connection.targetNodeId)?.inputFlows[connection.targetInputIndex]?.rate ??
+        0;
       outputNeighborRates.set(
         connection.sourceOutputIndex,
         (outputNeighborRates.get(connection.sourceOutputIndex) ?? 0) + neighborRate,
       );
     } else if (connection.targetNodeId === nodeId) {
       const neighborRate =
-        flowResults.get(connection.sourceNodeId)?.outputFlows[connection.sourceOutputIndex]?.rate ?? 0;
+        flowResults.get(connection.sourceNodeId)?.outputFlows[connection.sourceOutputIndex]?.rate ??
+        0;
       inputNeighborRates.set(
         connection.targetInputIndex,
         (inputNeighborRates.get(connection.targetInputIndex) ?? 0) + neighborRate,
@@ -196,12 +203,14 @@ function solveAnalytically(
     let waste = 0;
 
     inputNeighborRates.forEach((neighborRate, index) => {
-      waste +=
-        Math.abs((resolvePortQuantity(recipe, 'input', index) * machineCount) / cycleTime - neighborRate);
+      waste += Math.abs(
+        (resolvePortQuantity(recipe, 'input', index) * machineCount) / cycleTime - neighborRate,
+      );
     });
     outputNeighborRates.forEach((neighborRate, index) => {
-      waste +=
-        Math.abs((resolvePortQuantity(recipe, 'output', index) * machineCount) / cycleTime - neighborRate);
+      waste += Math.abs(
+        (resolvePortQuantity(recipe, 'output', index) * machineCount) / cycleTime - neighborRate,
+      );
     });
 
     if (waste < bestWaste) {
@@ -226,7 +235,9 @@ function solveGoldenSection(
   globalSettings?: Record<string, unknown>,
 ): number {
   const nodeFlows = flowResults.get(nodeId);
-  const flowStatus = (ref.side === 'input' ? nodeFlows?.inputFlows : nodeFlows?.outputFlows)?.[ref.index];
+  const flowStatus = (ref.side === 'input' ? nodeFlows?.inputFlows : nodeFlows?.outputFlows)?.[
+    ref.index
+  ];
   if (!flowStatus) return 0;
 
   const localNodes = nodes.filter((node) => scope.nodeIds.has(node.id));
@@ -288,4 +299,3 @@ function solveGoldenSection(
 
   return Number(((a + b) / 2).toFixed(8));
 }
-

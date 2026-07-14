@@ -1,11 +1,16 @@
 import type { ProductType, Recipe } from './data';
+import type { ResearchInfrastructureStats } from '../utils/researchInfrastructure';
 
 export type SettingType = 'number' | 'select' | 'product';
 
 export interface BaseSettingDefinition {
   type: SettingType;
   label: string;
-  dynamicLabel?: (settings: Record<string, unknown>, globalSettings?: Record<string, unknown>) => string;
+  dynamicLabel?: (
+    settings: Record<string, unknown>,
+    globalSettings?: Record<string, unknown>,
+    context?: { researchInfrastructure: ResearchInfrastructureStats },
+  ) => string;
 }
 
 export interface NumberSettingDefinition extends BaseSettingDefinition {
@@ -68,6 +73,11 @@ export interface SpecialRecipe {
     nodeId?: string,
   ) => number;
   computeModelCount?: (
+    settings: Record<string, unknown>,
+    globalSettings?: Record<string, unknown>,
+    nodeId?: string,
+  ) => number;
+  computeMachineSpace?: (
     settings: Record<string, unknown>,
     globalSettings?: Record<string, unknown>,
     nodeId?: string,

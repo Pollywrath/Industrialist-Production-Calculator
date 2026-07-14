@@ -161,10 +161,7 @@ function normalizeTurnsFromRaw(
     const startY = pairIndex === 0 ? anchors.sourceY : laneYs[pairIndex - 1];
     const endY = pairIndex === pairCount - 1 ? anchors.targetY : laneYs[pairIndex];
 
-    normalizedTurns.push(
-      { x, y: startY },
-      { x, y: endY },
-    );
+    normalizedTurns.push({ x, y: startY }, { x, y: endY });
   }
 
   return normalizedTurns;
@@ -213,8 +210,7 @@ export function normalizeOrthogonalTurns(
   anchors: OrthogonalRouteAnchors,
 ): EdgeControlPoint[] {
   const finiteTurns = toFinitePoints(rawTurns);
-  const evenTurnCount =
-    finiteTurns.length % 2 === 0 ? finiteTurns.length : finiteTurns.length - 1;
+  const evenTurnCount = finiteTurns.length % 2 === 0 ? finiteTurns.length : finiteTurns.length - 1;
   const minimumTurnCount = getMinimumOrthogonalTurnCount(anchors);
 
   if (evenTurnCount < minimumTurnCount) {
@@ -462,10 +458,7 @@ function getPreferredDeletionPairStart(
     !isProtectedTurnIndex(turnIndex, turns.length, minimumTurnCount) &&
     !isProtectedTurnIndex(turnIndex + 1, turns.length, minimumTurnCount);
 
-  if (
-    canDeleteRight &&
-    arePointsAtSamePosition(turns[turnIndex], turns[turnIndex + 1])
-  ) {
+  if (canDeleteRight && arePointsAtSamePosition(turns[turnIndex], turns[turnIndex + 1])) {
     return turnIndex;
   }
   if (canDeleteLeft) return turnIndex - 1;

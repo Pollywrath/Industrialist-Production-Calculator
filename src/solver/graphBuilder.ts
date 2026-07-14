@@ -50,9 +50,10 @@ export function buildSolverGraph(
             const sourceOutput = sourceRecipe.outputs[sourceParsed.index];
             if (!sourceOutput) continue;
             const sourceMultiplier = getRateMultiplier(sourceRecipe.cycle_time, 'second');
-            const sourceScale = sourceOutput.independentOfMachineCount ? 1 : (sourceNode.data.machineCount ?? 1);
-            const sourceRate =
-              sourceOutput.quantity * sourceScale * sourceMultiplier;
+            const sourceScale = sourceOutput.independentOfMachineCount
+              ? 1
+              : (sourceNode.data.machineCount ?? 1);
+            const sourceRate = sourceOutput.quantity * sourceScale * sourceMultiplier;
             totalFlow += sourceRate;
           } else {
             const targetNode = nodesMap.get(edge.target);
@@ -71,9 +72,10 @@ export function buildSolverGraph(
             const targetInput = targetRecipe.inputs[targetParsed.index];
             if (!targetInput) continue;
             const targetMultiplier = getRateMultiplier(targetRecipe.cycle_time, 'second');
-            const targetScale = targetInput.independentOfMachineCount ? 1 : (targetNode.data.machineCount ?? 1);
-            const targetRate =
-              targetInput.quantity * targetScale * targetMultiplier;
+            const targetScale = targetInput.independentOfMachineCount
+              ? 1
+              : (targetNode.data.machineCount ?? 1);
+            const targetRate = targetInput.quantity * targetScale * targetMultiplier;
             totalFlow += targetRate;
           }
         }

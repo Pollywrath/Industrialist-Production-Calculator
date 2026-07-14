@@ -10,6 +10,8 @@ import { useNodeEditorStore } from './NodeEditorContext';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
+import { useDashboardStore } from '../../../stores/useDashboardStore';
+import type { ResearchInfrastructureStats } from '../../../utils/researchInfrastructure';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
 import { SearchDropdown } from '../../shared/SearchDropdown';
 import { buildHandleId } from '../../../utils/idGenerator';
@@ -30,6 +32,7 @@ interface SettingItemProps {
   updateSetting: (key: string, val: unknown) => void;
   resolvedSettings: Record<string, unknown>;
   globalSettings: Record<string, unknown>;
+  researchInfrastructure: ResearchInfrastructureStats;
 }
 
 function getProductOptions(def: ProductSettingDefinition) {
@@ -54,6 +57,7 @@ function SettingItem({
   updateSetting,
   resolvedSettings,
   globalSettings,
+  researchInfrastructure,
 }: SettingItemProps) {
   const handleId =
     inputIndex !== undefined
@@ -71,7 +75,7 @@ function SettingItem({
   const displayValue = isConnected && propagatedTemp !== undefined ? propagatedTemp : value;
 
   const labelText = def.dynamicLabel
-    ? def.dynamicLabel(resolvedSettings, globalSettings)
+    ? def.dynamicLabel(resolvedSettings, globalSettings, { researchInfrastructure })
     : def.label;
   const productOptions = def.type === 'product' ? getProductOptions(def) : [];
   const productDropdownOptions = productOptions.map((product) => ({
@@ -79,9 +83,7 @@ function SettingItem({
     label: product.name,
   }));
   const selectOptions =
-    def.type === 'select'
-      ? getSelectOptions(def, resolvedSettings, globalSettings)
-      : [];
+    def.type === 'select' ? getSelectOptions(def, resolvedSettings, globalSettings) : [];
   const selectDisplayValue =
     def.type === 'select' && selectOptions.some((opt) => opt.value === displayValue)
       ? displayValue
@@ -100,7 +102,10 @@ function SettingItem({
         : '';
 
   return (
-    <div className={styles['node-editor-group']} data-tutorial-node-editor={`setting-${settingKey}`}>
+    <div
+      className={styles['node-editor-group']}
+      data-tutorial-node-editor={`setting-${settingKey}`}
+    >
       <label>{labelText}</label>
       {def.type === 'number' && (
         <ValidatedNumberInput
@@ -120,7 +125,9 @@ function SettingItem({
         <select
           value={String(selectDisplayValue)}
           onChange={(e) => {
-            const selectedOption = selectOptions.find((opt) => String(opt.value) === e.target.value);
+            const selectedOption = selectOptions.find(
+              (opt) => String(opt.value) === e.target.value,
+            );
             updateSetting(settingKey, selectedOption?.value ?? e.target.value);
           }}
           className={styles['node-editor-input']}
@@ -157,6 +164,7 @@ export function SettingsEditor({ recipe, nodeId }: SettingsEditorProps) {
   const globalSettings = useGlobalSettingsStore((s) => s.settings);
   const edges = useFlowStore((s) => s.edges);
   const inputTempsMap = useFlowResultStore((s) => s.inputTemps[nodeId]);
+  const researchInfrastructure = useDashboardStore((s) => s.researchInfrastructure);
 
   if (!sr) {
     return (
@@ -185,9 +193,7 @@ export function SettingsEditor({ recipe, nodeId }: SettingsEditorProps) {
 
   return (
     <div className={styles['settings-editor']}>
-      {sr.description && (
-        <div className={styles['node-editor-description']}>{sr.description}</div>
-      )}
+      {sr.description && <div className={styles['node-editor-description']}>{sr.description}</div>}
       {Object.entries(sr.settings).map(([key, def]) => {
         const value = settings[key] ?? def.default;
         const inputIndex = settingKeyToInputIndex[key];
@@ -203,6 +209,7 @@ export function SettingsEditor({ recipe, nodeId }: SettingsEditorProps) {
             updateSetting={updateSetting}
             resolvedSettings={resolvedSettings}
             globalSettings={globalSettings as unknown as Record<string, unknown>}
+            researchInfrastructure={researchInfrastructure}
           />
         );
       })}

@@ -91,9 +91,7 @@ export function mergeSaveIntoCanvas(
         },
       });
     } else if (isRecipeNode(mergedNode)) {
-      const groupId = mergedNode.data.groupId
-        ? idMap.get(mergedNode.data.groupId)
-        : undefined;
+      const groupId = mergedNode.data.groupId ? idMap.get(mergedNode.data.groupId) : undefined;
       mergedNodes.push({
         ...mergedNode,
         data: {

@@ -42,8 +42,7 @@ export function NodeEditorProvider({
         );
       })();
 
-    const initialRecipe =
-      resolveActiveRecipe(recipe.id, initialSettings, nodeId) ?? recipe;
+    const initialRecipe = resolveActiveRecipe(recipe.id, initialSettings, nodeId) ?? recipe;
 
     return createStore<NodeEditorState>((set, get) => ({
       inputs: initialData.inputOrder ?? recipe.inputs.map((_, i) => i),

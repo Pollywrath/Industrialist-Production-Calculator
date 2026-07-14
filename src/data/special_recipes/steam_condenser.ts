@@ -83,7 +83,8 @@ export const steam_condenser_01: SpecialRecipe = {
   id: 'r_steam_condenser_01',
   name: 'Makes Distilled Water, Condensate',
   machine_id: 'm_steam_condenser',
-  description: 'Condenses low pressure steam back into condensate using distilled water as a coolant. Operating window: condensate temp must stay below half of steam temp (clamped 40°C - 100°C).',
+  description:
+    'Condenses low pressure steam back into condensate using distilled water as a coolant. Operating window: condensate temp must stay below half of steam temp (clamped 40°C - 100°C).',
   potentialInputs: ['p_distilled_water', 'p_low_pressure_steam'],
   potentialOutputs: ['p_distilled_water', 'p_condensate'],
   inputTemperatureSettings: {
@@ -136,7 +137,7 @@ export const steam_condenser_01: SpecialRecipe = {
       name: 'Makes Distilled Water, Condensate',
       machine_id: 'm_steam_condenser',
       cycle_time: 1,
-      power_consumption: 500000,
+      power_use: 500000,
       power_type: 'MV',
       pollution: 0,
       inputs: [

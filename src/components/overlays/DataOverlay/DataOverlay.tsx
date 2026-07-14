@@ -115,7 +115,11 @@ function DataOverlayModal() {
             <Database size={18} />
             <span>Data Manager</span>
           </div>
-          <button className={styles['data-close']} onClick={handleClose} data-tutorial-data-close="true">
+          <button
+            className={styles['data-close']}
+            onClick={handleClose}
+            data-tutorial-data-close="true"
+          >
             <X size={18} />
           </button>
         </div>

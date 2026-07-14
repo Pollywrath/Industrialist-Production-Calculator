@@ -20,7 +20,7 @@ const settingDefinitions = {
     label: 'Input Power',
     default: 100000,
     min: 0,
-    max: 240000000
+    max: 240000000,
   },
   coolant: {
     type: 'select' as const,
@@ -79,26 +79,26 @@ export const hv_transformer_01: SpecialRecipe = {
       name: direction === 'mv_to_hv' ? 'Converts MV to HV' : 'Converts HV to MV',
       machine_id: 'm_hv_transformer',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: inputType,
       powerEffects: [
         {
           power_type: inputType,
-          power_consumption: inputPower,
+          power_use: inputPower,
           label: 'Input',
         },
         {
           power_type: outputType,
-          power_consumption: -outputPower,
+          power_use: -outputPower,
           label: 'Output',
         },
       ],
       powerAccountingEffects: [
         {
           power_type: outputType,
-          power_consumption: -conversionLoss,
+          power_use: -conversionLoss,
           label: 'Conversion Loss',
-          accounting: 'production_delta',
+          accounting: 'output_delta',
         },
       ],
       pollution: 0,

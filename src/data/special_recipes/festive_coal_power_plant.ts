@@ -106,12 +106,15 @@ function evaluateCpp(rawState: CppState, controls: Controls, inputWaterTemp: num
   const air = airControl(controls);
   const exhaust = exhaustControl(controls);
 
-  const combinedPressure = Math.max(Math.sqrt(Math.max(0, state.temp)) / 10 + state.fireboxPressure, 1e-9);
-  const exhaustRequest = combinedPressure * exhaust / 2 * 1000;
+  const combinedPressure = Math.max(
+    Math.sqrt(Math.max(0, state.temp)) / 10 + state.fireboxPressure,
+    1e-9,
+  );
+  const exhaustRequest = ((combinedPressure * exhaust) / 2) * 1000;
   const exhaustOut = clamp(clamp(exhaustRequest, -1, state.exhaust + state.air), 0, Infinity);
-  const airIn = (1 / combinedPressure) * air / 4 * 3500 * 5;
+  const airIn = (((1 / combinedPressure) * air) / 4) * 3500 * 5;
   const totalGas = state.exhaust * 3 + state.air;
-  const exhaustFraction = totalGas > 0 ? state.exhaust * 3 / totalGas : 0;
+  const exhaustFraction = totalGas > 0 ? (state.exhaust * 3) / totalGas : 0;
 
   const exhaustRemoved = clamp(exhaustOut * exhaustFraction, 0, state.exhaust / 3);
   const airRemoved = clamp(exhaustOut * (1 - exhaustFraction), 0, state.air / 3);
@@ -122,11 +125,14 @@ function evaluateCpp(rawState: CppState, controls: Controls, inputWaterTemp: num
     (airIn + combinedPressure * 100000);
 
   const nextFireboxPressure =
-    (exhaustAfterAir * 2 + airAfterAir) * tempAfterAir * 0.0036 / 100000;
-  const steamPressureLevel = Math.max(Math.sqrt(Math.max(0, tempAfterAir)) / 10 + nextFireboxPressure, 1e-9);
+    ((exhaustAfterAir * 2 + airAfterAir) * tempAfterAir * 0.0036) / 100000;
+  const steamPressureLevel = Math.max(
+    Math.sqrt(Math.max(0, tempAfterAir)) / 10 + nextFireboxPressure,
+    1e-9,
+  );
 
-  const airExhaustRatio = exhaustAfterAir > 0 ? airAfterAir * 4 / exhaustAfterAir : 40;
-  const nominalBurn = steamPressureLevel / 2 * clamp(airExhaustRatio, 0.025, 40) * 1.6 * 1.6;
+  const airExhaustRatio = exhaustAfterAir > 0 ? (airAfterAir * 4) / exhaustAfterAir : 40;
+  const nominalBurn = (steamPressureLevel / 2) * clamp(airExhaustRatio, 0.025, 40) * 1.6 * 1.6;
   const airLimitedBurn = Math.min(nominalBurn, airAfterAir / 6.25);
   const burnCapacity = Math.max(0, airLimitedBurn);
   const actualBurn = Math.min(targetFeedBurn(controls), burnCapacity);
@@ -141,10 +147,15 @@ function evaluateCpp(rawState: CppState, controls: Controls, inputWaterTemp: num
     (tempAfterBurn - inputWaterTemp) * 0.9 * clamp(steamPressureLevel / 16, 0.1, 0.5);
   const pressureAdjustedHeat = heatTransfer * pressureFactor;
   const tempAfterWater =
-    (tempAfterBurn * 100000 * steamPressureLevel - WATER_FLOW * pressureAdjustedHeat * OUTPUT_PRESSURE) /
+    (tempAfterBurn * 100000 * steamPressureLevel -
+      WATER_FLOW * pressureAdjustedHeat * OUTPUT_PRESSURE) /
     (100000 * steamPressureLevel);
   const outputTemp = inputWaterTemp + pressureAdjustedHeat;
-  const nextTemp = clamp(tempAfterWater - (0.5 + sqr(tempAfterWater) / 1000000), AMBIENT_TEMP, Infinity);
+  const nextTemp = clamp(
+    tempAfterWater - (0.5 + sqr(tempAfterWater) / 1000000),
+    AMBIENT_TEMP,
+    Infinity,
+  );
 
   const next = sanitizeState({
     temp: nextTemp,
@@ -194,12 +205,7 @@ function residual(state: CppState, controls: Controls, inputWaterTemp: number): 
 
 function residualNorm(state: CppState, controls: Controls, inputWaterTemp: number): number {
   const r = residual(state, controls, inputWaterTemp);
-  return Math.sqrt(
-    sqr(r[0] / 1) +
-      sqr(r[1] / 50) +
-      sqr(r[2] / 50) +
-      sqr(r[3] / 0.01),
-  );
+  return Math.sqrt(sqr(r[0] / 1) + sqr(r[1] / 50) + sqr(r[2] / 50) + sqr(r[3] / 0.01));
 }
 
 function solveLinear4(matrix: number[][]): number[] | null {
@@ -419,15 +425,16 @@ function calculateSiloSteadyTemp(returnTemp: number, siloWater: number): number 
 
   const passiveCoolingShare = 1 - exchangeRate;
   const discriminant =
-    sqr(1600 * exchangeRate) +
-    4 * passiveCoolingShare * 1600 * exchangeRate * inputDelta;
+    sqr(1600 * exchangeRate) + 4 * passiveCoolingShare * 1600 * exchangeRate * inputDelta;
   const mixedDelta =
-    (-1600 * exchangeRate + Math.sqrt(Math.max(0, discriminant))) /
-    (2 * passiveCoolingShare);
-  const steadySiloTemp =
-    AMBIENT_TEMP + mixedDelta - sqr(mixedDelta) / 1600;
+    (-1600 * exchangeRate + Math.sqrt(Math.max(0, discriminant))) / (2 * passiveCoolingShare);
+  const steadySiloTemp = AMBIENT_TEMP + mixedDelta - sqr(mixedDelta) / 1600;
 
-  return clamp(steadySiloTemp, Math.min(AMBIENT_TEMP, safeReturnTemp), Math.max(AMBIENT_TEMP, safeReturnTemp));
+  return clamp(
+    steadySiloTemp,
+    Math.min(AMBIENT_TEMP, safeReturnTemp),
+    Math.max(AMBIENT_TEMP, safeReturnTemp),
+  );
 }
 
 function getCacheKey(controls: Controls, incomingWaterTemp: number, siloWater: number): string {
@@ -631,7 +638,7 @@ export const festive_coal_power_plant_01: SpecialRecipe = {
         : 'Tripped',
       machine_id: 'm_festive_coal_power_plant',
       cycle_time: 1,
-      power_consumption: roundTo(evalResult.cppPowerUse, 6),
+      power_use: roundTo(evalResult.cppPowerUse, 6),
       power_type: 'HV',
       pollution: 0,
       inputs: [

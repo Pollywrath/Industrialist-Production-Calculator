@@ -10,13 +10,8 @@
         "type": "recipe",
         "recipeId": "r_craft_assembler_06",
         "machineCount": 30,
-        "inputOrder": [
-          1,
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [1, 0],
+        "outputOrder": [0],
         "position": {
           "x": 4446,
           "y": 273
@@ -29,13 +24,8 @@
         "type": "recipe",
         "recipeId": "r_craft_assembler_05",
         "machineCount": 30,
-        "inputOrder": [
-          1,
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [1, 0],
+        "outputOrder": [0],
         "position": {
           "x": 3952,
           "y": 247
@@ -47,12 +37,8 @@
         "type": "recipe",
         "recipeId": "r_roller_03",
         "machineCount": 16,
-        "inputOrder": [
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [0],
+        "outputOrder": [0],
         "position": {
           "x": 3458,
           "y": 299
@@ -64,12 +50,8 @@
         "type": "recipe",
         "recipeId": "r_roller_04",
         "machineCount": 32,
-        "inputOrder": [
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [0],
+        "outputOrder": [0],
         "position": {
           "x": 3458,
           "y": 52
@@ -81,12 +63,8 @@
         "type": "recipe",
         "recipeId": "r_press_03",
         "machineCount": 32,
-        "inputOrder": [
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [0],
+        "outputOrder": [0],
         "position": {
           "x": 2964,
           "y": 52
@@ -98,13 +76,8 @@
         "type": "recipe",
         "recipeId": "r_blast_furnace_02",
         "machineCount": 10,
-        "inputOrder": [
-          1,
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [1, 0],
+        "outputOrder": [0],
         "position": {
           "x": 2470,
           "y": 195
@@ -116,13 +89,8 @@
         "type": "recipe",
         "recipeId": "r_blast_furnace_03",
         "machineCount": 10,
-        "inputOrder": [
-          1,
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [1, 0],
+        "outputOrder": [0],
         "position": {
           "x": 1976,
           "y": 104
@@ -135,9 +103,7 @@
         "recipeId": "r_coal_drill_01",
         "machineCount": 53.28,
         "inputOrder": [],
-        "outputOrder": [
-          0
-        ],
+        "outputOrder": [0],
         "position": {
           "x": 1482,
           "y": 247
@@ -149,12 +115,8 @@
         "type": "recipe",
         "recipeId": "r_grinder_03",
         "machineCount": 20.210526315789,
-        "inputOrder": [
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [0],
+        "outputOrder": [0],
         "position": {
           "x": 1482,
           "y": 0
@@ -167,9 +129,7 @@
         "recipeId": "r_iron_drill_01",
         "machineCount": 80.842105263158,
         "inputOrder": [],
-        "outputOrder": [
-          0
-        ],
+        "outputOrder": [0],
         "position": {
           "x": 988,
           "y": 0
@@ -181,12 +141,8 @@
         "type": "recipe",
         "recipeId": "r_industrial_plastic_molder_02",
         "machineCount": 8,
-        "inputOrder": [
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [0],
+        "outputOrder": [0],
         "position": {
           "x": 3952,
           "y": 572
@@ -198,13 +154,8 @@
         "type": "recipe",
         "recipeId": "r_plastic_production_facility_01",
         "machineCount": 6,
-        "inputOrder": [
-          1,
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [1, 0],
+        "outputOrder": [0],
         "position": {
           "x": 3458,
           "y": 546
@@ -216,13 +167,8 @@
         "type": "recipe",
         "recipeId": "r_plastic_refinery_02",
         "machineCount": 2,
-        "inputOrder": [
-          1,
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [1, 0],
+        "outputOrder": [0],
         "position": {
           "x": 2964,
           "y": 520
@@ -234,12 +180,8 @@
         "type": "recipe",
         "recipeId": "r_oxidation_plant_01",
         "machineCount": 0.666666666667,
-        "inputOrder": [
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [0],
+        "outputOrder": [0],
         "position": {
           "x": 2470,
           "y": 520
@@ -251,13 +193,8 @@
         "type": "recipe",
         "recipeId": "r_plastic_refinery_01",
         "machineCount": 4,
-        "inputOrder": [
-          1,
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [1, 0],
+        "outputOrder": [0],
         "position": {
           "x": 1976,
           "y": 494
@@ -270,9 +207,7 @@
         "recipeId": "r_oil_rig_01",
         "machineCount": 8.333333333333,
         "inputOrder": [],
-        "outputOrder": [
-          0
-        ],
+        "outputOrder": [0],
         "position": {
           "x": 1482,
           "y": 741
@@ -285,9 +220,7 @@
         "recipeId": "r_water_pump2_01",
         "machineCount": 0.666666666667,
         "inputOrder": [],
-        "outputOrder": [
-          0
-        ],
+        "outputOrder": [0],
         "position": {
           "x": 1482,
           "y": 494
@@ -299,14 +232,8 @@
         "type": "recipe",
         "recipeId": "r_steam_cracking_plant_01",
         "machineCount": 1.333333333333,
-        "inputOrder": [
-          1,
-          0
-        ],
-        "outputOrder": [
-          0,
-          1
-        ],
+        "inputOrder": [1, 0],
+        "outputOrder": [0, 1],
         "position": {
           "x": 2470,
           "y": 767
@@ -318,12 +245,8 @@
         "type": "recipe",
         "recipeId": "r_oxidation_plant_02",
         "machineCount": 1.111111111111,
-        "inputOrder": [
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [0],
+        "outputOrder": [0],
         "position": {
           "x": 2964,
           "y": 819
@@ -336,9 +259,7 @@
         "recipeId": "r_oil_rig_01",
         "machineCount": 7.407407407407,
         "inputOrder": [],
-        "outputOrder": [
-          0
-        ],
+        "outputOrder": [0],
         "position": {
           "x": 1976,
           "y": 1092
@@ -350,14 +271,8 @@
         "type": "recipe",
         "recipeId": "r_boiler_01",
         "machineCount": 0.740740740741,
-        "inputOrder": [
-          0,
-          1
-        ],
-        "outputOrder": [
-          0,
-          1
-        ],
+        "inputOrder": [0, 1],
+        "outputOrder": [0, 1],
         "position": {
           "x": 1976,
           "y": 793
@@ -369,13 +284,8 @@
         "type": "recipe",
         "recipeId": "r_gas_burner_01",
         "machineCount": 0.074074074074,
-        "inputOrder": [
-          1,
-          0
-        ],
-        "outputOrder": [
-          0
-        ],
+        "inputOrder": [1, 0],
+        "outputOrder": [0],
         "position": {
           "x": 1482,
           "y": 988
@@ -388,9 +298,7 @@
         "recipeId": "r_water_pump2_01",
         "machineCount": 0.37037037037,
         "inputOrder": [],
-        "outputOrder": [
-          0
-        ],
+        "outputOrder": [0],
         "position": {
           "x": 988,
           "y": 741
@@ -402,13 +310,8 @@
         "type": "recipe",
         "recipeId": "r_gas_refinery_01",
         "machineCount": 0.037037037037,
-        "inputOrder": [
-          0
-        ],
-        "outputOrder": [
-          1,
-          0
-        ],
+        "inputOrder": [0],
+        "outputOrder": [1, 0],
         "position": {
           "x": 988,
           "y": 988
@@ -420,14 +323,8 @@
         "type": "recipe",
         "recipeId": "r_condenser_01",
         "machineCount": 0.111111111111,
-        "inputOrder": [
-          0
-        ],
-        "outputOrder": [
-          0,
-          1,
-          2
-        ],
+        "inputOrder": [0],
+        "outputOrder": [0, 1, 2],
         "position": {
           "x": 494,
           "y": 910
@@ -440,9 +337,7 @@
         "recipeId": "r_natural_gas_well_01",
         "machineCount": 0.222222222222,
         "inputOrder": [],
-        "outputOrder": [
-          0
-        ],
+        "outputOrder": [0],
         "position": {
           "x": 0,
           "y": 962
@@ -454,9 +349,7 @@
         "type": "recipe",
         "recipeId": "r_van_depot_01",
         "machineCount": 1.882352941176,
-        "inputOrder": [
-          0
-        ],
+        "inputOrder": [0],
         "outputOrder": [],
         "position": {
           "x": 4940,

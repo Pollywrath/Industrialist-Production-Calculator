@@ -49,7 +49,12 @@ export type TutorialHighlight =
     }
   | { kind: 'recipe-card'; recipeId: string }
   | { kind: 'product-row'; productId: string }
-  | { kind: 'diagnostic'; status: 'deficiency' | 'excess'; productId: string; nodeAlias?: TutorialAlias }
+  | {
+      kind: 'diagnostic';
+      status: 'deficiency' | 'excess';
+      productId: string;
+      nodeAlias?: TutorialAlias;
+    }
   | { kind: 'node-editor'; id: string }
   | { kind: 'solver'; id: string }
   | { kind: 'save'; id: string }
@@ -64,7 +69,11 @@ export type TutorialAction =
   | { type: 'selector-tab'; tab: 'product' | 'machine' }
   | { type: 'selector-search'; query: string }
   | { type: 'selector-product'; productId: string }
-  | { type: 'selector-filter'; filter: 'producer' | 'consumer' | 'outlet' | 'heatPower'; value: boolean }
+  | {
+      type: 'selector-filter';
+      filter: 'producer' | 'consumer' | 'outlet' | 'heatPower';
+      value: boolean;
+    }
   | { type: 'selector-recipe'; recipeId: string; alias?: TutorialAlias }
   | { type: 'node-rect'; alias: TutorialAlias; side: 'input' | 'output'; index: number }
   | { type: 'node-handle-double'; alias: TutorialAlias; side: 'input' | 'output'; index: number }
@@ -80,7 +89,12 @@ export type TutorialAction =
   | { type: 'node-editor-machine-count'; alias: TutorialAlias; value: number }
   | { type: 'node-editor-setting'; key: string; value?: unknown }
   | { type: 'node-editor-apply'; mode: 'local' | 'chain' }
-  | { type: 'dashboard-diagnostic'; status: 'deficiency' | 'excess'; productId: string; nodeAlias?: TutorialAlias }
+  | {
+      type: 'dashboard-diagnostic';
+      status: 'deficiency' | 'excess';
+      productId: string;
+      nodeAlias?: TutorialAlias;
+    }
   | { type: 'target-node'; alias: TutorialAlias }
   | { type: 'node-multi-select'; aliases: TutorialAlias[] }
   | { type: 'group-create'; alias: TutorialAlias }

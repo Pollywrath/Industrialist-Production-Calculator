@@ -5,24 +5,128 @@ import type {
   RatioOptimizerConnection,
   RatioOptimizerNode,
   RatioOptimizerRequest,
+  RatioOptimizerWarmupRequest,
   RatioOptimizerResponse,
+  RatioOptimizerWorkerRequest,
+  RatioSolverProgress,
+  RatioSolverStageTelemetry,
+  RatioSolverTelemetry,
   RatioRootCauseDiagnostic,
   RatioUpstreamContributionDiagnostic,
+  RatioObjectiveWeights,
 } from './ratioOptimizer';
+import {
+  DEFAULT_RATIO_OBJECTIVE_WEIGHTS,
+  RATIO_OBJECTIVE_NORMALIZERS,
+  resolveRatioObjectiveWeights,
+} from './ratioOptimizer';
+import {
+  DEFAULT_SCIP_BUNDLE_PATH,
+  getScipAssetUrl,
+  normalizeScipBundlePath,
+  type ScipBundlePath,
+} from './scipBundle';
+import {
+  DEFAULT_OPTIMIZATION_CONFIGURATION,
+  OPTIMIZATION_METRIC_IDS,
+  OPTIMIZATION_NORMALIZERS,
+  sanitizeOptimizationConfiguration,
+  type OptimizationConfiguration,
+} from './optimizationConfig';
 
 interface SCIPRuntime {
   FS: {
     writeFile: (path: string, data: string) => void;
-    readFile: (path: string, options: { encoding: 'utf8' }) => string;
+    readFile: (path: string, options?: { encoding?: 'utf8' }) => string | Uint8Array;
     unlink: (path: string) => void;
   };
   main: (args: string[]) => void;
   stdoutLines: string[];
+  canDisableMilpPresolver?: boolean;
+  bundlePath: ScipBundlePath;
+  initMs: number;
+  initializedDuringLastRequest: boolean;
+  nativeRatioSolver?: NativeRatioSolver;
+}
+
+interface SCIPWasmModule {
+  FS: SCIPRuntime['FS'];
+  callMain: (args: string[]) => void;
+  UTF8ToString?: (ptr: number) => string;
+  _malloc?: (byteLength: number) => number;
+  _free?: (ptr: number) => void;
+  _industrialist_has_native_ratio_solver?: () => number;
+  _industrialist_free_string?: (ptr: number) => void;
+  _industrialist_free_result_buffer?: (ptr: number) => void;
+  _industrialist_native_abi_version?: () => number;
+  _industrialist_native_capabilities?: () => number;
+  _industrialist_start_ratio_job_f64?: (
+    payloadPtr: number,
+    payloadDoubleCount: number,
+    usePapiloReliabilityProfile: number,
+  ) => number;
+  _industrialist_get_ratio_job_state?: () => number;
+  _industrialist_get_ratio_job_stage?: () => number;
+  _industrialist_get_ratio_job_elapsed_ms?: () => number;
+  _industrialist_cancel_ratio_job?: () => number;
+  _industrialist_take_ratio_job_result?: () => number;
+  _industrialist_get_ratio_job_error?: () => number;
+  HEAPF64?: Float64Array;
+}
+
+type NativeResultStatus =
+  | 'optimal'
+  | 'cancelled'
+  | 'infeasible'
+  | 'unbounded'
+  | 'limit_reached_not_proven'
+  | 'numerical_failure'
+  | 'invalid_payload'
+  | 'internal_error';
+
+interface NativeBinaryResult {
+  status: NativeResultStatus;
+  error?: string;
+  telemetry: Partial<RatioSolverTelemetry>;
+  stageTelemetry: RatioSolverStageTelemetry[];
+  machineCountsByNode: Float64Array;
+  connectionFlows: Float64Array;
+  inputDeficits: Float64Array;
+}
+
+interface NativeRatioSolver {
+  solveTypedPayloadResult: (
+    payload: Float64Array,
+    progress?: ProgressReporter,
+  ) => Promise<NativeBinaryResult | null> | NativeBinaryResult | null;
+  cancelActiveSolve?: () => boolean;
+  getWasmMemoryBytes?: () => number | null;
+}
+
+type ProgressReporter = (progress: RatioSolverProgress) => void;
+
+type RatioObjectiveMode = 'legacy' | 'shortage' | 'sink_excess' | 'weighted' | 'machine_count';
+
+type RatioObjectiveBoundKey = 'shortage' | 'sinkExcess' | 'weighted';
+
+interface RatioMPSBuildOptions {
+  objective?: RatioObjectiveMode;
+  bounds?: Partial<Record<RatioObjectiveBoundKey, number>>;
+  valueScale?: number;
+  objectiveWeights?: RatioObjectiveWeights;
+}
+
+interface RatioObjectiveExpressions {
+  shortage: Map<string, number>;
+  sinkExcess: Map<string, number>;
+  weighted: Map<string, number>;
+  machineCount: Map<string, number>;
 }
 
 interface RatioMPSModel {
   mpsString: string;
   varNameMap: Map<string, string>;
+  objectiveExpressions: RatioObjectiveExpressions;
 }
 
 type MPSRowType = 'E' | 'L' | 'G';
@@ -35,58 +139,702 @@ interface MPSRow {
 
 let runtimePromise: Promise<SCIPRuntime> | null = null;
 let runtimeKey: string | null = null;
+let activeRuntime: SCIPRuntime | null = null;
+const cancelledRequestIds = new Set<number>();
+let activeWorkerRequestId: number | undefined;
 
-function getRuntimeKey(origin: string, version?: string): string {
-  return `${origin}::${version ?? ''}`;
+const STAGE_BOUND_ABSOLUTE_TOLERANCE = 1e-6;
+const STAGE_BOUND_RELATIVE_TOLERANCE = 1e-6;
+const STAGE_ZERO_BOUND_TOLERANCE = 1e-9;
+const NATIVE_BINARY_RESULT_MAGIC = 444926465;
+const NATIVE_BINARY_RESULT_VERSION = 2;
+const NATIVE_BINARY_RESULT_LEGACY_VERSION = 1;
+const NATIVE_BINARY_RESULT_HEADER_DOUBLES = 28;
+const NATIVE_BINARY_RESULT_LEGACY_HEADER_DOUBLES = 20;
+const NATIVE_PAYLOAD_F64_MAGIC = 444926466;
+const NATIVE_PAYLOAD_F64_VERSION = 4;
+const NATIVE_PAYLOAD_F64_HEADER_DOUBLES = 39;
+const NATIVE_PAYLOAD_F64_NODE_DOUBLES = 13;
+const NATIVE_PAYLOAD_F64_INPUT_DOUBLES = 2;
+const NATIVE_PAYLOAD_F64_OUTPUT_DOUBLES = 2;
+const NATIVE_PAYLOAD_F64_CONNECTION_DOUBLES = 4;
+const NATIVE_ABI_V2_REQUIRED_CAPABILITIES = 31;
+const SCALED_DEFICIENCY_EPSILON = 1e-6;
+const ZERO_RATE_CONNECTION_EPSILON = 1e-12;
+function addExpressionCoeff(expression: Map<string, number>, varName: string, coeff: number): void {
+  if (coeff === 0) return;
+  expression.set(varName, (expression.get(varName) ?? 0) + coeff);
 }
 
-async function getOrCreateRuntime(origin: string, version?: string): Promise<SCIPRuntime> {
-  const nextKey = getRuntimeKey(origin, version);
+function getTargetMachineLowerBound(node: RatioOptimizerNode): number | null {
+  if (!node.isTarget) return null;
+  if (!Number.isFinite(node.currentMachineCount)) return 0;
+  return Math.max(0, node.currentMachineCount);
+}
+
+function getStageBoundRhs(value: number): number {
+  const normalizedValue = Math.max(0, value);
+  if (normalizedValue <= STAGE_ZERO_BOUND_TOLERANCE) return 0;
+  return (
+    normalizedValue +
+    Math.max(
+      STAGE_BOUND_ABSOLUTE_TOLERANCE,
+      Math.abs(normalizedValue) * STAGE_BOUND_RELATIVE_TOLERANCE,
+    )
+  );
+}
+
+function getObjectiveExpression(
+  objective: RatioObjectiveMode,
+  expressions: RatioObjectiveExpressions,
+  legacyExpression: Map<string, number>,
+): Map<string, number> {
+  switch (objective) {
+    case 'legacy':
+      return legacyExpression;
+    case 'shortage':
+      return expressions.shortage;
+    case 'sink_excess':
+      return expressions.sinkExcess;
+    case 'weighted':
+      return expressions.weighted;
+    case 'machine_count':
+      return expressions.machineCount;
+  }
+}
+
+function getNoTargetComponentNodeIds(
+  nodes: RatioOptimizerNode[],
+  connections: RatioOptimizerConnection[],
+  preservePowerOutputComponents = false,
+): Set<string> {
+  const adjacency = new Map<string, string[]>();
+  for (const node of nodes) {
+    adjacency.set(node.id, []);
+  }
+
+  for (const connection of connections) {
+    adjacency.get(connection.sourceNodeId)?.push(connection.targetNodeId);
+    adjacency.get(connection.targetNodeId)?.push(connection.sourceNodeId);
+  }
+
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const visited = new Set<string>();
+  const noTargetComponentNodeIds = new Set<string>();
+
+  for (const node of nodes) {
+    if (visited.has(node.id)) continue;
+
+    const componentNodeIds: string[] = [];
+    const stack = [node.id];
+    let hasTarget = false;
+    let hasPowerOutput = false;
+    visited.add(node.id);
+
+    while (stack.length > 0) {
+      const nodeId = stack.pop()!;
+      componentNodeIds.push(nodeId);
+      const componentNode = nodeById.get(nodeId);
+      hasTarget ||= !!componentNode?.isTarget;
+      hasPowerOutput ||= (componentNode?.powerOutput ?? 0) > 0;
+
+      for (const nextNodeId of adjacency.get(nodeId) ?? []) {
+        if (visited.has(nextNodeId)) continue;
+        visited.add(nextNodeId);
+        stack.push(nextNodeId);
+      }
+    }
+
+    if (!hasTarget && !(preservePowerOutputComponents && hasPowerOutput)) {
+      for (const nodeId of componentNodeIds) {
+        noTargetComponentNodeIds.add(nodeId);
+      }
+    }
+  }
+
+  return noTargetComponentNodeIds;
+}
+
+interface RatioPresolveStats {
+  originalNodeCount: number;
+  originalConnectionCount: number;
+  nodeCount: number;
+  connectionCount: number;
+  removedNodeCount: number;
+  removedConnectionCount: number;
+  removedInvalidConnectionCount: number;
+  removedZeroDemandConnectionCount: number;
+  removedNoTargetConnectionCount: number;
+}
+
+interface RatioPresolvedModel {
+  nodes: RatioOptimizerNode[];
+  connections: RatioOptimizerConnection[];
+  stats: RatioPresolveStats;
+}
+
+function getConnectionEndpoints(
+  nodesById: Map<string, RatioOptimizerNode>,
+  connection: RatioOptimizerConnection,
+): {
+  sourceNode: RatioOptimizerNode;
+  targetNode: RatioOptimizerNode;
+  sourceOutput: RatioOptimizerNode['outputs'][number];
+  targetInput: RatioOptimizerNode['inputs'][number];
+} | null {
+  const sourceNode = nodesById.get(connection.sourceNodeId);
+  const targetNode = nodesById.get(connection.targetNodeId);
+  if (!sourceNode || !targetNode) return null;
+
+  const sourceOutput = sourceNode.outputs[connection.sourceOutputIndex];
+  const targetInput = targetNode.inputs[connection.targetInputIndex];
+  if (!sourceOutput || !targetInput) return null;
+
+  return {
+    sourceNode,
+    targetNode,
+    sourceOutput,
+    targetInput,
+  };
+}
+
+function isEffectivelyZeroRate(value: number): boolean {
+  return Number.isFinite(value) && Math.abs(value) <= ZERO_RATE_CONNECTION_EPSILON;
+}
+
+function presolveRatioOptimizerModel(
+  nodes: RatioOptimizerNode[],
+  connections: RatioOptimizerConnection[],
+  preservePowerOutputComponents: boolean,
+): RatioPresolvedModel {
+  const nodesById = new Map(nodes.map((node) => [node.id, node]));
+  const semanticallyActiveConnections: RatioOptimizerConnection[] = [];
+  let removedInvalidConnectionCount = 0;
+  let removedZeroDemandConnectionCount = 0;
+
+  for (const connection of connections) {
+    const endpoints = getConnectionEndpoints(nodesById, connection);
+    if (!endpoints) {
+      removedInvalidConnectionCount += 1;
+      continue;
+    }
+
+    if (isEffectivelyZeroRate(endpoints.targetInput.quantity)) {
+      removedZeroDemandConnectionCount += 1;
+      continue;
+    }
+
+    semanticallyActiveConnections.push(connection);
+  }
+
+  const noTargetComponentNodeIds = getNoTargetComponentNodeIds(
+    nodes,
+    semanticallyActiveConnections,
+    preservePowerOutputComponents,
+  );
+  const keptNodeIds = new Set<string>();
+  const presolvedNodes: RatioOptimizerNode[] = [];
+  for (const node of nodes) {
+    if (noTargetComponentNodeIds.has(node.id)) continue;
+    keptNodeIds.add(node.id);
+    presolvedNodes.push(node);
+  }
+
+  const presolvedConnections: RatioOptimizerConnection[] = [];
+  let removedNoTargetConnectionCount = 0;
+  for (const connection of semanticallyActiveConnections) {
+    if (!keptNodeIds.has(connection.sourceNodeId) || !keptNodeIds.has(connection.targetNodeId)) {
+      removedNoTargetConnectionCount += 1;
+      continue;
+    }
+    presolvedConnections.push(connection);
+  }
+
+  const removedNodeCount = nodes.length - presolvedNodes.length;
+  const removedConnectionCount = connections.length - presolvedConnections.length;
+
+  return {
+    nodes: presolvedNodes,
+    connections: presolvedConnections,
+    stats: {
+      originalNodeCount: nodes.length,
+      originalConnectionCount: connections.length,
+      nodeCount: presolvedNodes.length,
+      connectionCount: presolvedConnections.length,
+      removedNodeCount,
+      removedConnectionCount,
+      removedInvalidConnectionCount,
+      removedZeroDemandConnectionCount,
+      removedNoTargetConnectionCount,
+    },
+  };
+}
+
+function didPresolveChangeModel(stats: RatioPresolveStats): boolean {
+  return stats.removedNodeCount > 0 || stats.removedConnectionCount > 0;
+}
+
+function attachPresolveTelemetry(
+  response: RatioOptimizerResponse,
+  stats: RatioPresolveStats,
+): void {
+  const telemetry = response.telemetry;
+  if (!telemetry) return;
+
+  response.telemetry = {
+    ...telemetry,
+    presolveOriginalNodeCount: stats.originalNodeCount,
+    presolveOriginalConnectionCount: stats.originalConnectionCount,
+    presolveNodeCount: stats.nodeCount,
+    presolveConnectionCount: stats.connectionCount,
+    presolveRemovedNodeCount: stats.removedNodeCount,
+    presolveRemovedConnectionCount: stats.removedConnectionCount,
+    presolveRemovedInvalidConnectionCount: stats.removedInvalidConnectionCount,
+    presolveRemovedZeroDemandConnectionCount: stats.removedZeroDemandConnectionCount,
+    presolveRemovedNoTargetConnectionCount: stats.removedNoTargetConnectionCount,
+  };
+}
+
+function buildPresolvedEmptyResponse(
+  runtime: SCIPRuntime,
+  originalNodes: RatioOptimizerNode[],
+): RatioOptimizerResponse {
+  const machineCounts: Record<string, number> = {};
+  for (const node of originalNodes) {
+    machineCounts[node.id] = 0;
+  }
+
+  return {
+    feasible: true,
+    machineCounts,
+    telemetry: {
+      solver: runtime.nativeRatioSolver ? 'native' : 'mps',
+      bundlePath: runtime.bundlePath,
+      initializedDuringSolve: runtime.initializedDuringLastRequest,
+      initMs: runtime.initMs,
+      solveMs: 0,
+      variableCount: 0,
+      constraintCount: 0,
+      nonzeroCount: 0,
+      stageTelemetry: [
+        { name: 'shortage', objectiveValue: 0, elapsedMs: 0 },
+        { name: 'weighted', objectiveValue: 0, elapsedMs: 0 },
+        { name: 'machine count', objectiveValue: 0, elapsedMs: 0 },
+      ],
+    },
+  };
+}
+
+function getRuntimeKey(origin: string, bundlePath: ScipBundlePath, version?: string): string {
+  return getScipAssetUrl(origin, 'scip.js', bundlePath, version);
+}
+
+function getNativeProfileLabel(profileCode: number): string {
+  switch (profileCode) {
+    case 1:
+      return 'soplex_direct';
+    case 2:
+      return 'reusable_scip';
+    case 3:
+      return 'fresh_scip';
+    case 4:
+      return 'scip_rounded_milp';
+    default:
+      return 'unknown';
+  }
+}
+
+function getNativeResultStatus(statusCode: number): NativeResultStatus {
+  switch (statusCode) {
+    case 1:
+      return 'optimal';
+    case 2:
+      return 'cancelled';
+    case 3:
+      return 'infeasible';
+    case 4:
+      return 'unbounded';
+    case 5:
+      return 'limit_reached_not_proven';
+    case 6:
+      return 'numerical_failure';
+    case 7:
+      return 'invalid_payload';
+    case 8:
+    default:
+      return 'internal_error';
+  }
+}
+
+function getNativeBinaryStageLabel(stageCode: number): string {
+  switch (stageCode) {
+    case 1:
+      return 'shortage';
+    case 2:
+      return 'sink excess';
+    case 3:
+      return 'objective tier 1';
+    case 4:
+      return 'objective tier 2';
+    case 5:
+      return 'objective tier 3';
+    case 6:
+      return 'machine count';
+    case 7:
+      return 'infinite machine cost';
+    default:
+      return 'unknown';
+  }
+}
+
+function readNativeBinaryResultBuffer(scip: SCIPWasmModule, resultPtr: number): NativeBinaryResult {
+  const heap = scip.HEAPF64;
+  if (!heap) {
+    throw new Error('Native ratio solver exposed binary results without a Float64 heap view.');
+  }
+  if (resultPtr % Float64Array.BYTES_PER_ELEMENT !== 0) {
+    throw new Error('Native ratio solver returned an unaligned binary result pointer.');
+  }
+
+  const baseIndex = resultPtr / Float64Array.BYTES_PER_ELEMENT;
+  const magic = heap[baseIndex];
+  const totalDoubles = heap[baseIndex + 1];
+  const version = heap[baseIndex + 2];
+  if (magic !== NATIVE_BINARY_RESULT_MAGIC) {
+    throw new Error(`Native binary result magic mismatch: ${magic}.`);
+  }
+  if (version !== NATIVE_BINARY_RESULT_VERSION && version !== NATIVE_BINARY_RESULT_LEGACY_VERSION) {
+    throw new Error(`Unsupported native binary result version: ${version}.`);
+  }
+  const headerDoubles =
+    version === NATIVE_BINARY_RESULT_VERSION
+      ? NATIVE_BINARY_RESULT_HEADER_DOUBLES
+      : NATIVE_BINARY_RESULT_LEGACY_HEADER_DOUBLES;
+  if (
+    !Number.isInteger(totalDoubles) ||
+    totalDoubles < headerDoubles ||
+    baseIndex + totalDoubles > heap.length
+  ) {
+    throw new Error(`Invalid native binary result length: ${totalDoubles}.`);
+  }
+
+  const values = heap.slice(baseIndex, baseIndex + totalDoubles);
+  const status = getNativeResultStatus(values[3]);
+
+  const stageCount = values[15];
+  const nodeCount = values[16];
+  const connectionCount = values[17];
+  const inputValueCount = values[18];
+  if (
+    !Number.isInteger(stageCount) ||
+    stageCount < 0 ||
+    !Number.isInteger(nodeCount) ||
+    nodeCount < 0 ||
+    !Number.isInteger(connectionCount) ||
+    connectionCount < 0 ||
+    !Number.isInteger(inputValueCount) ||
+    inputValueCount < 0
+  ) {
+    throw new Error('Native binary result contained invalid section counts.');
+  }
+  const expectedDoubles =
+    headerDoubles + stageCount * 3 + nodeCount + connectionCount + inputValueCount;
+  if (!Number.isSafeInteger(expectedDoubles) || expectedDoubles !== values.length) {
+    throw new Error('Native binary result section lengths did not match the buffer length.');
+  }
+
+  let offset = headerDoubles;
+  const stageTelemetry: RatioSolverStageTelemetry[] = [];
+  for (let i = 0; i < stageCount; i += 1) {
+    stageTelemetry.push({
+      name: getNativeBinaryStageLabel(values[offset]),
+      objectiveValue: values[offset + 1],
+      elapsedMs: values[offset + 2],
+    });
+    offset += 3;
+  }
+
+  const machineCountsByNode = values.slice(offset, offset + nodeCount);
+  offset += nodeCount;
+  const connectionFlows = values.slice(offset, offset + connectionCount);
+  offset += connectionCount;
+  const inputDeficits = values.slice(offset, offset + inputValueCount);
+  offset += inputValueCount;
+
+  if (offset !== values.length)
+    throw new Error('Native binary result parsing did not consume its buffer.');
+
+  return {
+    status,
+    telemetry: {
+      solver: 'native',
+      profileUsed: getNativeProfileLabel(values[4]),
+      nativeCallMs: values[5],
+      nativeModelBuildMs: values[6],
+      variableCount: values[7],
+      constraintCount: values[8],
+      nonzeroCount: values[9],
+      valueScale: values[10],
+      minCoefficient: values[11],
+      maxCoefficient: values[12],
+      minFiniteBound: values[13],
+      maxFiniteBound: values[14],
+      nativePayloadParseMs: values[19],
+      nativeResultDoubles: totalDoubles,
+      nativeStatus: status,
+      mipNodeCount: version === NATIVE_BINARY_RESULT_VERSION ? values[20] : undefined,
+      lpIterations: version === NATIVE_BINARY_RESULT_VERSION ? values[21] : undefined,
+      primalBound: version === NATIVE_BINARY_RESULT_VERSION ? values[22] : undefined,
+      dualBound: version === NATIVE_BINARY_RESULT_VERSION ? values[23] : undefined,
+      mipGap: version === NATIVE_BINARY_RESULT_VERSION ? values[24] : undefined,
+      roundedVariableCount: version === NATIVE_BINARY_RESULT_VERSION ? values[25] : undefined,
+    },
+    stageTelemetry,
+    machineCountsByNode,
+    connectionFlows,
+    inputDeficits,
+  };
+}
+
+export function createNativeRatioSolver(
+  scip: SCIPWasmModule,
+  usePapiloReliabilityProfile: boolean,
+): NativeRatioSolver | undefined {
+  if (
+    typeof scip._industrialist_has_native_ratio_solver !== 'function' ||
+    scip._industrialist_has_native_ratio_solver() !== 1 ||
+    typeof scip._industrialist_free_string !== 'function' ||
+    typeof scip.UTF8ToString !== 'function' ||
+    typeof scip._malloc !== 'function' ||
+    typeof scip._free !== 'function' ||
+    typeof scip._industrialist_free_result_buffer !== 'function' ||
+    !(scip.HEAPF64 instanceof Float64Array)
+  ) {
+    return undefined;
+  }
+
+  const canRunAsyncJob =
+    scip._industrialist_native_abi_version?.() === 2 &&
+    ((scip._industrialist_native_capabilities?.() ?? 0) & NATIVE_ABI_V2_REQUIRED_CAPABILITIES) ===
+      NATIVE_ABI_V2_REQUIRED_CAPABILITIES &&
+    typeof scip._industrialist_start_ratio_job_f64 === 'function' &&
+    typeof scip._industrialist_get_ratio_job_state === 'function' &&
+    typeof scip._industrialist_get_ratio_job_stage === 'function' &&
+    typeof scip._industrialist_get_ratio_job_elapsed_ms === 'function' &&
+    typeof scip._industrialist_cancel_ratio_job === 'function' &&
+    typeof scip._industrialist_take_ratio_job_result === 'function' &&
+    typeof scip._industrialist_get_ratio_job_error === 'function';
+  if (!canRunAsyncJob) return undefined;
+
+  const getWasmMemoryBytes = () => scip.HEAPF64?.buffer.byteLength ?? null;
+
+  return {
+    getWasmMemoryBytes,
+    cancelActiveSolve: () => scip._industrialist_cancel_ratio_job!() === 1,
+    solveTypedPayloadResult: async (payload: Float64Array, progress?: ProgressReporter) => {
+      const byteLength = payload.byteLength;
+      let payloadPtr = scip._malloc!(byteLength);
+      if (!payloadPtr) {
+        throw new Error('Failed to allocate WASM memory for native ratio payload.');
+      }
+
+      let resultPtr = 0;
+      try {
+        const heap = scip.HEAPF64;
+        if (!(heap instanceof Float64Array)) {
+          throw new Error('Native ratio solver typed payload path requires a Float64 heap view.');
+        }
+        if (payloadPtr % Float64Array.BYTES_PER_ELEMENT !== 0) {
+          throw new Error('Allocated native ratio payload pointer was not Float64-aligned.');
+        }
+
+        heap.set(payload, payloadPtr / Float64Array.BYTES_PER_ELEMENT);
+
+        const started = scip._industrialist_start_ratio_job_f64!(
+          payloadPtr,
+          payload.length,
+          usePapiloReliabilityProfile ? 1 : 0,
+        );
+        if (started !== 1) {
+          throw new Error('Native ratio solver could not start an asynchronous job.');
+        }
+        // start() owns a native copy, so the transient JS-to-WASM buffer can go now.
+        scip._free!(payloadPtr);
+        payloadPtr = 0;
+
+        let lastStage = -1;
+        while (true) {
+          const state = scip._industrialist_get_ratio_job_state!();
+          const stage = scip._industrialist_get_ratio_job_stage!();
+          if (stage !== lastStage) {
+            lastStage = stage;
+            const stageMessages: Record<number, string> = {
+              0: 'Preparing the optimization model.',
+              1: 'Satisfying connected-input shortages.',
+              2: 'Balancing excess routed into sinks.',
+              3: 'Optimizing Priority 1.',
+              4: 'Optimizing Priority 2.',
+              5: 'Optimizing Priority 3.',
+              6: 'Reducing the final machine count.',
+              7: 'Finalizing the optimized ratios.',
+            };
+            progress?.({
+              phase: stage > 6 ? 'finalizing' : stage === 0 ? 'building' : 'solving',
+              message: stageMessages[stage] ?? 'Optimizing production ratios.',
+              solver: 'native',
+              elapsedMs: scip._industrialist_get_ratio_job_elapsed_ms!(),
+            });
+          }
+
+          if (state === 2) break;
+          if (state !== 1) {
+            throw new Error(`Native ratio job entered unexpected state ${state}.`);
+          }
+          await new Promise<void>((resolve) => setTimeout(resolve, 16));
+        }
+
+        const errorPtr = scip._industrialist_get_ratio_job_error!();
+        let nativeError = '';
+        try {
+          if (errorPtr) nativeError = scip.UTF8ToString!(errorPtr);
+        } finally {
+          if (errorPtr) scip._industrialist_free_string!(errorPtr);
+        }
+
+        resultPtr = scip._industrialist_take_ratio_job_result!();
+        if (!resultPtr) {
+          throw new Error(nativeError || 'Native ratio job returned no result buffer.');
+        }
+        const result = readNativeBinaryResultBuffer(scip, resultPtr);
+        if (nativeError) result.error = nativeError;
+        return result;
+      } finally {
+        if (resultPtr) {
+          scip._industrialist_free_result_buffer!(resultPtr);
+        }
+        if (payloadPtr) scip._free!(payloadPtr);
+      }
+    },
+  };
+}
+
+async function getOrCreateRuntime(
+  origin: string,
+  requestedBundlePath = DEFAULT_SCIP_BUNDLE_PATH,
+  version?: string,
+  progress?: ProgressReporter,
+): Promise<SCIPRuntime> {
+  if (typeof SharedArrayBuffer === 'undefined' || globalThis.crossOriginIsolated !== true) {
+    throw new Error(
+      'The native ratio solver requires cross-origin isolation. Serve the app with ' +
+        'Cross-Origin-Opener-Policy: same-origin and ' +
+        'Cross-Origin-Embedder-Policy: require-corp.',
+    );
+  }
+  const bundlePath = normalizeScipBundlePath(requestedBundlePath);
+  const nextKey = getRuntimeKey(origin, bundlePath, version);
   if (runtimePromise && runtimeKey === nextKey) {
-    return runtimePromise;
+    const runtime = await runtimePromise;
+    activeRuntime = runtime;
+    runtime.initializedDuringLastRequest = false;
+    return runtime;
   }
 
   runtimeKey = nextKey;
+  const initStart = performance.now();
   runtimePromise = (async () => {
-    const versionSuffix = version ? `?v=${version}` : '';
-    const scipUrl = `${origin}/scip/scip.js${versionSuffix}`;
+    progress?.({
+      phase: 'loading',
+      message: `Loading SCIP bundle '${bundlePath}'.`,
+      solver: 'unknown',
+      elapsedMs: 0,
+    });
+    const scipUrl = getScipAssetUrl(origin, 'scip.js', bundlePath, version);
     const scipModule = await import(/* @vite-ignore */ scipUrl);
     const createSCIP = scipModule.default;
 
     const stdoutLines: string[] = [];
-    const scip = await createSCIP({
-      locateFile: (file: string) => `${origin}/scip/${file}${versionSuffix}`,
+    progress?.({
+      phase: 'loading',
+      message: 'Instantiating SCIP WASM runtime and worker pool.',
+      solver: 'unknown',
+      elapsedMs: performance.now() - initStart,
+    });
+    const scip = (await createSCIP({
+      locateFile: (file: string) => getScipAssetUrl(origin, file, bundlePath, version),
       print: (text: string) => {
         stdoutLines.push(text);
       },
       printErr: (text: string) => {
         stdoutLines.push(text);
       },
+    })) as SCIPWasmModule;
+    const canDisableMilpPresolver = false;
+    const nativeRatioSolver = createNativeRatioSolver(scip, canDisableMilpPresolver);
+    if (!nativeRatioSolver?.solveTypedPayloadResult || !nativeRatioSolver.cancelActiveSolve) {
+      throw new Error(
+        'The canonical SCIP bundle is missing native ABI v2 capabilities. ' +
+          'Rebuild public/scip from tools/scip-wasm before running the ratio optimizer.',
+      );
+    }
+    const initMs = performance.now() - initStart;
+    progress?.({
+      phase: 'ready',
+      message: 'Native SCIP ratio runtime is ready.',
+      solver: 'native',
+      elapsedMs: initMs,
     });
 
     return {
       FS: scip.FS,
       main: scip.callMain,
       stdoutLines,
+      canDisableMilpPresolver,
+      bundlePath,
+      initMs,
+      initializedDuringLastRequest: true,
+      nativeRatioSolver,
     };
   })();
 
   try {
-    return await runtimePromise;
+    const runtime = await runtimePromise;
+    activeRuntime = runtime;
+    runtime.initializedDuringLastRequest = true;
+    return runtime;
   } catch (error) {
     runtimePromise = null;
     runtimeKey = null;
+    activeRuntime = null;
     throw error;
   }
 }
 
-export function buildMPS(nodes: RatioOptimizerNode[], connections: RatioOptimizerConnection[]): RatioMPSModel {
+export function buildMPS(
+  nodes: RatioOptimizerNode[],
+  connections: RatioOptimizerConnection[],
+  options: RatioMPSBuildOptions = {},
+): RatioMPSModel {
+  const objectiveMode = options.objective ?? 'legacy';
+  const objectiveWeights = resolveRatioObjectiveWeights(options.objectiveWeights);
+  const valueScale =
+    Number.isFinite(options.valueScale) && options.valueScale! > 0 ? options.valueScale! : 1;
   const variables: string[] = [];
   const varSet = new Set<string>();
   const varNameMap = new Map<string, string>();
-  const objCoeffs = new Map<string, number>();
+  const legacyObjCoeffs = new Map<string, number>();
+  const objectiveExpressions: RatioObjectiveExpressions = {
+    shortage: new Map(),
+    sinkExcess: new Map(),
+    weighted: new Map(),
+    machineCount: new Map(),
+  };
   const rowMap = new Map<string, MPSRow>();
   const rowOrder: string[] = [];
+  const variableLowerBounds = new Map<string, number>();
+  const variableUpperBounds = new Map<string, number>();
+  const noTargetComponentNodeIds = getNoTargetComponentNodeIds(nodes, connections);
+  const nodesById = new Map(nodes.map((node) => [node.id, node]));
 
   let varCounter = 0;
 
@@ -99,11 +847,6 @@ export function buildMPS(nodes: RatioOptimizerNode[], connections: RatioOptimize
     variables.push(sanitized);
     varNameMap.set(sanitized, originalName);
     return sanitized;
-  };
-
-  const addObjCoeff = (varName: string, coeff: number) => {
-    if (coeff === 0) return;
-    objCoeffs.set(varName, (objCoeffs.get(varName) || 0) + coeff);
   };
 
   const registerRow = (name: string, type: MPSRowType, rhs = 0) => {
@@ -124,22 +867,63 @@ export function buildMPS(nodes: RatioOptimizerNode[], connections: RatioOptimize
     }
   };
 
+  const setLowerBound = (varName: string, lowerBound: number) => {
+    if (!Number.isFinite(lowerBound) || lowerBound <= 0) return;
+    variableLowerBounds.set(varName, Math.max(variableLowerBounds.get(varName) ?? 0, lowerBound));
+  };
+
+  const tightenUpperBound = (varName: string, upperBound: number) => {
+    if (!Number.isFinite(upperBound) || upperBound < 0) return;
+    variableUpperBounds.set(
+      varName,
+      Math.min(variableUpperBounds.get(varName) ?? Number.POSITIVE_INFINITY, upperBound),
+    );
+  };
+
   const nodeMachineVars = new Map<string, string>();
   for (const node of nodes) {
     const mVar = registerVar(`m_${node.id}`);
     nodeMachineVars.set(node.id, mVar);
+    const targetMachineLowerBound = getTargetMachineLowerBound(node);
+    if (targetMachineLowerBound !== null) {
+      setLowerBound(mVar, targetMachineLowerBound / valueScale);
+    }
+    if (noTargetComponentNodeIds.has(node.id)) {
+      tightenUpperBound(mVar, 0);
+    }
 
-    const machineWeight = Math.max(
+    const legacyMachineWeight = Math.max(
       1e-6,
-      1e-3 + 1e-8 * (node.power ?? 0) + 1e-5 * (node.pollution ?? 0)
+      1e-3 + 1e-8 * (node.powerUse ?? 0) + 1e-5 * (node.pollution ?? 0),
     );
-    addObjCoeff(mVar, machineWeight);
+    const weightedMachineCoeff =
+      valueScale *
+      ((objectiveWeights.powerUse * (node.powerUse ?? 0)) / RATIO_OBJECTIVE_NORMALIZERS.powerUse +
+        (objectiveWeights.pollution * (node.pollution ?? 0)) /
+          RATIO_OBJECTIVE_NORMALIZERS.pollution);
+    addExpressionCoeff(legacyObjCoeffs, mVar, legacyMachineWeight);
+    addExpressionCoeff(objectiveExpressions.weighted, mVar, weightedMachineCoeff);
+    addExpressionCoeff(objectiveExpressions.machineCount, mVar, 1);
   }
 
   const edgeFlowVars = new Map<string, string>();
   for (const conn of connections) {
     const fVar = registerVar(`f_${conn.id}`);
     edgeFlowVars.set(conn.id, fVar);
+    const endpoints = getConnectionEndpoints(nodesById, conn);
+    if (
+      noTargetComponentNodeIds.has(conn.sourceNodeId) ||
+      noTargetComponentNodeIds.has(conn.targetNodeId)
+    ) {
+      tightenUpperBound(fVar, 0);
+    }
+    if (
+      endpoints &&
+      (isEffectivelyZeroRate(endpoints.sourceOutput.quantity) ||
+        isEffectivelyZeroRate(endpoints.targetInput.quantity))
+    ) {
+      tightenUpperBound(fVar, 0);
+    }
   }
 
   for (const node of nodes) {
@@ -153,11 +937,15 @@ export function buildMPS(nodes: RatioOptimizerNode[], connections: RatioOptimize
         }
       }
 
-      if (!node.isTarget && outgoingVarNames.length === 0) return;
+      if (outgoingVarNames.length === 0 && !out.hasSinkConnection) return;
 
       const excessVar = registerVar(`excess_${node.id}_${outputIndex}`);
+      if (noTargetComponentNodeIds.has(node.id)) {
+        tightenUpperBound(excessVar, 0);
+      }
       if (out.hasSinkConnection) {
-        addObjCoeff(excessVar, 1e8);
+        addExpressionCoeff(legacyObjCoeffs, excessVar, 1e8);
+        addExpressionCoeff(objectiveExpressions.sinkExcess, excessVar, 1);
       }
 
       const rowName = registerRow(`flow_out_${node.id}_${outputIndex}`, 'E', 0);
@@ -186,9 +974,13 @@ export function buildMPS(nodes: RatioOptimizerNode[], connections: RatioOptimize
         addRowTerm(rowName, mVar, -inp.quantity);
       } else {
         const deficitVar = registerVar(`deficit_${node.id}_${inputIndex}`);
+        if (noTargetComponentNodeIds.has(node.id)) {
+          tightenUpperBound(deficitVar, 0);
+        }
         const isSinkNode = node.outputs.length === 0 || node.inputs.some((inp) => inp.isSink);
         const penalty = isSinkNode ? 1e4 : 1e12;
-        addObjCoeff(deficitVar, penalty);
+        addExpressionCoeff(legacyObjCoeffs, deficitVar, penalty);
+        addExpressionCoeff(objectiveExpressions.shortage, deficitVar, 1);
 
         const rowName = registerRow(`flow_in_${node.id}_${inputIndex}`, 'E', 0);
         incomingVarNames.forEach((fVar) => addRowTerm(rowName, fVar, 1));
@@ -197,6 +989,42 @@ export function buildMPS(nodes: RatioOptimizerNode[], connections: RatioOptimize
       }
     });
   }
+
+  const addObjectiveBound = (
+    name: string,
+    expression: Map<string, number>,
+    optimum: number | undefined,
+  ) => {
+    if (optimum === undefined || expression.size === 0) return;
+    if (!Number.isFinite(optimum)) {
+      throw new Error(`Cannot add ${name} objective bound because the optimum is not finite.`);
+    }
+    const rowName = registerRow(`limit_${name}`, 'L', getStageBoundRhs(optimum));
+    expression.forEach((coeff, varName) => addRowTerm(rowName, varName, coeff));
+  };
+
+  addObjectiveBound('shortage', objectiveExpressions.shortage, options.bounds?.shortage);
+  addObjectiveBound('sink_excess', objectiveExpressions.sinkExcess, options.bounds?.sinkExcess);
+  addObjectiveBound('weighted', objectiveExpressions.weighted, options.bounds?.weighted);
+
+  const addObjectiveDerivedVariableBounds = (
+    expression: Map<string, number>,
+    optimum: number | undefined,
+  ) => {
+    if (optimum === undefined || expression.size === 0) return;
+    if (!Number.isFinite(optimum)) return;
+    const rhs = getStageBoundRhs(optimum);
+    expression.forEach((coeff, varName) => {
+      if (coeff <= 0) return;
+      tightenUpperBound(varName, rhs / coeff);
+    });
+  };
+
+  addObjectiveDerivedVariableBounds(objectiveExpressions.shortage, options.bounds?.shortage);
+  addObjectiveDerivedVariableBounds(objectiveExpressions.sinkExcess, options.bounds?.sinkExcess);
+  addObjectiveDerivedVariableBounds(objectiveExpressions.weighted, options.bounds?.weighted);
+
+  const objCoeffs = getObjectiveExpression(objectiveMode, objectiveExpressions, legacyObjCoeffs);
 
   const out: string[] = [];
   out.push('NAME          MODEL\n');
@@ -250,10 +1078,14 @@ export function buildMPS(nodes: RatioOptimizerNode[], connections: RatioOptimize
   });
 
   out.push('BOUNDS\n');
-  for (const node of nodes) {
-    if (node.isTarget && node.currentMachineCount > 0) {
-      const mVar = nodeMachineVars.get(node.id)!;
-      out.push(` LO BND  ${mVar}  ${node.currentMachineCount}\n`);
+  for (const varName of variables) {
+    const lowerBound = variableLowerBounds.get(varName);
+    const upperBound = variableUpperBounds.get(varName);
+    if (lowerBound !== undefined) {
+      out.push(` LO BND  ${varName}  ${lowerBound}\n`);
+    }
+    if (upperBound !== undefined && Number.isFinite(upperBound)) {
+      out.push(` UP BND  ${varName}  ${upperBound}\n`);
     }
   }
 
@@ -262,106 +1094,170 @@ export function buildMPS(nodes: RatioOptimizerNode[], connections: RatioOptimize
   return {
     mpsString: out.join(''),
     varNameMap,
+    objectiveExpressions,
   };
 }
 
-self.onmessage = async (event: MessageEvent<RatioOptimizerRequest>) => {
-  const { origin, nodes, connections, version } = event.data;
+function safeNativeNumber(value: number): number {
+  return Number.isFinite(value) ? value : 0;
+}
 
-  try {
-    const { mpsString, varNameMap } = buildMPS(nodes, connections);
+function nativeBool(value: boolean): number {
+  return value ? 1 : 0;
+}
 
-    const { FS, main, stdoutLines } = await getOrCreateRuntime(origin, version);
-    stdoutLines.length = 0;
-
-    try {
-      FS.unlink('sol.txt');
-    } catch {
-      void 0;
-    }
-    FS.writeFile('model.mps', mpsString);
-
-    main(['-c', 'read model.mps', '-c', 'optimize', '-c', 'display solution', '-c', 'quit']);
-
-    const stdoutText = stdoutLines.join('\n');
-    let solutionText = '';
-    try {
-      solutionText = FS.readFile('sol.txt', { encoding: 'utf8' }) as string;
-    } catch {
-      solutionText = stdoutText;
-    }
-
-    const response = parseSCIPSolution(solutionText, varNameMap, connections, nodes);
-    self.postMessage(response);
-
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : String(err);
-    const errorStack = err instanceof Error ? err.stack : undefined;
-    console.error('[Ratio Optimizer Worker] Run failed:', errorMsg, errorStack);
-    self.postMessage({
-      feasible: false,
-      error: `Worker execution failed: ${errorMsg}`,
-    });
-  }
-};
-
-export function parseSCIPSolution(
-  solutionText: string,
-  varNameMap: Map<string, string>,
+export function buildNativeRatioPayloadArray(
+  nodes: RatioOptimizerNode[],
   connections: RatioOptimizerConnection[],
-  nodes: RatioOptimizerNode[]
-): RatioOptimizerResponse {
-  const DEFICIENCY_EPSILON = 1e-6;
+  objectiveWeights: RatioObjectiveWeights = DEFAULT_RATIO_OBJECTIVE_WEIGHTS,
+  configuration?: OptimizationConfiguration,
+): Float64Array {
+  const resolvedWeights = resolveRatioObjectiveWeights(objectiveWeights);
+  const resolvedConfiguration = configuration
+    ? sanitizeOptimizationConfiguration(configuration)
+    : sanitizeOptimizationConfiguration({
+        ...DEFAULT_OPTIMIZATION_CONFIGURATION,
+        metrics: {
+          ...DEFAULT_OPTIMIZATION_CONFIGURATION.metrics,
+          powerUse: {
+            ...DEFAULT_OPTIMIZATION_CONFIGURATION.metrics.powerUse,
+            weight: resolvedWeights.powerUse,
+          },
+          pollution: {
+            ...DEFAULT_OPTIMIZATION_CONFIGURATION.metrics.pollution,
+            weight: resolvedWeights.pollution,
+          },
+          machineCost: {
+            ...DEFAULT_OPTIMIZATION_CONFIGURATION.metrics.machineCost,
+            enabled: resolvedWeights.machineCost > 0,
+            weight: resolvedWeights.machineCost,
+          },
+          modelCount: {
+            ...DEFAULT_OPTIMIZATION_CONFIGURATION.metrics.modelCount,
+            enabled: resolvedWeights.modelCount > 0,
+            weight: resolvedWeights.modelCount,
+          },
+        },
+      });
+  const nodeIndexById = new Map<string, number>();
+  let inputCount = 0;
+  let outputCount = 0;
 
-  if (
-    !solutionText ||
-    solutionText.includes('no solution available') ||
-    solutionText.includes('infeasible')
-  ) {
-    return { feasible: false, error: 'Model is infeasible given the current constraints.' };
+  for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
+    nodeIndexById.set(nodes[nodeIndex].id, nodeIndex);
+    inputCount += nodes[nodeIndex].inputs.length;
+    outputCount += nodes[nodeIndex].outputs.length;
   }
 
-  if (solutionText.includes('unbounded')) {
-    return {
-      feasible: false,
-      error:
-        'The model is unbounded. This usually means a power-producing machine ' +
-        'has an unexpectedly large negative cost coefficient. Please report this issue.',
-    };
+  const nodeSectionOffset = NATIVE_PAYLOAD_F64_HEADER_DOUBLES;
+  const inputSectionOffset = nodeSectionOffset + nodes.length * NATIVE_PAYLOAD_F64_NODE_DOUBLES;
+  const outputSectionOffset = inputSectionOffset + inputCount * NATIVE_PAYLOAD_F64_INPUT_DOUBLES;
+  const connectionSectionOffset =
+    outputSectionOffset + outputCount * NATIVE_PAYLOAD_F64_OUTPUT_DOUBLES;
+  const totalDoubles =
+    connectionSectionOffset + connections.length * NATIVE_PAYLOAD_F64_CONNECTION_DOUBLES;
+  const out = new Float64Array(totalDoubles);
+
+  out[0] = NATIVE_PAYLOAD_F64_MAGIC;
+  out[1] = NATIVE_PAYLOAD_F64_VERSION;
+  out[2] = totalDoubles;
+  out[3] = nodes.length;
+  out[4] = connections.length;
+  out[5] = inputCount;
+  out[6] = outputCount;
+  out[7] = Math.max(
+    1,
+    ...OPTIMIZATION_METRIC_IDS.filter((id) => resolvedConfiguration.metrics[id].enabled).map(
+      (id) => resolvedConfiguration.metrics[id].tier,
+    ),
+  );
+  out[8] = 0;
+  for (let metricIndex = 0; metricIndex < OPTIMIZATION_METRIC_IDS.length; metricIndex += 1) {
+    const id = OPTIMIZATION_METRIC_IDS[metricIndex];
+    const setting = resolvedConfiguration.metrics[id];
+    const offset = 9 + metricIndex * 5;
+    out[offset] = nativeBool(setting.enabled);
+    out[offset + 1] = setting.weight / OPTIMIZATION_NORMALIZERS[id];
+    out[offset + 2] = setting.tier;
+    out[offset + 3] = setting.limit ?? -1;
+    out[offset + 4] = setting.outputGoal ?? -1;
   }
 
-  if (
-    !solutionText.includes('optimal solution found') &&
-    !solutionText.includes('solution status: feasible')
-  ) {
-    return { feasible: false, error: 'No feasible or optimal solution found.' };
-  }
+  let nextInputIndex = 0;
+  let nextOutputIndex = 0;
+  for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
+    const node = nodes[nodeIndex];
+    const nodeOffset = nodeSectionOffset + nodeIndex * NATIVE_PAYLOAD_F64_NODE_DOUBLES;
+    out[nodeOffset] = safeNativeNumber(node.currentMachineCount);
+    out[nodeOffset + 1] = nativeBool(node.isTarget);
+    out[nodeOffset + 2] = safeNativeNumber(node.powerUse);
+    out[nodeOffset + 3] = safeNativeNumber(node.powerOutput);
+    out[nodeOffset + 4] = safeNativeNumber(node.pollution);
+    out[nodeOffset + 5] = safeNativeNumber(node.machineCost);
+    out[nodeOffset + 6] = safeNativeNumber(node.machineSpace);
+    out[nodeOffset + 7] = safeNativeNumber(node.modelCount);
+    out[nodeOffset + 8] = nextInputIndex;
+    out[nodeOffset + 9] = node.inputs.length;
+    out[nodeOffset + 10] = nextOutputIndex;
+    out[nodeOffset + 11] = node.outputs.length;
+    out[nodeOffset + 12] = nativeBool(node.hasInfiniteMachineCost);
 
-  const rawValues: Record<string, number> = {};
-  const lines = solutionText.split('\n');
+    for (const input of node.inputs) {
+      const inputOffset = inputSectionOffset + nextInputIndex * NATIVE_PAYLOAD_F64_INPUT_DOUBLES;
+      out[inputOffset] = safeNativeNumber(input.quantity);
+      out[inputOffset + 1] = nativeBool(input.isSink);
+      nextInputIndex += 1;
+    }
 
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (trimmed.startsWith('solution status') || trimmed.startsWith('objective value')) continue;
-
-    const match = trimmed.match(/^(\S+)\s+([-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)/);
-    if (!match) continue;
-
-    const sanitizedName = match[1];
-    const value = parseFloat(match[2]);
-    if (isNaN(value)) continue;
-
-    const originalVarName = varNameMap.get(sanitizedName);
-    if (originalVarName) {
-      rawValues[originalVarName] = value;
+    for (const output of node.outputs) {
+      const outputOffset =
+        outputSectionOffset + nextOutputIndex * NATIVE_PAYLOAD_F64_OUTPUT_DOUBLES;
+      out[outputOffset] = safeNativeNumber(output.quantity);
+      out[outputOffset + 1] = nativeBool(output.hasSinkConnection);
+      nextOutputIndex += 1;
     }
   }
 
+  for (let connectionIndex = 0; connectionIndex < connections.length; connectionIndex += 1) {
+    const connection = connections[connectionIndex];
+    const sourceNodeIndex = nodeIndexById.get(connection.sourceNodeId);
+    const targetNodeIndex = nodeIndexById.get(connection.targetNodeId);
+    if (sourceNodeIndex === undefined || targetNodeIndex === undefined) {
+      throw new Error(
+        `Connection ${connection.id} references a node outside the native ratio payload.`,
+      );
+    }
+
+    const connectionOffset =
+      connectionSectionOffset + connectionIndex * NATIVE_PAYLOAD_F64_CONNECTION_DOUBLES;
+    out[connectionOffset] = sourceNodeIndex;
+    out[connectionOffset + 1] = connection.sourceOutputIndex;
+    out[connectionOffset + 2] = targetNodeIndex;
+    out[connectionOffset + 3] = connection.targetInputIndex;
+  }
+
+  return out;
+}
+
+function buildResponseFromRawValues(
+  rawValues: Record<string, number>,
+  connections: RatioOptimizerConnection[],
+  nodes: RatioOptimizerNode[],
+  deficiencyEpsilon: number,
+  telemetry?: RatioSolverTelemetry,
+): RatioOptimizerResponse {
   const machineCounts: Record<string, number> = {};
   for (const node of nodes) {
     const varName = `m_${node.id}`;
+    const targetMachineLowerBound = getTargetMachineLowerBound(node);
     let count = rawValues[varName] !== undefined ? rawValues[varName] : 0;
+    if (
+      targetMachineLowerBound !== null &&
+      count < targetMachineLowerBound &&
+      targetMachineLowerBound - count <= Math.max(1e-8, Math.abs(targetMachineLowerBound) * 1e-9)
+    ) {
+      count = targetMachineLowerBound;
+    }
     if (count < 1e-8) {
       count = 0;
     }
@@ -375,7 +1271,7 @@ export function parseSCIPSolution(
   for (let i = 0; i < rawEntries.length; i++) {
     const [varName, value] = rawEntries[i];
     if (!varName.startsWith('deficit_')) continue;
-    if (!Number.isFinite(value) || value <= DEFICIENCY_EPSILON) continue;
+    if (!Number.isFinite(value) || value <= deficiencyEpsilon) continue;
     unresolvedDeficiencyTotal += value;
     unresolvedDeficiencyCount += 1;
     unresolvedDeficits.push({ name: varName, value });
@@ -387,7 +1283,7 @@ export function parseSCIPSolution(
       connections,
       nodes,
       rawValues,
-      machineCounts
+      machineCounts,
     );
     return {
       feasible: false,
@@ -397,13 +1293,403 @@ export function parseSCIPSolution(
         `${unresolvedDeficiencyCount === 1 ? 'port is' : 'ports are'} still short by ` +
         `${unresolvedDeficiencyTotal.toFixed(6)} units/sec total.`,
       diagnostics,
+      telemetry,
     };
   }
 
   return {
     feasible: true,
     machineCounts,
+    telemetry,
   };
+}
+
+function buildResponseFromNativeBinaryResult(
+  binaryResult: NativeBinaryResult,
+  solvedConnections: RatioOptimizerConnection[],
+  solvedNodes: RatioOptimizerNode[],
+  resultConnections: RatioOptimizerConnection[],
+  resultNodes: RatioOptimizerNode[],
+  fallbackTelemetry: RatioSolverTelemetry,
+): RatioOptimizerResponse {
+  const rawValues: Record<string, number> = {};
+
+  for (let nodeIndex = 0; nodeIndex < solvedNodes.length; nodeIndex += 1) {
+    const value = binaryResult.machineCountsByNode[nodeIndex];
+    if (Number.isFinite(value)) {
+      rawValues[`m_${solvedNodes[nodeIndex].id}`] = value;
+    }
+  }
+
+  for (let connectionIndex = 0; connectionIndex < solvedConnections.length; connectionIndex += 1) {
+    const value = binaryResult.connectionFlows[connectionIndex];
+    if (Number.isFinite(value)) {
+      rawValues[`f_${solvedConnections[connectionIndex].id}`] = value;
+    }
+  }
+
+  let inputValueIndex = 0;
+  for (const node of solvedNodes) {
+    for (let inputIndex = 0; inputIndex < node.inputs.length; inputIndex += 1) {
+      const value = binaryResult.inputDeficits[inputValueIndex];
+      if (Number.isFinite(value) && Math.abs(value) > 1e-12) {
+        rawValues[`deficit_${node.id}_${inputIndex}`] = value;
+      }
+      inputValueIndex += 1;
+    }
+  }
+
+  const telemetry: RatioSolverTelemetry = {
+    ...fallbackTelemetry,
+    ...binaryResult.telemetry,
+    solver: 'native',
+    stageTelemetry: binaryResult.stageTelemetry,
+  };
+
+  return buildResponseFromRawValues(
+    rawValues,
+    resultConnections,
+    resultNodes,
+    Math.max(1e-6, SCALED_DEFICIENCY_EPSILON),
+    telemetry,
+  );
+}
+
+async function solveRatioStagesNative(
+  runtime: SCIPRuntime,
+  nodes: RatioOptimizerNode[],
+  connections: RatioOptimizerConnection[],
+  objectiveWeights: RatioObjectiveWeights = DEFAULT_RATIO_OBJECTIVE_WEIGHTS,
+  configuration?: OptimizationConfiguration,
+  progress?: ProgressReporter,
+  resultNodes = nodes,
+  resultConnections = connections,
+): Promise<RatioOptimizerResponse> {
+  if (!runtime.nativeRatioSolver) {
+    throw new Error('The native ratio optimizer is unavailable.');
+  }
+
+  const solveStart = performance.now();
+  progress?.({
+    phase: 'building',
+    message: 'Building native ratio payload.',
+    solver: 'native',
+  });
+  const payloadBuildStart = performance.now();
+  const payload = buildNativeRatioPayloadArray(nodes, connections, objectiveWeights, configuration);
+  const payloadBuildMs = performance.now() - payloadBuildStart;
+  const payloadBytes = payload.byteLength;
+  progress?.({
+    phase: 'solving',
+    message: 'Optimizing production ratios.',
+    solver: 'native',
+  });
+  const nativeCallStart = performance.now();
+  const binaryResult = await runtime.nativeRatioSolver.solveTypedPayloadResult(payload, progress);
+  const nativeCallMs = performance.now() - nativeCallStart;
+  if (!binaryResult) {
+    throw new Error('Native ratio solver failed before returning a typed result.');
+  }
+  if (binaryResult.status !== 'optimal') {
+    if (binaryResult.status === 'cancelled') {
+      throw new Error('Computation cancelled.');
+    }
+    throw new Error(
+      binaryResult.error || `Native ratio solver stopped with status '${binaryResult.status}'.`,
+    );
+  }
+
+  progress?.({
+    phase: 'finalizing',
+    message: 'Finalizing native solver result.',
+    solver: 'native',
+  });
+  const fallbackTelemetry: RatioSolverTelemetry = {
+    solver: 'native',
+    bundlePath: runtime.bundlePath,
+    initializedDuringSolve: runtime.initializedDuringLastRequest,
+    initMs: runtime.initMs,
+    solveMs: performance.now() - solveStart,
+    payloadBuildMs,
+    payloadBytes,
+    nativePayloadKind: 'f64',
+    nativeCallMs,
+    wasmMemoryBytes: runtime.nativeRatioSolver.getWasmMemoryBytes?.() ?? undefined,
+  };
+  const parseStart = performance.now();
+  const response = buildResponseFromNativeBinaryResult(
+    binaryResult,
+    connections,
+    nodes,
+    resultConnections,
+    resultNodes,
+    fallbackTelemetry,
+  );
+  response.telemetry = {
+    ...fallbackTelemetry,
+    ...response.telemetry,
+    solveMs: performance.now() - solveStart,
+    nativeCallMs: response.telemetry?.nativeCallMs ?? nativeCallMs,
+    resultParseMs: performance.now() - parseStart,
+  };
+  return response;
+}
+
+export async function solveRatioStages(
+  runtime: SCIPRuntime,
+  nodes: RatioOptimizerNode[],
+  connections: RatioOptimizerConnection[],
+  objectiveWeights: RatioObjectiveWeights = DEFAULT_RATIO_OBJECTIVE_WEIGHTS,
+  configuration?: OptimizationConfiguration,
+  progress?: ProgressReporter,
+): Promise<RatioOptimizerResponse> {
+  const resolvedConfiguration = configuration
+    ? sanitizeOptimizationConfiguration(configuration)
+    : undefined;
+  const powerOutput = resolvedConfiguration?.metrics.powerOutput;
+  const preservePowerOutputComponents =
+    (powerOutput?.limit ?? null) !== null ||
+    (powerOutput?.enabled === true && powerOutput.weight > 0 && powerOutput.outputGoal !== null);
+  const presolved = presolveRatioOptimizerModel(nodes, connections, preservePowerOutputComponents);
+  if (didPresolveChangeModel(presolved.stats)) {
+    progress?.({
+      phase: 'building',
+      message:
+        `Presolved ratio graph from ${presolved.stats.originalNodeCount} nodes / ` +
+        `${presolved.stats.originalConnectionCount} connections to ` +
+        `${presolved.stats.nodeCount} nodes / ${presolved.stats.connectionCount} connections.`,
+      solver: runtime.nativeRatioSolver ? 'native' : 'mps',
+    });
+  }
+
+  if (presolved.nodes.length === 0) {
+    const response = buildPresolvedEmptyResponse(runtime, nodes);
+    attachPresolveTelemetry(response, presolved.stats);
+    return response;
+  }
+
+  const response = await solveRatioStagesNative(
+    runtime,
+    presolved.nodes,
+    presolved.connections,
+    objectiveWeights,
+    resolvedConfiguration,
+    progress,
+    nodes,
+    connections,
+  );
+
+  attachPresolveTelemetry(response, presolved.stats);
+  return response;
+}
+
+function postProgress(requestId: number | undefined, progress: RatioSolverProgress): void {
+  self.postMessage({
+    type: 'progress',
+    requestId,
+    progress,
+  });
+}
+
+function throwIfCancelled(requestId: number | undefined): void {
+  if (requestId !== undefined && cancelledRequestIds.has(requestId)) {
+    throw new Error('Computation cancelled.');
+  }
+}
+
+function getWarmupNodes(): RatioOptimizerNode[] {
+  return [
+    {
+      id: 'warmup_target',
+      currentMachineCount: 1,
+      isTarget: true,
+      powerUse: 0,
+      powerOutput: 0,
+      pollution: 0,
+      machineCost: 0,
+      hasInfiniteMachineCost: false,
+      machineSpace: 0,
+      modelCount: 0,
+      inputs: [],
+      outputs: [
+        {
+          productId: 'warmup_product',
+          quantity: 1,
+          hasSinkConnection: false,
+        },
+      ],
+    },
+  ];
+}
+
+async function handleWarmupMessage(message: RatioOptimizerWarmupRequest): Promise<void> {
+  const warmupStart = performance.now();
+  const progress = (nextProgress: RatioSolverProgress) =>
+    postProgress(undefined, {
+      ...nextProgress,
+      phase: nextProgress.phase === 'loading' ? 'warmup' : nextProgress.phase,
+    });
+
+  try {
+    progress({
+      phase: 'warmup',
+      message: 'Preparing ratio optimizer runtime.',
+      solver: 'unknown',
+      elapsedMs: 0,
+    });
+    const runtime = await getOrCreateRuntime(
+      message.origin,
+      message.scipBundlePath,
+      message.version,
+      progress,
+    );
+    let smokeMs = 0;
+    if (runtime.nativeRatioSolver) {
+      const smokeStart = performance.now();
+      const smokeResponse = await solveRatioStagesNative(
+        runtime,
+        getWarmupNodes(),
+        [],
+        DEFAULT_RATIO_OBJECTIVE_WEIGHTS,
+        undefined,
+        (nextProgress) =>
+          postProgress(undefined, {
+            ...nextProgress,
+            phase: 'warmup',
+            message: `Warmup: ${nextProgress.message}`,
+          }),
+      );
+      smokeMs = performance.now() - smokeStart;
+      if (!smokeResponse?.feasible) {
+        throw new Error(smokeResponse?.error ?? 'Native warmup smoke solve failed.');
+      }
+    }
+
+    self.postMessage({
+      type: 'warmup-result',
+      feasible: true,
+      telemetry: {
+        solver: runtime.nativeRatioSolver ? 'native' : 'mps',
+        bundlePath: runtime.bundlePath,
+        initializedDuringSolve: runtime.initializedDuringLastRequest,
+        initMs: runtime.initMs,
+        warmupMs: performance.now() - warmupStart,
+        solveMs: smokeMs,
+      },
+    });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    console.error('[Ratio Optimizer Worker] Warmup failed:', errorMsg);
+    self.postMessage({
+      type: 'warmup-result',
+      feasible: false,
+      error: `Worker warmup failed: ${errorMsg}`,
+    });
+  }
+}
+
+async function handleSolveMessage(message: RatioOptimizerRequest): Promise<void> {
+  const { origin, scipBundlePath, nodes, connections, version, requestId } = message;
+  const solveStart = performance.now();
+  activeWorkerRequestId = requestId;
+  const progress = (nextProgress: RatioSolverProgress) =>
+    postProgress(requestId, {
+      ...nextProgress,
+      elapsedMs: nextProgress.elapsedMs ?? performance.now() - solveStart,
+    });
+
+  try {
+    throwIfCancelled(requestId);
+    progress({
+      phase: 'loading',
+      message: 'Preparing SCIP runtime.',
+      solver: 'unknown',
+    });
+    const runtime = await getOrCreateRuntime(origin, scipBundlePath, version, progress);
+    throwIfCancelled(requestId);
+    const response = await solveRatioStages(
+      runtime,
+      nodes,
+      connections,
+      resolveRatioObjectiveWeights(message.objectiveWeights),
+      message.optimizationConfiguration,
+      progress,
+    );
+    throwIfCancelled(requestId);
+    response.type = 'solve-result';
+    response.requestId = requestId;
+    response.telemetry = {
+      ...response.telemetry,
+      solver: response.telemetry?.solver ?? (runtime.nativeRatioSolver ? 'native' : 'mps'),
+      bundlePath: runtime.bundlePath,
+      initializedDuringSolve: runtime.initializedDuringLastRequest,
+      initMs: runtime.initMs,
+      solveMs: performance.now() - solveStart,
+    };
+    progress({
+      phase: response.feasible ? 'complete' : 'failed',
+      message: response.feasible
+        ? 'Ratio optimizer finished.'
+        : 'Ratio optimizer finished with unresolved shortages.',
+      solver: response.telemetry.solver,
+    });
+    self.postMessage(response);
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    const errorStack = err instanceof Error ? err.stack : undefined;
+    if (errorMsg !== 'Computation cancelled.') {
+      console.error('[Ratio Optimizer Worker] Run failed:', errorMsg, errorStack);
+    }
+    postProgress(requestId, {
+      phase: 'failed',
+      message: errorMsg,
+      solver: 'unknown',
+      elapsedMs: performance.now() - solveStart,
+    });
+    self.postMessage({
+      type: 'solve-result',
+      requestId,
+      feasible: false,
+      error:
+        errorMsg === 'Computation cancelled.' ? errorMsg : `Worker execution failed: ${errorMsg}`,
+    });
+  } finally {
+    if (requestId !== undefined) {
+      cancelledRequestIds.delete(requestId);
+    }
+    if (activeWorkerRequestId === requestId) {
+      activeWorkerRequestId = undefined;
+    }
+  }
+}
+
+let workerMessageQueue = Promise.resolve();
+
+const handleRatioOptimizerMessage = (event: MessageEvent<RatioOptimizerWorkerRequest>) => {
+  if (event.data.type === 'cancel') {
+    cancelledRequestIds.add(event.data.requestId);
+    if (activeWorkerRequestId === event.data.requestId) {
+      activeRuntime?.nativeRatioSolver?.cancelActiveSolve?.();
+    }
+    return;
+  }
+
+  const message = event.data;
+  workerMessageQueue = workerMessageQueue
+    .catch((error: unknown) => {
+      console.error('[Ratio Optimizer Worker] Unexpected queued task failure:', error);
+    })
+    .then(async () => {
+      if (message.type === 'warmup') {
+        await handleWarmupMessage(message);
+        return;
+      }
+      await handleSolveMessage(message);
+    });
+};
+
+if (typeof self !== 'undefined') {
+  self.onmessage = handleRatioOptimizerMessage;
 }
 
 function buildFailureDiagnostics(
@@ -411,7 +1697,7 @@ function buildFailureDiagnostics(
   connections: RatioOptimizerConnection[],
   nodes: RatioOptimizerNode[],
   rawValues: Record<string, number>,
-  machineCounts: Record<string, number>
+  machineCounts: Record<string, number>,
 ): RatioFailureDiagnostics {
   const deficientInputs: RatioDeficientInputDiagnostic[] = [];
   const deficientNodeIds = new Set<string>();
@@ -461,7 +1747,7 @@ function buildFailureDiagnostics(
   for (const deficit of parsedDeficits) {
     deficiencyByNode.set(
       deficit.nodeId,
-      (deficiencyByNode.get(deficit.nodeId) ?? 0) + deficit.value
+      (deficiencyByNode.get(deficit.nodeId) ?? 0) + deficit.value,
     );
   }
 
@@ -506,7 +1792,7 @@ function buildFailureDiagnostics(
     const inputConnections = incomingByInput.get(`${nodeId}::${inputIndex}`) ?? [];
     const suppliedRate = inputConnections.reduce(
       (sum, connection) => sum + getRawFlowValue(rawValues, connection.id),
-      0
+      0,
     );
 
     const upstreamContributions = inputConnections.map((connection) => {
@@ -517,11 +1803,11 @@ function buildFailureDiagnostics(
       const unitOutputRate = sourceOutput?.quantity ?? 0;
       const outputRate = Math.max(
         0,
-        (machineCounts[connection.sourceNodeId] ?? 0) * unitOutputRate
+        (machineCounts[connection.sourceNodeId] ?? 0) * unitOutputRate,
       );
       const totalOutgoingRate = siblingConnections.reduce(
         (sum, sibling) => sum + getRawFlowValue(rawValues, sibling.id),
-        0
+        0,
       );
 
       return {
@@ -547,11 +1833,7 @@ function buildFailureDiagnostics(
     });
 
     const upstreamNodeIds = upstreamContributions.map((contribution) => contribution.nodeId);
-    const causeKind = classifyDeficiencyCause(
-      nodeId,
-      upstreamContributions,
-      cycleNodeIdSet
-    );
+    const causeKind = classifyDeficiencyCause(nodeId, upstreamContributions, cycleNodeIdSet);
     const causeNodeIds = getCauseNodeIds(nodeId, upstreamContributions, deficientNodeIds);
 
     deficientInputs.push({
@@ -585,22 +1867,14 @@ function buildFailureDiagnostics(
   };
 
   for (const input of deficientInputs) {
-    const rootCausesForInput = traceRootCausesFromInput(
-      input,
-      rootCauseContext,
-      new Set()
-    );
+    const rootCausesForInput = traceRootCausesFromInput(input, rootCauseContext, new Set());
     if (rootCausesForInput.length === 0) continue;
 
     input.causeKind = summarizeRootCauseKind(rootCausesForInput);
     input.causeNodeIds = getRootCauseNodeIds(rootCausesForInput);
   }
 
-  const rootCauses = getSummaryRootCauses(
-    deficientInputs,
-    cycleComponents,
-    rootCauseContext
-  );
+  const rootCauses = getSummaryRootCauses(deficientInputs, cycleComponents, rootCauseContext);
 
   const sortedDeficientNodeIds = [...deficientNodeIds].sort((a, b) => {
     const deficiencyDelta = (deficiencyByNode.get(b) ?? 0) - (deficiencyByNode.get(a) ?? 0);
@@ -610,12 +1884,14 @@ function buildFailureDiagnostics(
 
   const likelyRootNodeIds = getRootCauseNodeIds(rootCauses);
   if (likelyRootNodeIds.length === 0) {
-    likelyRootNodeIds.push(...getLikelyRootNodeIds(
-      deficientInputs,
-      deficientNodeIds,
-      deficiencyByNode,
-      deficientUpstream
-    ));
+    likelyRootNodeIds.push(
+      ...getLikelyRootNodeIds(
+        deficientInputs,
+        deficientNodeIds,
+        deficiencyByNode,
+        deficientUpstream,
+      ),
+    );
   }
   if (likelyRootNodeIds.length === 0 && cycleNodeIds.length > 0) {
     likelyRootNodeIds.push(...cycleNodeIds);
@@ -646,7 +1922,7 @@ interface RatioRootCauseTraceContext {
 }
 
 function getDeficientInputsByNode(
-  deficientInputs: RatioDeficientInputDiagnostic[]
+  deficientInputs: RatioDeficientInputDiagnostic[],
 ): Map<string, RatioDeficientInputDiagnostic[]> {
   const deficientInputsByNode = new Map<string, RatioDeficientInputDiagnostic[]>();
   for (const input of deficientInputs) {
@@ -660,7 +1936,9 @@ function getDeficientInputsByNode(
   return deficientInputsByNode;
 }
 
-function getCycleNodeToComponent(cycleComponents: RatioCycleComponent[]): Map<string, RatioCycleComponent> {
+function getCycleNodeToComponent(
+  cycleComponents: RatioCycleComponent[],
+): Map<string, RatioCycleComponent> {
   const cycleNodeToComponent = new Map<string, RatioCycleComponent>();
   for (const component of cycleComponents) {
     for (const nodeId of component.nodeIds) {
@@ -673,14 +1951,18 @@ function getCycleNodeToComponent(cycleComponents: RatioCycleComponent[]): Map<st
 function attachCycleBoundaryNodeIds(
   cycleComponents: RatioCycleComponent[],
   deficientInputs: RatioDeficientInputDiagnostic[],
-  connections: RatioOptimizerConnection[]
+  connections: RatioOptimizerConnection[],
 ): void {
   for (const component of cycleComponents) {
     const boundaryNodeIds = new Set<string>();
 
     for (const input of deficientInputs) {
       if (!component.nodeIdSet.has(input.nodeId)) continue;
-      if (input.upstreamContributions.some((contribution) => !component.nodeIdSet.has(contribution.nodeId))) {
+      if (
+        input.upstreamContributions.some(
+          (contribution) => !component.nodeIdSet.has(contribution.nodeId),
+        )
+      ) {
         boundaryNodeIds.add(input.nodeId);
       }
     }
@@ -705,7 +1987,7 @@ function attachCycleBoundaryNodeIds(
 function traceRootCausesFromInput(
   input: RatioDeficientInputDiagnostic,
   context: RatioRootCauseTraceContext,
-  visitedInputKeys: Set<string>
+  visitedInputKeys: Set<string>,
 ): RatioRootCauseDiagnostic[] {
   const inputKey = `${input.nodeId}::${input.inputIndex}::${input.deficiency.toFixed(9)}`;
   const cached = context.rootCauseCache.get(inputKey);
@@ -714,7 +1996,9 @@ function traceRootCausesFromInput(
   const cycleComponent = context.cycleNodeToComponent.get(input.nodeId);
   if (
     cycleComponent &&
-    input.upstreamContributions.some((contribution) => cycleComponent.nodeIdSet.has(contribution.nodeId))
+    input.upstreamContributions.some((contribution) =>
+      cycleComponent.nodeIdSet.has(contribution.nodeId),
+    )
   ) {
     const rootCauses = [createCycleRootCause(input, cycleComponent)];
     context.rootCauseCache.set(inputKey, rootCauses);
@@ -739,15 +2023,13 @@ function traceRootCausesFromInput(
     const structuralInputs = getConnectedRequiredInputsForNode(
       contribution.nodeId,
       context,
-      input.deficiency
+      input.deficiency,
     );
     const structuralRootCauses: RatioRootCauseDiagnostic[] = [];
     for (const structuralInput of structuralInputs) {
-      structuralRootCauses.push(...traceRootCausesFromInput(
-        structuralInput,
-        context,
-        visitedInputKeys
-      ));
+      structuralRootCauses.push(
+        ...traceRootCausesFromInput(structuralInput, context, visitedInputKeys),
+      );
     }
 
     if (structuralRootCauses.length > 0) {
@@ -758,11 +2040,7 @@ function traceRootCausesFromInput(
     const upstreamDeficientInputs = context.deficientInputsByNode.get(contribution.nodeId) ?? [];
     if (contribution.directDeficiency > 1e-6 && upstreamDeficientInputs.length > 0) {
       for (const upstreamInput of upstreamDeficientInputs) {
-        rootCauses.push(...traceRootCausesFromInput(
-          upstreamInput,
-          context,
-          visitedInputKeys
-        ));
+        rootCauses.push(...traceRootCausesFromInput(upstreamInput, context, visitedInputKeys));
       }
       continue;
     }
@@ -781,7 +2059,7 @@ function traceRootCausesFromInput(
 function getConnectedRequiredInputsForNode(
   nodeId: string,
   context: RatioRootCauseTraceContext,
-  inheritedDeficiency: number
+  inheritedDeficiency: number,
 ): RatioDeficientInputDiagnostic[] {
   const node = context.nodeById.get(nodeId);
   if (!node) return [];
@@ -828,7 +2106,9 @@ function getConnectedRequiredInputsForNode(
       deficiency: inheritedDeficiency,
       requiredRate: 0,
       suppliedRate: 0,
-      upstreamNodeIds: [...new Set(upstreamContributions.map((contribution) => contribution.nodeId))],
+      upstreamNodeIds: [
+        ...new Set(upstreamContributions.map((contribution) => contribution.nodeId)),
+      ],
       causeNodeIds: [],
       causeKind: 'unknown',
       upstreamContributions,
@@ -850,18 +2130,18 @@ function getNodeDeficiency(nodeId: string, context: RatioRootCauseTraceContext):
 function getSummaryRootCauses(
   deficientInputs: RatioDeficientInputDiagnostic[],
   cycleComponents: RatioCycleComponent[],
-  context: RatioRootCauseTraceContext
+  context: RatioRootCauseTraceContext,
 ): RatioRootCauseDiagnostic[] {
   const summaryInputs = deficientInputs.filter(
-    (input) => !input.upstreamContributions.some((contribution) => contribution.directDeficiency > 1e-6)
+    (input) =>
+      !input.upstreamContributions.some((contribution) => contribution.directDeficiency > 1e-6),
   );
 
   if (summaryInputs.length === 0) {
     for (const component of cycleComponents) {
       const boundaryInput = deficientInputs.find(
         (input) =>
-          component.boundaryNodeIds.includes(input.nodeId) &&
-          component.nodeIdSet.has(input.nodeId)
+          component.boundaryNodeIds.includes(input.nodeId) && component.nodeIdSet.has(input.nodeId),
       );
       if (boundaryInput) summaryInputs.push(boundaryInput);
     }
@@ -881,7 +2161,7 @@ function getSummaryRootCauses(
 
 function createContributionRootCause(
   input: RatioDeficientInputDiagnostic,
-  contribution: RatioUpstreamContributionDiagnostic
+  contribution: RatioUpstreamContributionDiagnostic,
 ): RatioRootCauseDiagnostic {
   return {
     nodeId: contribution.nodeId,
@@ -902,7 +2182,7 @@ function createContributionRootCause(
 
 function createCycleRootCause(
   input: RatioDeficientInputDiagnostic,
-  component: RatioCycleComponent
+  component: RatioCycleComponent,
 ): RatioRootCauseDiagnostic {
   return {
     nodeId: component.boundaryNodeIds[0] ?? input.nodeId,
@@ -923,7 +2203,7 @@ function createCycleRootCause(
 
 function createUnresolvedRootCause(
   input: RatioDeficientInputDiagnostic,
-  kind: RatioDeficiencyCauseKind
+  kind: RatioDeficiencyCauseKind,
 ): RatioRootCauseDiagnostic {
   return {
     nodeId: input.nodeId,
@@ -943,7 +2223,7 @@ function createUnresolvedRootCause(
 }
 
 function getContributionRootCauseKind(
-  contribution: RatioUpstreamContributionDiagnostic
+  contribution: RatioUpstreamContributionDiagnostic,
 ): RatioDeficiencyCauseKind {
   if (!contribution.productMatches) {
     return 'product_mismatch';
@@ -976,8 +2256,7 @@ function summarizeRootCauseKind(rootCauses: RatioRootCauseDiagnostic[]): RatioDe
 }
 
 function getRootCauseNodeIds(rootCauses: RatioRootCauseDiagnostic[]): string[] {
-  return [...new Set(rootCauses.map((cause) => cause.nodeId))]
-    .sort((a, b) => a.localeCompare(b));
+  return [...new Set(rootCauses.map((cause) => cause.nodeId))].sort((a, b) => a.localeCompare(b));
 }
 
 function mergeRootCauses(rootCauses: RatioRootCauseDiagnostic[]): RatioRootCauseDiagnostic[] {
@@ -1014,7 +2293,7 @@ function mergeRootCauses(rootCauses: RatioRootCauseDiagnostic[]): RatioRootCause
 }
 
 function selectRootCausesForDisplay(
-  rootCauses: RatioRootCauseDiagnostic[]
+  rootCauses: RatioRootCauseDiagnostic[],
 ): RatioRootCauseDiagnostic[] {
   const zeroOutputCauses = rootCauses.filter((cause) => cause.kind === 'upstream_not_producing');
   if (zeroOutputCauses.length > 0) return zeroOutputCauses;
@@ -1052,7 +2331,7 @@ function getRawFlowValue(rawValues: Record<string, number>, edgeId: string): num
 function classifyDeficiencyCause(
   nodeId: string,
   upstreamContributions: RatioUpstreamContributionDiagnostic[],
-  cycleNodeIds: Set<string>
+  cycleNodeIds: Set<string>,
 ): RatioDeficiencyCauseKind {
   if (
     cycleNodeIds.has(nodeId) ||
@@ -1083,7 +2362,7 @@ function classifyDeficiencyCause(
 function getCauseNodeIds(
   nodeId: string,
   upstreamContributions: RatioUpstreamContributionDiagnostic[],
-  deficientNodeIds: Set<string>
+  deficientNodeIds: Set<string>,
 ): string[] {
   if (upstreamContributions.length === 0) {
     return [nodeId];
@@ -1109,7 +2388,7 @@ function getLikelyRootNodeIds(
   deficientInputs: RatioDeficientInputDiagnostic[],
   deficientNodeIds: Set<string>,
   deficiencyByNode: Map<string, number>,
-  deficientUpstream: Map<string, Set<string>>
+  deficientUpstream: Map<string, Set<string>>,
 ): string[] {
   const likelyRootNodeIds = new Set<string>();
 

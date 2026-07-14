@@ -36,7 +36,7 @@ export const coal_liquefaction_01: SpecialRecipe = {
       name: 'Makes Residue, Heavy Oil, Light Oil',
       machine_id: 'm_coal_liquefaction_plant',
       cycle_time: cycleTime,
-      power_consumption: 1000000,
+      power_use: 1000000,
       power_type: 'MV',
       pollution: 6.48,
       inputs: [

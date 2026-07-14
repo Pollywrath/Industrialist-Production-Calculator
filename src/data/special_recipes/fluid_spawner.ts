@@ -45,7 +45,7 @@ export const fluid_spawner_01: SpecialRecipe = {
       name: 'Fluid Spawner',
       machine_id: 'm_fluid_spawner',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 0,
       inputs: [],
@@ -62,4 +62,3 @@ export const fluid_spawner_01: SpecialRecipe = {
     return recipe;
   },
 };
-

@@ -134,7 +134,8 @@ export const DATA_OVERLAY_TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'coal-node-created',
     title: 'Node Updated From Data',
-    description: 'The created node is still the Coal Drill recipe, but the displayed product name follows the edited product data.',
+    description:
+      'The created node is still the Coal Drill recipe, but the displayed product name follows the edited product data.',
     highlight: { kind: 'node', alias: 'coalDrillTutorial' },
     action: { type: 'continue' },
   },
@@ -183,21 +184,24 @@ export const DATA_OVERLAY_TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'close-data-after-restore',
     title: 'Close Data Manager',
-    description: 'Close the overlay and look at the existing node. Its displayed output should update back to Coal.',
+    description:
+      'Close the overlay and look at the existing node. Its displayed output should update back to Coal.',
     highlight: { kind: 'data', selector: '[data-tutorial-data-close="true"]' },
     action: { type: 'data-close' },
   },
   {
     id: 'coal-node-restored',
     title: 'Canvas Refresh',
-    description: 'The existing node now reflects the restored Coal data. Data edits update existing canvas nodes, not just newly created nodes.',
+    description:
+      'The existing node now reflects the restored Coal data. Data edits update existing canvas nodes, not just newly created nodes.',
     highlight: { kind: 'node', alias: 'coalDrillTutorial' },
     action: { type: 'continue' },
   },
   {
     id: 'open-data-new-records',
     title: 'Create New Data',
-    description: 'Open Data Manager again. This time we will add a new machine, product, and recipe.',
+    description:
+      'Open Data Manager again. This time we will add a new machine, product, and recipe.',
     highlight: { kind: 'overlay', id: 'data' },
     action: { type: 'overlay', id: 'data' },
   },
@@ -346,10 +350,10 @@ export const DATA_OVERLAY_TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: 'recipe-power',
-    title: 'Power Consumption',
-    description: 'Set Power Consumption to 8080.',
-    highlight: { kind: 'data', selector: '[data-tutorial-data-field="recipe.power_consumption"]' },
-    action: { type: 'data-field', field: 'recipe.power_consumption', value: 8080 },
+    title: 'Power Use',
+    description: 'Set Power Use to 8080.',
+    highlight: { kind: 'data', selector: '[data-tutorial-data-field="recipe.power_use"]' },
+    action: { type: 'data-field', field: 'recipe.power_use', value: 8080 },
   },
   {
     id: 'recipe-cycle',
@@ -420,7 +424,10 @@ export const DATA_OVERLAY_TUTORIAL_STEPS: TutorialStep[] = [
     id: 'recipe-output-product',
     title: 'Output Product',
     description: 'Set the output product to Coal Ingot.',
-    highlight: { kind: 'data', selector: '[data-tutorial-data-field="recipe.output.0.product_id"]' },
+    highlight: {
+      kind: 'data',
+      selector: '[data-tutorial-data-field="recipe.output.0.product_id"]',
+    },
     action: { type: 'data-field', field: 'recipe.output.0.product_id', value: 'p_coal_ingot' },
     popoverSide: 'left',
   },

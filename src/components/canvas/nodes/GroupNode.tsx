@@ -15,12 +15,10 @@ import { isRecipeNode } from '../../../types/nodes';
 import type { GroupNodeType, RecipeNodeType } from '../../../types/nodes';
 import { getMachine, resolveActiveRecipe } from '../../../data/lookup';
 import { getSpecialRecipe } from '../../../data/registry';
-import {
-  formatCurrency,
-  formatPower,
-  formatPollution,
-} from '../../../utils/unitFormatting';
+import { formatCurrency, formatPower, formatPollution } from '../../../utils/unitFormatting';
 import { getRecipePowerTotals } from '../../../utils/recipePower';
+import { ceilMachineCount } from '../../../utils/precision';
+import { getRecipeOptimizationMetrics } from '../../../utils/optimizationMetrics';
 import {
   EMPTY_GROUP_HEIGHT,
   EMPTY_GROUP_WIDTH,
@@ -48,8 +46,7 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
   const flowResultDataDbVersion = useFlowResultStore((s) => s.dataDbVersion);
   const currentGraphVersion = useFlowStore((s) => s.graphVersion);
   const hasFreshSolveSnapshot =
-    flowResultGraphVersion === currentGraphVersion &&
-    flowResultDataDbVersion === dbVersion;
+    flowResultGraphVersion === currentGraphVersion && flowResultDataDbVersion === dbVersion;
 
   const memberNodes = useFlowStore(
     useShallow((s) => {
@@ -62,10 +59,10 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
         }
       }
       return values;
-    })
+    }),
   );
   const memberRecipes = useFlowResultStore(
-    useShallow((s) => memberNodes.map((node) => s.nodeRecipes[node.id]))
+    useShallow((s) => memberNodes.map((node) => s.nodeRecipes[node.id])),
   );
 
   useEffect(() => {
@@ -73,7 +70,9 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
 
     if (data.collapsed && !data.handlesReady) {
       const timer = setTimeout(() => {
-        useFlowStore.getState().updateGroupNodeData(id, { handlesReady: true }, { recordHistory: false });
+        useFlowStore
+          .getState()
+          .updateGroupNodeData(id, { handlesReady: true }, { recordHistory: false });
       }, 0);
       return () => clearTimeout(timer);
     }
@@ -93,26 +92,29 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
 
     memberNodes.forEach((node, index) => {
       if (!isRecipeNode(node)) return;
-      const recipe =
-        hasFreshSolveSnapshot
-          ? memberRecipes[index] ?? resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id)
-          : resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id) ?? memberRecipes[index];
+      const recipe = hasFreshSolveSnapshot
+        ? (memberRecipes[index] ??
+          resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id))
+        : (resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id) ??
+          memberRecipes[index]);
       if (!recipe) return;
       const sr = getSpecialRecipe(recipe.id);
       const machine = getMachine(recipe.machine_id);
       const machineCount = node.data.machineCount ?? 0;
-      const roundedCount = Math.ceil(machineCount);
+      const roundedCount = ceilMachineCount(machineCount);
 
       if (machine) {
-        const baseCost =
-          sr && sr.computeMachineCost
-            ? sr.computeMachineCost(
-                node.data.settings ?? {},
-                globalSettings as unknown as Record<string, unknown>,
-                node.id,
-              )
-            : machine.cost;
-        totalMachineCost += baseCost * roundedCount;
+        const metrics = getRecipeOptimizationMetrics(
+          recipe,
+          node.data.settings,
+          globalSettings as unknown as Record<string, unknown>,
+          node.id,
+        );
+        if (roundedCount > 0 && metrics.hasInfiniteMachineCost) {
+          totalMachineCost = Infinity;
+        } else if (Number.isFinite(totalMachineCost)) {
+          totalMachineCost += metrics.machineCostPerWholeMachine * roundedCount;
+        }
       }
 
       totalPower += getRecipePowerTotals(recipe, machineCount).net;
@@ -121,10 +123,9 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
       totalPollution += recipe.pollution * pollutionMultiplier;
     });
 
-    const displayHeight = height ?? getCollapsedGroupHeight(
-      data.inputProxyHandleIds.length,
-      data.outputProxyHandleIds.length,
-    );
+    const displayHeight =
+      height ??
+      getCollapsedGroupHeight(data.inputProxyHandleIds.length, data.outputProxyHandleIds.length);
 
     return (
       <>
@@ -184,7 +185,8 @@ export function GroupNode({ id, data, height, width }: NodeProps<GroupNodeType>)
                   data-tutorial-group-node-id={id}
                   data-tutorial-group-part="expand"
                   onClick={(e) => {
-                    const isDeleteMode = getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
+                    const isDeleteMode =
+                      getEffectiveToggleId(useUIStore.getState()) === 'delete_mode';
                     if (isDeleteMode) {
                       e.stopPropagation();
                       useFlowStore.getState().deleteNode(id);

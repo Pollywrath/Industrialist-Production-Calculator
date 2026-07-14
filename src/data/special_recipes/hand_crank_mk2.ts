@@ -19,14 +19,14 @@ export const hand_crank_mk2_01: SpecialRecipe = {
   settings: settingDefinitions,
   compute: (settings) => {
     const crankers = (settings.crankers as number) ?? 1;
-    const powerConsumption = -135810 * crankers;
+    const powerUse = -135810 * crankers;
 
     const recipe: Recipe = {
       id: 'r_hand_crank_mk2_01',
       name: 'Produces Power',
       machine_id: 'm_hand_crank_mk2',
       cycle_time: 1,
-      power_consumption: powerConsumption,
+      power_use: powerUse,
       power_type: 'MV',
       pollution: 0,
       inputs: [],

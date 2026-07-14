@@ -23,19 +23,19 @@
   backface-visibility: hidden;
 }
 
-.recipe-node[data-target="true"] {
+.recipe-node[data-target='true'] {
   background: var(--theme-color-node-target-bg);
   border: 2px solid var(--theme-color-node-target-border);
   outline: 2px solid var(--theme-color-node-target-border);
   outline-offset: 1px;
 }
 
-.recipe-node[data-multi-selected="true"] {
+.recipe-node[data-multi-selected='true'] {
   outline: 2px solid var(--theme-color-node-selected-border);
   outline-offset: 3px;
 }
 
-.recipe-node[data-target="true"][data-multi-selected="true"] {
+.recipe-node[data-target='true'][data-multi-selected='true'] {
   outline-color: var(--theme-color-node-target-border);
 }
 

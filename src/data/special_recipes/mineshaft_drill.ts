@@ -270,7 +270,9 @@ const DEPTH_YIELDS: Record<number, { product_id: string; amount: number }[]> = {
   ],
 };
 
-const DEPTHS = Object.keys(DEPTH_YIELDS).map(Number).sort((a, b) => a - b);
+const DEPTHS = Object.keys(DEPTH_YIELDS)
+  .map(Number)
+  .sort((a, b) => a - b);
 
 const settingDefinitions = {
   depth: {
@@ -335,7 +337,8 @@ const getComputedValues = (settings: Record<string, unknown>) => {
   const drillingEfficiency = lifeTime / cycleTime;
   const activeRatio = (lifeTime + travelTime) / cycleTime;
 
-  const powerConsumption = ((0.1 * replacementTime + 0.5 * travelTime + 2 * lifeTime) / cycleTime) * 1000000;
+  const powerUse =
+    ((0.1 * replacementTime + 0.5 * travelTime + 2 * lifeTime) / cycleTime) * 1000000;
 
   return {
     depth,
@@ -350,7 +353,7 @@ const getComputedValues = (settings: Record<string, unknown>) => {
     drillingEfficiency,
     activeRatio,
     hasMachineOil,
-    powerConsumption,
+    powerUse,
   };
 };
 
@@ -391,7 +394,9 @@ export const m_mineshaft_drill_01: SpecialRecipe = {
       {} as Record<string, unknown>,
     );
 
-    const drillHeadEntry = Object.entries(DRILL_HEADS).find(([, val]) => val.product_id === productId);
+    const drillHeadEntry = Object.entries(DRILL_HEADS).find(
+      ([, val]) => val.product_id === productId,
+    );
     if (drillHeadEntry) {
       defaultSettings.drill_head = drillHeadEntry[0];
       return defaultSettings;
@@ -430,8 +435,16 @@ export const m_mineshaft_drill_01: SpecialRecipe = {
     return null;
   },
   compute: (settings) => {
-    const { drillHead, acid, cycleTime, drillingEfficiency, hasMachineOil, depth, oilMultiplier, powerConsumption } =
-      getComputedValues(settings);
+    const {
+      drillHead,
+      acid,
+      cycleTime,
+      drillingEfficiency,
+      hasMachineOil,
+      depth,
+      oilMultiplier,
+      powerUse,
+    } = getComputedValues(settings);
 
     const inputsList: { product_id: string; quantity: number }[] = [
       { product_id: drillHead.product_id, quantity: 1 / cycleTime },
@@ -462,7 +475,7 @@ export const m_mineshaft_drill_01: SpecialRecipe = {
       name: `${depth}m Mineshaft Drill`,
       machine_id: 'm_mineshaft_drill',
       cycle_time: 1,
-      power_consumption: powerConsumption,
+      power_use: powerUse,
       power_type: 'HV',
       pollution: 0,
       inputs: inputsList,

@@ -21,7 +21,7 @@ const settingDefinitions = {
   },
 };
 
-const getPowerConsumption = (settings: Record<string, unknown>) => {
+const getPowerUse = (settings: Record<string, unknown>) => {
   const target = (settings.target_temperature as number) ?? 120;
   return MODE_MAP[target]?.power ?? 300000;
 };
@@ -38,7 +38,7 @@ export const electric_water_heater_01: SpecialRecipe = {
   settings: settingDefinitions,
   compute: (settings) => {
     const target = (settings.target_temperature as number) ?? 120;
-    const powerConsumption = getPowerConsumption(settings);
+    const powerUse = getPowerUse(settings);
     const powerType = getPowerType(settings);
 
     const recipe: Recipe = {
@@ -46,7 +46,7 @@ export const electric_water_heater_01: SpecialRecipe = {
       name: 'Heats Water',
       machine_id: 'm_electric_water_heater',
       cycle_time: 1,
-      power_consumption: powerConsumption,
+      power_use: powerUse,
       power_type: powerType,
       pollution: 0,
       inputs: [{ product_id: 'p_water', quantity: 6 }],
@@ -64,7 +64,7 @@ export const electric_water_heater_02: SpecialRecipe = {
   settings: settingDefinitions,
   compute: (settings) => {
     const target = (settings.target_temperature as number) ?? 120;
-    const powerConsumption = getPowerConsumption(settings);
+    const powerUse = getPowerUse(settings);
     const powerType = getPowerType(settings);
 
     const recipe: Recipe = {
@@ -72,7 +72,7 @@ export const electric_water_heater_02: SpecialRecipe = {
       name: 'Heats Filtered Water',
       machine_id: 'm_electric_water_heater',
       cycle_time: 1,
-      power_consumption: powerConsumption,
+      power_use: powerUse,
       power_type: powerType,
       pollution: 0,
       inputs: [{ product_id: 'p_filtered_water', quantity: 6 }],
@@ -90,7 +90,7 @@ export const electric_water_heater_03: SpecialRecipe = {
   settings: settingDefinitions,
   compute: (settings) => {
     const target = (settings.target_temperature as number) ?? 120;
-    const powerConsumption = getPowerConsumption(settings);
+    const powerUse = getPowerUse(settings);
     const powerType = getPowerType(settings);
 
     const recipe: Recipe = {
@@ -98,7 +98,7 @@ export const electric_water_heater_03: SpecialRecipe = {
       name: 'Heats Distilled Water',
       machine_id: 'm_electric_water_heater',
       cycle_time: 1,
-      power_consumption: powerConsumption,
+      power_use: powerUse,
       power_type: powerType,
       pollution: 0,
       inputs: [{ product_id: 'p_distilled_water', quantity: 6 }],

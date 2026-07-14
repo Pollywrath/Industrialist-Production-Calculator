@@ -55,11 +55,10 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
   const flowResultDataDbVersion = useFlowResultStore((s) => s.dataDbVersion);
   const currentGraphVersion = useFlowStore((s) => s.graphVersion);
   const hasFreshSolveSnapshot =
-    flowResultGraphVersion === currentGraphVersion &&
-    flowResultDataDbVersion === dbVersion;
+    flowResultGraphVersion === currentGraphVersion && flowResultDataDbVersion === dbVersion;
   const recipe = hasFreshSolveSnapshot
-    ? committedRecipe ?? liveRecipe
-    : liveRecipe ?? committedRecipe;
+    ? (committedRecipe ?? liveRecipe)
+    : (liveRecipe ?? committedRecipe);
 
   const inputTempsMap = useFlowResultStore((s) => s.inputTemps[id]);
   let receivedTemp: number | null = null;
@@ -114,14 +113,7 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
     return () => {
       window.cancelAnimationFrame(frame);
     };
-  }, [
-    id,
-    data.inputOrder,
-    data.outputOrder,
-    data.recipeId,
-    displayHeight,
-    updateNodeInternals,
-  ]);
+  }, [id, data.inputOrder, data.outputOrder, data.recipeId, displayHeight, updateNodeInternals]);
 
   return (
     <>

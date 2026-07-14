@@ -100,9 +100,7 @@ function createProductLinkAnchor(
   const verticalOffset = ((maxCount - sideCount) * (RECT_HEIGHT + RECT_GAP)) / 2;
   const y = 17 + verticalOffset + ordinal * (RECT_HEIGHT + RECT_GAP) + RECT_HEIGHT / 2;
   const x =
-    ref.side === 'input'
-      ? SIDE_PADDING + leftWidth
-      : SIDE_PADDING + leftWidth + middleWidth;
+    ref.side === 'input' ? SIDE_PADDING + leftWidth : SIDE_PADDING + leftWidth + middleWidth;
 
   return {
     ref,
@@ -125,11 +123,7 @@ function buildProductLinkLines(
   const middleWidth = NODE_WIDTH - SIDE_PADDING * 2 - leftWidth - rightWidth;
   const groups = new Map<string, ProductLinkAnchor[]>();
 
-  const addAnchor = (
-    ref: HandleRef,
-    ordinal: number,
-    sideCount: number,
-  ) => {
+  const addAnchor = (ref: HandleRef, ordinal: number, sideCount: number) => {
     const linkId = getProductLinkId(ref, recipe);
     if (!linkId) return;
 
@@ -331,8 +325,7 @@ export function RecipeNodeIO({
   const flowResultDataDbVersion = useFlowResultStore((s) => s.dataDbVersion);
   const currentGraphVersion = useFlowStore((s) => s.graphVersion);
   const hasFreshSolveSnapshot =
-    flowResultGraphVersion === currentGraphVersion &&
-    flowResultDataDbVersion === dbVersion;
+    flowResultGraphVersion === currentGraphVersion && flowResultDataDbVersion === dbVersion;
   const resolvedProducts = useFlowResultStore(
     useShallow((s) => {
       const all = s.resolvedProducts;
@@ -494,7 +487,10 @@ export function RecipeNodeIO({
     if (!hasEdges) return;
 
     const flowResults = useFlowResultStore.getState().results;
-    const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+    const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
+      string,
+      unknown
+    >;
 
     const targetRate = calculateBalancedRate(
       nodeId,
@@ -539,7 +535,8 @@ export function RecipeNodeIO({
           >
             {leftHandles.map((refVal) => {
               const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
-              const fallbackProductId = getRecipeEntryProductId(recipe, refVal.side, refVal.index) || '';
+              const fallbackProductId =
+                getRecipeEntryProductId(recipe, refVal.side, refVal.index) || '';
               const actualFlow = flowResult
                 ? ((refVal.side === 'input'
                     ? flowResult.inputFlows[refVal.index]?.connected
@@ -575,7 +572,8 @@ export function RecipeNodeIO({
           >
             {rightHandles.map((refVal) => {
               const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
-              const fallbackProductId = getRecipeEntryProductId(recipe, refVal.side, refVal.index) || '';
+              const fallbackProductId =
+                getRecipeEntryProductId(recipe, refVal.side, refVal.index) || '';
               const actualFlow = flowResult
                 ? ((refVal.side === 'input'
                     ? flowResult.inputFlows[refVal.index]?.connected

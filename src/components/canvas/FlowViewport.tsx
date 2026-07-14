@@ -33,10 +33,7 @@ import {
   insertOrthogonalTurnPair,
   type OrthogonalRouteAnchors,
 } from '../../utils/canvas/orthogonalEdgeRouting';
-import {
-  distanceSquaredPointToSegment,
-  getPointArray,
-} from '../../utils/canvas/edgeGeometry';
+import { distanceSquaredPointToSegment, getPointArray } from '../../utils/canvas/edgeGeometry';
 import { SNAP_GRID, GRID_DOT_SIZE } from '../../constants/layoutConstants';
 import { isGroupNode, isRecipeNode } from '../../types/nodes';
 import type { CanvasNode, RecipeNodeType } from '../../types/nodes';
@@ -252,17 +249,17 @@ const onNodeClick = (event: React.MouseEvent, node: CanvasNode) => {
       if (node.data.isMultiSelected) return;
       const flowStore = useFlowStore.getState();
       flowStore.toggleNodeSelection(node.id);
-      const selectedNodeIds = useFlowStore.getState().nodes
-        .filter((currentNode) => isRecipeNode(currentNode) && currentNode.data.isMultiSelected)
+      const selectedNodeIds = useFlowStore
+        .getState()
+        .nodes.filter(
+          (currentNode) => isRecipeNode(currentNode) && currentNode.data.isMultiSelected,
+        )
         .map((currentNode) => currentNode.id);
       completeTutorialAction({ type: 'node-multi-select', nodeIds: selectedNodeIds });
       return;
     }
 
-    if (
-      isRecipeNode(node) &&
-      canPerformTutorialAction({ type: 'target-node', nodeId: node.id })
-    ) {
+    if (isRecipeNode(node) && canPerformTutorialAction({ type: 'target-node', nodeId: node.id })) {
       event.stopPropagation();
       useFlowStore.getState().updateNodeData(node.id, { isTarget: true });
       completeTutorialAction({ type: 'target-node', nodeId: node.id });
@@ -789,7 +786,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
             ? ConnectionLineType.Straight
             : ConnectionLineType.SmoothStep
       }
-      >
+    >
       <ViewportPortal>
         <div
           ref={groupBoundsPreviewRef}

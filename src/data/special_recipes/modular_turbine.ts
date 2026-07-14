@@ -51,7 +51,7 @@ export function computeSteadyState(
   const steamFlow = Math.min(inputSteam, STEAM_FLOW_CAPACITY);
   const bypassedFlow = steamFlow * bypass;
   const turbineFlow = steamFlow * (1 - bypass);
-  const specificPower = turbineFlow * 0.04 * (inputTemperature + 273) / 24000;
+  const specificPower = (turbineFlow * 0.04 * (inputTemperature + 273)) / 24000;
 
   let remainingFlow = turbineFlow;
   let remainingTemp = inputTemperature;
@@ -60,7 +60,7 @@ export function computeSteadyState(
 
   for (let i = 0; i < hptCount; i++) {
     if (remainingTemp < 150) break;
-    const stagePower = remainingFlow * 0.04 * (remainingTemp + 273) / 24000;
+    const stagePower = (remainingFlow * 0.04 * (remainingTemp + 273)) / 24000;
     if (stagePower > 11.1) {
       hptTorque += 5 * stagePower ** 1.8;
     } else if (stagePower > 10) {
@@ -74,7 +74,7 @@ export function computeSteadyState(
   }
 
   if (lptCount > 0) {
-    if (remainingFlow * 0.04 * (remainingTemp + 273) / 48000 > 2) {
+    if ((remainingFlow * 0.04 * (remainingTemp + 273)) / 48000 > 2) {
       remainingFlow = 96000 / (0.04 * (remainingTemp + 273));
     }
   }
@@ -83,7 +83,7 @@ export function computeSteadyState(
   let effectiveLPT = 0;
   for (let i = 0; i < lptCount; i++) {
     if (remainingTemp < 150) break;
-    lptTorque += (remainingFlow * 0.04 * (remainingTemp + 273) / 48000 * 10) ** 2;
+    lptTorque += (((remainingFlow * 0.04 * (remainingTemp + 273)) / 48000) * 10) ** 2;
     remainingFlow *= 0.8;
     remainingTemp *= 0.9;
     effectiveLPT++;
@@ -92,9 +92,9 @@ export function computeSteadyState(
   const totalTorque = hptTorque + lptTorque;
   const rawPower = totalTorque * 240;
 
-  const targetPower = (rawPower * rpm / 10) * 1.1;
+  const targetPower = ((rawPower * rpm) / 10) * 1.1;
   const maxAvailable = gridMax - gridBuffer + 0.1;
-  let syncedPowerOutput = Math.min(rawPower * rpm / 10, maxAvailable);
+  let syncedPowerOutput = Math.min((rawPower * rpm) / 10, maxAvailable);
   syncedPowerOutput *= generatorClutch;
 
   const inertia =
@@ -106,7 +106,7 @@ export function computeSteadyState(
   const driveAcceleration = rawPower / safeInertia;
   const baseDrag = Math.max(NORMAL_SPINDOWN_RATE * 2.5 * (rpm / 60) ** 2, 4);
   const loadDrag = baseDrag * (syncedPowerOutput / 120000000 + 1);
-  const aerodynamicDrag = Math.exp(-0.001 * rpm) * 0.7 * rawPower / safeInertia;
+  const aerodynamicDrag = (Math.exp(-0.001 * rpm) * 0.7 * rawPower) / safeInertia;
   const rpmChange = driveAcceleration - loadDrag - aerodynamicDrag;
   const canSync = Math.abs(rpmChange) <= SYNC_RPM_DELTA_LIMIT;
 
@@ -152,7 +152,8 @@ export const modular_turbine_01: SpecialRecipe = {
   id: 'r_modular_turbine_01',
   name: 'Modular Turbine',
   machine_id: 'm_modular_turbine',
-  description: 'Modular steam turbine for high-capacity power generation. Input high pressure steam and configure turbine stages.',
+  description:
+    'Modular steam turbine for high-capacity power generation. Input high pressure steam and configure turbine stages.',
   potentialInputs: ['p_high_pressure_steam'],
   potentialOutputs: ['p_low_pressure_steam'],
   inputTemperatureSettings: {
@@ -173,7 +174,14 @@ export const modular_turbine_01: SpecialRecipe = {
         const bypass = ((settings.steam_bypass as number) ?? 0) / 100;
         const generatorClutch = ((settings.generator_engagement as number) ?? 100) / 100;
 
-        const result = computeSteadyState(inputFlow, inputTemp, hptCount, lptCount, bypass, generatorClutch);
+        const result = computeSteadyState(
+          inputFlow,
+          inputTemp,
+          hptCount,
+          lptCount,
+          bypass,
+          generatorClutch,
+        );
         return result.canSync
           ? `Input Flow - Power: ${formatPower(result.currentPowerOutput)}`
           : `Input Flow - Unsynced: ${formatPower(0)}`;
@@ -204,7 +212,14 @@ export const modular_turbine_01: SpecialRecipe = {
         const bypass = ((settings.steam_bypass as number) ?? 0) / 100;
         const generatorClutch = ((settings.generator_engagement as number) ?? 100) / 100;
 
-        const result = computeSteadyState(inputFlow, inputTemp, hptCount, lptCount, bypass, generatorClutch);
+        const result = computeSteadyState(
+          inputFlow,
+          inputTemp,
+          hptCount,
+          lptCount,
+          bypass,
+          generatorClutch,
+        );
         return `HPT Count (Effective: ${result.effectiveStages.hpt})`;
       },
     },
@@ -222,7 +237,14 @@ export const modular_turbine_01: SpecialRecipe = {
         const bypass = ((settings.steam_bypass as number) ?? 0) / 100;
         const generatorClutch = ((settings.generator_engagement as number) ?? 100) / 100;
 
-        const result = computeSteadyState(inputFlow, inputTemp, hptCount, lptCount, bypass, generatorClutch);
+        const result = computeSteadyState(
+          inputFlow,
+          inputTemp,
+          hptCount,
+          lptCount,
+          bypass,
+          generatorClutch,
+        );
         return `LPT Count (Effective: ${result.effectiveStages.lpt})`;
       },
     },
@@ -249,7 +271,14 @@ export const modular_turbine_01: SpecialRecipe = {
         const bypass = ((settings.steam_bypass as number) ?? 0) / 100;
         const generatorClutch = ((settings.generator_engagement as number) ?? 100) / 100;
 
-        const result = computeSteadyState(inputFlow, inputTemp, hptCount, lptCount, bypass, generatorClutch);
+        const result = computeSteadyState(
+          inputFlow,
+          inputTemp,
+          hptCount,
+          lptCount,
+          bypass,
+          generatorClutch,
+        );
         return `Generator Engagement - ${formatSyncStatus(result)}`;
       },
     },
@@ -262,14 +291,21 @@ export const modular_turbine_01: SpecialRecipe = {
     const bypass = ((settings.steam_bypass as number) ?? 0) / 100;
     const generatorClutch = ((settings.generator_engagement as number) ?? 100) / 100;
 
-    const result = computeSteadyState(inputFlow, inputTemp, hptCount, lptCount, bypass, generatorClutch);
+    const result = computeSteadyState(
+      inputFlow,
+      inputTemp,
+      hptCount,
+      lptCount,
+      bypass,
+      generatorClutch,
+    );
 
     const recipe: Recipe = {
       id: 'r_modular_turbine_01',
       name: result.canSync ? `${hptCount} HPT - ${lptCount} LPT Turbine` : 'Unsynced',
       machine_id: 'm_modular_turbine',
       cycle_time: 1,
-      power_consumption: result.canSync ? -Math.floor(result.currentPowerOutput) : 0,
+      power_use: result.canSync ? -Math.floor(result.currentPowerOutput) : 0,
       power_type: 'HV',
       pollution: 0,
       inputs: [
@@ -315,5 +351,22 @@ export const modular_turbine_01: SpecialRecipe = {
     const inputOutputCount = inputFlow > 12000 ? 6 : 4;
 
     return hptCount + lptCount + iptCount + inputOutputCount + generatorCount;
+  },
+  computeMachineSpace: (settings) => {
+    const hptCount = Math.max(0, (settings.hpt_count as number) ?? 1);
+    const lptCount = Math.max(1, (settings.lpt_count as number) ?? 5);
+    const area = (id: string) => {
+      const machine = getMachine(id);
+      return machine ? machine.size.x * machine.size.y : 0;
+    };
+
+    return (
+      area('m_turbine_input') +
+      area('m_intermediate_pressure_turbine') +
+      area('m_low_pressure_turbine') * lptCount +
+      area('m_turbine_generator') +
+      area('m_turbine_output') +
+      area('m_high_pressure_turbine') * hptCount
+    );
   },
 };

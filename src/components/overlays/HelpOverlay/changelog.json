@@ -1,5 +1,35 @@
 [
   {
+    "minor": 8,
+    "minorName": "Native Ratio Optimizer, Configurable Objectives & Power Metrics",
+    "patches": [
+      {
+        "hash": "pending",
+        "version": "v0.8.0",
+        "patch": 0,
+        "date": "2026-07-14",
+        "subject": "feat: rebuild ratio optimization around native SCIP and configurable objectives",
+        "items": [
+          "Replaced the previous ratio optimization path with a native WebAssembly model builder backed by SCIP 10.0.2 and SoPlex 8.0.2, avoiding repeated MPS serialization and parsing during normal solves.",
+          "Reworked ratio optimization into ordered stages that first minimize shortages, then minimize excess sent toward sinks, enforce user limits, optimize configured objective tiers, and finally minimize fractional machine count as a deterministic tie-breaker.",
+          "Added exact mixed-integer handling for machine cost, machine space, and machine model count so these objectives use rounded-up whole-machine counts instead of fractional LP counts.",
+          "Added configurable optimization objectives for power use, power output, net pollution, machine cost, machine space, and machine model count, including importance weights, objective tiers, ordering, output goals, and optional limits.",
+          "Added a redesigned ratio optimizer configuration panel with simpler objective descriptions, solve-time guidance for rounded objectives, consistent scrollbars, and a reserved mode selector for future recipe autocomplete.",
+          "Expanded solver results to show recipe and machine names alongside before-and-after power use, power output, net pollution, machine cost, machine space, and machine model count totals.",
+          "Added native graph presolve, safe target-derived scaling and bounds, reusable staged models, a direct SoPlex path for continuous LP solves, and a reduced SCIP MILP path when rounded objectives are enabled.",
+          "Improved solver reliability for large machine targets through formal coefficient scaling, centralized floating-point tolerances, target-value preservation, post-solve validation, and numerically safe whole-machine ceiling rules.",
+          "Reduced solver transfer and memory overhead with typed-array payloads and compact binary results, explicit native allocation cleanup, persistent worker reuse, cancellation support, page-load warmup, progress reporting, and console telemetry.",
+          "Bundled PaPILO 3.0.0 and oneTBB 2021.13.0 with pthread support, growable WebAssembly memory, and separate reliability profiles for direct LP and rounded MILP solves.",
+          "Added support for machines with infinite purchase cost: dashboards preserve the infinite total, while cost-aware optimization excludes those machines unless their use is unavoidable.",
+          "Renamed Power Consumption to Power Use and Power Production to Power Output throughout dashboards, recipe data, optimizer configuration, TypeScript contracts, worker payloads, and native solver fields, with migration support for existing local overrides and saved optimizer settings.",
+          "Redesigned Production Stats with separate MV and HV power-use and power-output rows, net pollution, profit, machine cost, machine space in squares, and machine model count.",
+          "Added machine-space and model-count calculations for modular machines, Research Station 3 with Research Station 4, and Satellite Dish Controllers, plus canvas-wide research infrastructure totals and optimal satellite-dish counts.",
+          "Added cross-origin isolation headers required by threaded WebAssembly and documented a reproducible Docker build with pinned SCIP, SoPlex, PaPILO, oneTBB, and Emscripten versions, checksums, generated bundle metadata, and native smoke tests."
+        ]
+      }
+    ]
+  },
+  {
     "minor": 7,
     "minorName": "Tutorials, Custom Saves, Solver Tuning & Orthogonal Edge Routing",
     "patches": [
@@ -275,7 +305,7 @@
         "subject": "a few more recipes",
         "items": [
           "Expanded the machine database to include Hand Pump, Energy Wheel, and Hand Crank items.",
-          "Implemented node and edge power generation/consumption display metrics on the canvas.",
+          "Implemented node and edge power output/use display metrics on the canvas.",
           "Modified power display tags to handle text wrapping."
         ]
       }
@@ -431,9 +461,7 @@
         "patch": 7,
         "date": "2026-05-30",
         "subject": "recipe car name",
-        "items": [
-          "Fixed recipe card name display issues in the Recipe Selector modal."
-        ]
+        "items": ["Fixed recipe card name display issues in the Recipe Selector modal."]
       },
       {
         "hash": "a7c79d2",
@@ -730,9 +758,7 @@
         "patch": 0,
         "date": "2026-05-09",
         "subject": "Initial commit",
-        "items": [
-          "Initialized the project repository and configured the open-source license."
-        ]
+        "items": ["Initialized the project repository and configured the open-source license."]
       },
       {
         "hash": "b1678c2",

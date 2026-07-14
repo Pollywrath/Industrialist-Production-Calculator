@@ -11,6 +11,19 @@ node_modules
 dist
 dist-ssr
 *.local
+tools/*
+!tools/scip-wasm/
+tools/scip-wasm/*
+!tools/scip-wasm/Dockerfile
+!tools/scip-wasm/README.md
+!tools/scip-wasm/build.sh
+!tools/scip-wasm/generate-third-party-licenses.sh
+!tools/scip-wasm/industrialist_ratio_wrapper.cpp
+!tools/scip-wasm/smoke-test.mjs
+!tools/scip-wasm/smoke-tests/
+tools/scip-wasm/smoke-tests/*
+!tools/scip-wasm/smoke-tests/tiny.lp
+!tools/scip-wasm/smoke-tests/integer-ceil.lp
 
 # Editor directories and files
 .vscode/*

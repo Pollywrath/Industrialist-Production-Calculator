@@ -47,71 +47,63 @@ const baseRecipes: Recipe[] = [
     name: 'Makes Ammonia',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
-    power_consumption: 100000,
+    power_use: 100000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
       { product_id: 'p_hydrogen', quantity: 30 },
       { product_id: 'p_nitrogen', quantity: 10 },
     ],
-    outputs: [
-      { product_id: 'p_ammonia', quantity: 20, temperature: 18 },
-    ],
+    outputs: [{ product_id: 'p_ammonia', quantity: 20, temperature: 18 }],
   },
   {
     id: 'r_chemical_plant_02',
     name: 'Makes Hardened Plastic Pellets',
     machine_id: 'm_chemical_plant',
     cycle_time: 5,
-    power_consumption: 1000000,
+    power_use: 1000000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
       { product_id: 'p_ammonia', quantity: 25 },
       { product_id: 'p_naphtha', quantity: 5 },
     ],
-    outputs: [
-      { product_id: 'p_hardened_plastic_pellets', quantity: 50, temperature: 18 },
-    ],
+    outputs: [{ product_id: 'p_hardened_plastic_pellets', quantity: 50, temperature: 18 }],
   },
   {
     id: 'r_chemical_plant_03',
     name: 'Makes Hydrogen',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
-    power_consumption: 500000,
+    power_use: 500000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
       { product_id: 'p_steam', quantity: 90 },
       { product_id: 'p_refined_gas', quantity: 60 },
     ],
-    outputs: [
-      { product_id: 'p_hydrogen', quantity: 15, temperature: 18 },
-    ],
+    outputs: [{ product_id: 'p_hydrogen', quantity: 15, temperature: 18 }],
   },
   {
     id: 'r_chemical_plant_04',
     name: 'Makes Unenriched UF6 Gas',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
-    power_consumption: 500000,
+    power_use: 500000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
       { product_id: 'p_yellowcake', quantity: 0.5 },
       { product_id: 'p_hydrofluoric_acid', quantity: 0.5 },
     ],
-    outputs: [
-      { product_id: 'p_unenriched_uf6_gas', quantity: 1.5, temperature: 18 },
-    ],
+    outputs: [{ product_id: 'p_unenriched_uf6_gas', quantity: 1.5, temperature: 18 }],
   },
   {
     id: 'r_chemical_plant_05',
     name: 'Makes Residue, Reprocessed Uranium, Plutonium Oxide Pellets',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
-    power_consumption: 500000,
+    power_use: 500000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
@@ -131,7 +123,7 @@ const baseRecipes: Recipe[] = [
     name: 'Makes Hydrofluoric Acid, Residue',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
-    power_consumption: 100000,
+    power_use: 100000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
@@ -148,23 +140,21 @@ const baseRecipes: Recipe[] = [
     name: 'Makes Slightly Enriched UF6 Gas',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
-    power_consumption: 100000,
+    power_use: 100000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
       { product_id: 'p_reprocessed_uranium', quantity: 1 },
       { product_id: 'p_hydrofluoric_acid', quantity: 0.5 },
     ],
-    outputs: [
-      { product_id: 'p_slightly_enriched_uf6_gas', quantity: 2, temperature: 18 },
-    ],
+    outputs: [{ product_id: 'p_slightly_enriched_uf6_gas', quantity: 2, temperature: 18 }],
   },
   {
     id: 'r_chemical_plant_08',
     name: 'Makes Boric Acid, Residue',
     machine_id: 'm_chemical_plant',
     cycle_time: 10,
-    power_consumption: 250000,
+    power_use: 250000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
@@ -181,7 +171,7 @@ const baseRecipes: Recipe[] = [
     name: 'Makes Boric Acid, Residue',
     machine_id: 'm_chemical_plant',
     cycle_time: 10,
-    power_consumption: 250000,
+    power_use: 250000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
@@ -198,7 +188,7 @@ const baseRecipes: Recipe[] = [
     name: 'Makes Phosphorus Oxychloride, Residue',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
-    power_consumption: 1000000,
+    power_use: 1000000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
@@ -215,7 +205,7 @@ const baseRecipes: Recipe[] = [
     name: 'Makes Tributyl Phosphate, Hydrochloric Acid',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
-    power_consumption: 1100000,
+    power_use: 1100000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
@@ -233,7 +223,7 @@ const baseRecipes: Recipe[] = [
     name: 'Makes Enriched UO2 Pellets, Residue',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
-    power_consumption: 2000000,
+    power_use: 2000000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
@@ -251,7 +241,7 @@ const baseRecipes: Recipe[] = [
     name: 'Makes Enriched UO2 Pellets, Residue',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
-    power_consumption: 2500000,
+    power_use: 2500000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
@@ -269,7 +259,7 @@ const baseRecipes: Recipe[] = [
     name: 'Makes Sulfuric Acid, Residue',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
-    power_consumption: 1500000,
+    power_use: 1500000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
@@ -287,7 +277,7 @@ const baseRecipes: Recipe[] = [
     name: 'Makes Hydrochloric Acid',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
-    power_consumption: 1500000,
+    power_use: 1500000,
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
@@ -296,9 +286,7 @@ const baseRecipes: Recipe[] = [
       { product_id: 'p_distilled_water', quantity: 10 },
       { product_id: 'p_argon', quantity: 20 },
     ],
-    outputs: [
-      { product_id: 'p_hydrochloric_acid', quantity: 10, temperature: 18 },
-    ],
+    outputs: [{ product_id: 'p_hydrochloric_acid', quantity: 10, temperature: 18 }],
   },
 ];
 
@@ -333,7 +321,7 @@ export const chemical_plant_recipes: SpecialRecipe[] = baseRecipes.map((base) =>
 
     return {
       ...base,
-      power_consumption: base.power_consumption * totalPowerMultiplier,
+      power_use: base.power_use * totalPowerMultiplier,
       inputs: base.inputs.map((inp) => ({
         ...inp,
         quantity: inp.quantity * inputMultiplier,

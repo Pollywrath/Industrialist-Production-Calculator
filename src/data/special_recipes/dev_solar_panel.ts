@@ -15,17 +15,17 @@ export const dev_solar_panel_01: SpecialRecipe = {
       name: 'Produces Power',
       machine_id: 'm_dev_solar_panel',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       powerEffects: [
         {
           power_type: 'MV',
-          power_consumption: -MV_POWER_OUTPUT,
+          power_use: -MV_POWER_OUTPUT,
           label: 'MV Output',
         },
         {
           power_type: 'HV',
-          power_consumption: -HV_POWER_OUTPUT,
+          power_use: -HV_POWER_OUTPUT,
           label: 'HV Output',
         },
       ],

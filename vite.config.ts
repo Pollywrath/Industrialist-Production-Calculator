@@ -9,9 +9,21 @@ const iconVersion =
   process.env.npm_package_version ??
   'dev';
 
+const crossOriginIsolationHeaders = {
+  'Cross-Origin-Opener-Policy': 'same-origin',
+  'Cross-Origin-Embedder-Policy': 'require-corp',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+};
+
 export default defineConfig({
   define: {
     'import.meta.env.VITE_ICON_VERSION': JSON.stringify(iconVersion),
+  },
+  server: {
+    headers: crossOriginIsolationHeaders,
+  },
+  preview: {
+    headers: crossOriginIsolationHeaders,
   },
   plugins: [react(), babel({ presets: [reactCompilerPreset()] })],
   worker: {

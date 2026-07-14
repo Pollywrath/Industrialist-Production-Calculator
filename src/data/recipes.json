@@ -4,7 +4,7 @@
     "name": "Extracts Crude Oil",
     "machine_id": "m_large_pumpjack",
     "cycle_time": 1,
-    "power_consumption": 30000,
+    "power_use": 30000,
     "power_type": "MV",
     "pollution": 1.44,
     "inputs": [],
@@ -21,7 +21,7 @@
     "name": "Extracts Crude Oil",
     "machine_id": "m_large_pumpjack",
     "cycle_time": 1,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 1.44,
     "inputs": [
@@ -43,7 +43,7 @@
     "name": "Extracts Crude Oil",
     "machine_id": "m_large_pumpjack",
     "cycle_time": 1,
-    "power_consumption": 30000,
+    "power_use": 30000,
     "power_type": "MV",
     "pollution": 1.44,
     "inputs": [
@@ -65,7 +65,7 @@
     "name": "Extracts Crude Oil",
     "machine_id": "m_large_pumpjack",
     "cycle_time": 1,
-    "power_consumption": 30000,
+    "power_use": 30000,
     "power_type": "MV",
     "pollution": 1.44,
     "inputs": [
@@ -87,7 +87,7 @@
     "name": "Extracts Lithium Brine, Residue",
     "machine_id": "m_lithium_brine_extractor",
     "cycle_time": 120,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -114,7 +114,7 @@
     "name": "Extracts Raw Gas",
     "machine_id": "m_natural_gas_well",
     "cycle_time": 1,
-    "power_consumption": 45000,
+    "power_use": 45000,
     "power_type": "MV",
     "pollution": 0.432,
     "inputs": [],
@@ -131,7 +131,7 @@
     "name": "Extracts Fracking Oil",
     "machine_id": "m_oil_fracking_tower",
     "cycle_time": 8,
-    "power_consumption": 62500,
+    "power_use": 62500,
     "power_type": "MV",
     "pollution": 0.0013,
     "inputs": [
@@ -165,7 +165,7 @@
     "name": "Extracts Fracking Oil",
     "machine_id": "m_oil_fracking_tower",
     "cycle_time": 8,
-    "power_consumption": 62500,
+    "power_use": 62500,
     "power_type": "MV",
     "pollution": 0.0013,
     "inputs": [
@@ -199,7 +199,7 @@
     "name": "Extracts Crude Oil",
     "machine_id": "m_oil_rig",
     "cycle_time": 1,
-    "power_consumption": 3000,
+    "power_use": 3000,
     "power_type": "MV",
     "pollution": 0.0288,
     "inputs": [],
@@ -216,7 +216,7 @@
     "name": "Extracts Water",
     "machine_id": "m_water_pump",
     "cycle_time": 1,
-    "power_consumption": 600,
+    "power_use": 600,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -233,7 +233,7 @@
     "name": "Extracts Water",
     "machine_id": "m_water_pump2",
     "cycle_time": 6,
-    "power_consumption": 700,
+    "power_use": 700,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -250,7 +250,7 @@
     "name": "Extracts Water",
     "machine_id": "m_hand_pump",
     "cycle_time": 3,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -267,7 +267,7 @@
     "name": "Extracts Coal",
     "machine_id": "m_advanced_coal_drill",
     "cycle_time": 12,
-    "power_consumption": 9000,
+    "power_use": 9000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -284,7 +284,7 @@
     "name": "Extracts Raw Copper",
     "machine_id": "m_advanced_copper_drill",
     "cycle_time": 12,
-    "power_consumption": 6000,
+    "power_use": 6000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -301,7 +301,7 @@
     "name": "Extracts Coal",
     "machine_id": "m_coal_drill",
     "cycle_time": 4,
-    "power_consumption": 120,
+    "power_use": 120,
     "power_type": "MV",
     "pollution": 0.864,
     "inputs": [],
@@ -318,7 +318,7 @@
     "name": "Extracts Raw Copper",
     "machine_id": "m_copper_drill",
     "cycle_time": 9,
-    "power_consumption": 360,
+    "power_use": 360,
     "power_type": "MV",
     "pollution": 0.108,
     "inputs": [],
@@ -335,7 +335,7 @@
     "name": "Extracts Raw Iron",
     "machine_id": "m_iron_drill",
     "cycle_time": 15,
-    "power_consumption": 1200,
+    "power_use": 1200,
     "power_type": "MV",
     "pollution": 0.432,
     "inputs": [],
@@ -352,7 +352,7 @@
     "name": "Extracts Lithium Ore",
     "machine_id": "m_lithium_ore_drill",
     "cycle_time": 10,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -374,7 +374,7 @@
     "name": "Extracts Soil, Clay",
     "machine_id": "m_quarry",
     "cycle_time": 20,
-    "power_consumption": 50000,
+    "power_use": 50000,
     "power_type": "MV",
     "pollution": 0.504,
     "inputs": [],
@@ -396,7 +396,7 @@
     "name": "Extracts Sand",
     "machine_id": "m_quarry",
     "cycle_time": 20,
-    "power_consumption": 50000,
+    "power_use": 50000,
     "power_type": "MV",
     "pollution": 0.504,
     "inputs": [],
@@ -413,7 +413,7 @@
     "name": "Extracts Limestone",
     "machine_id": "m_quarry",
     "cycle_time": 20,
-    "power_consumption": 50000,
+    "power_use": 50000,
     "power_type": "MV",
     "pollution": 0.504,
     "inputs": [],
@@ -430,7 +430,7 @@
     "name": "Extracts Soil, Clay",
     "machine_id": "m_quarry",
     "cycle_time": 20,
-    "power_consumption": 50000,
+    "power_use": 50000,
     "power_type": "MV",
     "pollution": 0.504,
     "inputs": [
@@ -457,7 +457,7 @@
     "name": "Extracts Sand",
     "machine_id": "m_quarry",
     "cycle_time": 20,
-    "power_consumption": 50000,
+    "power_use": 50000,
     "power_type": "MV",
     "pollution": 0.504,
     "inputs": [
@@ -479,7 +479,7 @@
     "name": "Extracts Limestone",
     "machine_id": "m_quarry",
     "cycle_time": 20,
-    "power_consumption": 50000,
+    "power_use": 50000,
     "power_type": "MV",
     "pollution": 0.504,
     "inputs": [
@@ -501,7 +501,7 @@
     "name": "Makes Chair",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -527,7 +527,7 @@
     "name": "Makes Tire",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -553,7 +553,7 @@
     "name": "Makes Tire Rim",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -579,7 +579,7 @@
     "name": "Makes Insulated Wire",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 1,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -605,7 +605,7 @@
     "name": "Makes Crankshaft",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -631,7 +631,7 @@
     "name": "Makes Gearbox",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -657,7 +657,7 @@
     "name": "Makes Gearbox",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 10,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -687,7 +687,7 @@
     "name": "Makes Gearbox",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -717,7 +717,7 @@
     "name": "Makes Toy",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -743,7 +743,7 @@
     "name": "Makes Uncharged Lithium-Ion Battery",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 10,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -773,7 +773,7 @@
     "name": "Makes Uncharged Lithium-Ion Battery",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 10,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -803,7 +803,7 @@
     "name": "Makes Lithium Battery Pack",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 10,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -833,7 +833,7 @@
     "name": "Makes Filter",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -867,7 +867,7 @@
     "name": "Makes Filter",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -901,7 +901,7 @@
     "name": "Makes Electromagnet",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -927,7 +927,7 @@
     "name": "Makes Dynamite",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -953,7 +953,7 @@
     "name": "Makes Electric Motor",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -991,7 +991,7 @@
     "name": "Makes Electric Motor",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1025,7 +1025,7 @@
     "name": "Makes Present Box",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 8,
-    "power_consumption": 125000,
+    "power_use": 125000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1051,7 +1051,7 @@
     "name": "Makes Chair",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1077,7 +1077,7 @@
     "name": "Makes Tire",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1103,7 +1103,7 @@
     "name": "Makes Tire Rim",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1129,7 +1129,7 @@
     "name": "Makes Insulated Wire",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1155,7 +1155,7 @@
     "name": "Makes Crankshaft",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1181,7 +1181,7 @@
     "name": "Makes Gearbox",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1207,7 +1207,7 @@
     "name": "Makes Toy",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1233,7 +1233,7 @@
     "name": "Makes Present Box",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1259,7 +1259,7 @@
     "name": "Makes Logic Plate",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1289,7 +1289,7 @@
     "name": "Makes Semiconductor",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1315,7 +1315,7 @@
     "name": "Makes 8x Microchip",
     "machine_id": "m_precision_assembler",
     "cycle_time": 30,
-    "power_consumption": 167000,
+    "power_use": 167000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1349,7 +1349,7 @@
     "name": "Makes Graphite-Iron Electrode",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1375,7 +1375,7 @@
     "name": "Makes Graphite-Zinc Electrode",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1401,7 +1401,7 @@
     "name": "Makes Standard Fuel Rod",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1427,7 +1427,7 @@
     "name": "Makes Control Rod",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1453,7 +1453,7 @@
     "name": "Makes MOX Fuel Rod",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1483,7 +1483,7 @@
     "name": "Makes Low Enrichment Fuel Rod",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1509,7 +1509,7 @@
     "name": "Makes Uncharged Lithium-Ion Battery",
     "machine_id": "m_precision_assembler",
     "cycle_time": 20,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1539,7 +1539,7 @@
     "name": "Makes Uncharged Lithium-Ion Battery",
     "machine_id": "m_precision_assembler",
     "cycle_time": 20,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -1569,7 +1569,7 @@
     "name": "Makes Steel Ingot",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1595,7 +1595,7 @@
     "name": "Makes Steel Ingot",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1621,7 +1621,7 @@
     "name": "Makes Iron Mix",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1647,7 +1647,7 @@
     "name": "Makes Copper Mix",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1673,7 +1673,7 @@
     "name": "Makes Coke Fuel",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1699,7 +1699,7 @@
     "name": "Makes Silicon",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1725,7 +1725,7 @@
     "name": "Makes Silicon",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1751,7 +1751,7 @@
     "name": "Makes Alumina",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1777,7 +1777,7 @@
     "name": "Makes Steel Ingot",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1803,7 +1803,7 @@
     "name": "Makes Steel Ingot",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1829,7 +1829,7 @@
     "name": "Makes Iron Mix",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1855,7 +1855,7 @@
     "name": "Makes Copper Mix",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1881,7 +1881,7 @@
     "name": "Makes Iron Mix",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1907,7 +1907,7 @@
     "name": "Makes Iron Mix",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -1933,7 +1933,7 @@
     "name": "Makes Steel Ingot",
     "machine_id": "m_blast_furnace_mk2",
     "cycle_time": 20,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0.36,
     "inputs": [
@@ -1959,7 +1959,7 @@
     "name": "Makes Coke Fuel",
     "machine_id": "m_blast_furnace_mk2",
     "cycle_time": 20,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0.36,
     "inputs": [
@@ -1985,7 +1985,7 @@
     "name": "Makes Coke Fuel",
     "machine_id": "m_blast_furnace_mk2",
     "cycle_time": 20,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0.36,
     "inputs": [
@@ -2011,7 +2011,7 @@
     "name": "Makes Steel Ingot",
     "machine_id": "m_blast_furnace_mk2",
     "cycle_time": 20,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0.36,
     "inputs": [
@@ -2037,7 +2037,7 @@
     "name": "Makes Liquid Copper",
     "machine_id": "m_electric_furnace",
     "cycle_time": 3,
-    "power_consumption": 400,
+    "power_use": 400,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2059,7 +2059,7 @@
     "name": "Makes Liquid Iron",
     "machine_id": "m_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 240,
+    "power_use": 240,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2081,7 +2081,7 @@
     "name": "Makes Liquid Iron",
     "machine_id": "m_electric_furnace",
     "cycle_time": 10,
-    "power_consumption": 120,
+    "power_use": 120,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2103,7 +2103,7 @@
     "name": "Makes Liquid Copper",
     "machine_id": "m_electric_furnace",
     "cycle_time": 6,
-    "power_consumption": 200,
+    "power_use": 200,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2125,7 +2125,7 @@
     "name": "Makes Liquid Copper",
     "machine_id": "m_electric_furnace",
     "cycle_time": 3,
-    "power_consumption": 400,
+    "power_use": 400,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2147,7 +2147,7 @@
     "name": "Makes Liquid Iron",
     "machine_id": "m_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 240,
+    "power_use": 240,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2169,7 +2169,7 @@
     "name": "Makes Liquid Sulfur",
     "machine_id": "m_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 240,
+    "power_use": 240,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2191,7 +2191,7 @@
     "name": "Makes Liquid Gold",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2213,7 +2213,7 @@
     "name": "Makes Liquid Gold",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2235,7 +2235,7 @@
     "name": "Makes Liquid Gold",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2257,7 +2257,7 @@
     "name": "Makes Liquid Gold",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2279,7 +2279,7 @@
     "name": "Makes Liquid Gold",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2301,7 +2301,7 @@
     "name": "Makes Liquid Aluminium",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2323,7 +2323,7 @@
     "name": "Makes Liquid Glass",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2345,7 +2345,7 @@
     "name": "Makes Liquid Iron",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2367,7 +2367,7 @@
     "name": "Makes Liquid Copper",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2389,7 +2389,7 @@
     "name": "Makes Liquid Lead",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2411,7 +2411,7 @@
     "name": "Makes Liquid Sulfur",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0.158,
     "inputs": [
@@ -2433,7 +2433,7 @@
     "name": "Makes Iron Mix",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.864,
     "inputs": [
@@ -2459,7 +2459,7 @@
     "name": "Makes Copper Mix",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.864,
     "inputs": [
@@ -2485,7 +2485,7 @@
     "name": "Makes Alumina Dust",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.864,
     "inputs": [
@@ -2511,7 +2511,7 @@
     "name": "Makes Iron Mix",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.864,
     "inputs": [
@@ -2537,7 +2537,7 @@
     "name": "Makes Cement",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.864,
     "inputs": [
@@ -2563,7 +2563,7 @@
     "name": "Makes Cement",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.864,
     "inputs": [
@@ -2589,7 +2589,7 @@
     "name": "Makes Iron Mix",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.864,
     "inputs": [
@@ -2615,7 +2615,7 @@
     "name": "Makes Iron Mix",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.864,
     "inputs": [
@@ -2641,7 +2641,7 @@
     "name": "Makes Copper Mix",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0.864,
     "inputs": [
@@ -2667,7 +2667,7 @@
     "name": "Makes Brick",
     "machine_id": "m_kiln",
     "cycle_time": 60,
-    "power_consumption": 7220,
+    "power_use": 7220,
     "power_type": "MV",
     "pollution": 0.144,
     "inputs": [
@@ -2689,7 +2689,7 @@
     "name": "Makes Charged Lithium-Ion Battery",
     "machine_id": "m_battery_charger",
     "cycle_time": 11,
-    "power_consumption": 318000,
+    "power_use": 318000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -2711,7 +2711,7 @@
     "name": "Makes Residue, Rubber",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -2742,7 +2742,7 @@
     "name": "Makes Sulfuric Acid",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -2768,7 +2768,7 @@
     "name": "Makes Sulfuric Acid",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 3,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -2798,7 +2798,7 @@
     "name": "Makes Sulfuric Acid",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 3,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -2828,7 +2828,7 @@
     "name": "Makes GasolineE10",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -2854,7 +2854,7 @@
     "name": "Makes Leaded Gasoline",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -2880,7 +2880,7 @@
     "name": "Makes Gold Ingot",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -2914,7 +2914,7 @@
     "name": "Makes Dirty Lithium Sulfate",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 2,
-    "power_consumption": 1500000,
+    "power_use": 1500000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -2940,7 +2940,7 @@
     "name": "Makes Lithium Carbonate",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 4,
-    "power_consumption": 750000,
+    "power_use": 750000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -2970,7 +2970,7 @@
     "name": "Makes Lithium Sulfate",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 2,
-    "power_consumption": 1500000,
+    "power_use": 1500000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3000,7 +3000,7 @@
     "name": "Makes Hydrochloric Acid, Residue",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 4,
-    "power_consumption": 1500000,
+    "power_use": 1500000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3031,7 +3031,7 @@
     "name": "Makes Zinc Sulfate, Residue",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 5,
-    "power_consumption": 600000,
+    "power_use": 600000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3062,7 +3062,7 @@
     "name": "Makes Hydrochloric Acid",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 5,
-    "power_consumption": 600000,
+    "power_use": 600000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3092,7 +3092,7 @@
     "name": "Makes Treated Raw Iron, Residue",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 5,
-    "power_consumption": 600000,
+    "power_use": 600000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3123,7 +3123,7 @@
     "name": "Makes Treated Raw Copper, Residue",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 5,
-    "power_consumption": 600000,
+    "power_use": 600000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3154,7 +3154,7 @@
     "name": "Makes Galvanized Steel",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 5,
-    "power_consumption": 600000,
+    "power_use": 600000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3180,7 +3180,7 @@
     "name": "Makes Tetraethyllead",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 5,
-    "power_consumption": 600000,
+    "power_use": 600000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3206,7 +3206,7 @@
     "name": "Makes Powdered Tungsten Carbide",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3236,7 +3236,7 @@
     "name": "Makes Gunpowder",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3266,7 +3266,7 @@
     "name": "Makes Sulfur",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 4,
-    "power_consumption": 750000,
+    "power_use": 750000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3292,7 +3292,7 @@
     "name": "Makes Zirconium Chloride, Residue",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 4,
-    "power_consumption": 750000,
+    "power_use": 750000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3323,7 +3323,7 @@
     "name": "Makes Zirconium Dioxide, Hydrochloric Acid",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 4,
-    "power_consumption": 750000,
+    "power_use": 750000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3354,7 +3354,7 @@
     "name": "Makes Residue, Hydrofluoric Acid",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 4,
-    "power_consumption": 750000,
+    "power_use": 750000,
     "power_type": "MV",
     "pollution": 1.62,
     "inputs": [
@@ -3385,7 +3385,7 @@
     "name": "Makes Crude Oil, Water, Water-Free Gas",
     "machine_id": "m_condenser",
     "cycle_time": 1,
-    "power_consumption": 21000,
+    "power_use": 21000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3417,7 +3417,7 @@
     "name": "Makes Hot Crude Oil",
     "machine_id": "m_liquid_boiler",
     "cycle_time": 1,
-    "power_consumption": 10000,
+    "power_use": 10000,
     "power_type": "MV",
     "pollution": 0.184,
     "inputs": [
@@ -3439,7 +3439,7 @@
     "name": "Heats Water",
     "machine_id": "m_liquid_boiler",
     "cycle_time": 1,
-    "power_consumption": 10000,
+    "power_use": 10000,
     "power_type": "MV",
     "pollution": 0.184,
     "inputs": [
@@ -3461,7 +3461,7 @@
     "name": "Makes Paper",
     "machine_id": "m_paper_mill",
     "cycle_time": 4,
-    "power_consumption": 62500,
+    "power_use": 62500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3483,7 +3483,7 @@
     "name": "Makes Paper",
     "machine_id": "m_paper_mill",
     "cycle_time": 2,
-    "power_consumption": 125000,
+    "power_use": 125000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3509,7 +3509,7 @@
     "name": "Makes Plastic Pellets",
     "machine_id": "m_plastic_production_facility",
     "cycle_time": 6,
-    "power_consumption": 80000,
+    "power_use": 80000,
     "power_type": "MV",
     "pollution": 0.432,
     "inputs": [
@@ -3535,7 +3535,7 @@
     "name": "Makes Residue, 8 Karat Gold",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3566,7 +3566,7 @@
     "name": "Makes Residue, 12 Karat Gold",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3597,7 +3597,7 @@
     "name": "Makes Residue, 24 Karat Gold",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3628,7 +3628,7 @@
     "name": "Makes Residue, Lithium Sulfate",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3659,7 +3659,7 @@
     "name": "Makes Concentrated Salt Solution, Raw Iron",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3690,7 +3690,7 @@
     "name": "Makes Naphtha, Coal",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3721,7 +3721,7 @@
     "name": "Makes Residue, Rock",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
-    "power_consumption": 200000,
+    "power_use": 200000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3752,7 +3752,7 @@
     "name": "Makes Nitrogen",
     "machine_id": "m_vaporizer",
     "cycle_time": 1,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3774,7 +3774,7 @@
     "name": "Makes Oxygen",
     "machine_id": "m_vaporizer",
     "cycle_time": 1,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3796,7 +3796,7 @@
     "name": "Makes Argon",
     "machine_id": "m_vaporizer",
     "cycle_time": 1,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -3818,7 +3818,7 @@
     "name": "Makes Lead Ingot",
     "machine_id": "m_foundry",
     "cycle_time": 182,
-    "power_consumption": 6000000,
+    "power_use": 6000000,
     "power_type": "HV",
     "pollution": 0.05,
     "inputs": [
@@ -3848,7 +3848,7 @@
     "name": "Makes Copper Ingot",
     "machine_id": "m_foundry",
     "cycle_time": 182,
-    "power_consumption": 6000000,
+    "power_use": 6000000,
     "power_type": "HV",
     "pollution": 0.05,
     "inputs": [
@@ -3878,7 +3878,7 @@
     "name": "Makes Iron Ingot",
     "machine_id": "m_foundry",
     "cycle_time": 182,
-    "power_consumption": 6000000,
+    "power_use": 6000000,
     "power_type": "HV",
     "pollution": 0.05,
     "inputs": [
@@ -3908,7 +3908,7 @@
     "name": "Makes Copper Ingot",
     "machine_id": "m_foundry",
     "cycle_time": 182,
-    "power_consumption": 6000000,
+    "power_use": 6000000,
     "power_type": "HV",
     "pollution": 0.05,
     "inputs": [
@@ -3938,7 +3938,7 @@
     "name": "Makes Iron Ingot",
     "machine_id": "m_foundry",
     "cycle_time": 182,
-    "power_consumption": 6000000,
+    "power_use": 6000000,
     "power_type": "HV",
     "pollution": 0.05,
     "inputs": [
@@ -3968,7 +3968,7 @@
     "name": "Makes Lead Ingot",
     "machine_id": "m_foundry",
     "cycle_time": 182,
-    "power_consumption": 6000000,
+    "power_use": 6000000,
     "power_type": "HV",
     "pollution": 0.29,
     "inputs": [
@@ -3998,7 +3998,7 @@
     "name": "Makes Copper Ingot",
     "machine_id": "m_foundry",
     "cycle_time": 182,
-    "power_consumption": 6000000,
+    "power_use": 6000000,
     "power_type": "HV",
     "pollution": 0.29,
     "inputs": [
@@ -4028,7 +4028,7 @@
     "name": "Makes Iron Ingot",
     "machine_id": "m_foundry",
     "cycle_time": 182,
-    "power_consumption": 6000000,
+    "power_use": 6000000,
     "power_type": "HV",
     "pollution": 0.29,
     "inputs": [
@@ -4058,7 +4058,7 @@
     "name": "Makes Copper Ingot",
     "machine_id": "m_foundry",
     "cycle_time": 182,
-    "power_consumption": 6000000,
+    "power_use": 6000000,
     "power_type": "HV",
     "pollution": 0.29,
     "inputs": [
@@ -4088,7 +4088,7 @@
     "name": "Makes Iron Ingot",
     "machine_id": "m_foundry",
     "cycle_time": 182,
-    "power_consumption": 6000000,
+    "power_use": 6000000,
     "power_type": "HV",
     "pollution": 0.29,
     "inputs": [
@@ -4118,7 +4118,7 @@
     "name": "Makes Plastic Bottle",
     "machine_id": "m_industrial_plastic_molder",
     "cycle_time": 12,
-    "power_consumption": 20000,
+    "power_use": 20000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4140,7 +4140,7 @@
     "name": "Makes Plastic Casing",
     "machine_id": "m_industrial_plastic_molder",
     "cycle_time": 12,
-    "power_consumption": 20000,
+    "power_use": 20000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4162,7 +4162,7 @@
     "name": "Makes Hardened Plastic Casing",
     "machine_id": "m_industrial_plastic_molder",
     "cycle_time": 12,
-    "power_consumption": 20000,
+    "power_use": 20000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4184,7 +4184,7 @@
     "name": "Makes Copper Ingot",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
-    "power_consumption": 150,
+    "power_use": 150,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4206,7 +4206,7 @@
     "name": "Makes Sulfur",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
-    "power_consumption": 150,
+    "power_use": 150,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4228,7 +4228,7 @@
     "name": "Makes Iron Ingot",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
-    "power_consumption": 150,
+    "power_use": 150,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4250,7 +4250,7 @@
     "name": "Makes Gold Ingot",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
-    "power_consumption": 150,
+    "power_use": 150,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4272,7 +4272,7 @@
     "name": "Makes Ferroaluminium Alloy Ingot",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
-    "power_consumption": 150,
+    "power_use": 150,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4294,7 +4294,7 @@
     "name": "Makes Purple Gold Ingot",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
-    "power_consumption": 150,
+    "power_use": 150,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4316,7 +4316,7 @@
     "name": "Makes Aluminium Ingot",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
-    "power_consumption": 150,
+    "power_use": 150,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4338,7 +4338,7 @@
     "name": "Makes Glass",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
-    "power_consumption": 150,
+    "power_use": 150,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4360,7 +4360,7 @@
     "name": "Makes Lead Ingot",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
-    "power_consumption": 150,
+    "power_use": 150,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4382,7 +4382,7 @@
     "name": "Makes Brass Ingot",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
-    "power_consumption": 150,
+    "power_use": 150,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4404,7 +4404,7 @@
     "name": "Makes Plastic Bottle",
     "machine_id": "m_plastic_molding_machine",
     "cycle_time": 7,
-    "power_consumption": 14000,
+    "power_use": 14000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4426,7 +4426,7 @@
     "name": "Makes Plastic Casing",
     "machine_id": "m_plastic_molding_machine",
     "cycle_time": 7,
-    "power_consumption": 14000,
+    "power_use": 14000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4448,7 +4448,7 @@
     "name": "Makes Yellowcake",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 40,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -4478,7 +4478,7 @@
     "name": "Makes Yellowcake",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 20,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -4508,7 +4508,7 @@
     "name": "Makes Mixed Fissile Oxides, Fission Byproducts, Residue",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 2,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -4552,7 +4552,7 @@
     "name": "Makes Mixed Fissile Oxides, Fission Byproducts, Residue",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 2,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -4596,7 +4596,7 @@
     "name": "Makes Ethanol, Hydrogen",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 6,
-    "power_consumption": 2000000,
+    "power_use": 2000000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -4627,7 +4627,7 @@
     "name": "Makes Acetic Acid",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 2,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -4653,7 +4653,7 @@
     "name": "Makes MEG",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 2,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -4679,7 +4679,7 @@
     "name": "Makes Liquid Sulfur",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 2,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -4705,7 +4705,7 @@
     "name": "Makes Sulfur Trioxide",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 2,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -4731,7 +4731,7 @@
     "name": "Makes Residue, Heavy Oil, Light Oil, Naphtha, Gasoline, Water-Free Gas, Crude Oil",
     "machine_id": "m_atmospheric_distillation_plant",
     "cycle_time": 8,
-    "power_consumption": 625000,
+    "power_use": 625000,
     "power_type": "MV",
     "pollution": 6.48,
     "inputs": [
@@ -4783,7 +4783,7 @@
     "name": "Makes Concentrated Salt Solution, Distilled Water",
     "machine_id": "m_atmospheric_distillation_plant",
     "cycle_time": 8,
-    "power_consumption": 625000,
+    "power_use": 625000,
     "power_type": "MV",
     "pollution": 6.48,
     "inputs": [
@@ -4810,7 +4810,7 @@
     "name": "Makes Water Bottle",
     "machine_id": "m_bottling_plant",
     "cycle_time": 3.5,
-    "power_consumption": 2860,
+    "power_use": 2860,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4836,7 +4836,7 @@
     "name": "Makes Cheap Water Bottle",
     "machine_id": "m_bottling_plant",
     "cycle_time": 3.5,
-    "power_consumption": 2860,
+    "power_use": 2860,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4862,7 +4862,7 @@
     "name": "Makes Residue Bottle",
     "machine_id": "m_bottling_plant",
     "cycle_time": 3.5,
-    "power_consumption": 2860,
+    "power_use": 2860,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4888,7 +4888,7 @@
     "name": "Makes Refined Diesel Bottle",
     "machine_id": "m_bottling_plant",
     "cycle_time": 3.5,
-    "power_consumption": 2860,
+    "power_use": 2860,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4914,7 +4914,7 @@
     "name": "Makes Oil Bottle",
     "machine_id": "m_bottling_plant",
     "cycle_time": 3.5,
-    "power_consumption": 2860,
+    "power_use": 2860,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -4940,7 +4940,7 @@
     "name": "Makes Clay Brick",
     "machine_id": "m_concrete_plant",
     "cycle_time": 10,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0.396,
     "inputs": [
@@ -4966,7 +4966,7 @@
     "name": "Makes Clay Brick",
     "machine_id": "m_concrete_plant",
     "cycle_time": 10,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0.396,
     "inputs": [
@@ -4996,7 +4996,7 @@
     "name": "Makes Clay Brick",
     "machine_id": "m_concrete_plant",
     "cycle_time": 10,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0.396,
     "inputs": [
@@ -5026,7 +5026,7 @@
     "name": "Makes Wet Concrete",
     "machine_id": "m_concrete_plant",
     "cycle_time": 10,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0.396,
     "inputs": [
@@ -5056,7 +5056,7 @@
     "name": "Makes Concrete Block",
     "machine_id": "m_concrete_plant",
     "cycle_time": 10,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0.396,
     "inputs": [
@@ -5082,7 +5082,7 @@
     "name": "Makes Reinforced Concrete Block",
     "machine_id": "m_concrete_plant",
     "cycle_time": 10,
-    "power_consumption": 4000,
+    "power_use": 4000,
     "power_type": "MV",
     "pollution": 0.396,
     "inputs": [
@@ -5108,7 +5108,7 @@
     "name": "Makes Oxygen, Hydrogen",
     "machine_id": "m_electrolysis_plant",
     "cycle_time": 30,
-    "power_consumption": 750000,
+    "power_use": 750000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -5137,7 +5137,7 @@
     "name": "Makes Chlorine, Sodium Hydroxide Solution",
     "machine_id": "m_electrolysis_plant",
     "cycle_time": 30,
-    "power_consumption": 750000,
+    "power_use": 750000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -5166,7 +5166,7 @@
     "name": "Makes Residue, Zinc",
     "machine_id": "m_electrolysis_plant",
     "cycle_time": 30,
-    "power_consumption": 750000,
+    "power_use": 750000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -5195,7 +5195,7 @@
     "name": "Makes Filtered Water",
     "machine_id": "m_filtration_plant",
     "cycle_time": 2,
-    "power_consumption": 7500,
+    "power_use": 7500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5217,7 +5217,7 @@
     "name": "Makes Water",
     "machine_id": "m_filtration_plant",
     "cycle_time": 2,
-    "power_consumption": 7500,
+    "power_use": 7500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5239,7 +5239,7 @@
     "name": "Makes Crude Diesel",
     "machine_id": "m_filtration_plant",
     "cycle_time": 2,
-    "power_consumption": 7500,
+    "power_use": 7500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5261,7 +5261,7 @@
     "name": "Makes Machine Oil",
     "machine_id": "m_filtration_plant",
     "cycle_time": 2,
-    "power_consumption": 7500,
+    "power_use": 7500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5283,7 +5283,7 @@
     "name": "Makes Residue",
     "machine_id": "m_filtration_plant",
     "cycle_time": 2,
-    "power_consumption": 7500,
+    "power_use": 7500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5305,7 +5305,7 @@
     "name": "Makes Crude Oil",
     "machine_id": "m_filtration_plant",
     "cycle_time": 2,
-    "power_consumption": 7500,
+    "power_use": 7500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5327,7 +5327,7 @@
     "name": "Makes LNG",
     "machine_id": "m_lng_plant",
     "cycle_time": 1,
-    "power_consumption": 2250000,
+    "power_use": 2250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5349,7 +5349,7 @@
     "name": "Makes Acetic Acid",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 20,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5371,7 +5371,7 @@
     "name": "Makes MEG",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 20,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5393,7 +5393,7 @@
     "name": "Makes Liquid Sulfur",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 20,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5415,7 +5415,7 @@
     "name": "Makes Sulfur Trioxide",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 12,
-    "power_consumption": 833000,
+    "power_use": 833000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5437,7 +5437,7 @@
     "name": "Makes Acetic Acid",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 5,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5463,7 +5463,7 @@
     "name": "Makes MEG",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 5,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5489,7 +5489,7 @@
     "name": "Makes Liquid Sulfur",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 5,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5515,7 +5515,7 @@
     "name": "Makes Sulfur Trioxide",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 3,
-    "power_consumption": 1670000,
+    "power_use": 1670000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5541,7 +5541,7 @@
     "name": "Makes Black Dye",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5563,7 +5563,7 @@
     "name": "Makes Paper",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5589,7 +5589,7 @@
     "name": "Makes Iron Powder",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5611,7 +5611,7 @@
     "name": "Makes Iron Powder",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5633,7 +5633,7 @@
     "name": "Makes Copper Powder",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5655,7 +5655,7 @@
     "name": "Makes Copper Powder",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5677,7 +5677,7 @@
     "name": "Makes Sand",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5699,7 +5699,7 @@
     "name": "Makes Crushed Bauxite",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5721,7 +5721,7 @@
     "name": "Makes Alumina Dust",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5743,7 +5743,7 @@
     "name": "Makes Gold Ingot",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5769,7 +5769,7 @@
     "name": "Makes Gravel",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5791,7 +5791,7 @@
     "name": "Makes Gravel",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5813,7 +5813,7 @@
     "name": "Makes Raw Iron",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5839,7 +5839,7 @@
     "name": "Makes Rock",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5861,7 +5861,7 @@
     "name": "Makes Shallow Earth Fragment",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5887,7 +5887,7 @@
     "name": "Makes Treated Rock",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5909,7 +5909,7 @@
     "name": "Makes Rich Soil",
     "machine_id": "m_grinder",
     "cycle_time": 12,
-    "power_consumption": 33000,
+    "power_use": 33000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5931,7 +5931,7 @@
     "name": "Makes Impure Boron",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5957,7 +5957,7 @@
     "name": "Makes Iron Powder",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -5979,7 +5979,7 @@
     "name": "Makes Copper Powder",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6001,7 +6001,7 @@
     "name": "Makes Sand",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6023,7 +6023,7 @@
     "name": "Makes Crushed Bauxite",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6045,7 +6045,7 @@
     "name": "Makes Alumina Dust",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6067,7 +6067,7 @@
     "name": "Makes Gravel",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6089,7 +6089,7 @@
     "name": "Makes Gravel",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6111,7 +6111,7 @@
     "name": "Makes Raw Iron",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6137,7 +6137,7 @@
     "name": "Makes Rock",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6159,7 +6159,7 @@
     "name": "Makes Shallow Earth Fragment",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6185,7 +6185,7 @@
     "name": "Makes Treated Rock",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6207,7 +6207,7 @@
     "name": "Makes Rich Soil",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
-    "power_consumption": 1250000,
+    "power_use": 1250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6229,7 +6229,7 @@
     "name": "Makes Copper Wire",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 750,
+    "power_use": 750,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6251,7 +6251,7 @@
     "name": "Makes Iron Coil",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 1125,
+    "power_use": 1125,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6273,7 +6273,7 @@
     "name": "Makes Steel Rod",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 9375,
+    "power_use": 9375,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6295,7 +6295,7 @@
     "name": "Makes Gear",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 9375,
+    "power_use": 9375,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6317,7 +6317,7 @@
     "name": "Makes Nails",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 1125,
+    "power_use": 1125,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6339,7 +6339,7 @@
     "name": "Makes Ferroaluminium Magnet",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 1125,
+    "power_use": 1125,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6361,7 +6361,7 @@
     "name": "Makes Gold Wire",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 11250,
+    "power_use": 11250,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6383,7 +6383,7 @@
     "name": "Makes Zirconium Rod",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6405,7 +6405,7 @@
     "name": "Makes Cut Oak Log",
     "machine_id": "m_industrial_sawmill",
     "cycle_time": 10,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6431,7 +6431,7 @@
     "name": "Makes Chunk Plank",
     "machine_id": "m_industrial_sawmill",
     "cycle_time": 10,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6457,7 +6457,7 @@
     "name": "Makes Planks",
     "machine_id": "m_industrial_sawmill",
     "cycle_time": 10,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6483,7 +6483,7 @@
     "name": "Makes Iron Plate",
     "machine_id": "m_industrial_sawmill",
     "cycle_time": 10,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6509,7 +6509,7 @@
     "name": "Makes Copper Drill Head",
     "machine_id": "m_lathe",
     "cycle_time": 60,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -6531,7 +6531,7 @@
     "name": "Makes Iron Drill Head",
     "machine_id": "m_lathe",
     "cycle_time": 160,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -6553,7 +6553,7 @@
     "name": "Makes Steel Drill Head",
     "machine_id": "m_lathe",
     "cycle_time": 200,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -6575,7 +6575,7 @@
     "name": "Makes Tungsten Carbide Drill Head",
     "machine_id": "m_lathe",
     "cycle_time": 240,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -6597,7 +6597,7 @@
     "name": "Makes Steel Rod",
     "machine_id": "m_lathe",
     "cycle_time": 30,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -6619,7 +6619,7 @@
     "name": "Makes Copper Plate",
     "machine_id": "m_press",
     "cycle_time": 4,
-    "power_consumption": 1000,
+    "power_use": 1000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6641,7 +6641,7 @@
     "name": "Makes Iron Plate",
     "machine_id": "m_press",
     "cycle_time": 4,
-    "power_consumption": 2000,
+    "power_use": 2000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6663,7 +6663,7 @@
     "name": "Makes Steel Plate",
     "machine_id": "m_press",
     "cycle_time": 4,
-    "power_consumption": 12500,
+    "power_use": 12500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6685,7 +6685,7 @@
     "name": "Makes Plank^2",
     "machine_id": "m_press",
     "cycle_time": 4,
-    "power_consumption": 6250,
+    "power_use": 6250,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6707,7 +6707,7 @@
     "name": "Makes Iron Plate^2",
     "machine_id": "m_press",
     "cycle_time": 4,
-    "power_consumption": 6250,
+    "power_use": 6250,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6729,7 +6729,7 @@
     "name": "Makes Iron Plate",
     "machine_id": "m_press_mk2",
     "cycle_time": 8,
-    "power_consumption": 50000,
+    "power_use": 50000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6751,7 +6751,7 @@
     "name": "Makes Steel Plate",
     "machine_id": "m_press_mk2",
     "cycle_time": 8,
-    "power_consumption": 75000,
+    "power_use": 75000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6773,7 +6773,7 @@
     "name": "Makes Copper Plate",
     "machine_id": "m_press_mk2",
     "cycle_time": 4,
-    "power_consumption": 25000,
+    "power_use": 25000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6795,7 +6795,7 @@
     "name": "Makes Tungsten Carbide Plate",
     "machine_id": "m_press_mk2",
     "cycle_time": 4,
-    "power_consumption": 250000,
+    "power_use": 250000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6817,7 +6817,7 @@
     "name": "Makes Gear",
     "machine_id": "m_press_mk2",
     "cycle_time": 4,
-    "power_consumption": 75000,
+    "power_use": 75000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6839,7 +6839,7 @@
     "name": "Makes Iron Plate^2",
     "machine_id": "m_press_mk2",
     "cycle_time": 4,
-    "power_consumption": 40000,
+    "power_use": 40000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6861,7 +6861,7 @@
     "name": "Makes Rawmix, Aggregate",
     "machine_id": "m_raw_mill",
     "cycle_time": 20,
-    "power_consumption": 2500,
+    "power_use": 2500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6896,7 +6896,7 @@
     "name": "Makes Rawmix",
     "machine_id": "m_raw_mill",
     "cycle_time": 20,
-    "power_consumption": 2500,
+    "power_use": 2500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6922,7 +6922,7 @@
     "name": "Makes Aggregate",
     "machine_id": "m_raw_mill",
     "cycle_time": 20,
-    "power_consumption": 2500,
+    "power_use": 2500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6944,7 +6944,7 @@
     "name": "Makes Copper Wire",
     "machine_id": "m_roller",
     "cycle_time": 8,
-    "power_consumption": 500,
+    "power_use": 500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6966,7 +6966,7 @@
     "name": "Makes Iron Coil",
     "machine_id": "m_roller",
     "cycle_time": 8,
-    "power_consumption": 750,
+    "power_use": 750,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -6988,7 +6988,7 @@
     "name": "Makes Steel Rod",
     "machine_id": "m_roller",
     "cycle_time": 8,
-    "power_consumption": 6250,
+    "power_use": 6250,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7010,7 +7010,7 @@
     "name": "Makes Gear",
     "machine_id": "m_roller",
     "cycle_time": 8,
-    "power_consumption": 6250,
+    "power_use": 6250,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7032,7 +7032,7 @@
     "name": "Makes Nails",
     "machine_id": "m_roller",
     "cycle_time": 8,
-    "power_consumption": 750,
+    "power_use": 750,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7054,7 +7054,7 @@
     "name": "Makes Gold Wire",
     "machine_id": "m_roller",
     "cycle_time": 8,
-    "power_consumption": 7500,
+    "power_use": 7500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7076,7 +7076,7 @@
     "name": "Makes Copper Wire",
     "machine_id": "m_roller_mk2",
     "cycle_time": 8,
-    "power_consumption": 25000,
+    "power_use": 25000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7098,7 +7098,7 @@
     "name": "Makes Iron Coil",
     "machine_id": "m_roller_mk2",
     "cycle_time": 8,
-    "power_consumption": 50000,
+    "power_use": 50000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7120,7 +7120,7 @@
     "name": "Makes Steel Coil",
     "machine_id": "m_roller_mk2",
     "cycle_time": 8,
-    "power_consumption": 75000,
+    "power_use": 75000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7142,7 +7142,7 @@
     "name": "Makes Gold Wire",
     "machine_id": "m_roller_mk2",
     "cycle_time": 8,
-    "power_consumption": 25000,
+    "power_use": 25000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7164,7 +7164,7 @@
     "name": "Makes Cut Oak Log",
     "machine_id": "m_sawmill",
     "cycle_time": 20,
-    "power_consumption": 3000,
+    "power_use": 3000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7186,7 +7186,7 @@
     "name": "Makes Chunk Plank",
     "machine_id": "m_sawmill",
     "cycle_time": 20,
-    "power_consumption": 3000,
+    "power_use": 3000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7208,7 +7208,7 @@
     "name": "Makes Planks",
     "machine_id": "m_sawmill",
     "cycle_time": 20,
-    "power_consumption": 3000,
+    "power_use": 3000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7230,7 +7230,7 @@
     "name": "Makes Iron Plate",
     "machine_id": "m_sawmill",
     "cycle_time": 20,
-    "power_consumption": 3000,
+    "power_use": 3000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7252,7 +7252,7 @@
     "name": "Makes Rich Soil, Bauxite Residue, Gravel, Sand",
     "machine_id": "m_trommel",
     "cycle_time": 28,
-    "power_consumption": 17900,
+    "power_use": 17900,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7293,7 +7293,7 @@
     "name": "Makes Shallow Earth Fragment, Raw Iron, Table Salt, Rock",
     "machine_id": "m_trommel",
     "cycle_time": 28,
-    "power_consumption": 17900,
+    "power_use": 17900,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7334,7 +7334,7 @@
     "name": "Makes 18 Karat Gold, Bauxite Residue",
     "machine_id": "m_trommel",
     "cycle_time": 28,
-    "power_consumption": 17900,
+    "power_use": 17900,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7365,7 +7365,7 @@
     "name": "Makes Coal, Powdered Tungsten",
     "machine_id": "m_trommel",
     "cycle_time": 28,
-    "power_consumption": 17900,
+    "power_use": 17900,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7396,7 +7396,7 @@
     "name": "Makes 10 Karat Gold, Rich Soil, Raw Lead, Bauxite Residue",
     "machine_id": "m_trommel",
     "cycle_time": 28,
-    "power_consumption": 17900,
+    "power_use": 17900,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -7437,7 +7437,7 @@
     "name": "Makes Poor Quality Diesel, Residue",
     "machine_id": "m_diesel_refinery",
     "cycle_time": 1,
-    "power_consumption": 1000,
+    "power_use": 1000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7464,7 +7464,7 @@
     "name": "Makes Diesel, Residue",
     "machine_id": "m_diesel_refinery",
     "cycle_time": 1,
-    "power_consumption": 1000,
+    "power_use": 1000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7491,7 +7491,7 @@
     "name": "Makes Refined Diesel, Residue",
     "machine_id": "m_diesel_refinery",
     "cycle_time": 1,
-    "power_consumption": 1000,
+    "power_use": 1000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7518,7 +7518,7 @@
     "name": "Makes Gasoline, Residue",
     "machine_id": "m_diesel_refinery",
     "cycle_time": 1,
-    "power_consumption": 1000,
+    "power_use": 1000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7545,7 +7545,7 @@
     "name": "Makes Refined Gas, Residue",
     "machine_id": "m_gas_refinery",
     "cycle_time": 1,
-    "power_consumption": 60000,
+    "power_use": 60000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7572,7 +7572,7 @@
     "name": "Makes Residue, 10 Karat Gold",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7607,7 +7607,7 @@
     "name": "Makes Residue, 18 Karat Gold",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7642,7 +7642,7 @@
     "name": "Makes Residue, 18 Karat Gold",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7677,7 +7677,7 @@
     "name": "Makes Residue, Bauxite Residue",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7712,7 +7712,7 @@
     "name": "Makes Residue, Raw Zinc",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7747,7 +7747,7 @@
     "name": "Makes Residue, Coal",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7782,7 +7782,7 @@
     "name": "Makes Lithium Brine, Rich Soil",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7817,7 +7817,7 @@
     "name": "Makes Residue, Coal",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7852,7 +7852,7 @@
     "name": "Makes Residue, Coal",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7887,7 +7887,7 @@
     "name": "Makes Residue, Coal",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7922,7 +7922,7 @@
     "name": "Makes Residue, 8 Karat Gold",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -7957,7 +7957,7 @@
     "name": "Makes Poor Quality Diesel, Residue",
     "machine_id": "m_industrial_diesel_refinery",
     "cycle_time": 1,
-    "power_consumption": 750000,
+    "power_use": 750000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -7988,7 +7988,7 @@
     "name": "Makes Diesel, Residue",
     "machine_id": "m_industrial_diesel_refinery",
     "cycle_time": 1,
-    "power_consumption": 750000,
+    "power_use": 750000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -8019,7 +8019,7 @@
     "name": "Makes Refined Diesel, Residue",
     "machine_id": "m_industrial_diesel_refinery",
     "cycle_time": 1,
-    "power_consumption": 750000,
+    "power_use": 750000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -8050,7 +8050,7 @@
     "name": "Makes Gasoline, Residue",
     "machine_id": "m_industrial_diesel_refinery",
     "cycle_time": 1,
-    "power_consumption": 750000,
+    "power_use": 750000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -8081,7 +8081,7 @@
     "name": "Makes Ethanol",
     "machine_id": "m_plastic_refinery",
     "cycle_time": 4,
-    "power_consumption": 60000,
+    "power_use": 60000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -8107,7 +8107,7 @@
     "name": "Makes PTA",
     "machine_id": "m_plastic_refinery",
     "cycle_time": 4,
-    "power_consumption": 60000,
+    "power_use": 60000,
     "power_type": "MV",
     "pollution": 0.216,
     "inputs": [
@@ -8133,7 +8133,7 @@
     "name": "Makes Residue, Coke Fuel, Light Oil, Hydrogen Sulfide",
     "machine_id": "m_advanced_oil_separator",
     "cycle_time": 10,
-    "power_consumption": 2500000,
+    "power_use": 2500000,
     "power_type": "MV",
     "pollution": 0.324,
     "inputs": [
@@ -8174,7 +8174,7 @@
     "name": "Makes Residue, Coke Fuel",
     "machine_id": "m_advanced_oil_separator",
     "cycle_time": 10,
-    "power_consumption": 2500000,
+    "power_use": 2500000,
     "power_type": "MV",
     "pollution": 0.324,
     "inputs": [
@@ -8205,7 +8205,7 @@
     "name": "Makes Residue, Heavy Oil",
     "machine_id": "m_advanced_oil_separator",
     "cycle_time": 10,
-    "power_consumption": 2500000,
+    "power_use": 2500000,
     "power_type": "MV",
     "pollution": 0.324,
     "inputs": [
@@ -8236,7 +8236,7 @@
     "name": "Makes Residue, Hydrogen Sulfide, Heavy Oil",
     "machine_id": "m_advanced_oil_separator",
     "cycle_time": 10,
-    "power_consumption": 2500000,
+    "power_use": 2500000,
     "power_type": "MV",
     "pollution": 0.324,
     "inputs": [
@@ -8272,7 +8272,7 @@
     "name": "Makes Crude Diesel, Gasoline, Residue",
     "machine_id": "m_crude_oil_separator",
     "cycle_time": 1,
-    "power_consumption": 2200,
+    "power_use": 2200,
     "power_type": "MV",
     "pollution": 0.432,
     "inputs": [
@@ -8304,7 +8304,7 @@
     "name": "Makes Depleted UF6 Waste, Slightly Enriched UF6 Gas, Unenriched UF6 Gas",
     "machine_id": "m_gas_centrifuge",
     "cycle_time": 1,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -8336,7 +8336,7 @@
     "name": "Makes Depleted UF6 Waste, Enriched UF6 Gas, Slightly Enriched UF6 Gas",
     "machine_id": "m_gas_centrifuge",
     "cycle_time": 1,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -8368,7 +8368,7 @@
     "name": "Makes Residue, Machine Oil, Light Oil",
     "machine_id": "m_industrial_oil_separator",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -8404,7 +8404,7 @@
     "name": "Makes Residue, Diesel, Crude Oil",
     "machine_id": "m_industrial_oil_separator",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -8440,7 +8440,7 @@
     "name": "Makes Residue, Crude Oil",
     "machine_id": "m_industrial_oil_separator",
     "cycle_time": 5,
-    "power_consumption": 100000,
+    "power_use": 100000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -8471,7 +8471,7 @@
     "name": "Makes Mixed Uranium Oxides, Sand, Residue",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 10,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -8511,7 +8511,7 @@
     "name": "Makes Mixed Uranium Oxides, Sand, Residue",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 10,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -8551,7 +8551,7 @@
     "name": "Makes Mixed Fissile Nitrates, Fission Byproducts, Residue",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 10,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -8591,7 +8591,7 @@
     "name": "Makes Mixed Fissile Nitrates, Fission Byproducts, Residue",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 10,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -8631,7 +8631,7 @@
     "name": "Makes Lithium Carbonate, Residue",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 4,
-    "power_consumption": 500000,
+    "power_use": 500000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -8670,7 +8670,7 @@
     "name": "Makes Powdered Tungsten Carbide, Residue",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 4,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -8709,7 +8709,7 @@
     "name": "Makes 24 Karat Gold, Bauxite Residue, Residue",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 2,
-    "power_consumption": 2000000,
+    "power_use": 2000000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -8745,7 +8745,7 @@
     "name": "Makes Treated Raw Iron, Residue",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 15,
-    "power_consumption": 800000,
+    "power_use": 800000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -8776,7 +8776,7 @@
     "name": "Makes Treated Raw Copper, Residue",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 15,
-    "power_consumption": 800000,
+    "power_use": 800000,
     "power_type": "HV",
     "pollution": 0,
     "inputs": [
@@ -8807,7 +8807,7 @@
     "name": "Consumes Exhaust, Filter",
     "machine_id": "m_exhaust_stack",
     "cycle_time": 5,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 86.4,
     "inputs": [
@@ -8827,7 +8827,7 @@
     "name": "Consumes Exhaust",
     "machine_id": "m_exhaust_stack",
     "cycle_time": 5,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 691.2,
     "inputs": [
@@ -8843,7 +8843,7 @@
     "name": "Makes Residue",
     "machine_id": "m_scrubber",
     "cycle_time": 4,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": -3.24,
     "inputs": [
@@ -8865,7 +8865,7 @@
     "name": "Makes Residue",
     "machine_id": "m_scrubber",
     "cycle_time": 4,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": -3.57,
     "inputs": [
@@ -8887,7 +8887,7 @@
     "name": "Makes Residue",
     "machine_id": "m_scrubber",
     "cycle_time": 4,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": -6.29,
     "inputs": [
@@ -8909,7 +8909,7 @@
     "name": "Makes Residue",
     "machine_id": "m_scrubber",
     "cycle_time": 4,
-    "power_consumption": 15000,
+    "power_use": 15000,
     "power_type": "MV",
     "pollution": 6.48,
     "inputs": [
@@ -8931,7 +8931,7 @@
     "name": "Makes Steam",
     "machine_id": "m_coal_generator",
     "cycle_time": 1,
-    "power_consumption": -7000,
+    "power_use": -7000,
     "power_type": "MV",
     "pollution": 0.27,
     "inputs": [
@@ -8957,7 +8957,7 @@
     "name": "Consumes Coal",
     "machine_id": "m_compact_coal_power_plant",
     "cycle_time": 3.33,
-    "power_consumption": -13500,
+    "power_use": -13500,
     "power_type": "MV",
     "pollution": 0.821,
     "inputs": [
@@ -8973,7 +8973,7 @@
     "name": "Produces Power",
     "machine_id": "m_energy_wheel",
     "cycle_time": 1,
-    "power_consumption": -30000,
+    "power_use": -30000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -8984,7 +8984,7 @@
     "name": "Produces Power",
     "machine_id": "m_hand_crank",
     "cycle_time": 1,
-    "power_consumption": -1500,
+    "power_use": -1500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -8995,7 +8995,7 @@
     "name": "Produces Power",
     "machine_id": "m_solar_panel",
     "cycle_time": 1,
-    "power_consumption": -200,
+    "power_use": -200,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -9006,7 +9006,7 @@
     "name": "Produces Power",
     "machine_id": "m_solar_panel2",
     "cycle_time": 1,
-    "power_consumption": -575,
+    "power_use": -575,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -9017,7 +9017,7 @@
     "name": "Produces Power",
     "machine_id": "m_solar_panel3",
     "cycle_time": 1,
-    "power_consumption": -3400,
+    "power_use": -3400,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -9028,7 +9028,7 @@
     "name": "Produces Power",
     "machine_id": "m_solar_farm1",
     "cycle_time": 1,
-    "power_consumption": -80000,
+    "power_use": -80000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -9039,7 +9039,7 @@
     "name": "Produces Power",
     "machine_id": "m_4_panel_solar",
     "cycle_time": 1,
-    "power_consumption": -68965.51,
+    "power_use": -68965.51,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -9050,7 +9050,7 @@
     "name": "Produces Power",
     "machine_id": "m_rtg",
     "cycle_time": 1,
-    "power_consumption": -1,
+    "power_use": -1,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -9061,7 +9061,7 @@
     "name": "Consumes Crude Diesel",
     "machine_id": "m_diesel_generator",
     "cycle_time": 5,
-    "power_consumption": -55200,
+    "power_use": -55200,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9077,7 +9077,7 @@
     "name": "Consumes Poor Quality Diesel",
     "machine_id": "m_diesel_generator",
     "cycle_time": 6,
-    "power_consumption": -66000,
+    "power_use": -66000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9093,7 +9093,7 @@
     "name": "Consumes Diesel",
     "machine_id": "m_diesel_generator",
     "cycle_time": 7.67,
-    "power_consumption": -78000,
+    "power_use": -78000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9109,7 +9109,7 @@
     "name": "Consumes Refined Diesel",
     "machine_id": "m_diesel_generator",
     "cycle_time": 10.33,
-    "power_consumption": -90000,
+    "power_use": -90000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9125,7 +9125,7 @@
     "name": "Heats Water",
     "machine_id": "m_firebox",
     "cycle_time": 1,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 1.08,
     "inputs": [
@@ -9151,7 +9151,7 @@
     "name": "Heats Filtered Water",
     "machine_id": "m_firebox",
     "cycle_time": 1,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 1.08,
     "inputs": [
@@ -9177,7 +9177,7 @@
     "name": "Heats Distilled Water",
     "machine_id": "m_firebox",
     "cycle_time": 1,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 1.08,
     "inputs": [
@@ -9203,7 +9203,7 @@
     "name": "Heats Water",
     "machine_id": "m_gas_burner",
     "cycle_time": 1,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 0.173,
     "inputs": [
@@ -9229,7 +9229,7 @@
     "name": "Heats Water",
     "machine_id": "m_gas_burner",
     "cycle_time": 1,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -9255,7 +9255,7 @@
     "name": "Heats Filtered Water",
     "machine_id": "m_gas_burner",
     "cycle_time": 1,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 0.173,
     "inputs": [
@@ -9281,7 +9281,7 @@
     "name": "Heats Filtered Water",
     "machine_id": "m_gas_burner",
     "cycle_time": 1,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -9307,7 +9307,7 @@
     "name": "Heats Distilled Water",
     "machine_id": "m_gas_burner",
     "cycle_time": 1,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 0.173,
     "inputs": [
@@ -9333,7 +9333,7 @@
     "name": "Heats Distilled Water",
     "machine_id": "m_gas_burner",
     "cycle_time": 1,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -9359,7 +9359,7 @@
     "name": "Consumes Gasoline",
     "machine_id": "m_gasoline_generator",
     "cycle_time": 2,
-    "power_consumption": -12000,
+    "power_use": -12000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9375,7 +9375,7 @@
     "name": "Consumes GasolineE10",
     "machine_id": "m_gasoline_generator",
     "cycle_time": 10,
-    "power_consumption": -24000,
+    "power_use": -24000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9391,7 +9391,7 @@
     "name": "Consumes Leaded Gasoline",
     "machine_id": "m_gasoline_generator",
     "cycle_time": 5,
-    "power_consumption": -100000,
+    "power_use": -100000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9407,7 +9407,7 @@
     "name": "Consumes Crude Diesel, Machine Oil",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
-    "power_consumption": -5000000,
+    "power_use": -5000000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9431,7 +9431,7 @@
     "name": "Consumes Poor Quality Diesel, Machine Oil",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
-    "power_consumption": -5000000,
+    "power_use": -5000000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9455,7 +9455,7 @@
     "name": "Consumes Diesel, Machine Oil",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
-    "power_consumption": -5000000,
+    "power_use": -5000000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9479,7 +9479,7 @@
     "name": "Consumes Refined Diesel, Machine Oil",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
-    "power_consumption": -5000000,
+    "power_use": -5000000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9503,7 +9503,7 @@
     "name": "Consumes Crude Diesel, Machine Oil, Filtered Water",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
-    "power_consumption": -6000000,
+    "power_use": -6000000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9527,7 +9527,7 @@
     "name": "Consumes Poor Quality Diesel, Machine Oil, Filtered Water",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
-    "power_consumption": -6000000,
+    "power_use": -6000000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9551,7 +9551,7 @@
     "name": "Consumes Diesel, Machine Oil, Filtered Water",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
-    "power_consumption": -6000000,
+    "power_use": -6000000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9575,7 +9575,7 @@
     "name": "Consumes Refined Diesel, Machine Oil, Filtered Water",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
-    "power_consumption": -6000000,
+    "power_use": -6000000,
     "power_type": "MV",
     "pollution": 0.648,
     "inputs": [
@@ -9599,7 +9599,7 @@
     "name": "Consumes Crude Diesel, Machine Oil, Distilled Water",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
-    "power_consumption": -6000000,
+    "power_use": -6000000,
     "power_type": "MV",
     "pollution": 0.432,
     "inputs": [
@@ -9623,7 +9623,7 @@
     "name": "Consumes Poor Quality Diesel, Machine Oil, Distilled Water",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
-    "power_consumption": -6000000,
+    "power_use": -6000000,
     "power_type": "MV",
     "pollution": 0.432,
     "inputs": [
@@ -9647,7 +9647,7 @@
     "name": "Consumes Diesel, Machine Oil, Distilled Water",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
-    "power_consumption": -6000000,
+    "power_use": -6000000,
     "power_type": "MV",
     "pollution": 0.432,
     "inputs": [
@@ -9671,7 +9671,7 @@
     "name": "Consumes Refined Diesel, Machine Oil, Distilled Water",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
-    "power_consumption": -6000000,
+    "power_use": -6000000,
     "power_type": "MV",
     "pollution": 0.432,
     "inputs": [
@@ -9695,7 +9695,7 @@
     "name": "Research Station 1",
     "machine_id": "m_research_station1",
     "cycle_time": 1,
-    "power_consumption": 2100,
+    "power_use": 2100,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -9706,7 +9706,7 @@
     "name": "Extracts Crude Oil",
     "machine_id": "m_american_oil_rig",
     "cycle_time": 1,
-    "power_consumption": 50000,
+    "power_use": 50000,
     "power_type": "MV",
     "pollution": 0.0216,
     "inputs": [],
@@ -9723,7 +9723,7 @@
     "name": "Extracts Crude Oil",
     "machine_id": "m_og_oil_rig",
     "cycle_time": 1,
-    "power_consumption": 3000,
+    "power_use": 3000,
     "power_type": "MV",
     "pollution": 0.0216,
     "inputs": [],
@@ -9740,7 +9740,7 @@
     "name": "Extracts Water",
     "machine_id": "m_hot_water_pump",
     "cycle_time": 1,
-    "power_consumption": 6000,
+    "power_use": 6000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -9757,7 +9757,7 @@
     "name": "Extracts Sand",
     "machine_id": "m_sand_excavator",
     "cycle_time": 2,
-    "power_consumption": 300000,
+    "power_use": 300000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [],
@@ -9774,7 +9774,7 @@
     "name": "Extracts Soil",
     "machine_id": "m_soil_excavator",
     "cycle_time": 1,
-    "power_consumption": 300000,
+    "power_use": 300000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -9796,7 +9796,7 @@
     "name": "Extracts 10 Karat Gold",
     "machine_id": "m_gold_drill",
     "cycle_time": 1,
-    "power_consumption": 900000,
+    "power_use": 900000,
     "power_type": "MV",
     "pollution": 0.2,
     "inputs": [],
@@ -9813,7 +9813,7 @@
     "name": "Extracts Uranium",
     "machine_id": "m_uranium_drill",
     "cycle_time": 180,
-    "power_consumption": 1200000000,
+    "power_use": 1200000000,
     "power_type": "MV",
     "pollution": 2.16,
     "inputs": [],
@@ -9830,7 +9830,7 @@
     "name": "Extracts Coal",
     "machine_id": "m_fancy_coal_drill",
     "cycle_time": 4,
-    "power_consumption": 120,
+    "power_use": 120,
     "power_type": "MV",
     "pollution": 0.015,
     "inputs": [],
@@ -9847,7 +9847,7 @@
     "name": "Makes Cat",
     "machine_id": "m_cat_assembler",
     "cycle_time": 92,
-    "power_consumption": 0,
+    "power_use": 0,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -9877,7 +9877,7 @@
     "name": "Makes Liquid Iron",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 10,
-    "power_consumption": 12000,
+    "power_use": 12000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -9899,7 +9899,7 @@
     "name": "Makes Liquid Copper",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 3,
-    "power_consumption": 40000,
+    "power_use": 40000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -9921,7 +9921,7 @@
     "name": "Makes Liquid Copper",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 3,
-    "power_consumption": 40000,
+    "power_use": 40000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -9943,7 +9943,7 @@
     "name": "Makes Liquid Iron",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 24000,
+    "power_use": 24000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -9965,7 +9965,7 @@
     "name": "Makes Liquid Iron",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 24000,
+    "power_use": 24000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -9987,7 +9987,7 @@
     "name": "Makes Liquid Sulfur",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 5,
-    "power_consumption": 24000,
+    "power_use": 24000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -10009,7 +10009,7 @@
     "name": "Makes Liquid Copper",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 6,
-    "power_consumption": 20000,
+    "power_use": 20000,
     "power_type": "MV",
     "pollution": 0.32,
     "inputs": [
@@ -10031,7 +10031,7 @@
     "name": "Makes Copper Plate",
     "machine_id": "m_industrial_press",
     "cycle_time": 3,
-    "power_consumption": 1340,
+    "power_use": 1340,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -10053,7 +10053,7 @@
     "name": "Makes Plank^2",
     "machine_id": "m_industrial_press",
     "cycle_time": 3.5,
-    "power_consumption": 1140,
+    "power_use": 1140,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -10075,7 +10075,7 @@
     "name": "Makes Steel Plate",
     "machine_id": "m_industrial_press",
     "cycle_time": 4,
-    "power_consumption": 12500,
+    "power_use": 12500,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -10097,7 +10097,7 @@
     "name": "Makes Iron Plate",
     "machine_id": "m_industrial_press",
     "cycle_time": 4,
-    "power_consumption": 1000,
+    "power_use": 1000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -10119,7 +10119,7 @@
     "name": "Makes Iron Plate^2",
     "machine_id": "m_industrial_press",
     "cycle_time": 4,
-    "power_consumption": 75,
+    "power_use": 75,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -10141,7 +10141,7 @@
     "name": "Makes Residue, Poor Quality Diesel",
     "machine_id": "m_advanced_diesel_refinery",
     "cycle_time": 1,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -10172,7 +10172,7 @@
     "name": "Makes Residue, Refined Diesel",
     "machine_id": "m_advanced_diesel_refinery",
     "cycle_time": 1,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -10203,7 +10203,7 @@
     "name": "Makes Residue, Diesel",
     "machine_id": "m_advanced_diesel_refinery",
     "cycle_time": 1,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -10234,7 +10234,7 @@
     "name": "Makes Residue, Gasoline",
     "machine_id": "m_advanced_diesel_refinery",
     "cycle_time": 1,
-    "power_consumption": 1000000,
+    "power_use": 1000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [
@@ -10265,7 +10265,7 @@
     "name": "Makes Crude Diesel, Heavy Oil, Crude Oil",
     "machine_id": "m_residue_refinery",
     "cycle_time": 60,
-    "power_consumption": 3000000,
+    "power_use": 3000000,
     "power_type": "MV",
     "pollution": 0,
     "inputs": [

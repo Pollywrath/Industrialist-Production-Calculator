@@ -9,6 +9,8 @@ import {
   AlertTriangle,
   Coins,
   Activity,
+  Boxes,
+  Ruler,
 } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
 import { useFlowStore } from '../../stores/useFlowStore';
@@ -21,6 +23,7 @@ import {
   formatPollution,
   formatQuantity,
   formatMachineCount,
+  formatMachineSpace,
 } from '../../utils/unitFormatting';
 import { VirtualList } from '../shared/VirtualList';
 import { ValidatedNumberInput } from '../shared/ValidatedNumberInput';
@@ -61,10 +64,13 @@ export function DashboardPanels() {
   const setGlobalPollution = useGlobalSettingsStore((s) => s.setGlobalPollution);
 
   const {
-    totalConsumption,
-    totalProduction,
+    mvUse,
+    mvOutput,
+    hvUse,
+    hvOutput,
     totalModelCount,
     totalMachineCost,
+    totalMachineSpace,
     netPollution,
     totalProfit,
     profitMultiplier,
@@ -99,7 +105,8 @@ export function DashboardPanels() {
 
     if (targetNode) {
       const x = targetNode.position.x + (targetNode.measured?.width ?? targetNode.width ?? 200) / 2;
-      const y = targetNode.position.y + (targetNode.measured?.height ?? targetNode.height ?? 120) / 2;
+      const y =
+        targetNode.position.y + (targetNode.measured?.height ?? targetNode.height ?? 120) / 2;
       setCenter(x, y, { zoom: 1.2 });
       completeTutorialAction({ type: 'dashboard-diagnostic', status, productId, nodeId });
     }
@@ -222,30 +229,51 @@ export function DashboardPanels() {
           <div className={styles['panel-body']}>
             <div className={styles['stat-row']}>
               <span className={styles['stat-label']}>
-                <Zap size={10} /> Power Consumption
+                <Zap size={10} /> MV Power Use
               </span>
-              <span className={styles['stat-value']}>{formatPower(totalConsumption)}</span>
+              <span className={styles['stat-value']}>{formatPower(mvUse)}</span>
             </div>
+
+            {Math.abs(hvUse) > 0.0001 && (
+              <div className={styles['stat-row']}>
+                <span className={styles['stat-label']}>
+                  <Zap size={10} /> HV Power Use
+                </span>
+                <span className={styles['stat-value']}>{formatPower(hvUse)}</span>
+              </div>
+            )}
 
             <div className={styles['stat-row']}>
               <span className={styles['stat-label']}>
-                <Zap size={10} className={styles['power-production-icon']} /> Power Production
+                <Zap size={10} className={styles['power-output-icon']} /> MV Power Output
               </span>
-              <span className={styles['stat-value']}>{formatPower(totalProduction)}</span>
+              <span className={styles['stat-value']}>{formatPower(mvOutput)}</span>
             </div>
+
+            {Math.abs(hvOutput) > 0.0001 && (
+              <div className={styles['stat-row']}>
+                <span className={styles['stat-label']}>
+                  <Zap size={10} className={styles['power-output-icon']} /> HV Power Output
+                </span>
+                <span className={styles['stat-value']}>{formatPower(hvOutput)}</span>
+              </div>
+            )}
 
             <div className={styles['stat-row']}>
               <span className={styles['stat-label']}>
-                <Activity size={10} /> Minimum Model Count
+                <AlertTriangle size={10} /> Net Pollution
               </span>
-              <span className={styles['stat-value']}>{formatMachineCount(totalModelCount)}</span>
-            </div>
-
-            <div className={styles['stat-row']}>
-              <span className={styles['stat-label']}>
-                <Coins size={10} /> Machine Cost
+              <span
+                className={`${styles['stat-value']} ${
+                  netPollution < -0.0001
+                    ? styles['success']
+                    : netPollution > 0.0001
+                      ? styles['error']
+                      : styles['neutral']
+                }`}
+              >
+                {formatPollution(netPollution)}
               </span>
-              <span className={styles['stat-value']}>{formatCurrency(totalMachineCost)}</span>
             </div>
 
             <div className={styles['stat-row']}>
@@ -282,18 +310,23 @@ export function DashboardPanels() {
 
             <div className={styles['stat-row']}>
               <span className={styles['stat-label']}>
-                <AlertTriangle size={10} /> Net Pollution
+                <Coins size={10} /> Machine Cost
               </span>
-              <span
-                className={`${styles['stat-value']} ${netPollution < -0.0001
-                  ? styles['success']
-                  : netPollution > 0.0001
-                    ? styles['error']
-                    : styles['neutral']
-                  }`}
-              >
-                {formatPollution(netPollution)}
+              <span className={styles['stat-value']}>{formatCurrency(totalMachineCost)}</span>
+            </div>
+
+            <div className={styles['stat-row']}>
+              <span className={styles['stat-label']}>
+                <Ruler size={10} /> Machine Space
               </span>
+              <span className={styles['stat-value']}>{formatMachineSpace(totalMachineSpace)}</span>
+            </div>
+
+            <div className={styles['stat-row']}>
+              <span className={styles['stat-label']}>
+                <Boxes size={10} /> Machine Model Count
+              </span>
+              <span className={styles['stat-value']}>{formatMachineCount(totalModelCount)}</span>
             </div>
           </div>
         )}
@@ -472,4 +505,3 @@ export function DashboardPanels() {
     </div>
   );
 }
-

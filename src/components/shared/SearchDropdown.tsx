@@ -78,9 +78,7 @@ export function SearchDropdown({
   const inputValue = isFocused ? typedValue : selectedOption ? selectedOption.label : '';
 
   const filteredOptions = hasTyped
-    ? options.filter((opt) =>
-      opt.label.toLowerCase().includes(typedValue.toLowerCase()),
-    )
+    ? options.filter((opt) => opt.label.toLowerCase().includes(typedValue.toLowerCase()))
     : options;
 
   const handleFocus = () => {
@@ -140,7 +138,9 @@ export function SearchDropdown({
                   type="button"
                   className={`${styles['option-item']} ${opt.value === value ? styles['is-selected'] : ''}`}
                   onClick={() => handleSelect(opt.value)}
-                  data-tutorial-data-option={dataTutorialDataField ? `${dataTutorialDataField}:${opt.value}` : undefined}
+                  data-tutorial-data-option={
+                    dataTutorialDataField ? `${dataTutorialDataField}:${opt.value}` : undefined
+                  }
                 >
                   {opt.label}
                 </button>

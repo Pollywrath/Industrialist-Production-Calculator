@@ -35,9 +35,9 @@ export type PowerType = 'MV' | 'HV';
 
 export interface RecipePowerEffect {
   power_type: PowerType;
-  power_consumption: number;
+  power_use: number;
   label?: string;
-  accounting?: 'normal' | 'production_delta';
+  accounting?: 'normal' | 'output_delta';
 }
 
 export interface RecipeInput {
@@ -70,7 +70,7 @@ export interface Recipe {
   name: string;
   machine_id: string;
   cycle_time: number;
-  power_consumption: number;
+  power_use: number;
   power_type: PowerType;
   powerEffects?: RecipePowerEffect[];
   powerAccountingEffects?: RecipePowerEffect[];

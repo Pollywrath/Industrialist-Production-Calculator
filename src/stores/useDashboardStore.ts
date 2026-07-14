@@ -8,7 +8,14 @@ import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 import { getSpecialRecipe } from '../data/registry';
 import { buildHandleId } from '../utils/idGenerator';
 import { isRecipeNode } from '../types/nodes';
-import { estimatePowerModelCount, getRecipePowerTotals } from '../utils/recipePower';
+import { getRecipePowerTotals } from '../utils/recipePower';
+import { getRecipeOptimizationMetrics } from '../utils/optimizationMetrics';
+import { ceilMachineCount } from '../utils/precision';
+import {
+  EMPTY_RESEARCH_INFRASTRUCTURE_STATS,
+  getOptimalSatelliteDishCount,
+  type ResearchInfrastructureStats,
+} from '../utils/researchInfrastructure';
 
 export interface ProductDeficiencyGroup {
   productId: string;
@@ -26,49 +33,45 @@ export interface ProductExcessGroup {
 }
 
 interface DashboardState {
-  totalConsumption: number;
-  totalProduction: number;
+  totalPowerUse: number;
+  totalPowerOutput: number;
+  mvUse: number;
+  mvOutput: number;
+  hvUse: number;
+  hvOutput: number;
   totalModelCount: number;
   totalMachineCost: number;
+  totalMachineSpace: number;
   netPollution: number;
   totalProfit: number;
   profitMultiplier: number;
+  researchInfrastructure: ResearchInfrastructureStats;
   deficienciesMap: Map<string, ProductDeficiencyGroup>;
   excessesMap: Map<string, ProductExcessGroup>;
   recompute: () => void;
 }
 
 export const useDashboardStore = create<DashboardState>((set) => ({
-  totalConsumption: 0,
-  totalProduction: 0,
+  totalPowerUse: 0,
+  totalPowerOutput: 0,
+  mvUse: 0,
+  mvOutput: 0,
+  hvUse: 0,
+  hvOutput: 0,
   totalModelCount: 0,
   totalMachineCost: 0,
+  totalMachineSpace: 0,
   netPollution: 0,
   totalProfit: 0,
   profitMultiplier: 0,
+  researchInfrastructure: EMPTY_RESEARCH_INFRASTRUCTURE_STATS,
   deficienciesMap: new Map(),
   excessesMap: new Map(),
 
   recompute: () => {
     const uiStore = useUIStore.getState();
-    const isStatsMinimized = uiStore.isStatsMinimized;
     const isExtendedMinimized = uiStore.isExtendedMinimized;
     const rateMode = uiStore.rateMode;
-
-    if (isStatsMinimized && isExtendedMinimized) {
-      set({
-        totalConsumption: 0,
-        totalProduction: 0,
-        totalModelCount: 0,
-        totalMachineCost: 0,
-        netPollution: 0,
-        totalProfit: 0,
-        profitMultiplier: 0,
-        deficienciesMap: new Map(),
-        excessesMap: new Map(),
-      });
-      return;
-    }
 
     const flowStore = useFlowStore.getState();
     const nodes = flowStore.nodes.filter(isRecipeNode);
@@ -83,12 +86,20 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     const edgeFlows = isSolutionFresh ? flowResultState.edgeFlows : {};
     const globalSettings = useGlobalSettingsStore.getState().settings;
 
-    let totalConsumption = 0;
-    let totalProduction = 0;
+    let totalPowerUse = 0;
+    let totalPowerOutput = 0;
+    let mvUse = 0;
+    let mvOutput = 0;
+    let hvUse = 0;
+    let hvOutput = 0;
     let totalModelCount = 0;
     let totalMachineCost = 0;
+    let totalMachineSpace = 0;
     let netPollution = 0;
     let totalProfit = 0;
+    const researchInfrastructure: ResearchInfrastructureStats = {
+      ...EMPTY_RESEARCH_INFRASTRUCTURE_STATS,
+    };
 
     const deficienciesMap = new Map<string, ProductDeficiencyGroup>();
     const excessesMap = new Map<string, ProductExcessGroup>();
@@ -110,43 +121,33 @@ export const useDashboardStore = create<DashboardState>((set) => ({
           return totalFlow;
         },
       };
-      const recipe = resolveActiveRecipe(
-        node.data.recipeId,
-        node.data.settings,
-        node.id,
-        helpers,
-        { globalSettings: globalSettings as unknown as Record<string, unknown> },
-      );
+      const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id, helpers, {
+        globalSettings: globalSettings as unknown as Record<string, unknown>,
+      });
       if (!recipe) return;
 
       const sr = getSpecialRecipe(recipe.id);
 
       const machineCount = node.data.machineCount ?? 0;
-      const roundedCount = Math.ceil(machineCount);
+      const roundedCount = ceilMachineCount(machineCount);
 
       const machine = getMachine(recipe.machine_id);
       const machineName = machine?.name ?? 'Machine';
 
-      const defaultSettings = sr
-        ? Object.entries(sr.settings).reduce(
-            (acc, [key, def]) => {
-              acc[key] = def.default;
-              return acc;
-            },
-            {} as Record<string, unknown>,
-          )
-        : {};
-      const resolvedSettings = {
-        ...defaultSettings,
-        ...(node.data.settings ?? {}),
-      };
+      const optimizationMetrics = getRecipeOptimizationMetrics(
+        recipe,
+        node.data.settings,
+        globalSettings as unknown as Record<string, unknown>,
+        node.id,
+      );
 
       if (machine) {
-        const baseCost =
-          sr && sr.computeMachineCost
-            ? sr.computeMachineCost(resolvedSettings, globalSettings as unknown as Record<string, unknown>, node.id)
-            : machine.cost;
-        totalMachineCost += baseCost * roundedCount;
+        if (roundedCount > 0 && optimizationMetrics.hasInfiniteMachineCost) {
+          totalMachineCost = Infinity;
+        } else if (Number.isFinite(totalMachineCost)) {
+          totalMachineCost += optimizationMetrics.machineCostPerWholeMachine * roundedCount;
+        }
+        totalMachineSpace += optimizationMetrics.machineSpacePerWholeMachine * roundedCount;
 
         if (machine.subcategory === 'Depot') {
           const nodeFlowResult = results.get(node.id);
@@ -174,22 +175,42 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       }
 
       const powerTotals = getRecipePowerTotals(recipe, machineCount);
-      totalConsumption += powerTotals.consumption;
-      totalProduction += powerTotals.production;
+      totalPowerUse += powerTotals.use;
+      totalPowerOutput += powerTotals.output;
+      mvUse += powerTotals.mvUse;
+      mvOutput += powerTotals.mvOutput;
+      hvUse += powerTotals.hvUse;
+      hvOutput += powerTotals.hvOutput;
 
-      const pollutionMultiplier = (recipe.pollutionIndependentOfMachineCount || sr?.pollutionIndependentOfMachineCount) ? 1 : machineCount;
+      const pollutionMultiplier =
+        recipe.pollutionIndependentOfMachineCount || sr?.pollutionIndependentOfMachineCount
+          ? 1
+          : machineCount;
       netPollution += recipe.pollution * pollutionMultiplier;
 
-      let baseModelCount: number;
-      if (sr && sr.computeModelCount) {
-        baseModelCount = sr.computeModelCount(resolvedSettings, globalSettings as unknown as Record<string, unknown>, node.id);
-      } else {
-        baseModelCount = 1 + 2 * recipe.inputs.length + 2 * recipe.outputs.length;
+      totalModelCount += optimizationMetrics.modelCountPerWholeMachine * roundedCount;
 
-        baseModelCount += estimatePowerModelCount(recipe);
+      if (recipe.id === 'r_research_station1_01') {
+        researchInfrastructure.researchStation1Count += roundedCount;
+      } else if (recipe.id === 'r_research_station2_01') {
+        researchInfrastructure.researchStation2Count += roundedCount;
+      } else if (recipe.id === 'r_research_station3_01') {
+        if (node.data.settings?.has_station_4 === 'Yes') {
+          researchInfrastructure.researchStation3With4Count += roundedCount;
+        } else {
+          researchInfrastructure.researchStation3Count += roundedCount;
+        }
+      } else if (recipe.id === 'r_satellite_dish_controller_01') {
+        const configuredDishes = Number(node.data.settings?.satellite_dish_count ?? 1);
+        const dishesPerController = Number.isFinite(configuredDishes)
+          ? Math.max(1, Math.round(configuredDishes))
+          : 1;
+        researchInfrastructure.satelliteDishControllerCount += roundedCount;
+        researchInfrastructure.satelliteDishCount += roundedCount * dishesPerController;
+        const fluid = getProduct(recipe.inputs[0]?.product_id ?? '');
+        researchInfrastructure.satelliteDishResearchPoints +=
+          (fluid?.rp_multiplier ?? 0) * roundedCount;
       }
-
-      totalModelCount += baseModelCount * roundedCount;
 
       if (!isExtendedMinimized) {
         const nodeFlowResult = results.get(node.id);
@@ -203,9 +224,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             const rawProductId = inputEntry?.product_id;
             if (!rawProductId) continue;
             const handleId = buildHandleId(node.id, 'input', i);
-            const productId =
-              resolvedProducts[handleId] ||
-              helpers.resolveProduct('input', i);
+            const productId = resolvedProducts[handleId] || helpers.resolveProduct('input', i);
             if (!productId) continue;
             const defRate = (inputFlow.rate - inputFlow.connected) * rateModeFactor;
             if (defRate > 0.0001) {
@@ -236,9 +255,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
           if (outputFlow && outputFlow.hasExcess) {
             if (!outDef) continue;
             const handleId = buildHandleId(node.id, 'output', i);
-            const productId =
-              resolvedProducts[handleId] ||
-              helpers.resolveProduct('output', i);
+            const productId = resolvedProducts[handleId] || helpers.resolveProduct('output', i);
             if (!productId) continue;
             const excRate = (outputFlow.rate - outputFlow.connected) * rateModeFactor;
             if (excRate > 0.0001) {
@@ -272,7 +289,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
     const difficulty = globalSettings.difficulty || 'normal';
     const x = globalSettings.global_pollution;
-    
+
     let y: number;
     if (difficulty === 'hard') {
       const val = (-77 * x) / 290;
@@ -297,15 +314,25 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     }
 
     const finalProfit = totalProfit * (1 + y / 100);
+    researchInfrastructure.optimalSatelliteDishCount = getOptimalSatelliteDishCount(
+      researchInfrastructure.satelliteDishControllerCount,
+      researchInfrastructure.satelliteDishResearchPoints,
+    );
 
     set({
-      totalConsumption,
-      totalProduction,
+      totalPowerUse,
+      totalPowerOutput,
+      mvUse,
+      mvOutput,
+      hvUse,
+      hvOutput,
       totalModelCount,
       totalMachineCost,
+      totalMachineSpace,
       netPollution,
       totalProfit: finalProfit,
       profitMultiplier: y,
+      researchInfrastructure,
       deficienciesMap,
       excessesMap,
     });

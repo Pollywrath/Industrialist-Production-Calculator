@@ -145,10 +145,7 @@ function RecipeSelectorModal() {
   const clickedRateInfo = derivedRate !== null ? { clickedPerSecondRate: derivedRate } : null;
 
   const handleAddRecipe = (recipeId: string) => {
-    if (
-      isTutorialActive() &&
-      !canPerformTutorialAction({ type: 'selector-recipe', recipeId })
-    ) {
+    if (isTutorialActive() && !canPerformTutorialAction({ type: 'selector-recipe', recipeId })) {
       return;
     }
 

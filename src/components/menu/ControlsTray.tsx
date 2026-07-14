@@ -106,9 +106,7 @@ const BUTTONS: ButtonConfig[] = [
   { id: 'redo', label: 'Redo', type: 'action', Icon: Redo },
 ];
 
-const UNWIRED_IDS = new Set([
-  'coming_soon',
-]);
+const UNWIRED_IDS = new Set(['coming_soon']);
 
 export function ControlsTray() {
   const [isLayouting, setIsLayouting] = useState(false);
@@ -187,7 +185,8 @@ export function ControlsTray() {
       if (isRatioOptimizerRunning()) {
         void useUIStore.getState().confirm({
           title: 'Solver Busy',
-          message: 'An optimization run is already in progress. Please wait for it to finish or cancel it first.',
+          message:
+            'An optimization run is already in progress. Please wait for it to finish or cancel it first.',
           confirmLabel: 'OK',
           cancelLabel: 'CLOSE',
           intent: 'info',
@@ -199,7 +198,8 @@ export function ControlsTray() {
       if (!hasTargetNode) {
         void useUIStore.getState().confirm({
           title: 'No Target Nodes Selected',
-          message: 'Please set at least one node as a target to anchor the ratio optimization. You can toggle the Target tool (Shift key or Target button) and click on a node.',
+          message:
+            'Please set at least one node as a target to anchor the ratio optimization. You can toggle the Target tool (Shift key or Target button) and click on a node.',
           confirmLabel: 'OK',
           cancelLabel: 'CLOSE',
           intent: 'info',
@@ -225,10 +225,7 @@ export function ControlsTray() {
       const layoutGraphVersion = flowStore.graphVersion;
 
       setIsLayouting(true);
-      void Promise.all([
-        import('../../layout'),
-        import('../../data/lookup'),
-      ])
+      void Promise.all([import('../../layout'), import('../../data/lookup')])
         .then(([{ autoLayout }, { resolveActiveRecipe }]) => {
           return autoLayout(flowStore.nodes, flowStore.edges, {
             edgePath: edgePathStyle,
@@ -319,7 +316,7 @@ export function ControlsTray() {
                   ? 'Layout...'
                   : btn.id === 'add_recipe' && isAddGroupMode
                     ? 'Add Group'
-                  : btn.label;
+                    : btn.label;
             const Icon = btn.id === 'add_recipe' && isAddGroupMode ? Group : btn.Icon;
 
             return (

@@ -17,7 +17,7 @@ export const m_truck_depot_01: SpecialRecipe = {
       name: 'Sell Item',
       machine_id: 'm_truck_depot',
       cycle_time: 15,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 0.06,
       inputs: [{ product_id: resolvedItem, quantity: 10 }],

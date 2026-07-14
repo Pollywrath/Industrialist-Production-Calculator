@@ -16,7 +16,7 @@ export const air_separation_unit: SpecialRecipe = {
       name: 'Standard Separation',
       machine_id: 'm_air_separation_unit',
       cycle_time: 1,
-      power_consumption: 20000000,
+      power_use: 20000000,
       power_type: 'HV',
       pollution: 0,
       inputs: [],

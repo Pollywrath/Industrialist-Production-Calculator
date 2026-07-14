@@ -19,7 +19,12 @@ import {
   clearCategoryDataOverrides,
 } from '../persistence/idb';
 import { useUIStore } from './useUIStore';
-import { validateProduct, validateMachine, validateResearch, validateRecipe } from '../utils/dataValidation';
+import {
+  validateProduct,
+  validateMachine,
+  validateResearch,
+  validateRecipe,
+} from '../utils/dataValidation';
 
 export interface PendingEdits {
   products: Record<string, Partial<Product> & { _tombstone?: boolean; _isNew?: boolean }>;
@@ -515,18 +520,17 @@ export const useDataStore = create<DataState>((set, get) => ({
       const nextRecipes = { ...state.pendingEdits.recipes };
 
       const activeMachine =
-        updates.machine_id !== undefined ? updates.machine_id : prevEdit.machine_id || 'm_assembler';
+        updates.machine_id !== undefined
+          ? updates.machine_id
+          : prevEdit.machine_id || 'm_assembler';
 
-      const machChanged = updates.machine_id !== undefined && updates.machine_id !== prevEdit.machine_id;
+      const machChanged =
+        updates.machine_id !== undefined && updates.machine_id !== prevEdit.machine_id;
 
       if (prevEdit._isNew && machChanged) {
         const otherPending = { ...state.pendingEdits.recipes };
         delete otherPending[id];
-        targetId = generateUniqueRecipeId(
-          activeMachine,
-          getAllRecipes(),
-          otherPending,
-        );
+        targetId = generateUniqueRecipeId(activeMachine, getAllRecipes(), otherPending);
 
         delete nextRecipes[id];
         nextRecipes[targetId] = {
@@ -562,7 +566,7 @@ export const useDataStore = create<DataState>((set, get) => ({
         name,
         machine_id: machineId,
         cycle_time: 1,
-        power_consumption: 100,
+        power_use: 100,
         power_type: 'MV',
         pollution: 0,
         inputs: [],

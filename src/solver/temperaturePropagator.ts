@@ -249,17 +249,11 @@ export function propagateTemperatures(
     const nodeOverrides = finalSettingsOverrides[node.id];
     const settings =
       nodeOverrides || node.data.settings ? { ...node.data.settings, ...nodeOverrides } : undefined;
-    const recipe = resolveActiveRecipe(
-      node.data.recipeId,
-      settings,
-      node.id,
-      getHelpers(node.id),
-      {
-        temperatureInputOverrides: inputTemps[node.id],
-        suppressStoreTemperatureOverrides: true,
-        globalSettings,
-      },
-    );
+    const recipe = resolveActiveRecipe(node.data.recipeId, settings, node.id, getHelpers(node.id), {
+      temperatureInputOverrides: inputTemps[node.id],
+      suppressStoreTemperatureOverrides: true,
+      globalSettings,
+    });
     if (recipe) {
       finalNodeOutputTemps[node.id] = recipe.outputs.map((out) => out.temperature ?? 18);
     } else {

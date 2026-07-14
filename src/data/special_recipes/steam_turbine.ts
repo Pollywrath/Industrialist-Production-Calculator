@@ -53,7 +53,7 @@ export const steam_turbine_01: SpecialRecipe = {
   inputTemperatureSettings,
   compute: (settings) => {
     const steamTemp = (settings.steam_temp as number) ?? 200;
-    const actualPowerProduction = Math.floor(getInterpolatedPower(steamTemp));
+    const actualPowerOutput = Math.floor(getInterpolatedPower(steamTemp));
     const waterOutputTemp = Math.floor(clamp(steamTemp / 3, 40, 99));
 
     const recipe: Recipe = {
@@ -61,7 +61,7 @@ export const steam_turbine_01: SpecialRecipe = {
       name: 'Steam Turbine Power Generation',
       machine_id: 'm_steam_turbine',
       cycle_time: 1,
-      power_consumption: -actualPowerProduction,
+      power_use: -actualPowerOutput,
       power_type: 'MV',
       pollution: 0,
       inputs: [{ product_id: 'p_steam', quantity: 3 }],

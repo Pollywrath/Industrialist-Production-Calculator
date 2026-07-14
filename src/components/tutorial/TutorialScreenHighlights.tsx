@@ -101,10 +101,7 @@ function resolveRectHighlight(
   const element = getElementForTutorialHighlight(highlight, getNodeId);
   if (!element) return null;
 
-  return rectFromElement(
-    element,
-    highlight.kind === 'handle' ? HANDLE_PADDING : RECT_PADDING,
-  );
+  return rectFromElement(element, highlight.kind === 'handle' ? HANDLE_PADDING : RECT_PADDING);
 }
 
 function resolveScreenHighlights(

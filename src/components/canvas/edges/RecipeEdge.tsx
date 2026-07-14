@@ -124,9 +124,13 @@ export function RecipeEdge({
   const { screenToFlowPosition } = useReactFlow();
 
   const [previewControlPoints, setPreviewControlPoints] = useState<EdgeControlPoint[] | null>(null);
-  const [previewOrthogonalTurns, setPreviewOrthogonalTurns] = useState<EdgeControlPoint[] | null>(null);
+  const [previewOrthogonalTurns, setPreviewOrthogonalTurns] = useState<EdgeControlPoint[] | null>(
+    null,
+  );
   const [hoveredOrthSegmentIndex, setHoveredOrthSegmentIndex] = useState<number | null>(null);
-  const [hoveredOrthHandlePoint, setHoveredOrthHandlePoint] = useState<EdgeControlPoint | null>(null);
+  const [hoveredOrthHandlePoint, setHoveredOrthHandlePoint] = useState<EdgeControlPoint | null>(
+    null,
+  );
   const [draggingOrthSegmentIndex, setDraggingOrthSegmentIndex] = useState<number | null>(null);
   const controlDragListenersRef = useRef<DragListeners | null>(null);
   const orthDragListenersRef = useRef<DragListeners | null>(null);
@@ -158,7 +162,7 @@ export function RecipeEdge({
   const isControlPointPath = pathStyle === 'bezier' || pathStyle === 'straight';
   const showOrthogonalEditor = isOrthogonalPath && selected;
   const controlPoints = isControlPointPath
-    ? previewControlPoints ?? toFinitePoints(data?.controlPoints)
+    ? (previewControlPoints ?? toFinitePoints(data?.controlPoints))
     : [];
   const orthogonalRoute: OrthogonalRouteAnchors = { sourceX, sourceY, targetX, targetY };
   const orthogonalTurns = isOrthogonalPath
@@ -205,7 +209,10 @@ export function RecipeEdge({
     flowStore.setEdges(nextEdges, options);
   };
 
-  const handleControlPointClick = (controlPointIndex: number, event: React.MouseEvent<SVGCircleElement>) => {
+  const handleControlPointClick = (
+    controlPointIndex: number,
+    event: React.MouseEvent<SVGCircleElement>,
+  ) => {
     event.preventDefault();
     event.stopPropagation();
 
@@ -220,7 +227,10 @@ export function RecipeEdge({
     setEdgePointArray(id, 'controlPoints', next, { visualOnly: true });
   };
 
-  const handleControlPointMouseDown = (controlPointIndex: number, event: React.MouseEvent<SVGCircleElement>) => {
+  const handleControlPointMouseDown = (
+    controlPointIndex: number,
+    event: React.MouseEvent<SVGCircleElement>,
+  ) => {
     event.preventDefault();
     event.stopPropagation();
 
@@ -292,11 +302,7 @@ export function RecipeEdge({
       return;
     }
 
-    const nextTurns = deleteOrthogonalTurnPair(
-      orthogonalTurns,
-      bendPointIndex,
-      orthogonalRoute,
-    );
+    const nextTurns = deleteOrthogonalTurnPair(orthogonalTurns, bendPointIndex, orthogonalRoute);
     if (!nextTurns) return;
 
     setEdgePointArray(id, 'orthogonalTurns', nextTurns, { visualOnly: true });
@@ -419,32 +425,27 @@ export function RecipeEdge({
 
   const catmullPoints: EdgeControlPoint[] = !isControlPointPath
     ? []
-    : [
-      { x: sourceX, y: sourceY },
-      ...controlPoints,
-      { x: targetX, y: targetY },
-    ];
+    : [{ x: sourceX, y: sourceY }, ...controlPoints, { x: targetX, y: targetY }];
 
   const catmullPath =
     pathStyle === 'bezier' && controlPoints.length > 0 ? buildCatmullRomPath(catmullPoints) : '';
   const straightControlPath =
     pathStyle === 'straight' && controlPoints.length > 0 ? buildPolylinePath(catmullPoints) : '';
 
-  const [edgePath] =
-    isOrthogonalPath
-      ? [orthogonalPath]
-      : catmullPath
-        ? [catmullPath]
-        : straightControlPath
-          ? [straightControlPath]
-          : pathStyle === 'straight'
-            ? getStraightPath({
+  const [edgePath] = isOrthogonalPath
+    ? [orthogonalPath]
+    : catmullPath
+      ? [catmullPath]
+      : straightControlPath
+        ? [straightControlPath]
+        : pathStyle === 'straight'
+          ? getStraightPath({
               sourceX,
               sourceY,
               targetX,
               targetY,
             })
-            : getBezierPath({
+          : getBezierPath({
               sourceX,
               sourceY,
               sourcePosition,
@@ -452,7 +453,6 @@ export function RecipeEdge({
               targetY,
               targetPosition,
             });
-
 
   const activeOrthSegmentIndex =
     draggingOrthSegmentIndex !== null ? draggingOrthSegmentIndex : hoveredOrthSegmentIndex;
@@ -473,7 +473,7 @@ export function RecipeEdge({
       : null;
   const activeOrthHandlePoint =
     showOrthogonalHandle && activeOrthSegment
-      ? hoveredOrthHandlePoint ?? activeOrthSegment.midpoint
+      ? (hoveredOrthHandlePoint ?? activeOrthSegment.midpoint)
       : null;
   const sourceHandleParsed = sourceHandleId ? parseHandleId(sourceHandleId) : null;
   const targetHandleParsed = targetHandleId ? parseHandleId(targetHandleId) : null;
@@ -489,15 +489,17 @@ export function RecipeEdge({
         data-tutorial-edge-source-index={sourceHandleParsed?.index}
         data-tutorial-edge-target-index={targetHandleParsed?.index}
         className={`${styles['edge-path']} ${styles[`line-style-${lineStyle}`]}`}
-        style={{
-          stroke: selected
-            ? 'var(--theme-color-edge-selected-stroke)'
-            : 'var(--theme-color-edge-stroke)',
-          strokeWidth: 2,
-          strokeDasharray:
-            lineStyle === 'dashed' ? '10 8' : lineStyle === 'dotted' ? '1 8' : undefined,
-          strokeLinecap: lineStyle === 'dotted' ? 'round' : undefined,
-        } as CSSProperties}
+        style={
+          {
+            stroke: selected
+              ? 'var(--theme-color-edge-selected-stroke)'
+              : 'var(--theme-color-edge-stroke)',
+            strokeWidth: 2,
+            strokeDasharray:
+              lineStyle === 'dashed' ? '10 8' : lineStyle === 'dotted' ? '1 8' : undefined,
+            strokeLinecap: lineStyle === 'dotted' ? 'round' : undefined,
+          } as CSSProperties
+        }
         interactionWidth={EDGE_INTERACTION_WIDTH}
       />
 
@@ -541,14 +543,12 @@ export function RecipeEdge({
                 y={activeOrthHandlePoint.y - orthogonalHandleDimensions.height / 2}
                 width={orthogonalHandleDimensions.width}
                 height={orthogonalHandleDimensions.height}
-                rx={Math.min(
-                  orthogonalHandleDimensions.width,
-                  orthogonalHandleDimensions.height,
-                ) / 2}
-                ry={Math.min(
-                  orthogonalHandleDimensions.width,
-                  orthogonalHandleDimensions.height,
-                ) / 2}
+                rx={
+                  Math.min(orthogonalHandleDimensions.width, orthogonalHandleDimensions.height) / 2
+                }
+                ry={
+                  Math.min(orthogonalHandleDimensions.width, orthogonalHandleDimensions.height) / 2
+                }
                 onMouseDown={(event) =>
                   handleOrthogonalSegmentDragStart(activeOrthSegment.index, event)
                 }

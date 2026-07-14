@@ -15,7 +15,10 @@ export function useFlowSolver(): void {
     function recompute(runToken: number) {
       const { nodes, edges, graphVersion } = useFlowStore.getState();
       const dataDbVersion = useDataStore.getState().dbVersion;
-      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+      const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
+        string,
+        unknown
+      >;
       if (runToken !== runTokenRef.current) return;
 
       const recipeNodes = nodes.filter(isRecipeNode);
@@ -26,18 +29,28 @@ export function useFlowSolver(): void {
 
       if (recipeNodes.length === 0) {
         if (runToken !== runTokenRef.current) return;
-        useFlowResultStore.getState().setResults(new Map(), {}, {}, {}, {}, {}, graphVersion, dataDbVersion);
+        useFlowResultStore
+          .getState()
+          .setResults(new Map(), {}, {}, {}, {}, {}, graphVersion, dataDbVersion);
         useFlowStore.getState().markSolutionCommitted();
         return;
       }
 
-      const { results, edgeFlows, edgeTemps, inputTemps, resolvedProducts, nodeRecipes } = solveFlowPipeline(
-        recipeNodes,
-        recipeEdges,
-        globalSettings,
-      );
+      const { results, edgeFlows, edgeTemps, inputTemps, resolvedProducts, nodeRecipes } =
+        solveFlowPipeline(recipeNodes, recipeEdges, globalSettings);
       if (runToken !== runTokenRef.current) return;
-      useFlowResultStore.getState().setResults(results, edgeFlows, edgeTemps, inputTemps, resolvedProducts, nodeRecipes, graphVersion, dataDbVersion);
+      useFlowResultStore
+        .getState()
+        .setResults(
+          results,
+          edgeFlows,
+          edgeTemps,
+          inputTemps,
+          resolvedProducts,
+          nodeRecipes,
+          graphVersion,
+          dataDbVersion,
+        );
       useFlowStore.getState().markSolutionCommitted();
     }
 

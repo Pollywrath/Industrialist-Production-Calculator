@@ -149,13 +149,8 @@ function NodeEditorModal({
       return;
     }
 
-    const {
-      settings,
-      clampedInputs,
-      clampedOutputs,
-      staleInputIndices,
-      staleOutputIndices,
-    } = prepareHandleSave();
+    const { settings, clampedInputs, clampedOutputs, staleInputIndices, staleOutputIndices } =
+      prepareHandleSave();
 
     const staleHandleIds = [
       ...buildStaleHandleIds(nodeId, 'input', staleInputIndices),
@@ -191,13 +186,8 @@ function NodeEditorModal({
       return;
     }
 
-    const {
-      settings,
-      clampedInputs,
-      clampedOutputs,
-      staleInputIndices,
-      staleOutputIndices,
-    } = prepareHandleSave();
+    const { settings, clampedInputs, clampedOutputs, staleInputIndices, staleOutputIndices } =
+      prepareHandleSave();
 
     const { nodes, edges } = useFlowStore.getState();
 

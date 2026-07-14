@@ -17,7 +17,7 @@ export const m_research_station2_01: SpecialRecipe = {
       name: 'Research Station 2',
       machine_id: 'm_research_station2',
       cycle_time: 1,
-      power_consumption: 17000,
+      power_use: 17000,
       power_type: 'MV',
       pollution: 0,
       inputs: [{ product_id: resolvedItem, quantity: 0.5 }],

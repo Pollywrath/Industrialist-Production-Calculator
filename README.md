@@ -16,14 +16,14 @@ Created and maintained by [Pollywrath](https://github.com/pollywrath).
 
 ## Features
 
-*   **Node Graph Canvas:** Built on `@xyflow/react` (React Flow) supporting interactive machine nodes, input/output nodes, group containers, and custom edge lines.
-*   **Flow Solver Pipeline:** A deterministic graph solver that computes product rate allocation, handles complex splits and merges, and calculates deficiency/excess rates at each node port.
-*   **Temperature Propagation:** Simulates heat transport along connected edges using flow-weighted averages, utilizing an iterative loop (up to 80 passes) to resolve recirculating systems.
-*   **Systemic Rate Balancer:** A rate optimizer that runs a Golden-Section Search (GSS) algorithm (40 iterations, $1e-8$ precision threshold) on isolated sub-graphs to balance rate outputs.
-*   **Linear Programming (LP) Solver:** Provides an LP interface to solve resource optimization problems using the SCIP Optimization Suite compiled to WebAssembly.
-*   **Custom Data Manager:** View and override recipes, machines, and product items. Custom database configurations are validated and bundled inside save files.
-*   **Persistence & Autosave:** Uses a dual-path persistence strategy combining a 5-second background interval with a `beforeunload` event handler. Startup restoration is gated to avoid async state issues in React Strict Mode.
-*   **Theme Editor & Clean Styling:** A flat, technical blueprint-style interface styled via CSS Modules and unified CSS custom properties (variables), allowing theme switching without inline style contamination.
+- **Node Graph Canvas:** Built on `@xyflow/react` (React Flow) supporting interactive machine nodes, input/output nodes, group containers, and custom edge lines.
+- **Flow Solver Pipeline:** A deterministic graph solver that computes product rate allocation, handles complex splits and merges, and calculates deficiency/excess rates at each node port.
+- **Temperature Propagation:** Simulates heat transport along connected edges using flow-weighted averages, utilizing an iterative loop (up to 80 passes) to resolve recirculating systems.
+- **Systemic Rate Balancer:** A rate optimizer that runs a Golden-Section Search (GSS) algorithm (40 iterations, $1e-8$ precision threshold) on isolated sub-graphs to balance rate outputs.
+- **Linear Programming (LP) Solver:** Provides an LP interface to solve resource optimization problems using the SCIP Optimization Suite compiled to WebAssembly.
+- **Custom Data Manager:** View and override recipes, machines, and product items. Custom database configurations are validated and bundled inside save files.
+- **Persistence & Autosave:** Uses a dual-path persistence strategy combining a 5-second background interval with a `beforeunload` event handler. Startup restoration is gated to avoid async state issues in React Strict Mode.
+- **Theme Editor & Clean Styling:** A flat, technical blueprint-style interface styled via CSS Modules and unified CSS custom properties (variables), allowing theme switching without inline style contamination.
 
 ---
 
@@ -31,11 +31,11 @@ Created and maintained by [Pollywrath](https://github.com/pollywrath).
 
 To maintain code hygiene, this codebase adheres to strict design contracts:
 
-*   **React Compiler:** This project uses the React Compiler. **Do not** manually add `useMemo`, `useCallback`, or `React.memo` to components, as they are automatically optimized.
-*   **Zustand State:** Global state is split into isolated stores (e.g., `useFlowStore` for nodes/edges, `useFlowResultStore` for solver outputs). Do not subscribe high-frequency interactive canvas components directly to global arrays; use selective selectors.
-*   **Styling Architecture:** All styling is completely flat, instant, and technical. There are no glows, shadows, gradients, or animations (except loading spinners, save buttons, and material flow dashed edges). Hex, HSL, or RGB colors are strictly prohibited in TSX files and component CSS files; all styling must reference variables defined in [src/index.css](file:///c:/Users/William/Documents/Web%20Apps/industrialist-calculator/src/index.css).
-*   **Data Decoupling:** The persistence layer ([src/persistence/](file:///c:/Users/William/Documents/Web%20Apps/industrialist-calculator/src/persistence/)) does not know about recipe formulas or schemas. Save files act as unopinionated data carriers.
-*   **TypeScript and Linting:** Strict module compilation is enforced with `verbatimModuleSyntax: true` (explicit `import type` must be used). ESLint warnings/errors must be resolved structurally—do not use `eslint-disable` comments.
+- **React Compiler:** This project uses the React Compiler. **Do not** manually add `useMemo`, `useCallback`, or `React.memo` to components, as they are automatically optimized.
+- **Zustand State:** Global state is split into isolated stores (e.g., `useFlowStore` for nodes/edges, `useFlowResultStore` for solver outputs). Do not subscribe high-frequency interactive canvas components directly to global arrays; use selective selectors.
+- **Styling Architecture:** All styling is completely flat, instant, and technical. There are no glows, shadows, gradients, or animations (except loading spinners, save buttons, and material flow dashed edges). Hex, HSL, or RGB colors are strictly prohibited in TSX files and component CSS files; all styling must reference variables defined in [src/index.css](file:///c:/Users/William/Documents/Web%20Apps/industrialist-calculator/src/index.css).
+- **Data Decoupling:** The persistence layer ([src/persistence/](file:///c:/Users/William/Documents/Web%20Apps/industrialist-calculator/src/persistence/)) does not know about recipe formulas or schemas. Save files act as unopinionated data carriers.
+- **TypeScript and Linting:** Strict module compilation is enforced with `verbatimModuleSyntax: true` (explicit `import type` must be used). ESLint warnings/errors must be resolved structurally—do not use `eslint-disable` comments.
 
 ---
 
@@ -50,7 +50,6 @@ To maintain code hygiene, this codebase adheres to strict design contracts:
 │   ├── scip/                # WebAssembly compiled SCIP Solver (Apache 2.0)
 │   │   ├── scip.js          # JS loader wrapper for WebAssembly SCIP
 │   │   ├── scip.wasm        # WebAssembly binary of the SCIP solver
-│   │   └── scip.wasm.js     # SCIP Emscripten build glue code
 │   └── induslogo.webp       # Application logo
 ├── src/
 │   ├── components/          # React components
@@ -86,8 +85,8 @@ To maintain code hygiene, this codebase adheres to strict design contracts:
 
 ### Prerequisites
 
-*   **Node.js**: `^18.0.0` or `^20.0.0` (LTS recommended)
-*   **NPM**: `^9.0.0` or higher
+- **Node.js**: `^18.0.0` or `^20.0.0` (LTS recommended)
+- **NPM**: `^9.0.0` or higher
 
 ### Clone & Local Setup
 
@@ -136,9 +135,15 @@ Check code formatting status:
 npm run format:check
 ```
 
+### Rebuilding SCIP WebAssembly
+
+The committed SCIP WebAssembly bundle can be reproduced with Docker. See
+[tools/scip-wasm/README.md](./tools/scip-wasm/README.md) for pinned dependencies,
+build commands, generated-file details, smoke tests, and troubleshooting.
+
 ---
 
 ## Licensing & Attribution
 
-*   **Codebase:** The application source code is licensed under the [MIT License](./LICENSE).
-*   **Assets & Disclaimers:** All third-party game assets, sprites, icons, trademarks, and third-party WebAssembly solver licenses/disclaimers are detailed in [ATTRIBUTIONS.md](./ATTRIBUTIONS.md).
+- **Codebase:** The application source code is licensed under the [MIT License](./LICENSE).
+- **Assets & Disclaimers:** All third-party game assets, sprites, icons, trademarks, and third-party WebAssembly solver licenses/disclaimers are detailed in [ATTRIBUTIONS.md](./ATTRIBUTIONS.md).

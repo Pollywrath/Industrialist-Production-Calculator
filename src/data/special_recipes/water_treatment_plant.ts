@@ -5,7 +5,7 @@ const settingDefinitions = {
   steam_temp: {
     type: 'number' as const,
     label: 'Steam Temperature (°C)',
-    default: 4000/11,
+    default: 4000 / 11,
     min: -273.15,
   },
 };
@@ -38,7 +38,7 @@ export const water_treatment_plant_01: SpecialRecipe = {
       name: 'Makes Distilled Water',
       machine_id: 'm_water_treatment_plant',
       cycle_time: 1,
-      power_consumption: 2000000,
+      power_use: 2000000,
       power_type: 'MV',
       pollution: 0,
       inputs: [
@@ -46,7 +46,11 @@ export const water_treatment_plant_01: SpecialRecipe = {
         { product_id: 'p_steam', quantity: 90 },
       ],
       outputs: [
-        { product_id: 'p_distilled_water', quantity: outputQuantity, temperature: outputTemperature },
+        {
+          product_id: 'p_distilled_water',
+          quantity: outputQuantity,
+          temperature: outputTemperature,
+        },
       ],
     };
 
@@ -70,7 +74,7 @@ export const water_treatment_plant_02: SpecialRecipe = {
       name: 'Makes Distilled Water',
       machine_id: 'm_water_treatment_plant',
       cycle_time: 1,
-      power_consumption: 2000000,
+      power_use: 2000000,
       power_type: 'MV',
       pollution: 0,
       inputs: [
@@ -78,7 +82,11 @@ export const water_treatment_plant_02: SpecialRecipe = {
         { product_id: 'p_steam', quantity: 90 },
       ],
       outputs: [
-        { product_id: 'p_distilled_water', quantity: outputQuantity, temperature: outputTemperature },
+        {
+          product_id: 'p_distilled_water',
+          quantity: outputQuantity,
+          temperature: outputTemperature,
+        },
       ],
     };
 
@@ -102,7 +110,7 @@ export const water_treatment_plant_03: SpecialRecipe = {
       name: 'Makes Distilled Water',
       machine_id: 'm_water_treatment_plant',
       cycle_time: 1,
-      power_consumption: 2000000,
+      power_use: 2000000,
       power_type: 'MV',
       pollution: 0,
       inputs: [
@@ -110,7 +118,11 @@ export const water_treatment_plant_03: SpecialRecipe = {
         { product_id: 'p_steam', quantity: 90 },
       ],
       outputs: [
-        { product_id: 'p_distilled_water', quantity: outputQuantity, temperature: outputTemperature },
+        {
+          product_id: 'p_distilled_water',
+          quantity: outputQuantity,
+          temperature: outputTemperature,
+        },
       ],
     };
 

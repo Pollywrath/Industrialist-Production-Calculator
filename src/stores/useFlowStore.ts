@@ -100,11 +100,7 @@ interface FlowState {
 
   setNodes: (nodes: CanvasNode[], options?: SetGraphOptions) => void;
   setEdges: (edges: Edge[], options?: SetGraphOptions) => void;
-  setNodesAndEdges: (
-    nodes: CanvasNode[],
-    edges: Edge[],
-    options?: SetGraphOptions,
-  ) => void;
+  setNodesAndEdges: (nodes: CanvasNode[], edges: Edge[], options?: SetGraphOptions) => void;
   applyAutoLayoutResult: (
     nodes: CanvasNode[],
     edges: Edge[],
@@ -158,9 +154,9 @@ const prepareGroupNode = (node: GroupNodeType): GroupNodeType => {
   const width = isCollapsed ? NODE_CSS_WIDTH : (node.width ?? EMPTY_GROUP_WIDTH);
   const height = isCollapsed
     ? getCollapsedGroupHeight(
-      node.data.inputProxyHandleIds.length,
-      node.data.outputProxyHandleIds.length,
-    )
+        node.data.inputProxyHandleIds.length,
+        node.data.outputProxyHandleIds.length,
+      )
     : (node.height ?? EMPTY_GROUP_HEIGHT);
 
   if (
@@ -391,7 +387,11 @@ const syncProxyEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[] => {
         }
       }
 
-      if (sourceMapped && targetMapped && (finalSource !== edge.source || finalTarget !== edge.target)) {
+      if (
+        sourceMapped &&
+        targetMapped &&
+        (finalSource !== edge.source || finalTarget !== edge.target)
+      ) {
         const proxyId = `proxy-${edge.id}`;
         const existingProxyEdge = existingProxyEdgeMap.get(proxyId);
         const proxyEndpointsUnchanged =
@@ -535,12 +535,14 @@ const applyGroupBoundsForGroups = (
     const isCollapsed = !!node.data.collapsed;
     const bounds = isCollapsed ? undefined : boundsByGroupId.get(node.id);
     const nextPosition = bounds ? { x: bounds.x, y: bounds.y } : node.position;
-    const nextWidth = isCollapsed ? NODE_CSS_WIDTH : (bounds?.width ?? node.width ?? EMPTY_GROUP_WIDTH);
+    const nextWidth = isCollapsed
+      ? NODE_CSS_WIDTH
+      : (bounds?.width ?? node.width ?? EMPTY_GROUP_WIDTH);
     const nextHeight = isCollapsed
       ? getCollapsedGroupHeight(
-        node.data.inputProxyHandleIds.length,
-        node.data.outputProxyHandleIds.length,
-      )
+          node.data.inputProxyHandleIds.length,
+          node.data.outputProxyHandleIds.length,
+        )
       : (bounds?.height ?? node.height ?? EMPTY_GROUP_HEIGHT);
 
     if (
@@ -969,7 +971,8 @@ const useFlowStore = create(
 
             const nextFuture = state.historyFuture.slice(0, -1);
             const overflow = Math.max(0, state.historyPast.length - (HISTORY_LIMIT - 1));
-            const trimmedPast = overflow > 0 ? state.historyPast.slice(overflow) : state.historyPast;
+            const trimmedPast =
+              overflow > 0 ? state.historyPast.slice(overflow) : state.historyPast;
             const nextPast = [...trimmedPast, entry];
 
             if (entry.kind === 'position') {
@@ -1034,7 +1037,9 @@ const useFlowStore = create(
         if (!start) return;
 
         const state = get();
-        pushHistoryEntry(buildGraphHistoryEntry(start.nodes, start.edges, state.nodes, state.edges));
+        pushHistoryEntry(
+          buildGraphHistoryEntry(start.nodes, start.edges, state.nodes, state.edges),
+        );
       },
 
       runTransaction: (fn) => {
@@ -1316,7 +1321,9 @@ const useFlowStore = create(
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, nextNodes, state.edges));
+          pushHistoryEntry(
+            buildGraphHistoryEntry(state.nodes, state.edges, nextNodes, state.edges),
+          );
         }
 
         return groupId;
@@ -1350,8 +1357,7 @@ const useFlowStore = create(
         finalNodes = applyGroupBoundsForGroups(finalNodes, affectedGroupIds);
 
         if (!hasStructuralChange) {
-          const nextIndexes =
-            affectedGroupIds.size > 0 ? createNodeIndexes(finalNodes) : undefined;
+          const nextIndexes = affectedGroupIds.size > 0 ? createNodeIndexes(finalNodes) : undefined;
           set({
             nodes: finalNodes,
             ...(nextIndexes
@@ -1364,7 +1370,6 @@ const useFlowStore = create(
           return;
         }
 
-
         const nextIndexes = createNodeIndexes(finalNodes);
         set({
           nodes: finalNodes,
@@ -1374,7 +1379,9 @@ const useFlowStore = create(
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, finalNodes, state.edges));
+          pushHistoryEntry(
+            buildGraphHistoryEntry(state.nodes, state.edges, finalNodes, state.edges),
+          );
         }
       },
 
@@ -1423,12 +1430,20 @@ const useFlowStore = create(
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges));
+          pushHistoryEntry(
+            buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges),
+          );
         }
       },
 
       onConnect: (connection) => {
-        if (!connection.source || !connection.target || !connection.sourceHandle || !connection.targetHandle) return;
+        if (
+          !connection.source ||
+          !connection.target ||
+          !connection.sourceHandle ||
+          !connection.targetHandle
+        )
+          return;
 
         let sourceHandle = connection.sourceHandle;
         let targetHandle = connection.targetHandle;
@@ -1490,10 +1505,7 @@ const useFlowStore = create(
         const currentEdges = state.edges;
         for (let i = 0; i < currentEdges.length; i++) {
           const e = currentEdges[i];
-          if (
-            e.sourceHandle === realSourceHandle &&
-            e.targetHandle === realTargetHandle
-          ) {
+          if (e.sourceHandle === realSourceHandle && e.targetHandle === realTargetHandle) {
             return;
           }
         }
@@ -1538,14 +1550,19 @@ const useFlowStore = create(
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges));
+          pushHistoryEntry(
+            buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges),
+          );
         }
       },
 
       setNodes: (nodes, options) => {
         clearFlowCache();
         const state = get();
-        const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(nodes, state.edges);
+        const { nodes: sanitizedNodes, edges: sanitizedEdges } = ensureGraphIntegrity(
+          nodes,
+          state.edges,
+        );
         const enriched = syncAllGroupBounds(sanitizedNodes.map(enrichNodeDimensions));
         const nextEdges = syncProxyEdges(enriched, sanitizedEdges);
         const nextIndexes = createNodeIndexes(enriched);
@@ -1644,9 +1661,7 @@ const useFlowStore = create(
         for (let i = 0; i < state.nodes.length; i++) {
           const node = state.nodes[i];
           const layoutNode = layoutNodeMap.get(node.id);
-          const patchedNode = layoutNode
-            ? patchNodeWithAutoLayoutResult(node, layoutNode)
-            : node;
+          const patchedNode = layoutNode ? patchNodeWithAutoLayoutResult(node, layoutNode) : node;
           if (patchedNode !== node) {
             nodesChanged = true;
           }
@@ -1660,9 +1675,7 @@ const useFlowStore = create(
         for (let i = 0; i < state.edges.length; i++) {
           const edge = state.edges[i];
           const layoutEdge = layoutEdgeMap.get(edge.id);
-          const patchedEdge = layoutEdge
-            ? patchEdgeWithAutoLayoutResult(edge, layoutEdge)
-            : edge;
+          const patchedEdge = layoutEdge ? patchEdgeWithAutoLayoutResult(edge, layoutEdge) : edge;
           if (patchedEdge !== edge) {
             edgesChanged = true;
           }
@@ -1715,13 +1728,17 @@ const useFlowStore = create(
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, finalNodes, state.edges));
+          pushHistoryEntry(
+            buildGraphHistoryEntry(state.nodes, state.edges, finalNodes, state.edges),
+          );
         }
       },
 
       updateGroupNodeData: (nodeId, data, options) => {
         const state = get();
-        const oldNode = state.nodes.find((n) => n.id === nodeId && isGroupNode(n)) as GroupNodeType | undefined;
+        const oldNode = state.nodes.find((n) => n.id === nodeId && isGroupNode(n)) as
+          | GroupNodeType
+          | undefined;
         if (!oldNode) return;
 
         if (data.collapsed !== undefined && data.collapsed !== oldNode.data.collapsed) {
@@ -1735,7 +1752,7 @@ const useFlowStore = create(
               const nextNodes = s.nodes.map((node) =>
                 node.id === nodeId && isGroupNode(node)
                   ? { ...node, data: { ...node.data, label: data.label! } }
-                  : node
+                  : node,
               );
               const nextIndexes = createNodeIndexes(nextNodes);
               return {
@@ -1784,7 +1801,9 @@ const useFlowStore = create(
 
       collapseGroup: (groupId: string) => {
         const state = get();
-        const groupNode = state.nodes.find((n) => n.id === groupId && isGroupNode(n)) as GroupNodeType | undefined;
+        const groupNode = state.nodes.find((n) => n.id === groupId && isGroupNode(n)) as
+          | GroupNodeType
+          | undefined;
         if (!groupNode || groupNode.data.collapsed) return;
 
         get().runTransaction(() => {
@@ -1792,7 +1811,7 @@ const useFlowStore = create(
           const edges = get().edges;
 
           const recipeNodeIdsInGroup = new Set(
-            nodes.filter((n) => isRecipeNode(n) && n.data.groupId === groupId).map((n) => n.id)
+            nodes.filter((n) => isRecipeNode(n) && n.data.groupId === groupId).map((n) => n.id),
           );
 
           const inputProxyHandleIds: string[] = [];
@@ -1824,7 +1843,8 @@ const useFlowStore = create(
               const inputCount = inputProxyHandleIds.length;
               const outputCount = outputProxyHandleIds.length;
               const maxCount = Math.max(inputCount, outputCount, 1);
-              const ioAreaHeight = maxCount * RECT_HEIGHT + (maxCount - 1) * RECT_GAP + IO_COLUMN_PADDING;
+              const ioAreaHeight =
+                maxCount * RECT_HEIGHT + (maxCount - 1) * RECT_GAP + IO_COLUMN_PADDING;
               const collapsedHeight = BASE_INFO_HEIGHT + ioAreaHeight + BOTTOM_PADDING;
 
               return {
@@ -1859,7 +1879,9 @@ const useFlowStore = create(
 
       expandGroup: (groupId: string) => {
         const state = get();
-        const groupNode = state.nodes.find((n) => n.id === groupId && isGroupNode(n)) as GroupNodeType | undefined;
+        const groupNode = state.nodes.find((n) => n.id === groupId && isGroupNode(n)) as
+          | GroupNodeType
+          | undefined;
         if (!groupNode || !groupNode.data.collapsed) return;
 
         get().runTransaction(() => {
@@ -1925,7 +1947,12 @@ const useFlowStore = create(
           }
 
           let nextNode = node;
-          if (shouldClearGroupMembership && !isCollapsedGroupDelete && isRecipeNode(node) && node.data.groupId === nodeId) {
+          if (
+            shouldClearGroupMembership &&
+            !isCollapsedGroupDelete &&
+            isRecipeNode(node) &&
+            node.data.groupId === nodeId
+          ) {
             nextNode = {
               ...node,
               hidden: false,
@@ -1977,7 +2004,10 @@ const useFlowStore = create(
         const filteredEdges = state.edges
           .filter((e) => {
             if (e.source === nodeId || e.target === nodeId) return false;
-            if (isCollapsedGroupDelete && (deletedMemberIds.has(e.source) || deletedMemberIds.has(e.target))) {
+            if (
+              isCollapsedGroupDelete &&
+              (deletedMemberIds.has(e.source) || deletedMemberIds.has(e.target))
+            ) {
               return false;
             }
             if (e.id.startsWith('proxy-')) {
@@ -1985,7 +2015,10 @@ const useFlowStore = create(
               const realEdge = state.edges.find((re) => re.id === realId);
               if (realEdge) {
                 if (realEdge.source === nodeId || realEdge.target === nodeId) return false;
-                if (isCollapsedGroupDelete && (deletedMemberIds.has(realEdge.source) || deletedMemberIds.has(realEdge.target))) {
+                if (
+                  isCollapsedGroupDelete &&
+                  (deletedMemberIds.has(realEdge.source) || deletedMemberIds.has(realEdge.target))
+                ) {
                   return false;
                 }
               }
@@ -2045,7 +2078,9 @@ const useFlowStore = create(
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges));
+          pushHistoryEntry(
+            buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges),
+          );
         }
       },
 
@@ -2081,7 +2116,9 @@ const useFlowStore = create(
         });
 
         if (!isApplyingHistory && transactionDepth === 0) {
-          pushHistoryEntry(buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges));
+          pushHistoryEntry(
+            buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges),
+          );
         }
       },
 

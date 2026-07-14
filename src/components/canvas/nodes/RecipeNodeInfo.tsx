@@ -63,11 +63,7 @@ export function RecipeNodeInfo({
   return (
     <div className={styles['recipe-node-info']}>
       <div className={styles['recipe-node-info__badges']}>
-        {isTarget && (
-          <div className={styles['recipe-node-info__target-badge']}>
-            TARGET
-          </div>
-        )}
+        {isTarget && <div className={styles['recipe-node-info__target-badge']}>TARGET</div>}
       </div>
       {receivedTemp !== undefined && receivedTemp !== null && (
         <div className={styles['recipe-node-info__temp-badge-anchor']}>
@@ -93,7 +89,9 @@ export function RecipeNodeInfo({
               {formatTime(displayCycleTime)}
             </span>
           </div>
-          <div className={`${styles['recipe-node-info__stat']} ${styles['recipe-node-info__stat--power']}`}>
+          <div
+            className={`${styles['recipe-node-info__stat']} ${styles['recipe-node-info__stat--power']}`}
+          >
             <span className={styles['recipe-node-info__stat-label']}>Power: </span>
             <span className={styles['recipe-node-info__stat-value']}>
               {recipe ? formatRecipePowerLine(recipe, machineCount) : '0 MF/s'}
@@ -108,7 +106,9 @@ export function RecipeNodeInfo({
         </div>
 
         <div className={styles['recipe-node-info__col--right']}>
-          <div className={`${styles['recipe-node-info__machine-name']} ${styles[`tier-${machineTier}`]}`}>
+          <div
+            className={`${styles['recipe-node-info__machine-name']} ${styles[`tier-${machineTier}`]}`}
+          >
             {machineName}
           </div>
           <div className={styles['recipe-node-info__machine-count']}>

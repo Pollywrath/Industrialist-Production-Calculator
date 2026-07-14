@@ -5,7 +5,12 @@ import type {
   FlowNetwork,
   FlowResults,
 } from '../types/solver';
-import { clampFlow, EPSILON } from '../utils/precision';
+import {
+  clampFlow,
+  EPSILON,
+  hasMeaningfulDeficit,
+  snapToReferenceIfNearlyEqual,
+} from '../utils/precision';
 import {
   findProductConnectedComponents,
   getProductConnectionSourceKey,
@@ -362,14 +367,20 @@ function runFlowPass(
   for (const [, nodeResult] of results) {
     for (const inputFlow of nodeResult.inputFlows) {
       inputFlow.rate = clampFlow(inputFlow.rate);
-      inputFlow.connected = clampFlow(inputFlow.connected);
-      inputFlow.hasDeficiency = inputFlow.rate > 0 && inputFlow.connected < inputFlow.rate - 1e-8;
+      inputFlow.connected = snapToReferenceIfNearlyEqual(
+        inputFlow.rate,
+        clampFlow(inputFlow.connected),
+      );
+      inputFlow.hasDeficiency = hasMeaningfulDeficit(inputFlow.rate, inputFlow.connected);
       inputFlow.hasExcess = false;
     }
     for (const outputFlow of nodeResult.outputFlows) {
       outputFlow.rate = clampFlow(outputFlow.rate);
-      outputFlow.connected = clampFlow(outputFlow.connected);
-      outputFlow.hasExcess = outputFlow.rate > 0 && outputFlow.connected < outputFlow.rate - 1e-8;
+      outputFlow.connected = snapToReferenceIfNearlyEqual(
+        outputFlow.rate,
+        clampFlow(outputFlow.connected),
+      );
+      outputFlow.hasExcess = hasMeaningfulDeficit(outputFlow.rate, outputFlow.connected);
       outputFlow.hasDeficiency = false;
     }
   }

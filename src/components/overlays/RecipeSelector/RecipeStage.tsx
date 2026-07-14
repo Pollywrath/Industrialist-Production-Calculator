@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import type { HandleDataType } from '../../../types/data';
-import { getProductName, getMachineName, getAllRecipes, getMachine, isMachineUnlocked } from '../../../data/lookup';
+import {
+  getProductName,
+  getMachineName,
+  getAllRecipes,
+  getMachine,
+  isMachineUnlocked,
+} from '../../../data/lookup';
 import { VirtualList } from '../../shared/VirtualList';
 import { RecipeCard } from './RecipeCard';
 import styles from './RecipeSelector.module.css';
@@ -200,10 +206,7 @@ export function RecipeStage({
             Recipes
           </span>
         </div>
-        <button
-          className={styles['recipe-selector-close']}
-          onClick={handleClose}
-        >
+        <button className={styles['recipe-selector-close']} onClick={handleClose}>
           <X size={16} />
         </button>
       </div>

@@ -20,14 +20,14 @@ export const item_dump_01: SpecialRecipe = {
 
     const flow1 = helpers?.getFlowRate?.('input', 0) ?? 30;
     const flow2 = helpers?.getFlowRate?.('input', 1) ?? 30;
-    const pollution = (flow1 + flow2) * 13 / 600;
+    const pollution = ((flow1 + flow2) * 13) / 600;
 
     const recipe: Recipe = {
       id: 'r_item_dump_01',
       name: 'Dump Items',
       machine_id: 'm_item_dump',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution,
       inputs: [

@@ -21,14 +21,14 @@ export const lightning_rod_01: SpecialRecipe = {
   settings: settingDefinitions,
   compute: (settings) => {
     const boltsPerHour = (settings.bolts_per_hour as number) ?? 1;
-    const averagePower = MAMYFLUX_PER_BOLT * boltsPerHour / SECONDS_PER_HOUR;
+    const averagePower = (MAMYFLUX_PER_BOLT * boltsPerHour) / SECONDS_PER_HOUR;
 
     const recipe: Recipe = {
       id: 'r_lightning_rod_01',
       name: 'Produces Power',
       machine_id: 'm_lightning_rod',
       cycle_time: 1,
-      power_consumption: -averagePower,
+      power_use: -averagePower,
       power_type: 'HV',
       pollution: 0,
       inputs: [],
