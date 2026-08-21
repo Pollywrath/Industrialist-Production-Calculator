@@ -32,6 +32,15 @@ export function getRecipePowerAccountingEffects(recipe: Recipe): RecipePowerEffe
   return getRecipePowerEffects(recipe);
 }
 
+function getEffectMachineCount(
+  recipe: Recipe,
+  effect: RecipePowerEffect,
+  machineCount: number,
+): number {
+  if (recipe.powerIndependentOfMachineCount || effect.powerIndependentOfMachineCount) return 1;
+  return machineCount;
+}
+
 export function getRecipePowerTotals(recipe: Recipe, machineCount = 1): RecipePowerTotals {
   const effects = getRecipePowerAccountingEffects(recipe);
   let use = 0;
@@ -42,10 +51,9 @@ export function getRecipePowerTotals(recipe: Recipe, machineCount = 1): RecipePo
   let hvUse = 0;
   let hvOutput = 0;
 
-  const actualMachineCount = recipe.powerIndependentOfMachineCount ? 1 : machineCount;
-
   for (let i = 0; i < effects.length; i++) {
-    const power = effects[i].power_use * actualMachineCount;
+    const effectMachineCount = getEffectMachineCount(recipe, effects[i], machineCount);
+    const power = effects[i].power_use * effectMachineCount;
     net += power;
     if (effects[i].accounting === 'output_delta') {
       output += power;
@@ -81,8 +89,9 @@ export function hasRecipePowerOutput(recipe: Recipe): boolean {
   return getRecipePowerEffects(recipe).some((effect) => effect.power_use < 0);
 }
 
-function formatEffect(effect: RecipePowerEffect, machineCount: number): string {
-  const powerText = formatPower(effect.power_use * machineCount);
+function formatEffect(recipe: Recipe, effect: RecipePowerEffect, machineCount: number): string {
+  const effectMachineCount = getEffectMachineCount(recipe, effect, machineCount);
+  const powerText = formatPower(effect.power_use * effectMachineCount);
   return effect.power_type === 'HV' ? `${powerText} HV` : powerText;
 }
 
@@ -94,7 +103,6 @@ function groupEffects(
 }
 
 export function formatRecipePowerLine(recipe: Recipe, machineCount = 1): string {
-  const actualMachineCount = recipe.powerIndependentOfMachineCount ? 1 : machineCount;
   const effects = getRecipePowerEffects(recipe).filter((effect) => effect.power_use !== 0);
 
   if (effects.length === 0) {
@@ -103,7 +111,9 @@ export function formatRecipePowerLine(recipe: Recipe, machineCount = 1): string 
 
   if (effects.length === 1) {
     const effect = effects[0];
-    const powerText = formatPower(effect.power_use * actualMachineCount);
+    const powerText = formatPower(
+      effect.power_use * getEffectMachineCount(recipe, effect, machineCount),
+    );
     return effect.power_type === 'HV' ? `${powerText} HV` : powerText;
   }
 
@@ -111,19 +121,21 @@ export function formatRecipePowerLine(recipe: Recipe, machineCount = 1): string 
   const outputs = groupEffects(effects, (effect) => effect.power_use < 0);
 
   if (uses.length === 1 && outputs.length === 1) {
-    return `${formatEffect(uses[0], actualMachineCount)} > ${formatEffect(outputs[0], actualMachineCount)}`;
+    return `${formatEffect(recipe, uses[0], machineCount)} > ${formatEffect(recipe, outputs[0], machineCount)}`;
   }
 
   if (uses.length === 0 && outputs.length > 0) {
-    return outputs.map((effect) => formatEffect(effect, actualMachineCount)).join(' + ');
+    return outputs.map((effect) => formatEffect(recipe, effect, machineCount)).join(' + ');
   }
 
   if (outputs.length === 0 && uses.length > 0) {
-    return uses.map((effect) => formatEffect(effect, actualMachineCount)).join(' + ');
+    return uses.map((effect) => formatEffect(recipe, effect, machineCount)).join(' + ');
   }
 
-  const useText = uses.map((effect) => formatEffect(effect, actualMachineCount)).join(' + ');
-  const outputText = outputs.map((effect) => formatEffect(effect, actualMachineCount)).join(' + ');
+  const useText = uses.map((effect) => formatEffect(recipe, effect, machineCount)).join(' + ');
+  const outputText = outputs
+    .map((effect) => formatEffect(recipe, effect, machineCount))
+    .join(' + ');
   return `Uses ${useText} | Outputs ${outputText}`;
 }
 

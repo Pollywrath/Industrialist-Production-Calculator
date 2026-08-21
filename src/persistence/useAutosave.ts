@@ -5,11 +5,18 @@ import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { getAutosave, saveAutosave, getDataOverrides } from './idb';
 import { serializeCanvas, deserializeCanvas } from './transformer';
 
+let startupAutosavePromise: ReturnType<typeof getAutosave> | null = null;
+
+function getStartupAutosave(): ReturnType<typeof getAutosave> {
+  startupAutosavePromise ??= getAutosave();
+  return startupAutosavePromise;
+}
+
 export function useAutosave(): void {
   useEffect(() => {
     let isMounted = true;
 
-    getAutosave()
+    getStartupAutosave()
       .then(async (record) => {
         if (!isMounted) return;
         if (record && record.data) {

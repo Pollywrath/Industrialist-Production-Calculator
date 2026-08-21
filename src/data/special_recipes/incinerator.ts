@@ -6,6 +6,7 @@ export const incinerator_01: SpecialRecipe = {
   name: 'Burn Item',
   machine_id: 'm_incinerator',
   isSellTrash: true,
+  autocompleteDisposalPriority: 'secondary',
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
     let resolvedFluid = 'any_item';

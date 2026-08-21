@@ -1,7 +1,9 @@
 import type { Edge } from '@xyflow/react';
+import type { Recipe } from '../types/data';
 import type { RecipeNodeType } from '../types/nodes';
 import { ASSET_VERSION } from '../data/productIcons';
 import { useFlowStore } from '../stores/useFlowStore';
+import { getMachineCountBounds } from '../utils/machineCountConstraint';
 import { useFlowResultStore } from '../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { solveFlowPipeline } from './solverPipeline';
@@ -47,18 +49,25 @@ export function resolveRatioObjectiveWeights(
 export interface RatioOptimizerNode {
   id: string;
   currentMachineCount: number;
+  minimumMachineCount: number;
+  maximumMachineCount: number | null;
   isTarget: boolean;
   powerUse: number;
   powerOutput: number;
   pollution: number;
   machineCost: number;
+  machineCostIndependentOfMachineCount: number;
   hasInfiniteMachineCost: boolean;
   modelCount: number;
+  modelCountIndependentOfMachineCount: number;
   machineSpace: number;
+  machineSpaceIndependentOfMachineCount: number;
   inputs: {
     productId: string;
     quantity: number;
     isSink: boolean;
+    independentOfMachineCount: boolean;
+    flowDependencies: { sourceInputIndex: number; coefficient: number }[];
   }[];
   outputs: {
     productId: string;
@@ -84,6 +93,7 @@ export interface RatioOptimizerRequest {
   connections: RatioOptimizerConnection[];
   objectiveWeights?: RatioObjectiveWeights;
   optimizationConfiguration?: OptimizationConfiguration;
+  excludeAvoidableInfiniteCostMachines?: boolean;
   version?: string;
 }
 
@@ -147,6 +157,8 @@ export interface RatioSolverTelemetry {
   dualBound?: number;
   mipGap?: number;
   roundedVariableCount?: number;
+  roundedMilpProfile?: string;
+  incumbentPolishMs?: number;
   warmupMs?: number;
   profileUsed?: string;
   variableCount?: number;
@@ -166,6 +178,7 @@ export interface RatioOptimizerResponse {
   feasible: boolean;
   error?: string;
   machineCounts?: Record<string, number>;
+  connectionFlows?: Record<string, number>;
   diagnostics?: RatioFailureDiagnostics;
   telemetry?: RatioSolverTelemetry;
 }
@@ -239,6 +252,14 @@ export interface RatioOptimizerSessionOptions {
   onProgress?: (progress: RatioSolverProgress) => void;
   objectiveWeights?: Partial<RatioObjectiveWeights>;
   optimizationConfiguration?: OptimizationConfiguration;
+  modelSnapshot?: RatioOptimizerModelSnapshot;
+  minimizeLinkedOutputExcess?: boolean;
+  excludeAvoidableInfiniteCostMachines?: boolean;
+}
+
+export interface RatioOptimizerModelSnapshot {
+  nodeRecipes: Record<string, Recipe>;
+  resolvedProducts: Record<string, string>;
 }
 
 export interface RatioOptimizerWarmupRequest {
@@ -299,12 +320,13 @@ function getCommittedSolverSnapshot(
 export function buildRatioOptimizerPayload(
   nodes: RecipeNodeType[],
   edges: Edge[],
+  options: Pick<RatioOptimizerSessionOptions, 'modelSnapshot' | 'minimizeLinkedOutputExcess'> = {},
 ): RatioOptimizerPayload {
   const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
     string,
     unknown
   >;
-  const committedSnapshot = getCommittedSolverSnapshot(nodes);
+  const committedSnapshot = options.modelSnapshot ?? getCommittedSolverSnapshot(nodes);
   const { nodeRecipes, resolvedProducts } =
     committedSnapshot ?? solveFlowPipeline(nodes, edges, globalSettings);
 
@@ -343,6 +365,8 @@ export function buildRatioOptimizerPayload(
         productId: resolvedProducts[handleId] ?? inp.product_id,
         quantity: inp.quantity * multiplier,
         isSink: !!inp.variable,
+        independentOfMachineCount: !!inp.independentOfMachineCount,
+        flowDependencies: inp.flowDependencies ?? [],
       };
     });
 
@@ -351,22 +375,29 @@ export function buildRatioOptimizerPayload(
       const outgoingEdges = edgeLookup.get(handleId) ?? [];
       const sourceProductId = getResolvedPortProduct(node.id, 'output', idx);
 
-      const hasSinkConnection = outgoingEdges.some((edge) => {
-        if (edge.sourceHandle !== handleId) return false;
-        if (!edge.targetHandle) return false;
-        const targetParsed = parseHandleId(edge.targetHandle);
-        if (!targetParsed) return false;
-        if (targetParsed.side !== 'input') return false;
-        const targetNode = nodesById.get(edge.target);
-        if (!targetNode) return false;
-        const targetRecipe = nodeRecipes[targetNode.id];
-        if (!targetRecipe) return false;
-        const targetInput = targetRecipe.inputs[targetParsed.index];
-        const targetProductId = getResolvedPortProduct(edge.target, 'input', targetParsed.index);
-        if (sourceProductId !== targetProductId) return false;
-        const targetIsSinkNode = targetRecipe.outputs.length === 0;
-        return !!targetInput?.variable || targetIsSinkNode;
-      });
+      const hasSinkConnection =
+        !out.voidable &&
+        ((options.minimizeLinkedOutputExcess && !!out.product_link_id) ||
+          outgoingEdges.some((edge) => {
+            if (edge.sourceHandle !== handleId) return false;
+            if (!edge.targetHandle) return false;
+            const targetParsed = parseHandleId(edge.targetHandle);
+            if (!targetParsed) return false;
+            if (targetParsed.side !== 'input') return false;
+            const targetNode = nodesById.get(edge.target);
+            if (!targetNode) return false;
+            const targetRecipe = nodeRecipes[targetNode.id];
+            if (!targetRecipe) return false;
+            const targetInput = targetRecipe.inputs[targetParsed.index];
+            const targetProductId = getResolvedPortProduct(
+              edge.target,
+              'input',
+              targetParsed.index,
+            );
+            if (sourceProductId !== targetProductId) return false;
+            const targetIsSinkNode = targetRecipe.outputs.length === 0;
+            return !!targetInput?.variable || targetIsSinkNode;
+          }));
 
       return {
         productId: sourceProductId || out.product_id,
@@ -375,17 +406,25 @@ export function buildRatioOptimizerPayload(
       };
     });
 
+    const machineCountBounds = getMachineCountBounds(node.data);
     ratioNodes.push({
       id: node.id,
       currentMachineCount: node.data.machineCount ?? 0,
+      minimumMachineCount: machineCountBounds.lowerBound,
+      maximumMachineCount: machineCountBounds.upperBound,
       isTarget: !!node.data.isTarget,
       powerUse: optimizationMetrics.powerUsePerMachine,
       powerOutput: optimizationMetrics.powerOutputPerMachine,
       pollution: optimizationMetrics.pollutionPerMachine,
       machineCost: optimizationMetrics.machineCostPerWholeMachine,
+      machineCostIndependentOfMachineCount:
+        optimizationMetrics.machineCostIndependentOfMachineCount,
       hasInfiniteMachineCost: optimizationMetrics.hasInfiniteMachineCost,
       modelCount: optimizationMetrics.modelCountPerWholeMachine,
+      modelCountIndependentOfMachineCount: optimizationMetrics.modelCountIndependentOfMachineCount,
       machineSpace: optimizationMetrics.machineSpacePerWholeMachine,
+      machineSpaceIndependentOfMachineCount:
+        optimizationMetrics.machineSpaceIndependentOfMachineCount,
       inputs,
       outputs,
     });
@@ -567,7 +606,7 @@ export function solveRatios(
 
   let payload: RatioOptimizerPayload;
   try {
-    payload = buildRatioOptimizerPayload(nodes, edges);
+    payload = buildRatioOptimizerPayload(nodes, edges, options);
   } catch (error) {
     return {
       promise: Promise.resolve({
@@ -605,6 +644,7 @@ export function solveRatios(
         connections: payload.connections,
         objectiveWeights: resolveRatioObjectiveWeights(options.objectiveWeights),
         optimizationConfiguration: options.optimizationConfiguration,
+        excludeAvoidableInfiniteCostMachines: options.excludeAvoidableInfiniteCostMachines,
         version: ASSET_VERSION,
       } satisfies RatioOptimizerRequest);
     } catch (error) {

@@ -6,6 +6,7 @@ export const huge_truck_depot_01: SpecialRecipe = {
   name: 'Sell Item',
   machine_id: 'm_huge_truck_depot',
   isSellTrash: true,
+  autocompleteDisposalPriority: 'last-resort',
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
     let resolvedItem = 'any_item';

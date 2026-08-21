@@ -21,6 +21,7 @@ export const big_liquid_burner_01: SpecialRecipe = {
   name: 'Burn Fluid',
   machine_id: 'm_big_liquid_burner',
   isSellTrash: true,
+  autocompleteDisposalPriority: 'secondary',
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
     let resolvedFluid = 'any_fluid';

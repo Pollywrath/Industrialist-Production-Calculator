@@ -65,7 +65,9 @@ export const steam_turbine_01: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0,
       inputs: [{ product_id: 'p_steam', quantity: 3 }],
-      outputs: [{ product_id: 'p_water', quantity: 0.1, temperature: waterOutputTemp }],
+      outputs: [
+        { product_id: 'p_water', quantity: 0.1, temperature: waterOutputTemp, voidable: true },
+      ],
     };
 
     return recipe;

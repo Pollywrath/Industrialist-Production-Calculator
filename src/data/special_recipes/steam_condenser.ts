@@ -79,6 +79,24 @@ function getConfiguredSteamFlow(settings: Record<string, unknown>): number {
   return (settings.steam_flow as number) ?? DEFAULT_STEAM_FLOW;
 }
 
+function getMaximumCoolantTemperature(settings: Record<string, unknown>): number | null {
+  const steamTemp = (settings.steam_temp as number) ?? 198;
+  const steamFlow = getConfiguredSteamFlow(settings);
+  let low = -273.15;
+  let high = 1_000_000;
+  if (!computeSteadyState(low, steamTemp, steamFlow).isCondensing) return null;
+
+  for (let iteration = 0; iteration < 48; iteration += 1) {
+    const midpoint = (low + high) / 2;
+    if (computeSteadyState(midpoint, steamTemp, steamFlow).isCondensing) {
+      low = midpoint;
+    } else {
+      high = midpoint;
+    }
+  }
+  return low - 1e-6;
+}
+
 export const steam_condenser_01: SpecialRecipe = {
   id: 'r_steam_condenser_01',
   name: 'Makes Distilled Water, Condensate',
@@ -90,6 +108,11 @@ export const steam_condenser_01: SpecialRecipe = {
   inputTemperatureSettings: {
     0: 'coolant_temp',
     1: 'steam_temp',
+  },
+  getAutocompleteInputTemperatureRange: (settings, inputIndex) => {
+    if (inputIndex !== 0) return null;
+    const maximum = getMaximumCoolantTemperature(settings);
+    return maximum === null ? null : { max: maximum };
   },
   settings: {
     coolant_temp: {

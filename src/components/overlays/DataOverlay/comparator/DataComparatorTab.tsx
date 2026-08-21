@@ -37,6 +37,7 @@ import {
 import styles from '../DataOverlay.module.css';
 import { VirtualList } from '../../../shared/VirtualList';
 import type { Machine, Product, Recipe } from '../../../../types/data';
+import { sortItems } from '../../../../utils/sorting';
 
 interface ComparatorVirtualRow {
   key: string;
@@ -260,8 +261,12 @@ function formatQuantityList<T>(
   }
 
   return (
-    Array.from(grouped.entries())
-      .map(([name, quantity]) => `${name} x${quantity}`)
+    sortItems(
+      Array.from(grouped.entries()).map(([name, quantity]) => ({ name, quantity })),
+      'name',
+      'asc',
+    )
+      .map(({ name, quantity }) => `${name} x${quantity}`)
       .join(', ') || '(None)'
   );
 }

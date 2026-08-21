@@ -39,7 +39,7 @@ export const m_research_station3_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_research_station3_01',
-      name: 'Research Station 3',
+      name: hasStation4 ? 'RS3 + RS4' : 'Research Station 3',
       machine_id: 'm_research_station3',
       cycle_time: 1,
       power_use: power,

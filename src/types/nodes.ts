@@ -5,9 +5,17 @@ export type HandleRef = {
   index: number;
 };
 
+export type MachineCountConstraintKind = 'locked' | 'capped';
+
+export interface MachineCountConstraint {
+  kind: MachineCountConstraintKind;
+  value: number;
+}
+
 export type RecipeNodeData = {
   recipeId: string;
   machineCount: number;
+  machineCountConstraint?: MachineCountConstraint;
   inputOrder?: number[];
   outputOrder?: number[];
   settings?: Record<string, unknown>;

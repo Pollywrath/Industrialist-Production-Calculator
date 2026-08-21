@@ -8,6 +8,7 @@ import type { Recipe } from '../types/data';
 import type { HandleRef } from '../types/nodes';
 import { buildHandleId, parseHandleId } from '../utils/idGenerator';
 import { solveFlowPipeline } from './solverPipeline';
+import { EPSILON } from '../utils/precision';
 
 const PHI = (Math.sqrt(5) - 1) / 2;
 
@@ -155,6 +156,7 @@ function solveAnalytically(
   const cycleTime = recipe.cycle_time;
   const inputNeighborRates = new Map<number, number>();
   const outputNeighborRates = new Map<number, number>();
+  const inputConnectionsBySource = new Map<string, SolverConnection[]>();
 
   for (let i = 0; i < connections.length; i++) {
     const connection = connections[i];
@@ -167,15 +169,36 @@ function solveAnalytically(
         (outputNeighborRates.get(connection.sourceOutputIndex) ?? 0) + neighborRate,
       );
     } else if (connection.targetNodeId === nodeId) {
-      const neighborRate =
-        flowResults.get(connection.sourceNodeId)?.outputFlows[connection.sourceOutputIndex]?.rate ??
-        0;
-      inputNeighborRates.set(
-        connection.targetInputIndex,
-        (inputNeighborRates.get(connection.targetInputIndex) ?? 0) + neighborRate,
-      );
+      const sourceKey = `${connection.sourceNodeId}:${connection.sourceOutputIndex}`;
+      const sourceConnections = inputConnectionsBySource.get(sourceKey);
+      if (sourceConnections) {
+        sourceConnections.push(connection);
+      } else {
+        inputConnectionsBySource.set(sourceKey, [connection]);
+      }
     }
   }
+
+  inputConnectionsBySource.forEach((sourceConnections) => {
+    const firstConnection = sourceConnections[0];
+    const sourceRate =
+      flowResults.get(firstConnection.sourceNodeId)?.outputFlows[firstConnection.sourceOutputIndex]
+        ?.rate ?? 0;
+    const totalQuantity = sourceConnections.reduce(
+      (sum, connection) => sum + resolvePortQuantity(recipe, 'input', connection.targetInputIndex),
+      0,
+    );
+    if (totalQuantity <= 0) return;
+
+    for (const connection of sourceConnections) {
+      const quantity = resolvePortQuantity(recipe, 'input', connection.targetInputIndex);
+      inputNeighborRates.set(
+        connection.targetInputIndex,
+        (inputNeighborRates.get(connection.targetInputIndex) ?? 0) +
+          (sourceRate * quantity) / totalQuantity,
+      );
+    }
+  });
 
   if (inputNeighborRates.size + outputNeighborRates.size <= 1) {
     const singleRate =
@@ -281,7 +304,7 @@ function solveGoldenSection(
   let f2 = evaluateTrialMetric(x2);
 
   for (let iter = 0; iter < 40; iter++) {
-    if (b - a < 1e-8) break;
+    if (b - a < EPSILON) break;
     if (f1 <= f2) {
       b = x2;
       x2 = x1;

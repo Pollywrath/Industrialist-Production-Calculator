@@ -23,6 +23,7 @@ import {
 import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId, parseHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
+import { constrainMachineCount } from '../../../utils/machineCountConstraint';
 import { getRecipeEntryHandleType, productTypeToHandleDataType } from '../../../utils/handleTypes';
 import styles from './RecipeNode.module.css';
 import { useShallow } from 'zustand/react/shallow';
@@ -411,7 +412,12 @@ export function GroupNodeIO({
     const q = entry ? entry.quantity : 0;
     if (q <= 0) return;
 
-    const newMachineCount = calculateMachineCountFromRate(targetRate, recipe.cycle_time, q);
+    const targetNode = recipeNodes.find((node) => node.id === parsed.nodeId);
+    if (!targetNode || targetNode.data.machineCountConstraint?.kind === 'locked') return;
+    const newMachineCount = constrainMachineCount(
+      targetNode.data,
+      calculateMachineCountFromRate(targetRate, recipe.cycle_time, q),
+    );
     useFlowStore.getState().updateNodeData(parsed.nodeId, { machineCount: newMachineCount });
     completeTutorialAction({
       type: 'node-handle-double',

@@ -63,6 +63,8 @@ await runModel('integer-ceil.lp', (output) => {
   }
 });
 
+console.log('Smoke: SCIP shell models passed.');
+
 if (
   typeof scip._industrialist_has_native_ratio_solver !== 'function' ||
   scip._industrialist_has_native_ratio_solver() !== 1 ||
@@ -85,9 +87,9 @@ if (
   throw new Error('Native Industrialist ratio solver exports were not found.');
 }
 
-if (scip._industrialist_native_abi_version() !== 2) {
+if (scip._industrialist_native_abi_version() !== 3) {
   throw new Error(
-    `Expected Industrialist native ABI 2, got ${scip._industrialist_native_abi_version()}.`,
+    `Expected Industrialist native ABI 3, got ${scip._industrialist_native_abi_version()}.`,
   );
 }
 if ((scip._industrialist_native_capabilities() & 31) !== 31) {
@@ -100,6 +102,15 @@ const NATIVE_MAGIC = 444926465;
 const NATIVE_RESULT_VERSION = 2;
 const NATIVE_RESULT_HEADER_DOUBLES = 28;
 const NATIVE_PAYLOAD_MAGIC = 444926466;
+const NATIVE_PAYLOAD_VERSION = 5;
+const METRIC_IDS = [
+  'powerUse',
+  'powerOutput',
+  'pollution',
+  'machineCost',
+  'machineSpace',
+  'modelCount',
+];
 
 function readNativeResult(resultPtr) {
   if (!resultPtr) {
@@ -125,96 +136,288 @@ function readNativeResult(resultPtr) {
   return result;
 }
 
+function makeNativePayload({
+  nodes,
+  connections = [],
+  metrics = {},
+  excludeAvoidableInfiniteCostMachines = false,
+  useWholeMachineCounts = true,
+}) {
+  const flatInputs = nodes.flatMap((node) => node.inputs ?? []);
+  const flatOutputs = nodes.flatMap((node) => node.outputs ?? []);
+  const flatDependencies = flatInputs.flatMap((input) => input.flowDependencies ?? []);
+  const totalDoubles =
+    41 +
+    nodes.length * 15 +
+    flatInputs.length * 5 +
+    flatOutputs.length * 2 +
+    connections.length * 4 +
+    flatDependencies.length * 2;
+  const payload = new Float64Array(totalDoubles);
+  const tierCount = Math.max(1, ...Object.values(metrics).map((metric) => metric.tier ?? 1));
+  payload.set([
+    NATIVE_PAYLOAD_MAGIC,
+    NATIVE_PAYLOAD_VERSION,
+    totalDoubles,
+    nodes.length,
+    connections.length,
+    flatInputs.length,
+    flatOutputs.length,
+    tierCount,
+    excludeAvoidableInfiniteCostMachines ? 1 : 0,
+    useWholeMachineCounts ? 1 : 0,
+  ]);
+  payload[40] = flatDependencies.length;
+  for (let metricIndex = 0; metricIndex < METRIC_IDS.length; metricIndex += 1) {
+    const metric = metrics[METRIC_IDS[metricIndex]];
+    payload.set(
+      metric
+        ? [1, metric.weight ?? 1, metric.tier ?? 1, -1, metric.outputGoal ?? -1]
+        : [0, 0, 1, -1, -1],
+      10 + metricIndex * 5,
+    );
+  }
+
+  const inputOffset = 41 + nodes.length * 15;
+  const outputOffset = inputOffset + flatInputs.length * 5;
+  const connectionOffset = outputOffset + flatOutputs.length * 2;
+  const dependencyOffset = connectionOffset + connections.length * 4;
+  let nextInput = 0;
+  let nextOutput = 0;
+  let nextDependency = 0;
+  for (let nodeIndex = 0; nodeIndex < nodes.length; nodeIndex += 1) {
+    const node = nodes[nodeIndex];
+    const current = node.currentMachineCount ?? 0;
+    const minimum = node.minimumMachineCount ?? (node.isTarget ? current : 0);
+    payload.set(
+      [
+        current,
+        minimum,
+        node.maximumMachineCount ?? -1,
+        node.powerUse ?? 0,
+        node.powerOutput ?? 0,
+        node.pollution ?? 0,
+        node.machineCost ?? 0,
+        node.machineSpace ?? 0,
+        node.modelCount ?? 0,
+        nextInput,
+        node.inputs?.length ?? 0,
+        nextOutput,
+        node.outputs?.length ?? 0,
+        node.hasInfiniteMachineCost ? 1 : 0,
+        node.isTarget ? 1 : 0,
+      ],
+      41 + nodeIndex * 15,
+    );
+    for (const input of node.inputs ?? []) {
+      const dependencies = input.flowDependencies ?? [];
+      payload.set(
+        [
+          input.quantity,
+          input.isSink ? 1 : 0,
+          input.independentOfMachineCount ? 1 : 0,
+          nextDependency,
+          dependencies.length,
+        ],
+        inputOffset + nextInput * 5,
+      );
+      for (const dependency of dependencies) {
+        payload.set(
+          [dependency.sourceInputIndex, dependency.coefficient],
+          dependencyOffset + nextDependency * 2,
+        );
+        nextDependency += 1;
+      }
+      nextInput += 1;
+    }
+    for (const output of node.outputs ?? []) {
+      payload.set(
+        [output.quantity, output.hasSinkConnection ? 1 : 0],
+        outputOffset + nextOutput * 2,
+      );
+      nextOutput += 1;
+    }
+  }
+  for (let index = 0; index < connections.length; index += 1) {
+    const connection = connections[index];
+    payload.set(
+      [
+        connection.sourceNode,
+        connection.sourceOutputIndex,
+        connection.targetNode,
+        connection.targetInputIndex,
+      ],
+      connectionOffset + index * 4,
+    );
+  }
+  return payload;
+}
+
 function makeSingleNodePayload({
   currentMachineCount = 2,
   machineCost = 0,
   machineCostWeight = 0,
   hasInfiniteMachineCost = false,
+  minimumMachineCount,
+  maximumMachineCount = null,
+  useWholeMachineCounts = true,
 } = {}) {
-  const payload = new Float64Array(52);
-  payload.set([NATIVE_PAYLOAD_MAGIC, 4, 52, 1, 0, 0, 0, 1, 0]);
-  for (let metricIndex = 0; metricIndex < 6; metricIndex += 1) {
-    payload.set([0, 0, 1, -1, -1], 9 + metricIndex * 5);
-  }
-  if (machineCostWeight > 0) {
-    payload.set([1, machineCostWeight, 1, -1, -1], 9 + 3 * 5);
-  }
-  payload.set(
-    [
-      currentMachineCount,
-      1,
-      0,
-      0,
-      0,
-      machineCost,
-      0,
-      0,
-      0,
-      0,
-      0,
-      0,
-      hasInfiniteMachineCost ? 1 : 0,
+  return makeNativePayload({
+    nodes: [
+      {
+        currentMachineCount,
+        minimumMachineCount,
+        maximumMachineCount,
+        isTarget: true,
+        machineCost,
+        hasInfiniteMachineCost,
+      },
     ],
-    39,
-  );
-  return payload;
+    metrics: machineCostWeight > 0 ? { machineCost: { weight: machineCostWeight } } : {},
+    useWholeMachineCounts,
+  });
 }
 
-function makeInfiniteCostChoicePayload() {
-  const payload = new Float64Array(92);
-  payload.set([NATIVE_PAYLOAD_MAGIC, 4, 92, 3, 2, 1, 2, 1, 0]);
-  for (let metricIndex = 0; metricIndex < 6; metricIndex += 1) {
-    payload.set([0, 0, 1, -1, -1], 9 + metricIndex * 5);
-  }
-  payload.set([1, 1, 1, -1, -1], 9 + 3 * 5);
+function makeConnectedAboveIntegerProducerPayload() {
+  return makeNativePayload({
+    nodes: [
+      { machineCost: 10, outputs: [{ quantity: 1 }] },
+      {
+        currentMachineCount: 1,
+        isTarget: true,
+        inputs: [{ quantity: 2.000000105 }],
+      },
+    ],
+    connections: [{ sourceNode: 0, sourceOutputIndex: 0, targetNode: 1, targetInputIndex: 0 }],
+    metrics: { machineCost: { weight: 1 } },
+  });
+}
 
-  payload.set([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1], 39);
-  payload.set([0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 1, 1, 0], 52);
-  payload.set([1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0], 65);
-  payload.set([1, 0], 78);
-  payload.set([1, 0, 1, 0], 80);
-  payload.set([0, 0, 2, 0, 1, 0, 2, 0], 84);
-  return payload;
+function makeIncumbentPolishPayload() {
+  return makeNativePayload({
+    nodes: Array.from({ length: 24 }, (_, index) => ({
+      currentMachineCount: index === 0 ? 2.2 : 0,
+      isTarget: index === 0,
+      machineCost: 10,
+    })),
+    metrics: { machineCost: { weight: 1 } },
+  });
+}
+
+function makeInfiniteCostChoicePayload({
+  machineCostWeight = 1,
+  excludeAvoidableInfiniteCostMachines = false,
+} = {}) {
+  return makeNativePayload({
+    nodes: [
+      { hasInfiniteMachineCost: true, outputs: [{ quantity: 1 }] },
+      { machineCost: 100, outputs: [{ quantity: 1 }] },
+      { currentMachineCount: 1, isTarget: true, inputs: [{ quantity: 1 }] },
+    ],
+    connections: [
+      { sourceNode: 0, sourceOutputIndex: 0, targetNode: 2, targetInputIndex: 0 },
+      { sourceNode: 1, sourceOutputIndex: 0, targetNode: 2, targetInputIndex: 0 },
+    ],
+    metrics: machineCostWeight > 0 ? { machineCost: { weight: machineCostWeight } } : {},
+    excludeAvoidableInfiniteCostMachines,
+  });
 }
 
 function makeTargetlessPowerOutputPayload() {
-  const payload = new Float64Array(52);
-  payload.set([NATIVE_PAYLOAD_MAGIC, 4, 52, 1, 0, 0, 0, 1, 0]);
-  for (let metricIndex = 0; metricIndex < 6; metricIndex += 1) {
-    payload.set([0, 0, 1, -1, -1], 9 + metricIndex * 5);
-  }
-  payload.set([1, 1, 1, -1, 250], 9 + 1 * 5);
-  payload.set([0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0], 39);
-  return payload;
+  return makeNativePayload({
+    nodes: [{ powerOutput: 100 }],
+    metrics: { powerOutput: { weight: 1, outputGoal: 250 } },
+  });
 }
 
 function makeMixedScaleTargetsPayload() {
-  const payload = new Float64Array(65);
-  payload.set([NATIVE_PAYLOAD_MAGIC, 4, 65, 2, 0, 0, 0, 1, 0]);
-  for (let metricIndex = 0; metricIndex < 6; metricIndex += 1) {
-    payload.set([0, 0, 1, -1, -1], 9 + metricIndex * 5);
-  }
-  payload.set([1e12, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 39);
-  payload.set([1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 52);
-  return payload;
+  return makeNativePayload({
+    nodes: [
+      { currentMachineCount: 1e12, isTarget: true },
+      { currentMachineCount: 1, isTarget: true },
+    ],
+  });
 }
 
 function makeScaledStagePriorityPayload({ targetMachineCount = 0.01, outputGoal = 1 } = {}) {
-  const payload = new Float64Array(107);
-  payload.set([NATIVE_PAYLOAD_MAGIC, 4, 107, 4, 2, 2, 2, 1, 0]);
-  for (let metricIndex = 0; metricIndex < 6; metricIndex += 1) {
-    payload.set([0, 0, 1, -1, -1], 9 + metricIndex * 5);
-  }
-  payload.set([1, 1, 1, -1, outputGoal], 9 + 1 * 5);
+  return makeNativePayload({
+    nodes: [
+      { currentMachineCount: 1e12, isTarget: true },
+      {
+        powerOutput: 1,
+        inputs: [{ quantity: 2 }],
+        outputs: [{ quantity: 1, hasSinkConnection: true }],
+      },
+      { currentMachineCount: targetMachineCount, isTarget: true, inputs: [{ quantity: 1 }] },
+      { outputs: [{ quantity: 0 }] },
+    ],
+    connections: [
+      { sourceNode: 3, sourceOutputIndex: 0, targetNode: 1, targetInputIndex: 0 },
+      { sourceNode: 1, sourceOutputIndex: 0, targetNode: 2, targetInputIndex: 0 },
+    ],
+    metrics: { powerOutput: { weight: 1, outputGoal } },
+  });
+}
 
-  payload.set([1e12, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 39);
-  payload.set([0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 1, 0], 52);
-  payload.set([targetMachineCount, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0], 65);
-  payload.set([0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 1, 1, 0], 78);
-  payload.set([2, 0, 1, 0], 91);
-  payload.set([1, 1, 0, 0], 95);
-  payload.set([3, 0, 1, 0, 1, 0, 2, 0], 99);
-  return payload;
+function makeBoundedProducerPayload({ minimum = 0, maximum }) {
+  return makeNativePayload({
+    nodes: [
+      {
+        minimumMachineCount: minimum,
+        maximumMachineCount: maximum,
+        outputs: [{ quantity: 1 }],
+      },
+      { currentMachineCount: 5, isTarget: true, inputs: [{ quantity: 1 }] },
+    ],
+    connections: [{ sourceNode: 0, sourceOutputIndex: 0, targetNode: 1, targetInputIndex: 0 }],
+  });
+}
+
+function makeUndergroundWastePayload() {
+  return makeNativePayload({
+    nodes: [
+      {
+        currentMachineCount: 100,
+        isTarget: true,
+        outputs: [{ quantity: 1, hasSinkConnection: true }],
+      },
+      {
+        currentMachineCount: 50,
+        isTarget: true,
+        outputs: [{ quantity: 1, hasSinkConnection: true }],
+      },
+      { outputs: [{ quantity: 1, hasSinkConnection: true }] },
+      { outputs: [{ quantity: 1, hasSinkConnection: true }] },
+      {
+        inputs: [
+          { quantity: 240, isSink: true },
+          { quantity: 240, isSink: true },
+          {
+            quantity: 0,
+            independentOfMachineCount: true,
+            flowDependencies: [
+              { sourceInputIndex: 0, coefficient: 0.02 },
+              { sourceInputIndex: 1, coefficient: 0.02 },
+            ],
+          },
+          {
+            quantity: 0,
+            independentOfMachineCount: true,
+            flowDependencies: [
+              { sourceInputIndex: 0, coefficient: 0.01 },
+              { sourceInputIndex: 1, coefficient: 0.01 },
+            ],
+          },
+        ],
+      },
+    ],
+    connections: [
+      { sourceNode: 0, sourceOutputIndex: 0, targetNode: 4, targetInputIndex: 0 },
+      { sourceNode: 1, sourceOutputIndex: 0, targetNode: 4, targetInputIndex: 1 },
+      { sourceNode: 2, sourceOutputIndex: 0, targetNode: 4, targetInputIndex: 2 },
+      { sourceNode: 3, sourceOutputIndex: 0, targetNode: 4, targetInputIndex: 3 },
+    ],
+  });
 }
 
 function getNativeResultSectionOffsets(result) {
@@ -226,7 +429,7 @@ function getNativeResultSectionOffsets(result) {
   };
 }
 
-async function runAsyncNativeJob(payload, cancelImmediately = false) {
+async function runAsyncNativeJob(payload, cancelImmediately = false, roundedMilpProfile = 0) {
   const payloadPtr = scip._malloc(payload.byteLength);
   if (!payloadPtr) {
     throw new Error('Failed to allocate asynchronous native payload memory.');
@@ -235,7 +438,9 @@ async function runAsyncNativeJob(payload, cancelImmediately = false) {
   let resultPtr = 0;
   try {
     scip.HEAPF64.set(payload, payloadPtr / Float64Array.BYTES_PER_ELEMENT);
-    if (scip._industrialist_start_ratio_job_f64(payloadPtr, payload.length, 0) !== 1) {
+    if (
+      scip._industrialist_start_ratio_job_f64(payloadPtr, payload.length, roundedMilpProfile) !== 1
+    ) {
       throw new Error('Failed to start asynchronous native ratio job.');
     }
 
@@ -272,6 +477,7 @@ async function runAsyncNativeJob(payload, cancelImmediately = false) {
   }
 }
 
+console.log('Smoke: tuned rounded MILP profile.');
 const roundedJob = await runAsyncNativeJob(
   makeSingleNodePayload({
     currentMachineCount: 2.2,
@@ -289,6 +495,11 @@ if (roundedJob.result[4] !== 4 || roundedJob.result[25] !== 1) {
     `Rounded native job did not use the exact MILP profile: profile=${roundedJob.result[4]}, roundedVars=${roundedJob.result[25]}.`,
   );
 }
+if (roundedJob.result[26] !== 10 || roundedJob.result[27] < 0) {
+  throw new Error(
+    `Rounded native job did not report tuned profile telemetry: profile=${roundedJob.result[26]}, polishMs=${roundedJob.result[27]}.`,
+  );
+}
 const roundedStageCount = roundedJob.result[15];
 const weightedStageOffset = Array.from(
   { length: roundedStageCount },
@@ -304,6 +515,109 @@ const roundedMachineOffset = NATIVE_RESULT_HEADER_DOUBLES + roundedStageCount * 
 if (Math.abs(roundedJob.result[roundedMachineOffset] - 2.2) > 1e-7) {
   throw new Error(
     `Rounded native job changed the target lower bound to ${roundedJob.result[roundedMachineOffset]}.`,
+  );
+}
+
+const continuousAccountingJob = await runAsyncNativeJob(
+  makeSingleNodePayload({
+    currentMachineCount: 2.2,
+    machineCost: 10,
+    machineCostWeight: 1,
+    useWholeMachineCounts: false,
+  }),
+);
+if (continuousAccountingJob.nativeError || continuousAccountingJob.result[3] !== 1) {
+  throw new Error(
+    `Continuous accounting job failed with status ${continuousAccountingJob.result[3]}: ${continuousAccountingJob.nativeError}`,
+  );
+}
+if (continuousAccountingJob.result[25] !== 0) {
+  throw new Error('Continuous machine accounting unexpectedly created rounded integer variables.');
+}
+
+for (const profile of [1, 2, 3]) {
+  console.log(`Smoke: rounded MILP comparison profile ${profile}.`);
+  const profileJob = await runAsyncNativeJob(
+    makeSingleNodePayload({
+      currentMachineCount: 2.2,
+      machineCost: 10,
+      machineCostWeight: 1,
+    }),
+    false,
+    profile,
+  );
+  if (profileJob.nativeError || profileJob.result[3] !== 1) {
+    throw new Error(
+      `Rounded profile ${profile} failed with status ${profileJob.result[3]}: ${profileJob.nativeError}`,
+    );
+  }
+  if (profileJob.result[26] !== profile + 10) {
+    throw new Error(`Rounded profile ${profile} reported telemetry code ${profileJob.result[26]}.`);
+  }
+}
+
+console.log('Smoke: rounded MILP incumbent polishing.');
+const incumbentPolishJob = await runAsyncNativeJob(makeIncumbentPolishPayload());
+if (incumbentPolishJob.nativeError || incumbentPolishJob.result[3] !== 1) {
+  throw new Error(
+    `Incumbent-polish native job failed with status ${incumbentPolishJob.result[3]}: ${incumbentPolishJob.nativeError}`,
+  );
+}
+if (incumbentPolishJob.result[25] !== 24 || incumbentPolishJob.result[27] <= 0) {
+  throw new Error(
+    `Incumbent polishing was not exercised: roundedVars=${incumbentPolishJob.result[25]}, polishMs=${incumbentPolishJob.result[27]}.`,
+  );
+}
+
+console.log('Smoke: remaining native ratio cases.');
+console.log('Smoke: bounded producer with locked minimum/maximum.');
+const lockedProducerJob = await runAsyncNativeJob(
+  makeBoundedProducerPayload({ minimum: 4, maximum: 4 }),
+);
+const lockedProducerOffset = getNativeResultSectionOffsets(lockedProducerJob.result).machineOffset;
+if (
+  lockedProducerJob.nativeError ||
+  lockedProducerJob.result[3] !== 1 ||
+  Math.abs(lockedProducerJob.result[lockedProducerOffset] - 4) > 1e-7
+) {
+  throw new Error(
+    `Locked producer bound was not preserved: ${lockedProducerJob.nativeError || lockedProducerJob.result[lockedProducerOffset]}.`,
+  );
+}
+
+console.log('Smoke: bounded producer with maximum.');
+const cappedProducerJob = await runAsyncNativeJob(makeBoundedProducerPayload({ maximum: 3 }));
+const cappedProducerOffset = getNativeResultSectionOffsets(cappedProducerJob.result).machineOffset;
+if (
+  cappedProducerJob.nativeError ||
+  cappedProducerJob.result[3] !== 1 ||
+  cappedProducerJob.result[cappedProducerOffset] > 3 + 1e-7
+) {
+  throw new Error(
+    `Capped producer exceeded its maximum: ${cappedProducerJob.nativeError || cappedProducerJob.result[cappedProducerOffset]}.`,
+  );
+}
+
+const undergroundWasteJob = await runAsyncNativeJob(makeUndergroundWastePayload());
+const undergroundWasteOffset = getNativeResultSectionOffsets(
+  undergroundWasteJob.result,
+).machineOffset;
+if (undergroundWasteJob.nativeError || undergroundWasteJob.result[3] !== 1) {
+  throw new Error(
+    `Underground Waste Facility flow-dependency job failed with status ${undergroundWasteJob.result[3]}: ${undergroundWasteJob.nativeError}`,
+  );
+}
+const undergroundWasteCounts = undergroundWasteJob.result.slice(
+  undergroundWasteOffset,
+  undergroundWasteOffset + 5,
+);
+if (
+  Math.abs(undergroundWasteCounts[2] - 3) > 1e-6 ||
+  Math.abs(undergroundWasteCounts[3] - 1.5) > 1e-6 ||
+  Math.abs(undergroundWasteCounts[4] - 100 / 240) > 1e-6
+) {
+  throw new Error(
+    `Underground Waste Facility dependencies were incorrect: ${undergroundWasteCounts.join(', ')}.`,
   );
 }
 
@@ -330,6 +644,76 @@ if (
   throw new Error('Near-integer native job did not price 2.00000005 as 2 whole machines.');
 }
 
+const aboveIntegerToleranceJob = await runAsyncNativeJob(
+  makeSingleNodePayload({
+    currentMachineCount: 2.000000105,
+    machineCost: 10,
+    machineCostWeight: 1,
+  }),
+);
+if (aboveIntegerToleranceJob.nativeError || aboveIntegerToleranceJob.result[3] !== 1) {
+  throw new Error(
+    `Above-tolerance native job failed with status ${aboveIntegerToleranceJob.result[3]}: ${aboveIntegerToleranceJob.nativeError}`,
+  );
+}
+const aboveIntegerToleranceStageOffset = Array.from(
+  { length: aboveIntegerToleranceJob.result[15] },
+  (_, index) => NATIVE_RESULT_HEADER_DOUBLES + index * 3,
+).find((offset) => aboveIntegerToleranceJob.result[offset] === 3);
+if (
+  aboveIntegerToleranceStageOffset === undefined ||
+  Math.abs(aboveIntegerToleranceJob.result[aboveIntegerToleranceStageOffset + 1] - 30) > 1e-6
+) {
+  throw new Error('Above-tolerance native job did not price 2.000000105 as 3 whole machines.');
+}
+
+const aboveZeroToleranceJob = await runAsyncNativeJob(
+  makeSingleNodePayload({
+    currentMachineCount: 0.000000105,
+    machineCost: 10,
+    machineCostWeight: 1,
+  }),
+);
+if (aboveZeroToleranceJob.nativeError || aboveZeroToleranceJob.result[3] !== 1) {
+  throw new Error(
+    `Above-zero-tolerance native job failed with status ${aboveZeroToleranceJob.result[3]}: ${aboveZeroToleranceJob.nativeError}`,
+  );
+}
+const aboveZeroToleranceStageOffset = Array.from(
+  { length: aboveZeroToleranceJob.result[15] },
+  (_, index) => NATIVE_RESULT_HEADER_DOUBLES + index * 3,
+).find((offset) => aboveZeroToleranceJob.result[offset] === 3);
+if (
+  aboveZeroToleranceStageOffset === undefined ||
+  Math.abs(aboveZeroToleranceJob.result[aboveZeroToleranceStageOffset + 1] - 10) > 1e-6
+) {
+  throw new Error('Above-zero-tolerance native job did not price 0.000000105 as 1 whole machine.');
+}
+
+const connectedAboveIntegerProducerJob = await runAsyncNativeJob(
+  makeConnectedAboveIntegerProducerPayload(),
+);
+if (
+  connectedAboveIntegerProducerJob.nativeError ||
+  connectedAboveIntegerProducerJob.result[3] !== 1
+) {
+  throw new Error(
+    `Connected above-integer producer job failed with status ${connectedAboveIntegerProducerJob.result[3]}: ${connectedAboveIntegerProducerJob.nativeError}`,
+  );
+}
+const connectedAboveIntegerProducerStageOffset = Array.from(
+  { length: connectedAboveIntegerProducerJob.result[15] },
+  (_, index) => NATIVE_RESULT_HEADER_DOUBLES + index * 3,
+).find((offset) => connectedAboveIntegerProducerJob.result[offset] === 3);
+if (
+  connectedAboveIntegerProducerStageOffset === undefined ||
+  Math.abs(
+    connectedAboveIntegerProducerJob.result[connectedAboveIntegerProducerStageOffset + 1] - 30,
+  ) > 1e-6
+) {
+  throw new Error('Connected producer just above 2 machines was not priced as 3 whole machines.');
+}
+
 const targetlessPowerOutputJob = await runAsyncNativeJob(makeTargetlessPowerOutputPayload());
 if (targetlessPowerOutputJob.nativeError || targetlessPowerOutputJob.result[3] !== 1) {
   throw new Error(
@@ -353,7 +737,9 @@ if (
   Math.abs(mixedScaleCounts[0] - 1e12) > 1 ||
   Math.abs(mixedScaleCounts[1] - 1) > 1e-8
 ) {
-  throw new Error(`Mixed-scale targets lost physical output precision: ${mixedScaleCounts.join(', ')}.`);
+  throw new Error(
+    `Mixed-scale targets lost physical output precision: ${mixedScaleCounts.join(', ')}.`,
+  );
 }
 
 const scaledPriorityJob = await runAsyncNativeJob(makeScaledStagePriorityPayload());
@@ -444,6 +830,33 @@ if (
 ) {
   throw new Error(
     `Infinite-cost choice did not select the finite supplier: ${infiniteChoiceCounts.join(', ')}.`,
+  );
+}
+
+const autocompleteInfiniteChoiceJob = await runAsyncNativeJob(
+  makeInfiniteCostChoicePayload({
+    machineCostWeight: 0,
+    excludeAvoidableInfiniteCostMachines: true,
+  }),
+);
+if (autocompleteInfiniteChoiceJob.nativeError || autocompleteInfiniteChoiceJob.result[3] !== 1) {
+  throw new Error(
+    `Autocomplete infinite-cost choice job failed with status ${autocompleteInfiniteChoiceJob.result[3]}: ${autocompleteInfiniteChoiceJob.nativeError}`,
+  );
+}
+const autocompleteInfiniteChoiceMachineOffset =
+  NATIVE_RESULT_HEADER_DOUBLES + autocompleteInfiniteChoiceJob.result[15] * 3;
+const autocompleteInfiniteChoiceCounts = autocompleteInfiniteChoiceJob.result.slice(
+  autocompleteInfiniteChoiceMachineOffset,
+  autocompleteInfiniteChoiceMachineOffset + 3,
+);
+if (
+  Math.abs(autocompleteInfiniteChoiceCounts[0]) > 1e-7 ||
+  Math.abs(autocompleteInfiniteChoiceCounts[1] - 1) > 1e-7 ||
+  Math.abs(autocompleteInfiniteChoiceCounts[2] - 1) > 1e-7
+) {
+  throw new Error(
+    `Autocomplete did not exclude the avoidable infinite-cost supplier: ${autocompleteInfiniteChoiceCounts.join(', ')}.`,
   );
 }
 

@@ -21,9 +21,9 @@ export const air_separation_unit: SpecialRecipe = {
       pollution: 0,
       inputs: [],
       outputs: [
-        { product_id: 'p_liquid_nitrogen', quantity: 60, temperature: -205 },
-        { product_id: 'p_liquid_oxygen', quantity: 15, temperature: -190 },
-        { product_id: 'p_liquid_argon', quantity: 3, temperature: -195 },
+        { product_id: 'p_liquid_nitrogen', quantity: 60, temperature: -205, voidable: true },
+        { product_id: 'p_liquid_oxygen', quantity: 15, temperature: -190, voidable: true },
+        { product_id: 'p_liquid_argon', quantity: 3, temperature: -195, voidable: true },
         { product_id: 'p_residue', quantity: residueQuantity, temperature: 18 },
       ],
     };

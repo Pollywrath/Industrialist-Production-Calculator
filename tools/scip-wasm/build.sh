@@ -31,7 +31,14 @@ OUT_DIR="${OUT_DIR:-/workspace/public/scip}"
 WITH_PAPILO="${WITH_PAPILO:-ON}"
 WITH_TBB="${WITH_TBB:-ON}"
 WITH_PTHREADS="${WITH_PTHREADS:-ON}"
-PTHREAD_POOL_SIZE="${PTHREAD_POOL_SIZE:-4}"
+# One pthread is reserved by the native async coordinator. Keep four additional
+# pthreads available for SCIP's concurrent MILP solver instances.
+# One pthread is reserved by the native async coordinator. Keep four additional
+# pthreads available for SCIP's concurrent MILP solver instances.
+# One pthread is reserved by the native async coordinator. Keep four additional
+# pthreads available for SCIP's concurrent MILP solver instances.
+PTHREAD_POOL_SIZE="${PTHREAD_POOL_SIZE:-5}"
+BUILD_JOBS="${BUILD_JOBS:-$(nproc)}"
 SCIP_CONFIGURE_LOG="${BUILD_ROOT}/scip-configure.log"
 INDUSTRIALIST_WRAPPER_SOURCE="/opt/scip-wasm/industrialist_ratio_wrapper.cpp"
 ACTUAL_PAPILO_SHA256="none"
@@ -39,6 +46,11 @@ ACTUAL_TBB_SHA256="none"
 
 if [[ "${WITH_TBB}" == "ON" && "${WITH_PTHREADS}" != "ON" ]]; then
   echo "WITH_TBB=ON requires WITH_PTHREADS=ON for a WASM build." >&2
+  exit 1
+fi
+
+if ! [[ "${BUILD_JOBS}" =~ ^[1-9][0-9]*$ ]]; then
+  echo "BUILD_JOBS must be a positive integer." >&2
   exit 1
 fi
 
@@ -95,7 +107,7 @@ tar -xzf "${SOURCE_ARCHIVE}" -C "${SOURCE_DIR}" --strip-components=1
 
 if [[ -f "${INDUSTRIALIST_WRAPPER_SOURCE}" ]]; then
   echo "==> Attaching Industrialist native ratio wrapper to SCIP shell target"
-  sed -i 's/set(TPI tny CACHE STRING "options for thread support library")/set(TPI none CACHE STRING "options for thread support library")/' \
+  sed -i 's/set(TPI tny CACHE STRING "options for thread support library")/set(TPI tny CACHE STRING "options for thread support library")/' \
     "${SOURCE_DIR}/scip/CMakeLists.txt"
   if [[ "${WITH_PAPILO}" == "ON" ]]; then
     sed -i '0,/if(PAPILO OR AUTOBUILD)/s//if(FALSE)/' "${SOURCE_DIR}/CMakeLists.txt"
@@ -138,7 +150,7 @@ if [[ "${WITH_TBB}" == "ON" ]]; then
     -DCMAKE_CXX_FLAGS="${COMMON_CXX_FLAGS}"
 
   echo "==> Building and installing oneTBB"
-  cmake --build "${TBB_BUILD_DIR}" --target install --parallel "$(nproc)"
+  cmake --build "${TBB_BUILD_DIR}" --target install --parallel "${BUILD_JOBS}"
 fi
 
 if [[ "${WITH_PAPILO}" == "ON" ]]; then
@@ -189,7 +201,7 @@ if [[ "${WITH_PAPILO}" == "ON" ]]; then
   emcmake cmake "${PAPILO_CMAKE_ARGS[@]}"
 
   echo "==> Building and installing PaPILO"
-  cmake --build "${PAPILO_BUILD_DIR}" --target install --parallel "$(nproc)"
+  cmake --build "${PAPILO_BUILD_DIR}" --target install --parallel "${BUILD_JOBS}"
 fi
 
 SCIP_CMAKE_ARGS=(
@@ -215,7 +227,7 @@ SCIP_CMAKE_ARGS=(
   -DGCG=OFF
   -DUG=OFF
   -DLPS=spx
-  -DTPI=none
+  -DTPI=tny
   -DPAPILO="${WITH_PAPILO}"
   -DZIMPL=OFF
   -DAMPL=OFF
@@ -264,7 +276,7 @@ if [[ "${WITH_PAPILO}" == "ON" && "${ACTUAL_PAPILO}" != "ON" ]]; then
 fi
 
 echo "==> Building SCIP executable"
-cmake --build "${BUILD_DIR}" --target scip --parallel "$(nproc)"
+cmake --build "${BUILD_DIR}" --target scip --parallel "${BUILD_JOBS}"
 
 SCIP_JS="$(find "${BUILD_DIR}" -name scip.js -type f | head -n 1)"
 if [[ -z "${SCIP_JS}" ]]; then
@@ -360,7 +372,7 @@ oneTBB source: $([[ "${WITH_TBB}" == "ON" ]] && echo "${TBB_URL}" || echo "none"
 oneTBB SHA256: ${ACTUAL_TBB_SHA256}
 Third-party licenses SHA256: ${ACTUAL_THIRD_PARTY_LICENSES_SHA256}
 Industrialist native ratio wrapper: ON
-Industrialist native ABI: 2
+Industrialist native ABI: 3
 VERSION
 
 echo "==> Running JS/WASM smoke tests"

@@ -1,4 +1,5 @@
 export type OptimizationMode = 'ratios' | 'autocomplete';
+export type MachineCountBasis = 'whole' | 'continuous';
 
 export type OptimizationMetricId =
   | 'powerUse'
@@ -12,13 +13,13 @@ export interface OptimizationMetricConfig {
   enabled: boolean;
   weight: number;
   tier: number;
-  limit: number | null;
   outputGoal: number | null;
 }
 
 export interface OptimizationConfiguration {
-  version: 2;
+  version: 3;
   mode: OptimizationMode;
+  machineCountBasis: MachineCountBasis;
   metrics: Record<OptimizationMetricId, OptimizationMetricConfig>;
   metricOrder: OptimizationMetricId[];
 }
@@ -30,10 +31,16 @@ export interface OptimizationMetricDefinition {
   direction: 'minimize' | 'maximize';
   rounded: boolean;
   currentRatioSupport: boolean;
-  limitLabel: string;
 }
 
 export const MAX_OPTIMIZATION_TIERS = 3;
+
+export const OPTIMIZATION_IMPORTANCE_PRESETS = [
+  { value: 0.5, label: 'Low' },
+  { value: 1, label: 'Normal' },
+  { value: 2, label: 'High' },
+  { value: 4, label: 'Very high' },
+] as const;
 
 export interface OptimizationConfigurationValidation {
   valid: boolean;
@@ -62,7 +69,6 @@ export const OPTIMIZATION_METRIC_DEFINITIONS: Record<
     direction: 'minimize',
     rounded: false,
     currentRatioSupport: true,
-    limitLabel: 'Maximum',
   },
   powerOutput: {
     id: 'powerOutput',
@@ -71,7 +77,6 @@ export const OPTIMIZATION_METRIC_DEFINITIONS: Record<
     direction: 'maximize',
     rounded: false,
     currentRatioSupport: true,
-    limitLabel: 'Minimum',
   },
   pollution: {
     id: 'pollution',
@@ -80,7 +85,6 @@ export const OPTIMIZATION_METRIC_DEFINITIONS: Record<
     direction: 'minimize',
     rounded: false,
     currentRatioSupport: true,
-    limitLabel: 'Maximum',
   },
   machineCost: {
     id: 'machineCost',
@@ -89,7 +93,6 @@ export const OPTIMIZATION_METRIC_DEFINITIONS: Record<
     direction: 'minimize',
     rounded: true,
     currentRatioSupport: true,
-    limitLabel: 'Maximum',
   },
   machineSpace: {
     id: 'machineSpace',
@@ -98,7 +101,6 @@ export const OPTIMIZATION_METRIC_DEFINITIONS: Record<
     direction: 'minimize',
     rounded: true,
     currentRatioSupport: true,
-    limitLabel: 'Maximum',
   },
   modelCount: {
     id: 'modelCount',
@@ -107,7 +109,6 @@ export const OPTIMIZATION_METRIC_DEFINITIONS: Record<
     direction: 'minimize',
     rounded: true,
     currentRatioSupport: true,
-    limitLabel: 'Maximum',
   },
 };
 
@@ -124,15 +125,15 @@ function metric(
     enabled,
     weight,
     tier: 1,
-    limit: null,
     outputGoal: null,
     ...overrides,
   };
 }
 
 export const DEFAULT_OPTIMIZATION_CONFIGURATION: OptimizationConfiguration = {
-  version: 2,
+  version: 3,
   mode: 'ratios',
+  machineCountBasis: 'whole',
   metrics: {
     powerUse: metric(true, 1),
     powerOutput: metric(false, 0.1),
@@ -146,6 +147,21 @@ export const DEFAULT_OPTIMIZATION_CONFIGURATION: OptimizationConfiguration = {
 
 function nonnegativeFinite(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : fallback;
+}
+
+function sanitizeImportance(value: unknown, fallback: number): number {
+  const finite = nonnegativeFinite(value, fallback);
+  let closest: number = OPTIMIZATION_IMPORTANCE_PRESETS[0].value;
+  let distance = Math.abs(finite - closest);
+  for (let index = 1; index < OPTIMIZATION_IMPORTANCE_PRESETS.length; index += 1) {
+    const candidate = OPTIMIZATION_IMPORTANCE_PRESETS[index].value;
+    const candidateDistance = Math.abs(finite - candidate);
+    if (candidateDistance < distance) {
+      closest = candidate;
+      distance = candidateDistance;
+    }
+  }
+  return closest;
 }
 
 function nullableNonnegativeFinite(value: unknown): number | null {
@@ -162,12 +178,11 @@ function sanitizeMetric(
   };
   return {
     enabled: typeof candidate.enabled === 'boolean' ? candidate.enabled : fallback.enabled,
-    weight: nonnegativeFinite(candidate.weight, fallback.weight),
+    weight: sanitizeImportance(candidate.weight, fallback.weight),
     tier: Math.min(
       MAX_OPTIMIZATION_TIERS,
       Math.max(1, Math.round(nonnegativeFinite(candidate.tier, fallback.tier))),
     ),
-    limit: nullableNonnegativeFinite(candidate.limit),
     outputGoal: nullableNonnegativeFinite(candidate.outputGoal ?? candidate.productionGoal),
   };
 }
@@ -179,6 +194,7 @@ export function sanitizeOptimizationConfiguration(raw: unknown): OptimizationCon
 
   const candidate = raw as {
     mode?: unknown;
+    machineCountBasis?: unknown;
     metrics?: Partial<
       Record<OptimizationMetricId | 'powerConsumption' | 'powerProduction', unknown>
     >;
@@ -218,8 +234,9 @@ export function sanitizeOptimizationConfiguration(raw: unknown): OptimizationCon
   }
 
   return {
-    version: 2,
+    version: 3,
     mode: candidate.mode === 'autocomplete' ? 'autocomplete' : 'ratios',
+    machineCountBasis: candidate.machineCountBasis === 'continuous' ? 'continuous' : 'whole',
     metrics,
     metricOrder: validOrder,
   };
@@ -253,20 +270,15 @@ export function validateOptimizationConfiguration(
   if (powerOutput.enabled && powerOutput.outputGoal === null) {
     errors.push('Power Output needs a finite output goal before it can be rewarded safely.');
   }
-  if (configuration.mode === 'autocomplete') {
-    errors.push('Autocomplete recipe selection is coming soon and cannot be started yet.');
-  }
-
   const needsRoundedModel = enabled.some(
-    (id) =>
-      OPTIMIZATION_METRIC_DEFINITIONS[id].rounded &&
-      (configuration.metrics[id].weight > 0 || configuration.metrics[id].limit !== null),
+    (id) => OPTIMIZATION_METRIC_DEFINITIONS[id].rounded && configuration.metrics[id].weight > 0,
   );
 
   return {
     valid: errors.length === 0,
     errors: Array.from(new Set(errors)),
     warnings: Array.from(new Set(warnings)),
-    backend: configuration.mode === 'autocomplete' || needsRoundedModel ? 'scip_milp' : 'soplex_lp',
+    backend:
+      configuration.machineCountBasis === 'whole' && needsRoundedModel ? 'scip_milp' : 'soplex_lp',
   };
 }

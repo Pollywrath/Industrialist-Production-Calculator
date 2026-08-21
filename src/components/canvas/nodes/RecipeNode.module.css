@@ -229,10 +229,30 @@
 }
 
 .recipe-node-info__machine-count {
+  display: flex;
+  gap: 5px;
+  align-items: center;
   font-size: 20px;
   font-weight: 700;
   line-height: 1;
   color: var(--theme-color-text-primary);
+}
+
+.recipe-node-info__constraint-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--theme-color-primary);
+}
+
+.recipe-node-info__constraint-icon[data-kind='capped'] {
+  color: var(--theme-color-warning);
+}
+
+.recipe-node-info__constraint-icon svg {
+  width: 15px;
+  height: 15px;
+  stroke-width: 2.25;
 }
 
 :global(.is-zoomed-out) .recipe-node-info__stats,

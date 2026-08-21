@@ -370,8 +370,9 @@ export function DashboardPanels() {
               </div>
             </div>
 
+            <div data-tutorial-dashboard="outputs">
             <div className={styles['diagnostic-section-title']}>Deficiencies (Shortages)</div>
-            <div className={styles['diagnostic-container']} data-tutorial-dashboard="outputs">
+            <div className={styles['diagnostic-container']}>
               {flatDeficiencies.length === 0 ? (
                 <div className={styles['empty-message']}>No shortages detected</div>
               ) : (
@@ -498,6 +499,7 @@ export function DashboardPanels() {
                   }
                 </VirtualList>
               )}
+            </div>
             </div>
           </div>
         )}

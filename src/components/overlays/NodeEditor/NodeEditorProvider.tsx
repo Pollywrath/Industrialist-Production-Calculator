@@ -11,6 +11,10 @@ import {
 } from '../../../utils/recipeComputation';
 import { getSpecialRecipe } from '../../../data/registry';
 import { resolveActiveRecipe } from '../../../data/lookup';
+import {
+  sanitizeMachineCountConstraint,
+  type MachineCountConstraintMode,
+} from '../../../utils/machineCountConstraint';
 
 interface NodeEditorProviderProps {
   children: React.ReactNode;
@@ -43,12 +47,14 @@ export function NodeEditorProvider({
       })();
 
     const initialRecipe = resolveActiveRecipe(recipe.id, initialSettings, nodeId) ?? recipe;
+    const initialConstraint = sanitizeMachineCountConstraint(initialData.machineCountConstraint);
 
     return createStore<NodeEditorState>((set, get) => ({
       inputs: initialData.inputOrder ?? recipe.inputs.map((_, i) => i),
       outputs: initialData.outputOrder ?? recipe.outputs.map((_, i) => i),
       machineCount: initialData.machineCount,
       machineCountStr: toPlainString(initialData.machineCount, 12),
+      constraintMode: initialConstraint?.kind ?? 'free',
       qtyStrMap: computeQuantityMap(
         initialRecipe,
         initialData.inputOrder ?? recipe.inputs.map((_, i) => i),
@@ -68,6 +74,7 @@ export function NodeEditorProvider({
       setOutputs: (outputs) => set({ outputs }),
       setMachineCount: (machineCount) => set({ machineCount }),
       setMachineCountStr: (machineCountStr) => set({ machineCountStr }),
+      setConstraintMode: (constraintMode: MachineCountConstraintMode) => set({ constraintMode }),
       setQtyStrMap: (updater) =>
         set((state) => ({
           qtyStrMap: typeof updater === 'function' ? updater(state.qtyStrMap) : updater,

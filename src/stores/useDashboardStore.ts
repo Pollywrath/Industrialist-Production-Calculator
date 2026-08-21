@@ -145,9 +145,13 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         if (roundedCount > 0 && optimizationMetrics.hasInfiniteMachineCost) {
           totalMachineCost = Infinity;
         } else if (Number.isFinite(totalMachineCost)) {
-          totalMachineCost += optimizationMetrics.machineCostPerWholeMachine * roundedCount;
+          totalMachineCost +=
+            optimizationMetrics.machineCostPerWholeMachine * roundedCount +
+            optimizationMetrics.machineCostIndependentOfMachineCount;
         }
-        totalMachineSpace += optimizationMetrics.machineSpacePerWholeMachine * roundedCount;
+        totalMachineSpace +=
+          optimizationMetrics.machineSpacePerWholeMachine * roundedCount +
+          optimizationMetrics.machineSpaceIndependentOfMachineCount;
 
         if (machine.subcategory === 'Depot') {
           const nodeFlowResult = results.get(node.id);
@@ -188,7 +192,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
           : machineCount;
       netPollution += recipe.pollution * pollutionMultiplier;
 
-      totalModelCount += optimizationMetrics.modelCountPerWholeMachine * roundedCount;
+      totalModelCount +=
+        optimizationMetrics.modelCountPerWholeMachine * roundedCount +
+        optimizationMetrics.modelCountIndependentOfMachineCount;
 
       if (recipe.id === 'r_research_station1_01') {
         researchInfrastructure.researchStation1Count += roundedCount;
@@ -201,10 +207,10 @@ export const useDashboardStore = create<DashboardState>((set) => ({
           researchInfrastructure.researchStation3Count += roundedCount;
         }
       } else if (recipe.id === 'r_satellite_dish_controller_01') {
-        const configuredDishes = Number(node.data.settings?.satellite_dish_count ?? 1);
+        const configuredDishes = Number(node.data.settings?.satellite_dish_count ?? 0);
         const dishesPerController = Number.isFinite(configuredDishes)
-          ? Math.max(1, Math.round(configuredDishes))
-          : 1;
+          ? Math.max(0, Math.round(configuredDishes))
+          : 0;
         researchInfrastructure.satelliteDishControllerCount += roundedCount;
         researchInfrastructure.satelliteDishCount += roundedCount * dishesPerController;
         const fluid = getProduct(recipe.inputs[0]?.product_id ?? '');

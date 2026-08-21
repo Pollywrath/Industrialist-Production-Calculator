@@ -5,6 +5,23 @@
     "patches": [
       {
         "hash": "pending",
+        "version": "v0.8.1",
+        "patch": 1,
+        "date": "2026-08-21",
+        "subject": "fix: improve production-chain placement, recipes, solver reliability, and tutorials",
+        "items": [
+          "Adjusted canvas node placement to preserve the vertical offset of the clicked recipe rectangle.",
+          "Updated the production-chain tutorial to use gearboxes as an example, and the Dashboard Outputs step now highlights both excess and deficiencies.",
+          "Improved systematic balancing when multiple inputs share the same source, distributing the available flow across those inputs before setting machine counts.",
+          "Updated Research Station 3, Satellite Dish Controller, HV Transformer, and voidable-output recipe behavior, including per-dish power accounting and signed power-output changes.",
+          "Added the experimental production autocomplete mode, which can search for and add missing recipes to complete a production chain.",
+          "Added machine-count constraints so nodes can lock a machine count or cap the maximum count, with the constraint reflected on the canvas and respected by solver results.",
+          "Made Data Comparator entries sort alphabetically using the shared sorting utility.",
+          "Unified solver epsilon and tolerance checks with the shared precision definitions in utils/precision.ts."
+        ]
+      },
+      {
+        "hash": "pending",
         "version": "v0.8.0",
         "patch": 0,
         "date": "2026-07-14",

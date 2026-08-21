@@ -6,6 +6,7 @@ export const item_dump_01: SpecialRecipe = {
   name: 'Dump Items',
   machine_id: 'm_item_dump',
   isSellTrash: true,
+  autocompleteDisposalPriority: 'primary',
   pollutionIndependentOfMachineCount: true,
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {

@@ -1,4 +1,5 @@
 import type { Product, Machine, Research, Recipe } from '../types/data';
+import { sortItems } from './sorting';
 
 function decodeWikiHtmlEntities(value: string): string {
   return value
@@ -164,6 +165,11 @@ export interface ComparisonResult<TApp, TWiki> {
   changed: Array<DiffItem<TApp, TWiki>>;
 }
 
+function sortDiffItems<TApp, TWiki>(items: Array<DiffItem<TApp, TWiki>>): void {
+  const sorted = sortItems(items, 'key', 'asc');
+  items.splice(0, items.length, ...sorted);
+}
+
 export function compareData<TApp, TWiki>(
   appItems: TApp[],
   wikiItems: TWiki[],
@@ -227,12 +233,12 @@ export function compareData<TApp, TWiki>(
     }
   }
 
-  return {
-    unchanged,
-    onlyInApp,
-    onlyInWiki,
-    changed,
-  };
+  sortDiffItems(unchanged);
+  sortDiffItems(onlyInApp);
+  sortDiffItems(onlyInWiki);
+  sortDiffItems(changed);
+
+  return { unchanged, onlyInApp, onlyInWiki, changed };
 }
 
 export function compareProducts(
@@ -471,7 +477,13 @@ function addQuantityDiffs(
   wikiSource: QuantitySource,
   preferredNames: Map<string, string>,
 ) {
-  const allNames = new Set([...appSource.quantities.keys(), ...wikiSource.quantities.keys()]);
+  const allNames = sortItems(
+    [...new Set([...appSource.quantities.keys(), ...wikiSource.quantities.keys()])].map((name) => ({
+      name,
+    })),
+    'name',
+    'asc',
+  ).map(({ name }) => name);
 
   for (const name of allNames) {
     const appVals = appSource.quantities.get(name) || [];

@@ -11,6 +11,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <condition_variable>
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
@@ -32,6 +33,7 @@ constexpr double kTargetMachineBoundCap = 1e4;
 constexpr double kValidationAbsoluteTolerance = 1e-6;
 constexpr double kValidationRelativeTolerance = 1e-7;
 constexpr double kIntegralityTolerance = 1e-7;
+constexpr double kScipFeasibilityTolerance = 1e-8;
 constexpr double kMachineIntegerRelativeTolerance =
   std::numeric_limits<double>::epsilon() * 8.0;
 constexpr double kZeroRateConnectionEpsilon = 1e-12;
@@ -39,14 +41,19 @@ constexpr double kBinaryResultMagic = 444926465.0; // "IRLP" as an exact small i
 constexpr double kBinaryResultVersion = 2.0;
 constexpr int kBinaryResultHeaderDoubles = 28;
 constexpr double kBinaryPayloadMagic = 444926466.0;
-constexpr double kBinaryPayloadVersion = 4.0;
-constexpr int kBinaryPayloadHeaderDoubles = 39;
-constexpr int kBinaryPayloadNodeDoubles = 13;
-constexpr int kBinaryPayloadInputDoubles = 2;
+constexpr double kBinaryPayloadVersion = 5.0;
+constexpr int kBinaryPayloadHeaderDoubles = 41;
+constexpr int kBinaryPayloadNodeDoubles = 15;
+constexpr int kBinaryPayloadInputDoubles = 5;
 constexpr int kBinaryPayloadOutputDoubles = 2;
 constexpr int kBinaryPayloadConnectionDoubles = 4;
+constexpr int kBinaryPayloadFlowDependencyDoubles = 2;
 constexpr int kMetricCount = 6;
 constexpr int kMaxObjectiveTiers = 3;
+constexpr int kIncumbentPolishMinimumRoundedVars = 24;
+constexpr int kIncumbentPolishMinimumFixedVars = 8;
+constexpr double kIncumbentPolishTimeLimitSeconds = 2.0;
+constexpr SCIP_Longint kIncumbentPolishNodeLimit = 500;
 
 enum MetricIndex {
   PowerUse = 0,
@@ -85,6 +92,8 @@ enum class VariableKind {
 struct InputPort {
   double quantity = 0.0;
   bool isSink = false;
+  bool independentOfMachineCount = false;
+  std::vector<std::pair<int, double>> flowDependencies;
 };
 
 struct OutputPort {
@@ -95,6 +104,8 @@ struct OutputPort {
 struct Node {
   std::string id;
   double currentMachineCount = 0.0;
+  double minimumMachineCount = 0.0;
+  double maximumMachineCount = -1.0;
   bool isTarget = false;
   double powerUse = 0.0;
   double powerOutput = 0.0;
@@ -120,6 +131,8 @@ struct NativeInput {
   std::vector<Connection> connections;
   std::array<MetricConfig, kMetricCount> metrics{};
   int tierCount = 1;
+  bool excludeAvoidableInfiniteCostMachines = false;
+  bool useWholeMachineCounts = true;
 };
 
 struct TermSpec {
@@ -185,6 +198,13 @@ enum class ObjectiveMode {
   MachineCount,
 };
 
+enum class RoundedMilpProfile {
+  Tuned = 0,
+  Legacy = 1,
+  Default = 2,
+  TunedWithoutPolish = 3,
+};
+
 int getTierIndex(ObjectiveMode objective) {
   if (objective == ObjectiveMode::Tier1) return 0;
   if (objective == ObjectiveMode::Tier2) return 1;
@@ -194,10 +214,16 @@ int getTierIndex(ObjectiveMode objective) {
 
 struct SolveOptions {
   const char* profileName = "default";
-  bool useNumericsEmphasis = false;
-  bool useFastPresolve = false;
-  bool disableSymmetry = false;
-  bool disableMilpPresolver = false;
+  SCIP_PARAMEMPHASIS emphasis = SCIP_PARAMEMPHASIS_DEFAULT;
+  SCIP_PARAMSETTING presolving = SCIP_PARAMSETTING_DEFAULT;
+  SCIP_PARAMSETTING heuristics = SCIP_PARAMSETTING_DEFAULT;
+  bool configurePresolving = false;
+  bool configureHeuristics = false;
+  bool preferDownwardIntegerBranching = false;
+  bool useConcurrentSolve = false;
+  int maxSolveThreads = 4;
+  double timeLimitSeconds = -1.0;
+  SCIP_Longint nodeLimit = -1;
 };
 
 struct StageSolution {
@@ -223,6 +249,8 @@ struct SolveTelemetry {
   double dualBound = 0.0;
   double mipGap = 0.0;
   int roundedVariableCount = 0;
+  int roundedMilpProfile = -1;
+  double incumbentPolishMs = 0.0;
   std::vector<StageTelemetry> stages;
 };
 
@@ -323,12 +351,14 @@ bool parsePayloadArray(const double* payload, int payloadDoubleCount, NativeInpu
   int connectionCount = 0;
   int inputCount = 0;
   int outputCount = 0;
+  int flowDependencyCount = 0;
   int objectiveFlags = 0;
   if (!readNonnegativeInt(payload[2], "totalDoubles", declaredDoubles, error) ||
       !readNonnegativeInt(payload[3], "nodeCount", nodeCount, error) ||
       !readNonnegativeInt(payload[4], "connectionCount", connectionCount, error) ||
       !readNonnegativeInt(payload[5], "inputCount", inputCount, error) ||
       !readNonnegativeInt(payload[6], "outputCount", outputCount, error) ||
+      !readNonnegativeInt(payload[40], "flowDependencyCount", flowDependencyCount, error) ||
       !readNonnegativeInt(payload[8], "objectiveFlags", objectiveFlags, error)) {
     return false;
   }
@@ -336,13 +366,15 @@ bool parsePayloadArray(const double* payload, int payloadDoubleCount, NativeInpu
     error = "Native binary ratio payload contained unsupported objective flags.";
     return false;
   }
+  input.excludeAvoidableInfiniteCostMachines = (objectiveFlags & 1) != 0;
+  input.useWholeMachineCounts = payload[9] != 0.0;
   if (!readNonnegativeInt(payload[7], "tierCount", input.tierCount, error) ||
       input.tierCount < 1 || input.tierCount > kMaxObjectiveTiers) {
     error = "Native binary ratio payload tier count was out of range.";
     return false;
   }
   for (int metricIndex = 0; metricIndex < kMetricCount; ++metricIndex) {
-    const int metricOffset = 9 + metricIndex * 5;
+    const int metricOffset = 10 + metricIndex * 5;
     MetricConfig& metric = input.metrics[static_cast<size_t>(metricIndex)];
     int tier = 0;
     metric.enabled = payload[metricOffset] != 0.0;
@@ -368,7 +400,8 @@ bool parsePayloadArray(const double* payload, int payloadDoubleCount, NativeInpu
     static_cast<int64_t>(nodeCount) * kBinaryPayloadNodeDoubles +
     static_cast<int64_t>(inputCount) * kBinaryPayloadInputDoubles +
     static_cast<int64_t>(outputCount) * kBinaryPayloadOutputDoubles +
-    static_cast<int64_t>(connectionCount) * kBinaryPayloadConnectionDoubles;
+    static_cast<int64_t>(connectionCount) * kBinaryPayloadConnectionDoubles +
+    static_cast<int64_t>(flowDependencyCount) * kBinaryPayloadFlowDependencyDoubles;
   if (expectedDoubles != payloadDoubleCount) {
     error = "Native binary ratio payload section sizes did not add up to the payload length.";
     return false;
@@ -377,6 +410,8 @@ bool parsePayloadArray(const double* payload, int payloadDoubleCount, NativeInpu
   const int inputSectionOffset = nodeSectionOffset + nodeCount * kBinaryPayloadNodeDoubles;
   const int outputSectionOffset = inputSectionOffset + inputCount * kBinaryPayloadInputDoubles;
   const int connectionSectionOffset = outputSectionOffset + outputCount * kBinaryPayloadOutputDoubles;
+  const int flowDependencySectionOffset =
+    connectionSectionOffset + connectionCount * kBinaryPayloadConnectionDoubles;
 
   input.nodes.reserve(static_cast<size_t>(nodeCount));
   input.connections.reserve(static_cast<size_t>(connectionCount));
@@ -390,25 +425,29 @@ bool parsePayloadArray(const double* payload, int payloadDoubleCount, NativeInpu
     Node node;
     node.id = std::to_string(nodeIndex);
     if (!readFiniteDouble(payload[base], "node.currentMachineCount", node.currentMachineCount, error) ||
-        !readFiniteDouble(payload[base + 2], "node.powerUse", node.powerUse, error) ||
-        !readFiniteDouble(payload[base + 3], "node.powerOutput", node.powerOutput, error) ||
-        !readFiniteDouble(payload[base + 4], "node.pollution", node.pollution, error) ||
-        !readFiniteDouble(payload[base + 5], "node.machineCost", node.machineCost, error) ||
-        !readFiniteDouble(payload[base + 6], "node.machineSpace", node.machineSpace, error) ||
-        !readFiniteDouble(payload[base + 7], "node.modelCount", node.modelCount, error) ||
-        !readNonnegativeInt(payload[base + 8], "node.inputOffset", inputOffset, error) ||
-        !readNonnegativeInt(payload[base + 9], "node.inputCount", nodeInputCount, error) ||
-        !readNonnegativeInt(payload[base + 10], "node.outputOffset", outputOffset, error) ||
-        !readNonnegativeInt(payload[base + 11], "node.outputCount", nodeOutputCount, error)) {
+        !readFiniteDouble(payload[base + 1], "node.minimumMachineCount", node.minimumMachineCount, error) ||
+        !readFiniteDouble(payload[base + 2], "node.maximumMachineCount", node.maximumMachineCount, error) ||
+        !readFiniteDouble(payload[base + 3], "node.powerUse", node.powerUse, error) ||
+        !readFiniteDouble(payload[base + 4], "node.powerOutput", node.powerOutput, error) ||
+        !readFiniteDouble(payload[base + 5], "node.pollution", node.pollution, error) ||
+        !readFiniteDouble(payload[base + 6], "node.machineCost", node.machineCost, error) ||
+        !readFiniteDouble(payload[base + 7], "node.machineSpace", node.machineSpace, error) ||
+        !readFiniteDouble(payload[base + 8], "node.modelCount", node.modelCount, error) ||
+        !readNonnegativeInt(payload[base + 9], "node.inputOffset", inputOffset, error) ||
+        !readNonnegativeInt(payload[base + 10], "node.inputCount", nodeInputCount, error) ||
+        !readNonnegativeInt(payload[base + 11], "node.outputOffset", outputOffset, error) ||
+        !readNonnegativeInt(payload[base + 12], "node.outputCount", nodeOutputCount, error)) {
       return false;
     }
-    if (node.powerUse < 0.0 || node.powerOutput < 0.0 ||
+    if (node.currentMachineCount < 0.0 || node.minimumMachineCount < 0.0 ||
+        (node.maximumMachineCount >= 0.0 && node.maximumMachineCount < node.minimumMachineCount) ||
+        node.powerUse < 0.0 || node.powerOutput < 0.0 ||
         node.machineCost < 0.0 || node.machineSpace < 0.0 || node.modelCount < 0.0) {
       error = "Native binary ratio payload node objective metrics must be nonnegative.";
       return false;
     }
-    node.isTarget = payload[base + 1] != 0.0;
-    node.hasInfiniteMachineCost = payload[base + 12] != 0.0;
+    node.hasInfiniteMachineCost = payload[base + 13] != 0.0;
+    node.isTarget = payload[base + 14] != 0.0;
     if (inputOffset > inputCount || nodeInputCount > inputCount - inputOffset ||
         outputOffset > outputCount || nodeOutputCount > outputCount - outputOffset) {
       error = "Native binary ratio payload node port section was out of range.";
@@ -420,10 +459,46 @@ bool parsePayloadArray(const double* payload, int payloadDoubleCount, NativeInpu
       const int inputBase =
         inputSectionOffset + (inputOffset + inputIndex) * kBinaryPayloadInputDoubles;
       InputPort port;
+      int dependencyOffset = 0;
+      int dependencyCount = 0;
       if (!readFiniteDouble(payload[inputBase], "input.quantity", port.quantity, error)) {
         return false;
       }
       port.isSink = payload[inputBase + 1] != 0.0;
+      port.independentOfMachineCount = payload[inputBase + 2] != 0.0;
+      if (!readNonnegativeInt(
+            payload[inputBase + 3], "input.flowDependencyOffset", dependencyOffset, error
+          ) ||
+          !readNonnegativeInt(
+            payload[inputBase + 4], "input.flowDependencyCount", dependencyCount, error
+          )) {
+        return false;
+      }
+      if (dependencyOffset > flowDependencyCount ||
+          dependencyCount > flowDependencyCount - dependencyOffset) {
+        error = "Native binary ratio payload input dependency section was out of range.";
+        return false;
+      }
+      port.flowDependencies.reserve(static_cast<size_t>(dependencyCount));
+      for (int dependencyIndex = 0; dependencyIndex < dependencyCount; ++dependencyIndex) {
+        const int dependencyBase = flowDependencySectionOffset +
+          (dependencyOffset + dependencyIndex) * kBinaryPayloadFlowDependencyDoubles;
+        int sourceInputIndex = 0;
+        double coefficient = 0.0;
+        if (!readNonnegativeInt(
+              payload[dependencyBase], "flowDependency.sourceInputIndex", sourceInputIndex, error
+            ) ||
+            !readFiniteDouble(
+              payload[dependencyBase + 1], "flowDependency.coefficient", coefficient, error
+            )) {
+          return false;
+        }
+        if (sourceInputIndex >= nodeInputCount || coefficient < 0.0) {
+          error = "Native binary ratio payload input dependency was invalid.";
+          return false;
+        }
+        port.flowDependencies.push_back({sourceInputIndex, coefficient});
+      }
       node.inputs.push_back(port);
     }
 
@@ -473,9 +548,7 @@ bool parsePayloadArray(const double* payload, int payloadDoubleCount, NativeInpu
 }
 
 double getTargetMachineLowerBound(const Node& node) {
-  if (!node.isTarget) return -1.0;
-  if (!std::isfinite(node.currentMachineCount)) return 0.0;
-  return std::max(0.0, node.currentMachineCount);
+  return std::max(0.0, node.minimumMachineCount);
 }
 
 struct GraphComponentInfo {
@@ -487,8 +560,7 @@ struct GraphComponentInfo {
 GraphComponentInfo analyzeGraphComponents(const NativeInput& input) {
   const MetricConfig& powerOutput = input.metrics[PowerOutput];
   const bool preservePowerOutputComponents =
-    powerOutput.limit >= 0.0 ||
-    (powerOutput.enabled && powerOutput.coefficient > 0.0 && powerOutput.outputGoal >= 0.0);
+    powerOutput.enabled && powerOutput.coefficient > 0.0 && powerOutput.outputGoal >= 0.0;
   std::vector<std::vector<int>> adjacency(input.nodes.size());
   for (const Connection& connection : input.connections) {
     if (connection.sourceNode < 0 ||
@@ -525,7 +597,7 @@ GraphComponentInfo analyzeGraphComponents(const NativeInput& input) {
       stack.pop_back();
       component.push_back(nodeIndex);
       const Node& node = input.nodes[static_cast<size_t>(nodeIndex)];
-      hasTarget = hasTarget || node.isTarget;
+      hasTarget = hasTarget || node.isTarget || node.minimumMachineCount > 0.0;
       hasPowerOutput = hasPowerOutput ||
         node.powerOutput > 0.0;
       maxTargetMachineCount = std::max(
@@ -1016,7 +1088,9 @@ ModelSpec buildModelSpec(const NativeInput& input) {
     input.metrics[ModelCount].limit,
   }};
   const MetricConfig& machineCostConfig = input.metrics[MachineCost];
-  if (machineCostConfig.enabled && machineCostConfig.coefficient > 0.0) {
+  if (input.excludeAvoidableInfiniteCostMachines) {
+    model.infiniteMachineCostTier = 1;
+  } else if (machineCostConfig.enabled && machineCostConfig.coefficient > 0.0) {
     model.infiniteMachineCostTier = machineCostConfig.tier;
   }
   model.hasRoundedObjective = std::any_of(
@@ -1065,11 +1139,10 @@ ModelSpec buildModelSpec(const NativeInput& input) {
     var.physicalScale = valueScale;
 
     const double targetMachineLowerBound = getTargetMachineLowerBound(node);
-    if (targetMachineLowerBound >= 0.0) {
-      var.lb = targetMachineLowerBound / valueScale;
+    var.lb = targetMachineLowerBound / valueScale;
+    if (node.maximumMachineCount >= 0.0) {
+      var.ub = node.maximumMachineCount / valueScale;
     }
-    // Targetless components are zero-bounded only when they cannot contribute to
-    // the configured power-output goal or minimum.
     if (noTargetComponentNodes[static_cast<size_t>(nodeIndex)]) {
       var.ub = 0.0;
     }
@@ -1086,9 +1159,15 @@ ModelSpec buildModelSpec(const NativeInput& input) {
         if (config.enabled && config.tier == tierIndex + 1) roundedWeight += config.coefficient * value;
       };
       addContinuous(PowerUse, node.powerUse);
-      addRounded(MachineCost, node.machineCost);
-      addRounded(MachineSpace, node.machineSpace);
-      addRounded(ModelCount, node.modelCount);
+      if (input.useWholeMachineCounts) {
+        addRounded(MachineCost, node.machineCost);
+        addRounded(MachineSpace, node.machineSpace);
+        addRounded(ModelCount, node.modelCount);
+      } else {
+        addContinuous(MachineCost, node.machineCost);
+        addContinuous(MachineSpace, node.machineSpace);
+        addContinuous(ModelCount, node.modelCount);
+      }
       var.continuousTierCoeff[static_cast<size_t>(tierIndex)] = continuousWeight * valueScale;
       var.tierCoeff[static_cast<size_t>(tierIndex)] = (continuousWeight + roundedWeight) * valueScale;
       model.roundedTierCoeffByNode[static_cast<size_t>(nodeIndex)][static_cast<size_t>(tierIndex)] = roundedWeight;
@@ -1201,7 +1280,11 @@ ModelSpec buildModelSpec(const NativeInput& input) {
     const Node& targetNode = input.nodes[static_cast<size_t>(connection.targetNode)];
     const OutputPort& sourceOutput = sourceNode.outputs[static_cast<size_t>(connection.sourceOutputIndex)];
     const InputPort& targetInput = targetNode.inputs[static_cast<size_t>(connection.targetInputIndex)];
-    if (isEffectivelyZeroRate(sourceOutput.quantity) || isEffectivelyZeroRate(targetInput.quantity)) {
+    const bool hasFlowDependentDemand = !targetInput.flowDependencies.empty();
+    if (
+      isEffectivelyZeroRate(sourceOutput.quantity) ||
+      (isEffectivelyZeroRate(targetInput.quantity) && !hasFlowDependentDemand)
+    ) {
       var.ub = 0.0;
     }
     model.edgeVarByConnection[static_cast<size_t>(connectionIndex)] = addVariable(model, std::move(var));
@@ -1258,7 +1341,7 @@ ModelSpec buildModelSpec(const NativeInput& input) {
         [static_cast<size_t>(inputIndex)];
       if (incoming.empty()) continue;
 
-      if (inputPort.isSink && !node.isTarget) {
+      if (inputPort.isSink) {
         RowSpec row;
         row.name = "sink_cap_" + node.id + "_" + std::to_string(inputIndex);
         row.lhs = -std::numeric_limits<double>::infinity();
@@ -1293,7 +1376,25 @@ ModelSpec buildModelSpec(const NativeInput& input) {
           addRowTerm(row, model.edgeVarByConnection[static_cast<size_t>(connectionIndex)], 1.0);
         }
         addRowTerm(row, deficitVarIndex, 1.0);
-        addRowTerm(row, machineVar, -inputPort.quantity);
+        if (!inputPort.flowDependencies.empty()) {
+          for (const auto& dependency : inputPort.flowDependencies) {
+            const std::vector<int>& sourceIncoming =
+              incomingByInput[static_cast<size_t>(nodeIndex)]
+                [static_cast<size_t>(dependency.first)];
+            for (int connectionIndex : sourceIncoming) {
+              addRowTerm(
+                row,
+                model.edgeVarByConnection[static_cast<size_t>(connectionIndex)],
+                -dependency.second
+              );
+            }
+          }
+        } else if (inputPort.independentOfMachineCount) {
+          row.lhs = inputPort.quantity;
+          row.rhs = inputPort.quantity;
+        } else {
+          addRowTerm(row, machineVar, -inputPort.quantity);
+        }
         model.rows.push_back(std::move(row));
       }
     }
@@ -1310,51 +1411,79 @@ bool checkScip(SCIP_RETCODE retcode, const char* action, std::string& error) {
   return false;
 }
 
-bool setOptionalIntParam(SCIP* scip, const char* name, int value) {
-  return SCIPsetIntParam(scip, name, value) == SCIP_OKAY;
-}
-
-bool setOptionalRealParam(SCIP* scip, const char* name, double value) {
-  return SCIPsetRealParam(scip, name, value) == SCIP_OKAY;
-}
-
 bool applySolveOptions(SCIP* scip, const SolveOptions& options, std::string& error) {
   if (!checkScip(SCIPsetIntParam(scip, "display/verblevel", 0), "Set SCIP display verbosity", error)) {
     return false;
   }
 
-  if (options.useNumericsEmphasis) {
-    if (!checkScip(SCIPsetEmphasis(scip, SCIP_PARAMEMPHASIS_NUMERICS, TRUE),
-                   "Set SCIP numerics emphasis", error)) {
+  if (options.emphasis != SCIP_PARAMEMPHASIS_DEFAULT) {
+    if (!checkScip(SCIPsetEmphasis(scip, options.emphasis, TRUE),
+                   "Set SCIP emphasis", error)) {
       return false;
     }
   }
 
-  if (options.useFastPresolve) {
+  if (options.configurePresolving) {
     if (!checkScip(
-          SCIPsetPresolving(scip, SCIP_PARAMSETTING_FAST, TRUE),
-          "Set SCIP fast presolving",
+          SCIPsetPresolving(scip, options.presolving, TRUE),
+          "Set SCIP presolving profile",
           error
         )) {
       return false;
     }
   }
 
-  if (options.disableSymmetry) {
+  if (options.configureHeuristics) {
     if (!checkScip(
-          SCIPsetIntParam(scip, "misc/usesymmetry", 0),
-          "Disable SCIP symmetry handling",
+          SCIPsetHeuristics(scip, options.heuristics, TRUE),
+          "Set SCIP heuristic profile",
           error
         )) {
       return false;
     }
   }
 
-  if (options.disableMilpPresolver) {
-    setOptionalIntParam(scip, "presolving/milp/maxrounds", 0);
+  if (options.useConcurrentSolve) {
+    if (!checkScip(
+          SCIPsetIntParam(scip, "parallel/maxnthreads", options.maxSolveThreads),
+          "Set SCIP maximum concurrent solve threads",
+          error
+        )) {
+      return false;
+    }
+    if (!checkScip(
+          SCIPsetIntParam(scip, "parallel/minnthreads", 1),
+          "Set SCIP minimum concurrent solve threads",
+          error
+        )) {
+      return false;
+    }
   }
 
-  setOptionalRealParam(scip, "numerics/feastol", 1e-8);
+  if (options.timeLimitSeconds >= 0.0 &&
+      !checkScip(
+        SCIPsetRealParam(scip, "limits/time", options.timeLimitSeconds),
+        "Set SCIP time limit",
+        error
+      )) {
+    return false;
+  }
+  if (options.nodeLimit >= 0 &&
+      !checkScip(
+        SCIPsetLongintParam(scip, "limits/nodes", options.nodeLimit),
+        "Set SCIP node limit",
+        error
+      )) {
+    return false;
+  }
+
+  if (!checkScip(
+        SCIPsetRealParam(scip, "numerics/feastol", kScipFeasibilityTolerance),
+        "Set SCIP feasibility tolerance",
+        error
+      )) {
+    return false;
+  }
 
   return true;
 }
@@ -1480,8 +1609,6 @@ class StagedLpEngine {
       if (coeff <= 0.0) continue;
 
       const double oldUb = var.ub;
-      // Safe after a solved priority stage: for coeff > 0 and expr <= rhs,
-      // each nonnegative variable is individually bounded by rhs / coeff.
       tightenUpperBound(var, rhs / coeff);
       if (oldUb == var.ub) continue;
       if (!changeBackendBounds(i, var, error)) return false;
@@ -1568,17 +1695,21 @@ class SoplexStagedLpEngine final : public StagedLpEngine {
         control_ != nullptr ? control_->interruptFlag : nullptr
       ));
       totalLpIterations_ += static_cast<double>(solver_.numIterations());
-      if (status != 1) {
+      if (status != soplex::SPxSolver::OPTIMAL) {
         if (isCancellationRequested(control_)) {
           error = "CANCELLED";
           return false;
         }
-        if (status == 2) {
+        if (status == soplex::SPxSolver::UNBOUNDED) {
           error = "UNBOUNDED";
           return false;
         }
-        if (status == 3 || status == 4) {
+        if (status == soplex::SPxSolver::INFEASIBLE) {
           error = "INFEASIBLE";
+          return false;
+        }
+        if (status == soplex::SPxSolver::INForUNBD) {
+          error = "INFEASIBLE_OR_UNBOUNDED";
           return false;
         }
         std::ostringstream out;
@@ -1695,6 +1826,14 @@ class ReusableScipStagedLpEngine final : public StagedLpEngine {
       }
       holder_.vars[static_cast<size_t>(i)] = var;
       if (!checkScip(SCIPaddVar(holder_.scip, var), "Add reusable SCIP variable", error)) return false;
+      if (options_.preferDownwardIntegerBranching && spec.kind != VariableKind::Continuous &&
+          !checkScip(
+            SCIPchgVarBranchDirection(holder_.scip, var, SCIP_BRANCHDIR_DOWNWARDS),
+            "Prefer downward branching for whole-machine variable",
+            error
+          )) {
+        return false;
+      }
     }
 
     for (const RowSpec& row : activeModel_.rows) {
@@ -1742,7 +1881,6 @@ class ReusableScipStagedLpEngine final : public StagedLpEngine {
       SCIPfreeSol(holder_.scip, &solution);
     }
 
-    // A rejected warm start affects speed, not correctness; SCIP can still prove the model.
     return ok;
   }
 
@@ -1752,6 +1890,38 @@ class ReusableScipStagedLpEngine final : public StagedLpEngine {
     telemetry.primalBound = primalBound_;
     telemetry.dualBound = dualBound_;
     telemetry.mipGap = mipGap_;
+  }
+
+  bool findIncumbent(
+    ObjectiveMode objective,
+    StageSolution& solution,
+    bool& found,
+    std::string& error
+  ) {
+    const auto stageStart = std::chrono::steady_clock::now();
+    found = false;
+    if (isCancellationRequested(control_)) {
+      error = "CANCELLED";
+      return false;
+    }
+    if (!setObjective(objective, error) || !publishActiveScip(error)) return false;
+
+    const SCIP_RETCODE solveRetcode = solveScip();
+    clearActiveScip();
+    if (!checkScip(solveRetcode, "Search for SCIP incumbent", error)) return false;
+    if (SCIPgetStatus(holder_.scip) == SCIP_STATUS_USERINTERRUPT ||
+        isCancellationRequested(control_)) {
+      error = "CANCELLED";
+      return false;
+    }
+
+    SCIP_SOL* bestSol = SCIPgetBestSol(holder_.scip);
+    if (bestSol != nullptr) {
+      if (!readBestSolution(objective, bestSol, true, solution, error)) return false;
+      found = true;
+    }
+    solution.elapsedMs = elapsedMilliseconds(stageStart);
+    return true;
   }
 
   bool solveStage(
@@ -1765,22 +1935,10 @@ class ReusableScipStagedLpEngine final : public StagedLpEngine {
       error = "CANCELLED";
       return false;
     }
-    for (int i = 0; i < static_cast<int>(activeModel_.vars.size()); ++i) {
-      if (!checkScip(
-            SCIPchgVarObj(
-              holder_.scip,
-              holder_.vars[static_cast<size_t>(i)],
-              getObjectiveCoeff(activeModel_.vars[static_cast<size_t>(i)], objective)
-            ),
-            "Change reusable SCIP objective",
-            error
-          )) {
-        return false;
-      }
-    }
+    if (!setObjective(objective, error)) return false;
 
     if (!publishActiveScip(error)) return false;
-    const SCIP_RETCODE solveRetcode = SCIPsolve(holder_.scip);
+    const SCIP_RETCODE solveRetcode = solveScip();
     clearActiveScip();
     if (!checkScip(solveRetcode, "Solve reusable SCIP stage", error)) return false;
 
@@ -1815,23 +1973,7 @@ class ReusableScipStagedLpEngine final : public StagedLpEngine {
       return false;
     }
 
-    std::vector<double> stageValues(activeModel_.vars.size(), 0.0);
-    for (int i = 0; i < static_cast<int>(activeModel_.vars.size()); ++i) {
-      const double value = SCIPgetSolVal(holder_.scip, bestSol, holder_.vars[static_cast<size_t>(i)]);
-      if (!std::isfinite(value)) {
-        error = "Reusable SCIP returned a non-finite value for variable " +
-          activeModel_.vars[static_cast<size_t>(i)].name + ".";
-        return false;
-      }
-      stageValues[static_cast<size_t>(i)] = value;
-    }
-
-    solution.objectiveValue = recomputeObjectiveValue(activeModel_, objective, stageValues);
-    if (!validateStageSolution(activeModel_, objective, stageValues, solution.objectiveValue, error)) {
-      return false;
-    }
-
-    if (captureValues) solution.values = std::move(stageValues);
+    if (!readBestSolution(objective, bestSol, captureValues, solution, error)) return false;
     solution.elapsedMs = elapsedMilliseconds(stageStart);
 
     mipNodeCount_ = static_cast<double>(SCIPgetNTotalNodes(holder_.scip));
@@ -1869,6 +2011,51 @@ class ReusableScipStagedLpEngine final : public StagedLpEngine {
   }
 
  private:
+  bool setObjective(ObjectiveMode objective, std::string& error) {
+    for (int i = 0; i < static_cast<int>(activeModel_.vars.size()); ++i) {
+      if (!checkScip(
+            SCIPchgVarObj(
+              holder_.scip,
+              holder_.vars[static_cast<size_t>(i)],
+              getObjectiveCoeff(activeModel_.vars[static_cast<size_t>(i)], objective)
+            ),
+            "Change reusable SCIP objective",
+            error
+          )) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  bool readBestSolution(
+    ObjectiveMode objective,
+    SCIP_SOL* bestSol,
+    bool captureValues,
+    StageSolution& solution,
+    std::string& error
+  ) const {
+    std::vector<double> stageValues(activeModel_.vars.size(), 0.0);
+    for (int i = 0; i < static_cast<int>(activeModel_.vars.size()); ++i) {
+      const double value = SCIPgetSolVal(holder_.scip, bestSol, holder_.vars[static_cast<size_t>(i)]);
+      if (!std::isfinite(value)) {
+        error = "Reusable SCIP returned a non-finite value for variable " +
+          activeModel_.vars[static_cast<size_t>(i)].name + ".";
+        return false;
+      }
+      stageValues[static_cast<size_t>(i)] = value;
+    }
+
+    solution.objectiveValue = recomputeObjectiveValue(activeModel_, objective, stageValues);
+    if (!validateStageSolution(
+          activeModel_, objective, stageValues, solution.objectiveValue, error
+        )) {
+      return false;
+    }
+    if (captureValues) solution.values = std::move(stageValues);
+    return true;
+  }
+
   bool publishActiveScip(std::string& error) {
     if (control_ == nullptr || control_->activeScip == nullptr) {
       if (isCancellationRequested(control_)) {
@@ -1906,14 +2093,74 @@ class ReusableScipStagedLpEngine final : public StagedLpEngine {
     control_->activeScip->store(nullptr, std::memory_order_release);
   }
 
+  SCIP_RETCODE solveScip() {
+    if (options_.useConcurrentSolve && !concurrentSolveUsed_) {
+      concurrentSolveUsed_ = true;
+      return SCIPsolveConcurrent(holder_.scip);
+    }
+    return SCIPsolve(holder_.scip);
+  }
+
   SolveOptions options_;
   ScipHolder holder_;
+  bool concurrentSolveUsed_ = false;
   double mipNodeCount_ = 0.0;
   double lpIterations_ = 0.0;
   double primalBound_ = 0.0;
   double dualBound_ = 0.0;
   double mipGap_ = 0.0;
 };
+
+RoundedMilpProfile getRoundedMilpProfile(int profileCode) {
+  switch (profileCode) {
+    case static_cast<int>(RoundedMilpProfile::Legacy):
+      return RoundedMilpProfile::Legacy;
+    case static_cast<int>(RoundedMilpProfile::Default):
+      return RoundedMilpProfile::Default;
+    case static_cast<int>(RoundedMilpProfile::TunedWithoutPolish):
+      return RoundedMilpProfile::TunedWithoutPolish;
+    default:
+      return RoundedMilpProfile::Tuned;
+  }
+}
+
+SolveOptions getRoundedMilpSolveOptions(RoundedMilpProfile profile) {
+  SolveOptions options;
+  options.useConcurrentSolve = true;
+  options.maxSolveThreads = 4;
+  options.preferDownwardIntegerBranching =
+    profile == RoundedMilpProfile::Tuned || profile == RoundedMilpProfile::TunedWithoutPolish;
+  if (profile == RoundedMilpProfile::Legacy) {
+    options.profileName = "rounded_milp_legacy";
+    options.emphasis = SCIP_PARAMEMPHASIS_NUMERICS;
+    options.presolving = SCIP_PARAMSETTING_FAST;
+    options.configurePresolving = true;
+  } else if (profile == RoundedMilpProfile::Default) {
+    options.profileName = "rounded_milp_default";
+  } else {
+    options.profileName = "rounded_milp_tuned";
+    options.emphasis = SCIP_PARAMEMPHASIS_OPTIMALITY;
+    options.presolving = SCIP_PARAMSETTING_AGGRESSIVE;
+    options.configurePresolving = true;
+  }
+  return options;
+}
+
+SolveOptions getIncumbentPolishOptions() {
+  SolveOptions options;
+  options.useConcurrentSolve = true;
+  options.maxSolveThreads = 4;
+  options.profileName = "rounded_incumbent_polish";
+  options.emphasis = SCIP_PARAMEMPHASIS_FEASIBILITY;
+  options.presolving = SCIP_PARAMSETTING_FAST;
+  options.heuristics = SCIP_PARAMSETTING_AGGRESSIVE;
+  options.configurePresolving = true;
+  options.configureHeuristics = true;
+  options.preferDownwardIntegerBranching = true;
+  options.timeLimitSeconds = kIncumbentPolishTimeLimitSeconds;
+  options.nodeLimit = kIncumbentPolishNodeLimit;
+  return options;
+}
 
 bool lockStageResult(
   StagedLpEngine& engine,
@@ -2004,8 +2251,6 @@ bool applyInfiniteMachineCostPreference(
     usageSolution.elapsedMs,
   });
 
-  // Only zero versus nonzero matters: once any such machine is required, every
-  // feasible solution has infinite total cost and finite objectives break ties.
   if (usageSolution.objectiveValue == 0.0 &&
       !engine.fixObjectiveVariablesToZero(ObjectiveMode::InfiniteMachineCostUsage, error)) {
     error = "Exclude avoidable infinite-cost machines failed: " + error;
@@ -2081,6 +2326,48 @@ bool solveAllStagesWithSoplex(
   return true;
 }
 
+void tightenRoundedModelFromIncumbent(
+  ModelSpec& model,
+  const std::vector<double>& values,
+  double incumbentObjective
+) {
+  const bool hasRoundedLimit = std::any_of(
+    model.roundedMetricLimits.begin(), model.roundedMetricLimits.end(),
+    [](double value) { return value >= 0.0; });
+  const bool tierOneHasInfiniteMachineCost =
+    model.infiniteMachineCostTier == 1 &&
+    std::any_of(
+      model.vars.begin(), model.vars.end(),
+      [](const VariableSpec& var) { return var.infiniteMachineCostUsageCoeff > 0.0; });
+  if (hasRoundedLimit || tierOneHasInfiniteMachineCost || !std::isfinite(incumbentObjective)) {
+    return;
+  }
+
+  const double incumbentRhs = getStageBoundRhs(model, incumbentObjective);
+  for (int nodeIndex = 0; nodeIndex < static_cast<int>(model.roundedVarByNode.size()); ++nodeIndex) {
+    const int roundedVarIndex = model.roundedVarByNode[static_cast<size_t>(nodeIndex)];
+    if (roundedVarIndex < 0) continue;
+    VariableSpec& roundedVar = model.vars[static_cast<size_t>(roundedVarIndex)];
+    const double roundedCoeff = roundedVar.tierCoeff[0];
+    if (roundedCoeff > 0.0) {
+      const double objectiveUpperBound = std::floor(
+        incumbentRhs / roundedCoeff + kIntegralityTolerance
+      );
+      const double incumbentValue = values[static_cast<size_t>(roundedVarIndex)];
+      tightenUpperBound(
+        roundedVar,
+        std::max(roundedVar.lb, std::max(incumbentValue, objectiveUpperBound))
+      );
+    }
+
+    const int machineVarIndex = model.machineVarByNode[static_cast<size_t>(nodeIndex)];
+    if (machineVarIndex < 0 || !std::isfinite(roundedVar.ub)) continue;
+    const double machineScale = model.vars[static_cast<size_t>(machineVarIndex)].physicalScale;
+    tightenUpperBound(model.vars[static_cast<size_t>(machineVarIndex)], roundedVar.ub / machineScale);
+  }
+  tightenObjectiveVariableBounds(model, ObjectiveMode::Tier1, incumbentObjective);
+}
+
 bool buildRoundedMilpModel(
   ModelSpec lockedLpModel,
   const StageSolution& lpRelaxation,
@@ -2141,7 +2428,7 @@ bool buildRoundedMilpModel(
     RowSpec linkingRow;
     linkingRow.name = "whole_link_" + std::to_string(nodeIndex);
     linkingRow.lhs = -std::numeric_limits<double>::infinity();
-    linkingRow.rhs = kIntegralityTolerance;
+    linkingRow.rhs = kIntegralityTolerance - kScipFeasibilityTolerance;
     linkingRow.terms.reserve(2);
     addRowTerm(
       linkingRow,
@@ -2151,11 +2438,10 @@ bool buildRoundedMilpModel(
     addRowTerm(linkingRow, roundedVarIndex, -1.0);
     milpModel.rows.push_back(std::move(linkingRow));
 
-    // This and whole_link encode the same absolute-plus-relative tolerance used by
-    // ceilMachineCount: -1 + absTol < (1 - relTol) * physical - whole <= absTol.
     RowSpec ceilingBandRow;
     ceilingBandRow.name = "whole_band_" + std::to_string(nodeIndex);
-    ceilingBandRow.lhs = -1.0 + kIntegralityTolerance;
+    ceilingBandRow.lhs =
+      -1.0 + kIntegralityTolerance + kScipFeasibilityTolerance;
     ceilingBandRow.rhs = std::numeric_limits<double>::infinity();
     ceilingBandRow.terms.reserve(2);
     addRowTerm(
@@ -2192,47 +2478,7 @@ bool buildRoundedMilpModel(
     return false;
   }
 
-  const double incumbentRhs = getStageBoundRhs(milpModel, incumbentObjective);
-  const bool hasRoundedLimit = std::any_of(
-    milpModel.roundedMetricLimits.begin(), milpModel.roundedMetricLimits.end(),
-    [](double value) { return value >= 0.0; });
-  const bool tierOneHasInfiniteMachineCost =
-    milpModel.infiniteMachineCostTier == 1 &&
-    std::any_of(
-      milpModel.vars.begin(),
-      milpModel.vars.end(),
-      [](const VariableSpec& var) { return var.infiniteMachineCostUsageCoeff > 0.0; }
-    );
-  for (int nodeIndex = 0;
-       nodeIndex < static_cast<int>(milpModel.roundedVarByNode.size());
-       ++nodeIndex) {
-    const int roundedVarIndex = milpModel.roundedVarByNode[static_cast<size_t>(nodeIndex)];
-    if (roundedVarIndex < 0) continue;
-    VariableSpec& roundedVar = milpModel.vars[static_cast<size_t>(roundedVarIndex)];
-    const double roundedCoeff = roundedVar.tierCoeff[0];
-    const double startValue = startValues[static_cast<size_t>(roundedVarIndex)];
-    if (!hasRoundedLimit && !tierOneHasInfiniteMachineCost && roundedCoeff > 0.0) {
-      const double objectiveUpperBound = std::floor(
-        incumbentRhs / roundedCoeff + kIntegralityTolerance
-      );
-      roundedVar.ub = std::max(roundedVar.lb, std::max(startValue, objectiveUpperBound));
-    }
-
-    const int machineVarIndex = milpModel.machineVarByNode[static_cast<size_t>(nodeIndex)];
-    if (!hasRoundedLimit && !tierOneHasInfiniteMachineCost &&
-        machineVarIndex >= 0 && std::isfinite(roundedVar.ub)) {
-      const double machineScale =
-        milpModel.vars[static_cast<size_t>(machineVarIndex)].physicalScale;
-      tightenUpperBound(
-        milpModel.vars[static_cast<size_t>(machineVarIndex)],
-        roundedVar.ub / machineScale
-      );
-    }
-  }
-
-  if (!hasRoundedLimit && !tierOneHasInfiniteMachineCost) {
-    tightenObjectiveVariableBounds(milpModel, ObjectiveMode::Tier1, incumbentObjective);
-  }
+  tightenRoundedModelFromIncumbent(milpModel, startValues, incumbentObjective);
   if (!validateStageSolution(
         milpModel,
         ObjectiveMode::Tier1,
@@ -2243,6 +2489,96 @@ bool buildRoundedMilpModel(
     error = "Rounded LP incumbent validation failed: " + error;
     return false;
   }
+  return true;
+}
+
+bool polishRoundedIncumbent(
+  const ModelSpec& model,
+  std::vector<double>& startValues,
+  double& incumbentObjective,
+  SolveTelemetry& telemetry,
+  std::string& error,
+  SolveControl* control
+) {
+  const int roundedVariableCount = static_cast<int>(std::count_if(
+    model.roundedVarByNode.begin(), model.roundedVarByNode.end(),
+    [](int value) { return value >= 0; }
+  ));
+  if (roundedVariableCount < kIncumbentPolishMinimumRoundedVars) return true;
+
+  std::vector<int> nodesToFix;
+  nodesToFix.reserve(static_cast<size_t>(roundedVariableCount));
+  for (int nodeIndex = 0; nodeIndex < static_cast<int>(model.roundedVarByNode.size()); ++nodeIndex) {
+    const int machineVarIndex = model.machineVarByNode[static_cast<size_t>(nodeIndex)];
+    const int roundedVarIndex = model.roundedVarByNode[static_cast<size_t>(nodeIndex)];
+    if (machineVarIndex < 0 || roundedVarIndex < 0) continue;
+    const VariableSpec& machineVar = model.vars[static_cast<size_t>(machineVarIndex)];
+    const double machineValue = startValues[static_cast<size_t>(machineVarIndex)];
+    if (machineVar.infiniteMachineCostUsageCoeff > 0.0 &&
+        std::abs(machineValue) > kZeroRateConnectionEpsilon) {
+      return true;
+    }
+    if (machineVar.lb <= 0.0 && std::abs(machineValue) <= kZeroRateConnectionEpsilon) {
+      nodesToFix.push_back(nodeIndex);
+    }
+  }
+  if (static_cast<int>(nodesToFix.size()) < kIncumbentPolishMinimumFixedVars) return true;
+
+  const auto polishStart = std::chrono::steady_clock::now();
+  try {
+    ModelSpec restrictedModel = model;
+    std::vector<double> restrictedStart = startValues;
+    for (int nodeIndex : nodesToFix) {
+      const int machineVarIndex = restrictedModel.machineVarByNode[static_cast<size_t>(nodeIndex)];
+      const int roundedVarIndex = restrictedModel.roundedVarByNode[static_cast<size_t>(nodeIndex)];
+      restrictedModel.vars[static_cast<size_t>(machineVarIndex)].ub = 0.0;
+      restrictedModel.vars[static_cast<size_t>(roundedVarIndex)].ub = 0.0;
+      restrictedStart[static_cast<size_t>(machineVarIndex)] = 0.0;
+      restrictedStart[static_cast<size_t>(roundedVarIndex)] = 0.0;
+    }
+
+    SolveOptions polishOptions = getIncumbentPolishOptions();
+    if (restrictedModel.infiniteMachineCostTier > 0) {
+      polishOptions.useConcurrentSolve = false;
+    }
+    ReusableScipStagedLpEngine engine(
+      std::move(restrictedModel), polishOptions, control
+    );
+    std::string polishError;
+    if (!engine.initialize(polishError) ||
+        !engine.activateDeferredLimits(polishError) ||
+        !engine.addStartSolution(restrictedStart, polishError)) {
+      telemetry.incumbentPolishMs = elapsedMilliseconds(polishStart);
+      if (isCancellationRequested(control)) {
+        error = "CANCELLED";
+        return false;
+      }
+      return true;
+    }
+
+    StageSolution polished;
+    bool found = false;
+    if (!engine.findIncumbent(ObjectiveMode::Tier1, polished, found, polishError)) {
+      telemetry.incumbentPolishMs = elapsedMilliseconds(polishStart);
+      if (polishError == "CANCELLED" || isCancellationRequested(control)) {
+        error = "CANCELLED";
+        return false;
+      }
+      return true;
+    }
+
+    const bool hasRoundedLimit = std::any_of(
+      model.roundedMetricLimits.begin(), model.roundedMetricLimits.end(),
+      [](double value) { return value >= 0.0; }
+    );
+    if (found && polished.values.size() == startValues.size() &&
+        (hasRoundedLimit || polished.objectiveValue <= getStageBoundRhs(model, incumbentObjective))) {
+      startValues = std::move(polished.values);
+      incumbentObjective = polished.objectiveValue;
+    }
+  } catch (const std::bad_alloc&) {
+  }
+  telemetry.incumbentPolishMs = elapsedMilliseconds(polishStart);
   return true;
 }
 
@@ -2280,6 +2616,17 @@ bool normalizeRoundedMachineVariables(
       error = "Rounded machine normalization produced a value outside its proven bounds.";
       return false;
     }
+    const double solvedRoundedCount = solution.values[static_cast<size_t>(roundedVarIndex)];
+    if (solvedRoundedCount + kIntegralityTolerance < exactRoundedCount) {
+      std::ostringstream out;
+      out << std::setprecision(17)
+          << "SCIP undercounted whole-machine variable " << roundedVar.name
+          << " as " << solvedRoundedCount
+          << " for physical machine count " << physicalMachineCount
+          << "; expected " << exactRoundedCount << ".";
+      error = out.str();
+      return false;
+    }
     solution.values[static_cast<size_t>(roundedVarIndex)] = exactRoundedCount;
   }
 
@@ -2303,10 +2650,13 @@ bool solveAllStagesWithRoundedMilp(
   ModelSpec& finalModel,
   SolveTelemetry& telemetry,
   std::string& error,
+  int roundedMilpProfileCode,
   SolveControl* control = nullptr
 ) {
   const auto solveStart = std::chrono::steady_clock::now();
+  const RoundedMilpProfile profile = getRoundedMilpProfile(roundedMilpProfileCode);
   telemetry.profileName = "scip_rounded_milp";
+  telemetry.roundedMilpProfile = static_cast<int>(profile);
   telemetry.stages.clear();
   telemetry.stages.reserve(4);
 
@@ -2340,64 +2690,103 @@ bool solveAllStagesWithRoundedMilp(
     }
   }
 
-  SolveOptions options;
-  options.profileName = "rounded_milp";
-  options.useNumericsEmphasis = true;
-  options.useFastPresolve = true;
-  options.disableSymmetry = true;
-  options.disableMilpPresolver = true;
-  ReusableScipStagedLpEngine milpEngine(std::move(milpModel), options, control);
-  if (!milpEngine.initialize(error)) {
-    error = "Initialize rounded SCIP model failed: " + error;
+  if (profile == RoundedMilpProfile::Tuned &&
+      !polishRoundedIncumbent(
+        milpModel, startValues, incumbentObjective, telemetry, error, control
+      )) {
     return false;
   }
-  if (!milpEngine.addStartSolution(startValues, error)) {
-    error = "Add rounded LP incumbent failed: " + error;
-    return false;
-  }
-  if (!milpEngine.activateDeferredLimits(error)) {
-    error = "Apply rounded user limits failed: " + error;
-    return false;
+  tightenRoundedModelFromIncumbent(milpModel, startValues, incumbentObjective);
+
+  SolveOptions options = getRoundedMilpSolveOptions(profile);
+  // Infinite-cost preference probes depend on mutable SCIP state and remain
+  // on the conservative sequential path until fresh-instance handling for
+  // that special objective is validated independently.
+  if (milpModel.infiniteMachineCostTier > 0) {
+    options.useConcurrentSolve = false;
   }
 
+  // Every lexicographic MILP stage depends on the exact bound locked by the
+  // preceding stage, so the stages remain sequential.  Each stage now gets a
+  // fresh SCIP instance, however, which lets SCIPsolveConcurrent() safely use
+  // up to four solver threads for every ordinary rounded stage instead of
+  // re-entering concurrent solving on one mutable SCIP model.
+  ModelSpec stagedMilpModel = std::move(milpModel);
+  std::vector<double> stagedStartValues = std::move(startValues);
   const ObjectiveMode tierModes[] = {ObjectiveMode::Tier1, ObjectiveMode::Tier2, ObjectiveMode::Tier3};
-  for (int tierIndex = 0; tierIndex < milpEngine.model().tierCount; ++tierIndex) {
-    milpEngine.reportStage(3 + tierIndex);
-    if (!applyInfiniteMachineCostPreference(milpEngine, tierIndex, telemetry, error)) return false;
+  int tierCount = stagedMilpModel.tierCount;
+  for (int tierIndex = 0; tierIndex < tierCount; ++tierIndex) {
+    ReusableScipStagedLpEngine tierEngine(std::move(stagedMilpModel), options, control);
+    if (!tierEngine.initialize(error)) {
+      error = "Initialize rounded SCIP tier " + std::to_string(tierIndex + 1) + " failed: " + error;
+      return false;
+    }
+    if (!tierEngine.activateDeferredLimits(error)) {
+      error = "Apply rounded user limits for tier " + std::to_string(tierIndex + 1) + " failed: " + error;
+      return false;
+    }
+    if (!tierEngine.addStartSolution(stagedStartValues, error)) {
+      error = "Add rounded incumbent for tier " + std::to_string(tierIndex + 1) + " failed: " + error;
+      return false;
+    }
+
+    tierEngine.reportStage(3 + tierIndex);
+    if (!applyInfiniteMachineCostPreference(tierEngine, tierIndex, telemetry, error)) return false;
     StageSolution tierSolution;
-    if (!milpEngine.solveStage(tierModes[tierIndex], true, tierSolution, error)) {
+    if (!tierEngine.solveStage(tierModes[tierIndex], true, tierSolution, error)) {
       error = "Rounded objective tier " + std::to_string(tierIndex + 1) + " failed: " + error;
       return false;
     }
     const std::string tierName = "tier_" + std::to_string(tierIndex + 1);
     telemetry.stages.push_back({tierName, tierSolution.objectiveValue, tierSolution.elapsedMs});
-    if (!lockStageResult(milpEngine, tierName, tierModes[tierIndex], tierSolution.objectiveValue, error)) return false;
+    if (!lockStageResult(tierEngine, tierName, tierModes[tierIndex], tierSolution.objectiveValue, error)) return false;
+
+    stagedStartValues = std::move(tierSolution.values);
+    stagedMilpModel = tierEngine.takeModel();
   }
 
-  milpEngine.reportStage(6);
-  if (!milpEngine.solveStage(ObjectiveMode::MachineCount, true, finalSolution, error)) {
-    error = "Stage 4 machine-count tie-break failed: " + error;
-    return false;
+  ModelSpec finalMilpModel;
+  {
+    ReusableScipStagedLpEngine finalEngine(std::move(stagedMilpModel), options, control);
+    if (!finalEngine.initialize(error)) {
+      error = "Initialize rounded machine-count stage failed: " + error;
+      return false;
+    }
+    if (!finalEngine.activateDeferredLimits(error)) {
+      error = "Apply rounded user limits for machine-count stage failed: " + error;
+      return false;
+    }
+    if (!finalEngine.addStartSolution(stagedStartValues, error)) {
+      error = "Add rounded incumbent for machine-count stage failed: " + error;
+      return false;
+    }
+
+    finalEngine.reportStage(6);
+    if (!finalEngine.solveStage(ObjectiveMode::MachineCount, true, finalSolution, error)) {
+      error = "Stage 4 machine-count tie-break failed: " + error;
+      return false;
+    }
+    telemetry.stages.push_back({
+      "machine_count",
+      finalSolution.objectiveValue,
+      finalSolution.elapsedMs,
+    });
+    if (!normalizeRoundedMachineVariables(finalEngine.model(), finalSolution, error)) {
+      error = "Normalize exact rounded machine counts failed: " + error;
+      return false;
+    }
+    finalMilpModel = finalEngine.takeModel();
   }
-  telemetry.stages.push_back({
-    "machine_count",
-    finalSolution.objectiveValue,
-    finalSolution.elapsedMs,
-  });
-  if (!normalizeRoundedMachineVariables(milpEngine.model(), finalSolution, error)) {
-    error = "Normalize exact rounded machine counts failed: " + error;
-    return false;
-  }
+
   telemetry.roundedVariableCount = static_cast<int>(
     std::count_if(
-      milpEngine.model().roundedVarByNode.begin(),
-      milpEngine.model().roundedVarByNode.end(),
+      finalMilpModel.roundedVarByNode.begin(),
+      finalMilpModel.roundedVarByNode.end(),
       [](int value) { return value >= 0; }
     )
   );
-  milpEngine.collectTelemetry(telemetry);
   telemetry.totalMs = elapsedMilliseconds(solveStart);
-  finalModel = milpEngine.takeModel();
+  finalModel = std::move(finalMilpModel);
   return true;
 }
 
@@ -2506,6 +2895,10 @@ std::vector<double> buildBinarySolutionValues(
   out[23] = telemetry.dualBound;
   out[24] = telemetry.mipGap;
   out[25] = static_cast<double>(telemetry.roundedVariableCount);
+  out[26] = telemetry.roundedMilpProfile >= 0
+    ? static_cast<double>(telemetry.roundedMilpProfile + 10)
+    : 0.0;
+  out[27] = telemetry.incumbentPolishMs;
 
   size_t offset = static_cast<size_t>(kBinaryResultHeaderDoubles);
   for (const StageTelemetry& stage : telemetry.stages) {
@@ -2535,6 +2928,7 @@ bool solveNativePayloadStructured(
   NativeInput&& input,
   double payloadParseMs,
   NativeSolveResult& result,
+  int roundedMilpProfileCode,
   SolveControl* control = nullptr
 ) {
   setSolveStage(control, 0);
@@ -2566,7 +2960,8 @@ bool solveNativePayloadStructured(
   const bool hasRoundedObjective = model.hasRoundedObjective;
   const bool solved = hasRoundedObjective
     ? solveAllStagesWithRoundedMilp(
-        std::move(model), finalSolution, finalModel, telemetry, attemptError, control
+        std::move(model), finalSolution, finalModel, telemetry, attemptError,
+        roundedMilpProfileCode, control
       )
     : solveAllStagesWithSoplex(
         std::move(model), finalSolution, finalModel, telemetry, attemptError, control
@@ -2617,11 +3012,10 @@ bool solveNativePayloadStructured(
 bool solveNativeArrayPayloadStructured(
   const double* payload,
   int payloadDoubleCount,
-  bool usePapiloReliabilityProfile,
+  int roundedMilpProfileCode,
   NativeSolveResult& result,
   SolveControl* control = nullptr
 ) {
-  (void)usePapiloReliabilityProfile;
   NativeInput input;
   std::string error;
   const auto parseStart = std::chrono::steady_clock::now();
@@ -2634,6 +3028,7 @@ bool solveNativeArrayPayloadStructured(
     std::move(input),
     elapsedMilliseconds(parseStart),
     result,
+    roundedMilpProfileCode,
     control
   );
 }
@@ -2647,6 +3042,7 @@ enum class NativeJobState {
 
 struct NativeAsyncJob {
   std::mutex mutex;
+  std::condition_variable condition;
   std::thread worker;
   std::atomic<int> state{ static_cast<int>(NativeJobState::Idle) };
   std::atomic<int> stageCode{ 0 };
@@ -2655,6 +3051,8 @@ struct NativeAsyncJob {
   volatile bool soplexInterruptFlag = false;
   std::chrono::steady_clock::time_point startedAt;
   std::vector<double> resultValues;
+  std::vector<double> pendingPayload;
+  int pendingRoundedMilpProfileCode = 0;
   std::string error;
 };
 
@@ -2702,16 +3100,12 @@ void finishAsyncJob(NativeSolveResult&& solveResult) noexcept {
 int startNativeAsyncJob(
   const double* payload,
   int payloadDoubleCount,
-  bool usePapiloReliabilityProfile
+  int roundedMilpProfileCode
 ) {
   if (payload == nullptr || payloadDoubleCount <= 0) return 0;
   if (g_asyncJob.state.load(std::memory_order_acquire) !=
       static_cast<int>(NativeJobState::Idle)) {
     return 0;
-  }
-
-  if (g_asyncJob.worker.joinable()) {
-    g_asyncJob.worker.join();
   }
 
   std::vector<double> payloadCopy;
@@ -2727,16 +3121,28 @@ int startNativeAsyncJob(
     g_asyncJob.cancellationRequested.store(false, std::memory_order_release);
     g_asyncJob.soplexInterruptFlag = false;
     g_asyncJob.startedAt = std::chrono::steady_clock::now();
+    g_asyncJob.pendingPayload = std::move(payloadCopy);
+    g_asyncJob.pendingRoundedMilpProfileCode = roundedMilpProfileCode;
+    g_asyncJob.state.store(static_cast<int>(NativeJobState::Running), std::memory_order_release);
   }
   g_asyncJob.stageCode.store(0, std::memory_order_release);
   g_asyncJob.activeScip.store(nullptr, std::memory_order_release);
-  g_asyncJob.state.store(static_cast<int>(NativeJobState::Running), std::memory_order_release);
 
   try {
-    g_asyncJob.worker = std::thread([
-      payloadValues = std::move(payloadCopy),
-      usePapiloReliabilityProfile
-    ]() mutable {
+    if (!g_asyncJob.worker.joinable()) {
+      g_asyncJob.worker = std::thread([]() {
+        for (;;) {
+          std::vector<double> payloadValues;
+          int roundedMilpProfileCode = 0;
+          {
+            std::unique_lock<std::mutex> lock(g_asyncJob.mutex);
+            g_asyncJob.condition.wait(lock, []() {
+              return !g_asyncJob.pendingPayload.empty();
+            });
+            payloadValues = std::move(g_asyncJob.pendingPayload);
+            roundedMilpProfileCode = g_asyncJob.pendingRoundedMilpProfileCode;
+          }
+
       try {
         NativeSolveResult result;
         SolveControl control;
@@ -2747,7 +3153,7 @@ int startNativeAsyncJob(
         control.activeScipMutex = &g_asyncJob.mutex;
         solveNativeArrayPayloadStructured(
           payloadValues.data(), static_cast<int>(payloadValues.size()),
-          usePapiloReliabilityProfile, result, &control
+          roundedMilpProfileCode, result, &control
         );
         finishAsyncJob(std::move(result));
       } catch (const std::bad_alloc&) {
@@ -2757,7 +3163,10 @@ int startNativeAsyncJob(
       } catch (...) {
         finishAsyncJobAfterException("Native ratio solve failed with an unknown exception.");
       }
-    });
+        }
+      });
+    }
+    g_asyncJob.condition.notify_one();
   } catch (const std::exception& ex) {
     NativeSolveResult result;
     result.status = NativeResultStatus::InternalError;
@@ -2774,10 +3183,6 @@ double* takeNativeAsyncJobResult() {
       static_cast<int>(NativeJobState::Complete)) {
     return nullptr;
   }
-  if (g_asyncJob.worker.joinable()) {
-    g_asyncJob.worker.join();
-  }
-
   std::lock_guard<std::mutex> lock(g_asyncJob.mutex);
   double* result = copyToOwnedDoubleBuffer(g_asyncJob.resultValues);
   if (result == nullptr) {
@@ -2809,7 +3214,7 @@ int industrialist_has_native_ratio_solver() {
 
 EMSCRIPTEN_KEEPALIVE
 int industrialist_native_abi_version() {
-  return 2;
+  return 3;
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -2821,12 +3226,12 @@ EMSCRIPTEN_KEEPALIVE
 int industrialist_start_ratio_job_f64(
   const double* payload,
   int payloadDoubleCount,
-  int usePapiloReliabilityProfile
+  int roundedMilpProfileCode
 ) {
   return startNativeAsyncJob(
     payload,
     payloadDoubleCount,
-    usePapiloReliabilityProfile != 0
+    roundedMilpProfileCode
   );
 }
 

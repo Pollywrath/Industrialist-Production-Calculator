@@ -3,8 +3,8 @@ import type { SpecialRecipe } from '../../types/specialRecipes';
 import { getMachine } from '../lookup';
 
 function getDishCount(settings: Record<string, unknown>): number {
-  const value = Number(settings.satellite_dish_count ?? 1);
-  return Number.isFinite(value) ? Math.max(1, Math.round(value)) : 1;
+  const value = Number(settings.satellite_dish_count ?? 0);
+  return Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
 }
 
 function getOptimalDishCount(controllerCount: number, researchPoints: number): number {
@@ -23,8 +23,8 @@ export const satellite_dish_controller_01: SpecialRecipe = {
     satellite_dish_count: {
       type: 'number',
       label: 'Satellite Dishes',
-      default: 1,
-      min: 1,
+      default: 0,
+      min: 0,
       step: 1,
       dynamicLabel: (_settings, _globalSettings, context) => {
         const stats = context?.researchInfrastructure;
@@ -38,7 +38,8 @@ export const satellite_dish_controller_01: SpecialRecipe = {
       },
     },
   },
-  compute: (_settings, _globalSettings, _nodeId, helpers) => {
+  compute: (settings, _globalSettings, _nodeId, helpers) => {
+    const dishCount = getDishCount(settings);
     let resolvedFluid = 'any_fluid';
     if (helpers?.hasConnection('input', 0)) {
       resolvedFluid = helpers.resolveProduct('input', 0) || 'any_fluid';
@@ -46,11 +47,24 @@ export const satellite_dish_controller_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_satellite_dish_controller_01',
-      name: 'Satellite Dish Controller',
+      name: `${dishCount} Total Dishes`,
       machine_id: 'm_satellite_dish_controller',
       cycle_time: 1,
       power_use: 75000,
       power_type: 'MV',
+      powerEffects: [
+        {
+          power_type: 'MV',
+          power_use: 75000,
+          label: 'Controller',
+        },
+        {
+          power_type: 'MV',
+          power_use: dishCount * 75000,
+          label: 'Dishes',
+          powerIndependentOfMachineCount: true,
+        },
+      ],
       pollution: 0,
       inputs: [{ product_id: resolvedFluid, quantity: 0.5 }],
       outputs: [],
@@ -58,21 +72,26 @@ export const satellite_dish_controller_01: SpecialRecipe = {
 
     return recipe;
   },
-  computeMachineCost: (settings) => {
-    return (
-      (getMachine('m_satellite_dish_controller')?.cost ?? 0) +
-      (getMachine('m_satellite_dish')?.cost ?? 0) * getDishCount(settings)
-    );
+  computeMachineCost: () => {
+    return getMachine('m_satellite_dish_controller')?.cost ?? 0;
   },
-  computeModelCount: (settings) => {
-    // Controller, fluid connection models, MV connection models, then dishes.
-    return 1 + 2 + 2 + getDishCount(settings);
+  computeMachineCostIndependentOfMachineCount: (settings) => {
+    return (getMachine('m_satellite_dish')?.cost ?? 0) * getDishCount(settings);
   },
-  computeMachineSpace: (settings) => {
+  computeModelCount: () => {
+    return 1 + 2 + 2;
+  },
+  computeModelCountIndependentOfMachineCount: (settings) => {
+    return getDishCount(settings);
+  },
+  computeMachineSpace: () => {
     const controller = getMachine('m_satellite_dish_controller');
-    const dish = getMachine('m_satellite_dish');
     const controllerArea = controller ? controller.size.x * controller.size.y : 0;
+    return controllerArea;
+  },
+  computeMachineSpaceIndependentOfMachineCount: (settings) => {
+    const dish = getMachine('m_satellite_dish');
     const dishArea = dish ? dish.size.x * dish.size.y : 0;
-    return controllerArea + dishArea * getDishCount(settings);
+    return dishArea * getDishCount(settings);
   },
 };

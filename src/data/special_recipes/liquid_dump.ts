@@ -21,6 +21,7 @@ export const liquid_dump_01: SpecialRecipe = {
   name: 'Dump Fluids',
   machine_id: 'm_liquid_dump',
   isSellTrash: true,
+  autocompleteDisposalPriority: 'primary',
   pollutionIndependentOfMachineCount: true,
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {

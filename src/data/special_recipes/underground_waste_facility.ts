@@ -49,8 +49,20 @@ export const underground_waste_facility_01: SpecialRecipe = {
           product_id: 'p_concrete_block',
           quantity: concreteQuantity,
           independentOfMachineCount: true,
+          flowDependencies: [
+            { sourceInputIndex: 0, coefficient: 140 / 7000 },
+            { sourceInputIndex: 1, coefficient: 140 / 7000 },
+          ],
         },
-        { product_id: 'p_lead_ingot', quantity: leadQuantity, independentOfMachineCount: true },
+        {
+          product_id: 'p_lead_ingot',
+          quantity: leadQuantity,
+          independentOfMachineCount: true,
+          flowDependencies: [
+            { sourceInputIndex: 0, coefficient: 70 / 7000 },
+            { sourceInputIndex: 1, coefficient: 70 / 7000 },
+          ],
+        },
       ],
       outputs: [],
     };

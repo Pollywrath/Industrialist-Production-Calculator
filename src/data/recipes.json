@@ -156,7 +156,8 @@
       {
         "product_id": "p_fracking_oil",
         "quantity": 100,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       }
     ]
   },
@@ -190,7 +191,8 @@
       {
         "product_id": "p_fracking_oil",
         "quantity": 100,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       }
     ]
   },
@@ -382,12 +384,14 @@
       {
         "product_id": "p_soil",
         "quantity": 60,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       },
       {
         "product_id": "p_clay",
         "quantity": 60,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       }
     ]
   },
@@ -404,7 +408,8 @@
       {
         "product_id": "p_sand",
         "quantity": 60,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       }
     ]
   },
@@ -421,7 +426,8 @@
       {
         "product_id": "p_limestone",
         "quantity": 60,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       }
     ]
   },
@@ -443,12 +449,14 @@
       {
         "product_id": "p_soil",
         "quantity": 120,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       },
       {
         "product_id": "p_clay",
         "quantity": 120,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       }
     ]
   },
@@ -470,7 +478,8 @@
       {
         "product_id": "p_sand",
         "quantity": 120,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       }
     ]
   },
@@ -492,7 +501,8 @@
       {
         "product_id": "p_limestone",
         "quantity": 120,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       }
     ]
   },
@@ -6882,12 +6892,14 @@
       {
         "product_id": "p_rawmix",
         "quantity": 20,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       },
       {
         "product_id": "p_aggregate",
         "quantity": 20,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       }
     ]
   },
@@ -6913,7 +6925,8 @@
       {
         "product_id": "p_rawmix",
         "quantity": 20,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       }
     ]
   },
@@ -6935,7 +6948,8 @@
       {
         "product_id": "p_aggregate",
         "quantity": 20,
-        "temperature": 18
+        "temperature": 18,
+        "voidable": true
       }
     ]
   },
@@ -8948,7 +8962,8 @@
       {
         "product_id": "p_steam",
         "quantity": 3,
-        "temperature": 150
+        "temperature": 150,
+        "voidable": true
       }
     ]
   },

@@ -33,41 +33,74 @@ export interface WikiBucketCacheRecord {
   checkedAt: number;
 }
 
-let dbPromise: Promise<IDBPDatabase<SavesDB> | null> | null = null;
+interface DatabaseConnectionState {
+  promise: Promise<IDBPDatabase<SavesDB> | null> | null;
+}
+
+interface IndustrialistGlobalScope {
+  __industrialistDatabaseConnectionState?: DatabaseConnectionState;
+}
+
+function getConnectionState(): DatabaseConnectionState {
+  const scope = globalThis as typeof globalThis & IndustrialistGlobalScope;
+  scope.__industrialistDatabaseConnectionState ??= { promise: null };
+  return scope.__industrialistDatabaseConnectionState;
+}
 
 function getDB(): Promise<IDBPDatabase<SavesDB> | null> {
   if (typeof indexedDB === 'undefined') {
     return Promise.resolve(null);
   }
 
-  if (!dbPromise) {
-    dbPromise = openDB<SavesDB>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion) {
-        if (oldVersion < 1) {
-          db.createObjectStore('saves', { keyPath: 'id' });
-          db.createObjectStore('autosave', { keyPath: 'id' });
-        }
-        if (oldVersion < 2) {
-          if (!db.objectStoreNames.contains('data_overrides')) {
-            db.createObjectStore('data_overrides', { keyPath: 'id' });
+  const connectionState = getConnectionState();
+  if (!connectionState.promise) {
+    const openingPromise: Promise<IDBPDatabase<SavesDB> | null> = openDB<SavesDB>(
+      DB_NAME,
+      DB_VERSION,
+      {
+        upgrade(db, oldVersion) {
+          if (oldVersion < 1) {
+            db.createObjectStore('saves', { keyPath: 'id' });
+            db.createObjectStore('autosave', { keyPath: 'id' });
           }
-        }
-        if (oldVersion < 3) {
-          if (!db.objectStoreNames.contains('wiki_bucket_cache')) {
-            db.createObjectStore('wiki_bucket_cache', { keyPath: 'id' });
+          if (oldVersion < 2) {
+            if (!db.objectStoreNames.contains('data_overrides')) {
+              db.createObjectStore('data_overrides', { keyPath: 'id' });
+            }
           }
-        }
+          if (oldVersion < 3) {
+            if (!db.objectStoreNames.contains('wiki_bucket_cache')) {
+              db.createObjectStore('wiki_bucket_cache', { keyPath: 'id' });
+            }
+          }
+        },
+        blocking() {
+          void openingPromise.then((db) => {
+            db?.close();
+            if (connectionState.promise === openingPromise) {
+              connectionState.promise = null;
+            }
+          });
+        },
+        terminated() {
+          if (connectionState.promise === openingPromise) {
+            connectionState.promise = null;
+          }
+        },
       },
-    }).catch((err) => {
+    ).catch((err) => {
       console.warn(
         'IndexedDB failed to open (Incognito mode or quota limit), resetting promise cache:',
         err,
       );
-      dbPromise = null;
+      if (connectionState.promise === openingPromise) {
+        connectionState.promise = null;
+      }
       return null;
     });
+    connectionState.promise = openingPromise;
   }
-  return dbPromise;
+  return connectionState.promise;
 }
 
 export async function getSaves(): Promise<SaveRecord[]> {

@@ -21,6 +21,7 @@ import {
 import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
+import { constrainMachineCount } from '../../../utils/machineCountConstraint';
 import {
   getRecipeEntryHandleType,
   getRecipeEntryProductId,
@@ -476,6 +477,8 @@ export function RecipeNodeIO({
     const handleId = buildHandleId(nodeId, ref.side, ref.index);
     const { nodes, edges } = useFlowStore.getState();
     const recipeNodes = nodes.filter(isRecipeNode);
+    const targetNode = recipeNodes.find((node) => node.id === nodeId);
+    if (!targetNode || targetNode.data.machineCountConstraint?.kind === 'locked') return;
     const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
     const recipeEdges = edges.filter(
       (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
@@ -504,7 +507,10 @@ export function RecipeNodeIO({
     );
     const q = resolveQuantity(ref, recipe);
     if (q <= 0) return;
-    const newMachineCount = calculateMachineCountFromRate(targetRate, recipe.cycle_time, q);
+    const newMachineCount = constrainMachineCount(
+      targetNode.data,
+      calculateMachineCountFromRate(targetRate, recipe.cycle_time, q),
+    );
     useFlowStore.getState().updateNodeData(nodeId, { machineCount: newMachineCount });
     completeTutorialAction({
       type: 'node-handle-double',

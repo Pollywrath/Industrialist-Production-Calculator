@@ -71,7 +71,6 @@ export const hv_transformer_01: SpecialRecipe = {
     const coolant = readCoolant(settings.coolant);
     const inputPower = Math.max(0, (settings.input_power as number) ?? 100000);
     const outputPower = inputPower * (1 - getLossRate(coolant));
-    const conversionLoss = inputPower - outputPower;
     const { inputType, outputType } = getPowerTypeForDirection(direction);
 
     const recipe: Recipe = {
@@ -95,9 +94,15 @@ export const hv_transformer_01: SpecialRecipe = {
       ],
       powerAccountingEffects: [
         {
+          power_type: inputType,
+          power_use: -inputPower,
+          label: 'Input Power',
+          accounting: 'output_delta',
+        },
+        {
           power_type: outputType,
-          power_use: -conversionLoss,
-          label: 'Conversion Loss',
+          power_use: outputPower,
+          label: 'Output Power',
           accounting: 'output_delta',
         },
       ],

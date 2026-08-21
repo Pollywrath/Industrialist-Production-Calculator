@@ -147,8 +147,15 @@ export const logic_assembler_01: SpecialRecipe = {
     }
 
     const outputsList = failStep
-      ? [{ product_id: 'p_microchip_scrap', quantity: scrapQuantity, temperature: 18 }]
-      : [{ product_id: targetChip, quantity: 1, temperature: 18 }];
+      ? [
+          {
+            product_id: 'p_microchip_scrap',
+            quantity: scrapQuantity,
+            temperature: 18,
+            voidable: true,
+          },
+        ]
+      : [{ product_id: targetChip, quantity: 1, temperature: 18, voidable: true }];
 
     const recipe: Recipe = {
       id: 'r_logic_assembler_01',

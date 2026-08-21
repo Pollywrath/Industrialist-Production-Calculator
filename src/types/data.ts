@@ -16,6 +16,7 @@ export interface Machine {
   subcategory: string;
   sandboxOnly?: boolean;
   sandboxPlusOnly?: boolean;
+  requiresManualOperation?: boolean;
 }
 
 export type ProductType = 'Item' | 'Fluid';
@@ -38,6 +39,7 @@ export interface RecipePowerEffect {
   power_use: number;
   label?: string;
   accounting?: 'normal' | 'output_delta';
+  powerIndependentOfMachineCount?: boolean;
 }
 
 export interface RecipeInput {
@@ -47,6 +49,7 @@ export interface RecipeInput {
   product_link_id?: string;
   variable?: boolean;
   independentOfMachineCount?: boolean;
+  flowDependencies?: { sourceInputIndex: number; coefficient: number }[];
 }
 
 export interface RecipeOutput {

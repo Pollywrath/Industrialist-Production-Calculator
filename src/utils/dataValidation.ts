@@ -185,6 +185,13 @@ export function validateMachine(
     errors.push({ field: 'sandboxPlusOnly', message: 'Sandbox+ Only must be a boolean' });
   }
 
+  if (m.requiresManualOperation !== undefined && typeof m.requiresManualOperation !== 'boolean') {
+    errors.push({
+      field: 'requiresManualOperation',
+      message: 'Requires Manual Operation must be a boolean',
+    });
+  }
+
   if (typeof m.research !== 'string') {
     errors.push({ field: 'research', message: 'Research must be a string' });
   } else if (validResearchIds && m.research && !validResearchIds.has(m.research)) {

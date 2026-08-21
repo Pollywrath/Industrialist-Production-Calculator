@@ -1,5 +1,6 @@
-import { Ellipsis } from 'lucide-react';
+import { Ellipsis, Gauge, LockKeyhole } from 'lucide-react';
 import type { Recipe } from '../../../types/data';
+import type { MachineCountConstraint } from '../../../types/nodes';
 import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
 import { getSpecialRecipe } from '../../../data/registry';
 import { getNormalizedCycleTime } from '../../../utils/recipeComputation';
@@ -25,6 +26,7 @@ interface RecipeNodeInfoProps {
   receivedTemp?: number | null;
   machineTier?: number;
   isTarget?: boolean;
+  machineCountConstraint?: MachineCountConstraint;
   nodeId: string;
 }
 
@@ -36,6 +38,7 @@ export function RecipeNodeInfo({
   receivedTemp,
   machineTier = 1,
   isTarget = false,
+  machineCountConstraint,
   nodeId,
 }: RecipeNodeInfoProps) {
   const rateMode = useUIStore((s) => s.rateMode);
@@ -59,6 +62,9 @@ export function RecipeNodeInfo({
   };
 
   const displayName = recipe?.name || 'Unknown Recipe';
+  const constraintLabel = machineCountConstraint
+    ? `Machine count ${machineCountConstraint.kind === 'locked' ? 'locked' : 'capped'} at ${formatMachineCount(machineCountConstraint.value)}`
+    : undefined;
 
   return (
     <div className={styles['recipe-node-info']}>
@@ -112,6 +118,20 @@ export function RecipeNodeInfo({
             {machineName}
           </div>
           <div className={styles['recipe-node-info__machine-count']}>
+            {machineCountConstraint && (
+              <span
+                className={styles['recipe-node-info__constraint-icon']}
+                data-kind={machineCountConstraint.kind}
+                title={constraintLabel}
+                aria-label={constraintLabel}
+              >
+                {machineCountConstraint.kind === 'locked' ? (
+                  <LockKeyhole aria-hidden="true" />
+                ) : (
+                  <Gauge aria-hidden="true" />
+                )}
+              </span>
+            )}
             {formatMachineCount(machineCount)}
           </div>
         </div>

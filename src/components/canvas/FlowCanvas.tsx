@@ -243,7 +243,8 @@ export function FlowCanvas() {
       .getState()
       .confirm({
         title: 'First Production Chain Tutorial',
-        message: 'Would you like to walk through building your first Gearbox production chain?',
+        message:
+          'Would you like to walk through building your first production chain, using Gearbox as the example?',
         confirmLabel: 'START TUTORIAL',
         cancelLabel: 'SKIP',
         intent: 'info',

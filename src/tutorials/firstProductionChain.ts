@@ -7,7 +7,7 @@ export const FIRST_PRODUCTION_CHAIN_COMPLETED_KEY =
 
 export const FIRST_PRODUCTION_CHAIN_TUTORIAL_ID = 'first-production-chain' as const;
 
-export const FIRST_PRODUCTION_CHAIN_SAVE_NAME = 'Gearbox Tutorial';
+export const FIRST_PRODUCTION_CHAIN_SAVE_NAME = 'Production Chain Tutorial';
 
 export const FIRST_PRODUCTION_CHAIN_RECIPE_IDS = [
   'r_craft_assembler_06',
@@ -182,7 +182,7 @@ export const FIRST_PRODUCTION_CHAIN_STEPS: TutorialStep[] = [
   {
     id: 'steel-ingot-input',
     title: 'Add Steel Ingot',
-    description: 'Click Steel Rod’s Steel Ingot input.',
+    description: 'Click Steel Rod’s Steel Ingot input.  You can move the boxes if its overlapped',
     highlight: { kind: 'rect', alias: 'steelRod', side: 'input', index: 0 },
     action: { type: 'node-rect', alias: 'steelRod', side: 'input', index: 0 },
   },
@@ -196,7 +196,7 @@ export const FIRST_PRODUCTION_CHAIN_STEPS: TutorialStep[] = [
   {
     id: 'connect-steel-ingot-to-steel-plate',
     title: 'Connect Steel To Plate',
-    description: 'Connect the Blast Furnace Steel Ingot output to the Press Steel Plate input.',
+    description: 'Connect the Blast Furnace Steel Ingot output to the Press Steel Plate input. Again, you can move boxes if its not working',
     highlight: { kind: 'handle', alias: 'steelIngot', side: 'output', index: 0 },
     secondaryHighlight: { kind: 'handle', alias: 'steelPlate', side: 'input', index: 0 },
     action: {

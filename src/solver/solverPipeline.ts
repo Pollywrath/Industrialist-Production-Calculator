@@ -8,9 +8,9 @@ import { propagateTemperatures } from './temperaturePropagator';
 import { computeResolvedProducts } from '../utils/productResolver';
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 import { buildHandleId } from '../utils/idGenerator';
+import { FLOW_STATUS_ABSOLUTE_TOLERANCE } from '../utils/precision';
 
 const MAX_TEMPERATURE_COUPLED_PASSES = 8;
-const NUMERIC_EQUALITY_EPSILON = 1e-6;
 
 type SettingsOverrides = Record<string, Record<string, unknown>>;
 
@@ -29,7 +29,7 @@ function areValuesEquivalent(a: unknown, b: unknown): boolean {
     if (!Number.isFinite(a) || !Number.isFinite(b)) {
       return a === b;
     }
-    return Math.abs(a - b) <= NUMERIC_EQUALITY_EPSILON;
+    return Math.abs(a - b) <= FLOW_STATUS_ABSOLUTE_TOLERANCE;
   }
   return a === b;
 }

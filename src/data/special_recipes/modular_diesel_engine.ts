@@ -56,6 +56,35 @@ const getBestGenerators = (torque: number): number => {
   return bestG;
 };
 
+function resolveAutocompleteSettings(settings: Record<string, unknown>): Record<string, unknown> {
+  const cylinders = (settings.cylinders as number) ?? 32;
+  const throttle = (settings.throttle as number) ?? 59;
+  const afr = (settings.afr as number) ?? 14;
+  const crankshafts = (settings.crankshafts as number) ?? 20;
+  const flywheels = (settings.flywheels as number) ?? 0;
+  const fuelType = (settings.fuel_type as string) ?? 'Refined Diesel';
+  const cylMap = getCylMap(cylinders);
+  const torque = cylMap * (throttle / 100) * (14 / afr);
+  const loadFactor = clamp((torque * torque) / (cylMap * cylMap), 0, 1);
+  const loadRatio = (torque + 1) / (cylMap + 1);
+  const sinFactor = getSinFactor(cylinders);
+  const fuelUsage =
+    (cylinders * loadRatio * sinFactor * loadFactor * 13.5) / FUEL_MAP[fuelType].rate;
+  const airTotal = cylinders * (sinFactor * loadRatio * 30 * loadFactor + flywheels * 0.2);
+  const efficiency = getEfficiency(crankshafts, flywheels);
+  const exhaustTotal =
+    cylinders * loadRatio * sinFactor * 30 * loadFactor * loadFactor * (1 - efficiency / 100);
+
+  return {
+    ...settings,
+    generators: getBestGenerators(torque),
+    air_inputs: Math.max(1, Math.ceil(airTotal / 200)),
+    exhausts: Math.max(1, Math.ceil(exhaustTotal / 200)),
+    fuel_inputs: Math.max(1, Math.ceil(fuelUsage / 0.7)),
+    sideways_crankshafts: 0,
+  };
+}
+
 export const modular_diesel_engine_01: SpecialRecipe = {
   id: 'r_modular_diesel_engine_01',
   name: 'Modular Diesel Engine',
@@ -64,6 +93,7 @@ export const modular_diesel_engine_01: SpecialRecipe = {
     'Modular diesel engine. Configure components. Throttle and AFR dictate target torque. Cylinders scale base torque, fuel, air, and exhaust. Crankshafts/Flywheels drive efficiency (reducing exhaust). Generators convert torque to power; too much torque per generator causes overload penalties.',
   potentialInputs: ['p_refined_diesel', 'p_diesel', 'p_poor_quality_diesel', 'p_crude_diesel'],
   potentialOutputs: [],
+  resolveAutocompleteSettings,
   resolveSettings: (productId: string) => {
     const fuel = Object.entries(FUEL_MAP).find(([, f]) => f.product_id === productId);
     if (fuel) return { fuel_type: fuel[0] };

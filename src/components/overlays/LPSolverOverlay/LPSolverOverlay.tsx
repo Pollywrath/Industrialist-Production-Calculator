@@ -12,10 +12,14 @@ import {
   solveRatios,
   cancelRatioOptimizer,
   type RatioOptimizerNode,
-  type RatioOptimizerSession,
   type RatioFailureDiagnostics,
   type RatioSolverProgress,
 } from '../../../solver/ratioOptimizer';
+import {
+  cancelAutocomplete,
+  solveAutocomplete,
+  type AutocompletePlan,
+} from '../../../solver/autocomplete';
 import { getMachine, getProductName, resolveActiveRecipe } from '../../../data/lookup';
 import { INDUS_LOGO_SRC } from '../../../data/productIcons';
 import {
@@ -31,6 +35,7 @@ import {
   snapToReferenceIfNearlyEqual,
 } from '../../../utils/precision';
 import { isRecipeNode } from '../../../types/nodes';
+import { constrainMachineCount } from '../../../utils/machineCountConstraint';
 import styles from './LPSolverOverlay.module.css';
 import { ALL_TIPS } from '../HelpOverlay/tips';
 import { OptimizationConfigurePanel } from './OptimizationConfigurePanel';
@@ -45,6 +50,7 @@ interface NodeChange {
   machineName: string;
   currentCount: number;
   proposedCount: number;
+  isNew?: boolean;
 }
 
 interface ObjectiveSummary {
@@ -80,12 +86,15 @@ function summarizeObjectives(
     summary.powerUse += node.powerUse * machineCount;
     summary.powerOutput += node.powerOutput * machineCount;
     summary.pollution += node.pollution * machineCount;
-    summary.machineSpace += node.machineSpace * wholeMachineCount;
-    summary.modelCount += node.modelCount * wholeMachineCount;
+    summary.machineSpace +=
+      node.machineSpace * wholeMachineCount + node.machineSpaceIndependentOfMachineCount;
+    summary.modelCount +=
+      node.modelCount * wholeMachineCount + node.modelCountIndependentOfMachineCount;
     if (wholeMachineCount > 0 && node.hasInfiniteMachineCost) {
       summary.machineCost = Infinity;
     } else if (Number.isFinite(summary.machineCost)) {
-      summary.machineCost += node.machineCost * wholeMachineCount;
+      summary.machineCost +=
+        node.machineCost * wholeMachineCount + node.machineCostIndependentOfMachineCount;
     }
   }
 
@@ -109,10 +118,15 @@ export function LPSolverOverlay() {
   const [solverProgress, setSolverProgress] = useState<RatioSolverProgress | null>(null);
   const [changes, setChanges] = useState<NodeChange[]>([]);
   const [proposedMachineCounts, setProposedMachineCounts] = useState<Record<string, number>>({});
+  const [autocompletePlan, setAutocompletePlan] = useState<AutocompletePlan | null>(null);
+  const [resultMode, setResultMode] = useState<OptimizationConfiguration['mode']>('ratios');
+  const [resultMachineCountBasis, setResultMachineCountBasis] =
+    useState<OptimizationConfiguration['machineCountBasis']>('whole');
 
   const [objectiveSummary, setObjectiveSummary] = useState<ObjectiveSummaryComparison | null>(null);
 
-  const sessionRef = useRef<RatioOptimizerSession | null>(null);
+  const sessionRef = useRef<{ promise: Promise<unknown> } | null>(null);
+  const activeModeRef = useRef<OptimizationConfiguration['mode']>('ratios');
   const startTimeRef = useRef(0);
   const runTokenRef = useRef(0);
 
@@ -129,6 +143,8 @@ export function LPSolverOverlay() {
       setSolverProgress(null);
       setChanges([]);
       setProposedMachineCounts({});
+      setAutocompletePlan(null);
+      setResultMode('ratios');
       setObjectiveSummary(null);
     });
 
@@ -136,7 +152,8 @@ export function LPSolverOverlay() {
       const latestToken = runTokenRef.current;
       runTokenRef.current = latestToken + 1;
       if (sessionRef.current) {
-        cancelRatioOptimizer();
+        if (activeModeRef.current === 'autocomplete') cancelAutocomplete();
+        else cancelRatioOptimizer();
         sessionRef.current = null;
       }
     };
@@ -170,7 +187,11 @@ export function LPSolverOverlay() {
     setSolverProgress(null);
     setErrorMsg('');
     setFailureDiagnostics(null);
+    setAutocompletePlan(null);
+    setResultMode(configuration.mode);
+    setResultMachineCountBasis(configuration.machineCountBasis);
     setSolverState('solving');
+    activeModeRef.current = configuration.mode;
     startTimeRef.current = performance.now();
 
     const { nodes: canvasNodes, edges } = useFlowStore.getState();
@@ -180,6 +201,99 @@ export function LPSolverOverlay() {
       (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
     );
     const optimizerPayload = buildRatioOptimizerPayload(nodes, recipeEdges);
+    if (configuration.mode === 'autocomplete') {
+      const session = solveAutocomplete(canvasNodes, edges, {
+        configuration,
+        onProgress: (progress) => {
+          if (runTokenRef.current !== runToken) return;
+          setSolverProgress(progress);
+        },
+      });
+      sessionRef.current = session;
+
+      session.promise
+        .then((res) => {
+          if (runTokenRef.current !== runToken) return;
+          setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
+          if (res.telemetry) {
+            console.info('[Autocomplete Overlay] Solver telemetry:', res.telemetry);
+          }
+          if (!res.feasible || !res.plan) {
+            setErrorMsg(res.error || 'Autocomplete could not build a feasible production graph.');
+            setFailureDiagnostics(res.diagnostics ?? null);
+            setSolverState('failed');
+            return;
+          }
+          if (res.plan.warnings.length > 0) {
+            console.warn('[Autocomplete Overlay] Candidate warnings:', res.plan.warnings);
+          }
+
+          const planNodeMap = new Map(
+            res.plan.nodes.filter(isRecipeNode).map((node) => [node.id, node]),
+          );
+          const nodeChanges: NodeChange[] = [];
+          for (const node of nodes) {
+            const proposedNode = planNodeMap.get(node.id);
+            if (!proposedNode) continue;
+            const currentCount = node.data.machineCount ?? 0;
+            const proposedCount = proposedNode.data.machineCount ?? 0;
+            if (areNearlyEqual(currentCount, proposedCount)) continue;
+            const recipe = resolveActiveRecipe(
+              proposedNode.data.recipeId,
+              proposedNode.data.settings,
+              proposedNode.id,
+            );
+            if (!recipe) continue;
+            nodeChanges.push({
+              id: node.id,
+              recipeName: recipe.name,
+              machineName: getMachine(recipe.machine_id)?.name ?? recipe.machine_id,
+              currentCount,
+              proposedCount,
+            });
+          }
+          for (const nodeId of res.plan.addedNodeIds) {
+            const node = planNodeMap.get(nodeId);
+            if (!node) continue;
+            const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id);
+            if (!recipe) continue;
+            nodeChanges.push({
+              id: node.id,
+              recipeName: recipe.name,
+              machineName: getMachine(recipe.machine_id)?.name ?? recipe.machine_id,
+              currentCount: 0,
+              proposedCount: node.data.machineCount ?? 0,
+              isNew: true,
+            });
+          }
+
+          setFailureDiagnostics(null);
+          setChanges(nodeChanges);
+          setProposedMachineCounts({});
+          setAutocompletePlan(res.plan);
+          setObjectiveSummary({
+            current: summarizeObjectives(optimizerPayload.nodes, {}),
+            proposed: summarizeObjectives(res.plan.objectiveNodes, res.plan.machineCounts),
+          });
+          setSolverState('results');
+          completeTutorialAction({ type: 'solver-results' });
+        })
+        .catch((err: unknown) => {
+          if (runTokenRef.current !== runToken) return;
+          setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
+          console.error('[Autocomplete Overlay] Execution rejected:', err);
+          setErrorMsg(err instanceof Error ? err.message : String(err));
+          setFailureDiagnostics(null);
+          setSolverState('failed');
+        })
+        .finally(() => {
+          if (runTokenRef.current !== runToken) return;
+          setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
+          sessionRef.current = null;
+        });
+      return;
+    }
+
     const session = solveRatios(nodes, recipeEdges, {
       optimizationConfiguration: configuration,
       objectiveWeights: {
@@ -228,9 +342,9 @@ export function LPSolverOverlay() {
           if (!recipe) continue;
 
           const currentCount = node.data.machineCount ?? 0;
-          const propCount = snapToReferenceIfNearlyEqual(
-            currentCount,
-            res.machineCounts[node.id] ?? 0,
+          const propCount = constrainMachineCount(
+            node.data,
+            snapToReferenceIfNearlyEqual(currentCount, res.machineCounts[node.id] ?? 0),
           );
 
           if (!areNearlyEqual(currentCount, propCount)) {
@@ -292,7 +406,8 @@ export function LPSolverOverlay() {
     if (isTutorialActive()) return;
     runTokenRef.current++;
     if (sessionRef.current) {
-      cancelRatioOptimizer();
+      if (activeModeRef.current === 'autocomplete') cancelAutocomplete();
+      else cancelRatioOptimizer();
       sessionRef.current = null;
     }
     resetViewState();
@@ -302,6 +417,13 @@ export function LPSolverOverlay() {
   const handleApply = () => {
     if (isTutorialActive() && !canPerformTutorialAction({ type: 'solver-apply' })) return;
     const flowStore = useFlowStore.getState();
+    if (autocompletePlan) {
+      flowStore.setNodesAndEdges(autocompletePlan.nodes, autocompletePlan.edges);
+      resetViewState();
+      setIsLPSolverOpen(false);
+      completeTutorialAction({ type: 'solver-apply' });
+      return;
+    }
     flowStore.runTransaction(() => {
       Object.entries(proposedMachineCounts).forEach(([nodeId, count]) => {
         flowStore.updateNodeData(nodeId, { machineCount: count });
@@ -331,6 +453,8 @@ export function LPSolverOverlay() {
     setSolverProgress(null);
     setChanges([]);
     setProposedMachineCounts({});
+    setAutocompletePlan(null);
+    setResultMode('ratios');
     setObjectiveSummary(null);
   };
 
@@ -353,6 +477,7 @@ export function LPSolverOverlay() {
   };
 
   const formatSolverName = (solver: RatioSolverProgress['solver']): string => {
+    if (resultMode === 'autocomplete') return 'Production builder (Experimental)';
     switch (solver) {
       case 'native':
         return 'Ratio optimizer';
@@ -522,7 +647,9 @@ export function LPSolverOverlay() {
             <div className={styles['results-content']}>
               {changes.length === 0 ? (
                 <div className={styles['no-changes-msg']}>
-                  No changes required. The current machine counts are already fully balanced!
+                  {resultMode === 'autocomplete'
+                    ? 'No recipes or machine-count changes are needed for the current targets.'
+                    : 'No changes required. The current machine counts are already fully balanced!'}
                 </div>
               ) : (
                 <>
@@ -542,7 +669,9 @@ export function LPSolverOverlay() {
                           <tr key={c.id}>
                             <td>{c.recipeName}</td>
                             <td className={styles['machine-name-cell']}>{c.machineName}</td>
-                            <td className={styles['align-right']}>{c.currentCount.toFixed(2)}</td>
+                            <td className={styles['align-right']}>
+                              {c.isNew ? 'New' : c.currentCount.toFixed(2)}
+                            </td>
                             <td className={styles['align-center']}>&rarr;</td>
                             <td className={styles['align-left']}>{c.proposedCount.toFixed(2)}</td>
                           </tr>
@@ -554,6 +683,12 @@ export function LPSolverOverlay() {
               )}
               {objectiveSummary && (
                 <div className={styles['metrics-summary']}>
+                  {resultMachineCountBasis === 'continuous' && (
+                    <p className={styles['continuous-result-note']}>
+                      Cost, space, and model totals below use real rounded-up machines. The solver
+                      optimized fractional estimates, so these totals may not be minimal.
+                    </p>
+                  )}
                   <div className={styles['metric-row']}>
                     <span>Power Use:</span>
                     <span>
@@ -605,9 +740,11 @@ export function LPSolverOverlay() {
               <button className={styles['action-btn-neutral']} onClick={handleCancel}>
                 Discard Changes
               </button>
-              {changes.length > 0 && (
+              {(changes.length > 0 || autocompletePlan !== null) && (
                 <button className={styles['action-btn-primary']} onClick={handleApply}>
-                  <span data-tutorial-solver="apply">Apply Changes</span>
+                  <span data-tutorial-solver="apply">
+                    {resultMode === 'autocomplete' ? 'Apply Production Plan' : 'Apply Changes'}
+                  </span>
                 </button>
               )}
             </div>

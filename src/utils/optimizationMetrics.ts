@@ -8,9 +8,12 @@ export interface RecipeOptimizationMetrics {
   powerOutputPerMachine: number;
   pollutionPerMachine: number;
   machineCostPerWholeMachine: number;
+  machineCostIndependentOfMachineCount: number;
   hasInfiniteMachineCost: boolean;
   modelCountPerWholeMachine: number;
+  modelCountIndependentOfMachineCount: number;
   machineSpacePerWholeMachine: number;
+  machineSpaceIndependentOfMachineCount: number;
 }
 
 function toNonnegativeFinite(value: number): number {
@@ -54,15 +57,36 @@ export function getRecipeOptimizationMetrics(
       ? specialRecipe.computeMachineCost(resolvedSettings, globalSettings, nodeId)
       : machine.cost
     : 0;
+  const machineCostIndependent = specialRecipe?.computeMachineCostIndependentOfMachineCount
+    ? specialRecipe.computeMachineCostIndependentOfMachineCount(
+        resolvedSettings,
+        globalSettings,
+        nodeId,
+      )
+    : 0;
 
   const modelCount = specialRecipe?.computeModelCount
     ? specialRecipe.computeModelCount(resolvedSettings, globalSettings, nodeId)
     : 1 + 2 * recipe.inputs.length + 2 * recipe.outputs.length + estimatePowerModelCount(recipe);
+  const modelCountIndependent = specialRecipe?.computeModelCountIndependentOfMachineCount
+    ? specialRecipe.computeModelCountIndependentOfMachineCount(
+        resolvedSettings,
+        globalSettings,
+        nodeId,
+      )
+    : 0;
   const machineSpace = specialRecipe?.computeMachineSpace
     ? specialRecipe.computeMachineSpace(resolvedSettings, globalSettings, nodeId)
     : machine
       ? machine.size.x * machine.size.y
       : 0;
+  const machineSpaceIndependent = specialRecipe?.computeMachineSpaceIndependentOfMachineCount
+    ? specialRecipe.computeMachineSpaceIndependentOfMachineCount(
+        resolvedSettings,
+        globalSettings,
+        nodeId,
+      )
+    : 0;
 
   const powerIsConstant = recipe.powerIndependentOfMachineCount === true;
   const pollutionIsConstant =
@@ -71,7 +95,6 @@ export function getRecipeOptimizationMetrics(
   const hasInfiniteMachineCost = machineCost === Infinity;
 
   return {
-    // Fixed per-node effects do not affect ratio selection because the node already exists.
     powerUsePerMachine: powerIsConstant
       ? 0
       : toNonnegativeFinite(getRecipePowerTotals(recipe, 1).use),
@@ -80,8 +103,11 @@ export function getRecipeOptimizationMetrics(
       : toNonnegativeFinite(getRecipePowerTotals(recipe, 1).output),
     pollutionPerMachine: pollutionIsConstant ? 0 : toFinite(recipe.pollution ?? 0),
     machineCostPerWholeMachine: hasInfiniteMachineCost ? 0 : toNonnegativeFinite(machineCost),
+    machineCostIndependentOfMachineCount: toNonnegativeFinite(machineCostIndependent),
     hasInfiniteMachineCost,
     modelCountPerWholeMachine: toNonnegativeFinite(modelCount),
+    modelCountIndependentOfMachineCount: toNonnegativeFinite(modelCountIndependent),
     machineSpacePerWholeMachine: toNonnegativeFinite(machineSpace),
+    machineSpaceIndependentOfMachineCount: toNonnegativeFinite(machineSpaceIndependent),
   };
 }

@@ -17,6 +17,11 @@ export interface SteadyStateOutputs {
 const k = 2 / 15;
 const Kc = 2.2 * k;
 
+function getMinimumCoolantTemperature(settings: Record<string, unknown>): number {
+  const waterTemp = (settings.water_temp as number) ?? 18;
+  return (100 * (3.2 - 2.2 * k) - waterTemp) / (2.2 * (1 - k));
+}
+
 export function calculateSinkSteadyState(inputs: SteadyStateInputs): SteadyStateOutputs {
   const { coolantSourceTemp: Tc, waterSourceTemp: Tw } = inputs;
 
@@ -62,6 +67,8 @@ export const heat_exchanger_distilled_water: SpecialRecipe = {
     0: 'water_temp',
     1: 'coolant_temp',
   },
+  getAutocompleteInputTemperatureRange: (settings, inputIndex) =>
+    inputIndex === 1 ? { min: getMinimumCoolantTemperature(settings) } : null,
   compute: (settings, _globalSettings, _nodeId, helpers) => {
     const waterTemp = (settings.water_temp as number) ?? 18;
     const coolantTemp = (settings.coolant_temp as number) ?? 330;
@@ -138,6 +145,8 @@ export const heat_exchanger_contaminated_water: SpecialRecipe = {
     0: 'water_temp',
     1: 'coolant_temp',
   },
+  getAutocompleteInputTemperatureRange: (settings, inputIndex) =>
+    inputIndex === 1 ? { min: getMinimumCoolantTemperature(settings) } : null,
   compute: (settings, _globalSettings, _nodeId, helpers) => {
     const waterTemp = (settings.water_temp as number) ?? 18;
     const coolantTemp = (settings.coolant_temp as number) ?? 330;

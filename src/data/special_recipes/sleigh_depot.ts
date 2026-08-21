@@ -6,6 +6,7 @@ export const m_sleigh_depot_01: SpecialRecipe = {
   name: 'Sell Item',
   machine_id: 'm_sleigh_depot',
   isSellTrash: true,
+  autocompleteDisposalPriority: 'last-resort',
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
     const resolvedItem = helpers?.hasConnection('input', 0)

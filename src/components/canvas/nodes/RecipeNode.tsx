@@ -135,6 +135,7 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
           }}
           receivedTemp={receivedTemp}
           isTarget={!!data.isTarget}
+          machineCountConstraint={data.machineCountConstraint}
           nodeId={id}
         />
         <RecipeNodeIO

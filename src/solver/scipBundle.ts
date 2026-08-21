@@ -2,7 +2,7 @@ export const DEFAULT_SCIP_BUNDLE_PATH = 'scip';
 
 export type ScipBundlePath = typeof DEFAULT_SCIP_BUNDLE_PATH;
 
-const SCIP_BUNDLE_CACHE_VERSION = '2026-07-12-native-abi2-rounded-fast-2';
+const SCIP_BUNDLE_CACHE_VERSION = '2026-07-30-native-abi3-temperature-fix-1';
 
 export function normalizeScipBundlePath(value: unknown): ScipBundlePath {
   if (typeof value === 'string' && value.trim().replace(/^\/+|\/+$/g, '') === 'scip') {
