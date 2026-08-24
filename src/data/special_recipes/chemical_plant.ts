@@ -30,7 +30,7 @@ export function computeChemicalPlantMultipliers(speedFactor: number, efficiencyF
     inputMultFromEfficiency = 1 + efficiencySteps * -0.0625;
     powerMultFromEfficiency = 1 + efficiencySteps * 0.05;
   } else if (clampedEfficiency > 100) {
-    inputMultFromEfficiency = 1 + efficiencySteps * -0.0425;
+    inputMultFromEfficiency = 1 + efficiencySteps * (-1 / 24);
     powerMultFromEfficiency = 1 + efficiencySteps * 0.25;
   }
 
@@ -313,8 +313,8 @@ export const chemical_plant_recipes: SpecialRecipe[] = baseRecipes.map((base) =>
     },
   },
   compute: (settings) => {
-    const speed = (settings.speed_factor as number) ?? 200;
-    const efficiency = (settings.efficiency_factor as number) ?? 120;
+    const speed = (settings.speed_factor as number) ?? 100;
+    const efficiency = (settings.efficiency_factor as number) ?? 100;
 
     const { inputMultiplier, outputMultiplier, totalPowerMultiplier } =
       computeChemicalPlantMultipliers(speed, efficiency);

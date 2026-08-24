@@ -5,6 +5,16 @@
     "patches": [
       {
         "hash": "pending",
+        "version": "v0.8.2",
+        "patch": 2,
+        "date": "2026-08-25",
+        "subject": "fix: correct Chemical Plant formula",
+        "items": [
+          "Corrected the Chemical Plant formula."
+        ]
+      },
+      {
+        "hash": "pending",
         "version": "v0.8.1",
         "patch": 1,
         "date": "2026-08-21",
