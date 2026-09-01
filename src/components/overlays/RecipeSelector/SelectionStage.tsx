@@ -52,17 +52,9 @@ const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multipl
     field: 'sell_price',
     label: 'Sell Price',
     widthClass: 'col-25',
-    renderCell: (p) => (
-      <span
-        className={
-          p.sell_price < 0
-            ? styles['sell-price-negative']
-            : p.profit
-              ? styles['sell-price-profit']
-              : ''
-        }
-      >
-        {formatCurrency(p.sell_price)}
+    Cell: ({item}) => (
+      <span className={item.sell_price < 0 ? styles['sell-price-negative'] : (item.profit ? styles['sell-price-profit'] : '')}>
+        {formatCurrency(item.sell_price)}
       </span>
     ),
   },
