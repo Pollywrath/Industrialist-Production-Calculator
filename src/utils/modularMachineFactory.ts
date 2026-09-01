@@ -23,9 +23,10 @@ export function createVirtualModularMachine(
   };
 }
 
-export function validateModularConsistency(
-  machines: Machine[],
-): { valid: boolean; errors: string[] } {
+export function validateModularConsistency(machines: Machine[]): {
+  valid: boolean;
+  errors: string[];
+} {
   const errors: string[] = [];
   const modularMachines = machines.filter((m) => m.category === 'Modular');
 

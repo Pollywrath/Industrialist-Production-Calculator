@@ -35,10 +35,7 @@ export interface LayoutEdgePriorityOptions {
   selfLoop: LayoutEdgePriority;
 }
 
-export type LayoutGreedySwitchType =
-  | 'OFF'
-  | 'ONE_SIDED_GREEDY_SWITCH'
-  | 'TWO_SIDED_GREEDY_SWITCH';
+export type LayoutGreedySwitchType = 'OFF' | 'ONE_SIDED_GREEDY_SWITCH' | 'TWO_SIDED_GREEDY_SWITCH';
 
 export type LayoutLayeringStrategy =
   | 'NETWORK_SIMPLEX'

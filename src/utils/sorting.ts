@@ -16,8 +16,10 @@ export function sortItems<T>(items: T[], field: keyof T, order: 'asc' | 'desc'):
       return order === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
     }
 
-    const numA = typeof valA === 'string' && valA.toLowerCase() === 'infinity' ? Infinity : Number(valA || 0);
-    const numB = typeof valB === 'string' && valB.toLowerCase() === 'infinity' ? Infinity : Number(valB || 0);
+    const numA =
+      typeof valA === 'string' && valA.toLowerCase() === 'infinity' ? Infinity : Number(valA || 0);
+    const numB =
+      typeof valB === 'string' && valB.toLowerCase() === 'infinity' ? Infinity : Number(valB || 0);
     if (numA === numB) return 0;
     if (isNaN(numA)) return 1;
     if (isNaN(numB)) return -1;

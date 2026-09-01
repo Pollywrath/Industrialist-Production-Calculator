@@ -341,43 +341,46 @@ function VariableRow({
   onValueChange: (name: string, nextValue: string) => void;
   onReset: (name: string) => void;
 }) {
-    const colorValue = definition.category === 'color' ? toColorInputValue(value) : null;
+  const colorValue = definition.category === 'color' ? toColorInputValue(value) : null;
 
-    return (
-      <div className={styles['variable-row']}>
-        <div className={styles['variable-meta']}>
-          <span className={styles['variable-label']}>{label}</span>
-          {hint ? <span className={styles['variable-hint']}>{hint}</span> : null}
-          <code className={styles['variable-name']}>{definition.name}</code>
-        </div>
-        <div className={styles['variable-controls']}>
-          {definition.category === 'color' && (
-            <span className={styles['color-swatch']} style={{ '--swatch-bg': value } as React.CSSProperties} />
-          )}
-          {colorValue && (
-            <input
-              type="color"
-              value={colorValue}
-              className={styles['color-input']}
-              onChange={(e) => onValueChange(definition.name, e.target.value)}
-            />
-          )}
+  return (
+    <div className={styles['variable-row']}>
+      <div className={styles['variable-meta']}>
+        <span className={styles['variable-label']}>{label}</span>
+        {hint ? <span className={styles['variable-hint']}>{hint}</span> : null}
+        <code className={styles['variable-name']}>{definition.name}</code>
+      </div>
+      <div className={styles['variable-controls']}>
+        {definition.category === 'color' && (
+          <span
+            className={styles['color-swatch']}
+            style={{ '--swatch-bg': value } as React.CSSProperties}
+          />
+        )}
+        {colorValue && (
           <input
-            type="text"
-            value={value}
-            className={styles['value-input']}
+            type="color"
+            value={colorValue}
+            className={styles['color-input']}
             onChange={(e) => onValueChange(definition.name, e.target.value)}
           />
-          <button
-            className={styles['row-reset-btn']}
-            onClick={() => onReset(definition.name)}
-            title="Reset variable"
-          >
-            <Undo2 size={14} />
-          </button>
-        </div>
+        )}
+        <input
+          type="text"
+          value={value}
+          className={styles['value-input']}
+          onChange={(e) => onValueChange(definition.name, e.target.value)}
+        />
+        <button
+          className={styles['row-reset-btn']}
+          onClick={() => onReset(definition.name)}
+          title="Reset variable"
+        >
+          <Undo2 size={14} />
+        </button>
       </div>
-    );
+    </div>
+  );
 }
 
 function PresetCard({
@@ -451,7 +454,11 @@ function ThemeOverlayModal() {
       const fieldMeta = VARIABLE_META_BY_NAME.get(variable.name);
       const groupMeta = fieldMeta
         ? GROUP_META_BY_ID.get(fieldMeta.groupId)
-        : { id: 'misc', label: 'Uncategorized', description: 'Variables without an explicit group.' };
+        : {
+            id: 'misc',
+            label: 'Uncategorized',
+            description: 'Variables without an explicit group.',
+          };
 
       if (!groupMeta) continue;
 
@@ -578,15 +585,19 @@ function ThemeOverlayModal() {
           {activeView === 'presets' ? (
             colorVariables.length === 0 ? (
               <div className={styles['empty-state']}>
-                No color theme variables were discovered from `:root`. Confirm `src/index.css` is loaded.
+                No color theme variables were discovered from `:root`. Confirm `src/index.css` is
+                loaded.
               </div>
             ) : (
               <div className={styles['presets-view']}>
                 <div className={styles['presets-intro']}>
-                  Select a preset first. Available sets: {darkPresets.length} dark and {lightPresets.length} light.
+                  Select a preset first. Available sets: {darkPresets.length} dark and{' '}
+                  {lightPresets.length} light.
                 </div>
                 <div className={styles['preset-mode-section']}>
-                  <div className={styles['preset-mode-title']}>Dark Presets ({darkPresets.length})</div>
+                  <div className={styles['preset-mode-title']}>
+                    Dark Presets ({darkPresets.length})
+                  </div>
                   <div className={styles['preset-grid']}>
                     {darkPresets.map((preset) => (
                       <PresetCard
@@ -599,7 +610,9 @@ function ThemeOverlayModal() {
                   </div>
                 </div>
                 <div className={styles['preset-mode-section']}>
-                  <div className={styles['preset-mode-title']}>Light Presets ({lightPresets.length})</div>
+                  <div className={styles['preset-mode-title']}>
+                    Light Presets ({lightPresets.length})
+                  </div>
                   <div className={styles['preset-grid']}>
                     {lightPresets.map((preset) => (
                       <PresetCard
@@ -616,7 +629,8 @@ function ThemeOverlayModal() {
           ) : activeView === 'advanced' ? (
             colorVariables.length === 0 ? (
               <div className={styles['empty-state']}>
-                No color theme variables were discovered from `:root`. Confirm `src/index.css` is loaded.
+                No color theme variables were discovered from `:root`. Confirm `src/index.css` is
+                loaded.
               </div>
             ) : (
               <div className={styles['advanced-groups']}>
@@ -656,7 +670,8 @@ function ThemeOverlayModal() {
               <section className={styles['section']}>
                 <h3 className={styles['section-title']}>Line Style</h3>
                 <p className={styles['section-description']}>
-                  Dashed and dotted lines are animated from source to target. Solid lines remain static.
+                  Dashed and dotted lines are animated from source to target. Solid lines remain
+                  static.
                 </p>
                 <div className={styles['edge-option-list']}>
                   {EDGE_LINE_OPTIONS.map((option) => (
@@ -669,7 +684,9 @@ function ThemeOverlayModal() {
                       aria-pressed={lineStyle === option.value}
                     >
                       <span className={styles['edge-option-label']}>{option.label}</span>
-                      <span className={styles['edge-option-description']}>{option.description}</span>
+                      <span className={styles['edge-option-description']}>
+                        {option.description}
+                      </span>
                     </button>
                   ))}
                 </div>
@@ -690,12 +707,15 @@ function ThemeOverlayModal() {
                       aria-pressed={pathStyle === option.value}
                     >
                       <span className={styles['edge-option-label']}>{option.label}</span>
-                      <span className={styles['edge-option-description']}>{option.description}</span>
+                      <span className={styles['edge-option-description']}>
+                        {option.description}
+                      </span>
                     </button>
                   ))}
                 </div>
                 <div className={styles['edge-auto-note']}>
-                  Default edge style: {DEFAULT_EDGE_LINE_STYLE} line + {DEFAULT_EDGE_PATH_STYLE} path.
+                  Default edge style: {DEFAULT_EDGE_LINE_STYLE} line + {DEFAULT_EDGE_PATH_STYLE}{' '}
+                  path.
                 </div>
               </section>
             </div>

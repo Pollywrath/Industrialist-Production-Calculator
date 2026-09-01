@@ -6,6 +6,7 @@ export const m_van_depot_01: SpecialRecipe = {
   name: 'Sell Item',
   machine_id: 'm_van_depot',
   isSellTrash: true,
+  autocompleteDisposalPriority: 'last-resort',
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
     const resolvedItem = helpers?.hasConnection('input', 0)
@@ -17,7 +18,7 @@ export const m_van_depot_01: SpecialRecipe = {
       name: 'Sell Item',
       machine_id: 'm_van_depot',
       cycle_time: 80,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 0.03375,
       inputs: [{ product_id: resolvedItem, quantity: 85 }],

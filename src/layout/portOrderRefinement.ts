@@ -176,18 +176,8 @@ function refineSidePortOrder(
     candidate[connectedSlots[i]] = sortedHandles[i].handleIndex;
   }
 
-  const currentScore = countPortOrderInversions(
-    nodeId,
-    side,
-    currentOrder,
-    neighborYsByHandleId,
-  );
-  const candidateScore = countPortOrderInversions(
-    nodeId,
-    side,
-    candidate,
-    neighborYsByHandleId,
-  );
+  const currentScore = countPortOrderInversions(nodeId, side, currentOrder, neighborYsByHandleId);
+  const candidateScore = countPortOrderInversions(nodeId, side, candidate, neighborYsByHandleId);
 
   if (candidateScore >= currentScore || arePortOrdersEqual(candidate, currentOrder)) {
     return currentOrder;

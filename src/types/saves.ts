@@ -1,8 +1,11 @@
+import type { MachineCountConstraint } from './nodes';
+
 export interface SavedRecipeNode {
   id: string;
   type?: 'recipe';
   recipeId: string;
   machineCount: number;
+  machineCountConstraint?: MachineCountConstraint;
   inputOrder?: number[];
   outputOrder?: number[];
   position: { x: number; y: number };

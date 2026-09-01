@@ -47,9 +47,10 @@ interface SavesOverlayProviderProps {
   children: React.ReactNode;
 }
 
-function validateSaveOverrides(
-  overrides: { id: string; data: Record<string, unknown> }[]
-): { valid: boolean; errorMessages: string[] } {
+function validateSaveOverrides(overrides: { id: string; data: Record<string, unknown> }[]): {
+  valid: boolean;
+  errorMessages: string[];
+} {
   const errorMessages: string[] = [];
 
   const productIds = new Set<string>(getDefaultProducts().map((p) => p.id));
@@ -471,7 +472,8 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
                     });
                     void useUIStore.getState().confirm({
                       title: 'IMPORT FAILED',
-                      message: 'Failed to store the imported save. Browser storage quota may be exceeded.',
+                      message:
+                        'Failed to store the imported save. Browser storage quota may be exceeded.',
                       confirmLabel: 'OK',
                       showCancel: false,
                       intent: 'error',
@@ -484,7 +486,8 @@ export function SavesOverlayProvider({ children }: SavesOverlayProviderProps) {
                   });
                   void useUIStore.getState().confirm({
                     title: 'IMPORT FAILED',
-                    message: 'Invalid save file format. The file is missing the required data payload.',
+                    message:
+                      'Invalid save file format. The file is missing the required data payload.',
                     confirmLabel: 'OK',
                     showCancel: false,
                     intent: 'error',

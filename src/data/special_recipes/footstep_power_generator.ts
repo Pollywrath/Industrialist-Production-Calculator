@@ -33,7 +33,7 @@ export const footstep_power_generator_01: SpecialRecipe = {
       name: 'Produces Power',
       machine_id: 'm_footstep_power_generator',
       cycle_time: 1,
-      power_consumption: -(stepsPerSecond * powerPerStep),
+      power_use: -(stepsPerSecond * powerPerStep),
       power_type: 'MV',
       pollution: 0,
       inputs: [],

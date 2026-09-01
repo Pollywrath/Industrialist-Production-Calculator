@@ -1,7 +1,10 @@
 import type { Recipe } from '../../types/data';
-import type { SpecialRecipe } from '../../types/specialRecipes';
+import type {
+  SpecialRecipe,
+  SpecialRecipeAutocompleteSizingContext,
+} from '../../types/specialRecipes';
 import { getMachine } from '../lookup';
-import { roundTo } from '../../utils/precision';
+import { ceilMachineCount, roundTo } from '../../utils/precision';
 
 const DEFAULT_CONTROLLER_ID = 'm_tree_farm_controller';
 const IGLOO_CONTROLLER_ID = 'm_igloo_farm_controller';
@@ -10,6 +13,10 @@ const CANDY_CANE_TREE_ID = 'm_candy_cane_tree';
 const BASE_LOGS_PER_TREE = 2;
 const IGLOO_WINTER_LOG_MULTIPLIER = 1.5;
 const CANDY_CANE_GROWTH_MULTIPLIER = 1.2;
+const MIN_TREE_COUNT = 1;
+const MAX_TREE_COUNT = 650;
+const MIN_HARVESTER_COUNT = 1;
+const MAX_HARVESTER_COUNT = 30;
 
 const CONTROLLER_OPTIONS = [
   { label: 'Tree Farm Controller', value: DEFAULT_CONTROLLER_ID },
@@ -45,7 +52,7 @@ function getControllerOptions(
   globalSettings?: Record<string, unknown>,
 ) {
   return CONTROLLER_OPTIONS.filter((option) =>
-    isMachineOptionAllowed(option.value, globalSettings)
+    isMachineOptionAllowed(option.value, globalSettings),
   );
 }
 
@@ -53,9 +60,7 @@ function getTreeOptions(
   _settings: Record<string, unknown>,
   globalSettings?: Record<string, unknown>,
 ) {
-  return TREE_OPTIONS.filter((option) =>
-    isMachineOptionAllowed(option.value, globalSettings)
-  );
+  return TREE_OPTIONS.filter((option) => isMachineOptionAllowed(option.value, globalSettings));
 }
 
 function getSelectedMachineId(
@@ -111,10 +116,11 @@ function getLogsPerTree(
   controllerId: string,
   treeId: string,
 ): number {
-  return BASE_LOGS_PER_TREE * (
-    hasIglooWinterBonus(settings, globalSettings, controllerId, treeId)
+  return (
+    BASE_LOGS_PER_TREE *
+    (hasIglooWinterBonus(settings, globalSettings, controllerId, treeId)
       ? IGLOO_WINTER_LOG_MULTIPLIER
-      : 1
+      : 1)
   );
 }
 
@@ -138,7 +144,7 @@ function calculateGrowthTime(pollution: number, treeId = DEFAULT_TREE_ID): numbe
 
   let total = 0;
   for (let n = 7; n <= 11; n++) {
-    const value = Math.ceil((P / growthModifier) / (n * 100));
+    const value = Math.ceil(P / growthModifier / (n * 100));
     total += value;
   }
 
@@ -155,25 +161,73 @@ function calculateHarvestersNeeded(
   const growthModifier = calculateGrowthModifier(pollution) * getTreeGrowthMultiplier(treeId);
   const P = 4500;
 
-  const growthHarvester = 2 * (1000 / 30) * Math.ceil((P / growthModifier) / 1000);
-  const harvester = Math.ceil(numTrees / (3 * growthHarvester / (1000 / 30)));
+  const growthHarvester = 2 * (1000 / 30) * Math.ceil(P / growthModifier / 1000);
+  const harvester = Math.ceil(numTrees / ((3 * growthHarvester) / (1000 / 30)));
 
   return harvester;
 }
 
-function calculateLogsPerSecond(
-  numTrees: number,
-  growthTime: number,
-  logsPerTree: number,
-): number {
+function calculateLogsPerSecond(numTrees: number, growthTime: number, logsPerTree: number): number {
   return (numTrees * logsPerTree) / growthTime;
+}
+
+function calculateActualHarvestRate(
+  treeCount: number,
+  harvesterCount: number,
+  pollution: number,
+  treeId: string,
+): number {
+  const treesPerSecond = treeCount / calculateGrowthTime(pollution, treeId);
+  return Math.min(treesPerSecond, harvesterCount / 11);
+}
+
+function clampCount(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, ceilMachineCount(value)));
+}
+
+function sizeAutocompleteSettings(
+  settings: Record<string, unknown>,
+  context: SpecialRecipeAutocompleteSizingContext,
+): Record<string, unknown> {
+  if (!Number.isFinite(context.machineCount) || context.machineCount <= 0) return settings;
+
+  const treeCount = (settings.tree_count as number) ?? 600;
+  const harvesterCount = (settings.harvester_count as number) ?? 20;
+  const pollution = (context.globalSettings?.global_pollution as number) ?? 10;
+  const controllerId = getControllerId(settings, context.globalSettings);
+  const treeId = getTreeId(settings, context.globalSettings);
+  const logsPerTree = getLogsPerTree(settings, context.globalSettings, controllerId, treeId);
+  const currentOutputRate = roundTo(
+    calculateActualHarvestRate(treeCount, harvesterCount, pollution, treeId) * logsPerTree,
+    6,
+  );
+  const requiredHarvestRate = (currentOutputRate * context.machineCount) / logsPerTree;
+  const growthTime = calculateGrowthTime(pollution, treeId);
+  const nextTreeCount = clampCount(
+    requiredHarvestRate * growthTime,
+    MIN_TREE_COUNT,
+    MAX_TREE_COUNT,
+  );
+  const nextHarvesterCount = clampCount(
+    requiredHarvestRate * 11,
+    MIN_HARVESTER_COUNT,
+    MAX_HARVESTER_COUNT,
+  );
+
+  if (nextTreeCount === treeCount && nextHarvesterCount === harvesterCount) return settings;
+  return {
+    ...settings,
+    tree_count: nextTreeCount,
+    harvester_count: nextHarvesterCount,
+  };
 }
 
 export const tree_farm_01: SpecialRecipe = {
   id: 'r_tree_farm_01',
   name: 'Tree Farm',
   machine_id: 'm_tree_farm',
-  description: 'Modular tree farm for producing oak logs. Configure controller, tree type, harvesters, sprinklers, and outputs.',
+  description:
+    'Modular tree farm for producing oak logs. Configure controller, tree type, harvesters, sprinklers, and outputs.',
   settings: {
     controller_id: {
       type: 'select',
@@ -185,9 +239,7 @@ export const tree_farm_01: SpecialRecipe = {
         const controllerId = getControllerId(settings, globalSettings);
         const treeId = getTreeId(settings, globalSettings);
         const active = hasIglooWinterBonus(settings, globalSettings, controllerId, treeId);
-        return active
-          ? 'Controller - 50% more logs during December to February'
-          : 'Controller';
+        return active ? 'Controller - 50% more logs during December to February' : 'Controller';
       },
     },
     tree_id: {
@@ -201,8 +253,8 @@ export const tree_farm_01: SpecialRecipe = {
       type: 'number',
       label: 'Tree Count',
       default: 600,
-      min: 1,
-      max: 650,
+      min: MIN_TREE_COUNT,
+      max: MAX_TREE_COUNT,
       step: 1,
       dynamicLabel: (settings, globalSettings) => {
         const treeCount = (settings.tree_count as number) ?? 600;
@@ -220,8 +272,8 @@ export const tree_farm_01: SpecialRecipe = {
       type: 'number',
       label: 'Harvester Count',
       default: 20,
-      min: 1,
-      max: 30,
+      min: MIN_HARVESTER_COUNT,
+      max: MAX_HARVESTER_COUNT,
       step: 1,
       dynamicLabel: (settings, globalSettings) => {
         const treeCount = (settings.tree_count as number) ?? 600;
@@ -255,6 +307,7 @@ export const tree_farm_01: SpecialRecipe = {
       step: 1,
     },
   },
+  sizeAutocompleteSettings,
   compute: (settings, globalSettings) => {
     const treeCount = (settings.tree_count as number) ?? 600;
     const harvesterCount = (settings.harvester_count as number) ?? 20;
@@ -263,11 +316,13 @@ export const tree_farm_01: SpecialRecipe = {
     const controllerId = getControllerId(settings, globalSettings);
     const treeId = getTreeId(settings, globalSettings);
 
-    const growthTime = calculateGrowthTime(pollution, treeId);
-    const treesPerSecond = treeCount / growthTime;
-    const maxHarvestRate = harvesterCount / 11;
-    const actualHarvestRate = Math.min(treesPerSecond, maxHarvestRate);
-    const powerConsumption = actualHarvestRate * (200000 / 11);
+    const actualHarvestRate = calculateActualHarvestRate(
+      treeCount,
+      harvesterCount,
+      pollution,
+      treeId,
+    );
+    const powerUse = actualHarvestRate * (200000 / 11);
     const waterConsumption = sprinklerCount * (33 / (100 / 3));
     const logsPerTree = getLogsPerTree(settings, globalSettings, controllerId, treeId);
     const treeName = getMachine(treeId)?.name ?? 'Tree';
@@ -277,11 +332,18 @@ export const tree_farm_01: SpecialRecipe = {
       name: `${treeCount} ${treeName} Farm`,
       machine_id: 'm_tree_farm',
       cycle_time: 1,
-      power_consumption: roundTo(powerConsumption, 6),
+      power_use: roundTo(powerUse, 6),
       power_type: 'MV',
       pollution: 0,
       inputs: [{ product_id: 'p_water', quantity: waterConsumption }],
-      outputs: [{ product_id: 'p_oak_log', quantity: roundTo(actualHarvestRate * logsPerTree, 6), temperature: 18 }],
+      outputs: [
+        {
+          product_id: 'p_oak_log',
+          quantity: roundTo(actualHarvestRate * logsPerTree, 6),
+          temperature: 18,
+          voidable: true,
+        },
+      ],
     };
 
     return recipe;
@@ -316,14 +378,16 @@ export const tree_farm_01: SpecialRecipe = {
     const pollution = (globalSettings?.global_pollution as number) ?? 10;
     const treeId = getTreeId(settings, globalSettings);
 
-    const growthTime = calculateGrowthTime(pollution, treeId);
-    const treesPerSecond = treeCount / growthTime;
-    const maxHarvestRate = harvesterCount / 11;
-    const actualHarvestRate = Math.min(treesPerSecond, maxHarvestRate);
-    const powerConsumption = actualHarvestRate * (200000 / 11);
+    const actualHarvestRate = calculateActualHarvestRate(
+      treeCount,
+      harvesterCount,
+      pollution,
+      treeId,
+    );
+    const powerUse = actualHarvestRate * (200000 / 11);
 
     const waterTanks = Math.ceil(sprinklerCount / 3);
-    const additionalPowerModels = Math.ceil(powerConsumption / 1500000);
+    const additionalPowerModels = Math.ceil(powerUse / 1500000);
 
     return (
       treeCount +
@@ -333,6 +397,28 @@ export const tree_farm_01: SpecialRecipe = {
       waterTanks * 2 +
       outputsCount * 2 +
       additionalPowerModels
+    );
+  },
+  computeMachineSpace: (settings, globalSettings) => {
+    const treeCount = (settings.tree_count as number) ?? 600;
+    const harvesterCount = (settings.harvester_count as number) ?? 20;
+    const sprinklerCount = (settings.sprinkler_count as number) ?? 24;
+    const outputsCount = (settings.outputs_count as number) ?? 8;
+    const controllerId = getControllerId(settings, globalSettings);
+    const treeId = getTreeId(settings, globalSettings);
+    const waterTanks = Math.ceil(sprinklerCount / 3);
+    const area = (id: string) => {
+      const machine = getMachine(id);
+      return machine ? machine.size.x * machine.size.y : 0;
+    };
+
+    return (
+      area(controllerId) +
+      area(treeId) * treeCount +
+      area('m_farm_harvester') * harvesterCount +
+      area('m_tree_farm_sprinkler') * sprinklerCount +
+      area('m_tree_farm_water_tank') * waterTanks +
+      area('m_tree_farm_output') * outputsCount
     );
   },
 };

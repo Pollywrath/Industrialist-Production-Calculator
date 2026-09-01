@@ -18,17 +18,37 @@ Sprites and graphical icons included in this repository (located under `public/i
 
 These files are **NOT** covered by the MIT License. Any forks, redistributions, or alternative hosting configurations of this project must attribute the source, remain non-commercial, and distribute these assets under the same CC BY-NC-SA 4.0 license.
 
-* For more details, see the [CC BY-NC-SA 4.0 License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+- For more details, see the [CC BY-NC-SA 4.0 License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
 ---
 
-## 3. SCIP WebAssembly Solver (Apache 2.0)
+## 3. SCIP WebAssembly Solver
 
-The compiled WebAssembly solver binaries located under `public/scip/` are a browser-compatible build of the **SCIP Optimization Suite**, adapted from Jacob Strieb's [Poker Chipper](https://github.com/jstrieb/poker-chipper) repository with modifications to support dynamic WebAssembly memory growth.
+The compiled WebAssembly solver binaries under `public/scip/` are built directly
+from the official **SCIP Optimization Suite** sources using the build scripts and
+native ratio-solver wrapper under `tools/scip-wasm/`. Exact source URLs, archive
+hashes, build options, and component versions are recorded in
+`public/scip/VERSION.txt`.
 
-The underlying SCIP Optimization Suite is licensed under the **Apache License 2.0**.
+The solver bundle's principal open-source components are:
 
-* For more details, see the [Apache 2.0 License](https://www.apache.org/licenses/LICENSE-2.0).
+- [SCIP 10.0.2](https://github.com/scipopt/scip) - Apache License 2.0.
+- [SoPlex 8.0.2](https://github.com/scipopt/soplex) - Apache License 2.0.
+- [PaPILO 3.0.0](https://github.com/scipopt/papilo) - Apache License 2.0.
+- [oneTBB 2021.13.0](https://github.com/uxlfoundation/oneTBB) - Apache License 2.0.
+- [CppAD](https://github.com/coin-or/CppAD) - Eclipse Public License 1.0 in the
+  SCIP source distribution.
+- [TinyCThread](https://github.com/tinycthread/tinycthread) - zlib License.
+- [Nauty](https://pallini.di.uniroma1.it/) - Apache License 2.0.
+- dejavu/sassy symmetry preprocessing code - MIT License.
+- [Emscripten](https://github.com/emscripten-core/emscripten), used to produce
+  the browser bundle - MIT License and University of Illinois/NCSA Open Source
+  License.
+
+These components remain subject to their respective licenses and are not covered
+by this project's MIT License. Their complete license terms and notices are
+distributed with the solver in
+[`public/scip/THIRD_PARTY_LICENSES.txt`](public/scip/THIRD_PARTY_LICENSES.txt).
 
 ---
 

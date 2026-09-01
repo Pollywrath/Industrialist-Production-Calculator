@@ -3,8 +3,7 @@ import { resolveActiveRecipe } from '../data/lookup';
 import { getSpecialRecipe } from '../data/registry';
 import { parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
-
-const EFFECTIVE_TEMPERATURE_FLOW_EPSILON = 1e-8;
+import { FLOW_STATUS_ABSOLUTE_TOLERANCE } from '../utils/precision';
 
 export interface TemperaturePropagationResult {
   edgeTemps: Record<string, number>;
@@ -137,7 +136,7 @@ export function propagateTemperatures(
 
     for (const edge of edges) {
       if (!edge.sourceHandle) continue;
-      if ((edgeFlows[edge.id] ?? 0) <= EFFECTIVE_TEMPERATURE_FLOW_EPSILON) {
+      if ((edgeFlows[edge.id] ?? 0) <= FLOW_STATUS_ABSOLUTE_TOLERANCE) {
         edgeTemps[edge.id] = 18;
         continue;
       }
@@ -196,12 +195,12 @@ export function propagateTemperatures(
           let weightedSum = 0;
           for (const edge of connected) {
             const flow = edgeFlows[edge.id] ?? 0;
-            if (flow <= EFFECTIVE_TEMPERATURE_FLOW_EPSILON) continue;
+            if (flow <= FLOW_STATUS_ABSOLUTE_TOLERANCE) continue;
             totalFlow += flow;
             weightedSum += flow * edgeTemps[edge.id];
           }
 
-          if (totalFlow > EFFECTIVE_TEMPERATURE_FLOW_EPSILON) {
+          if (totalFlow > FLOW_STATUS_ABSOLUTE_TOLERANCE) {
             inputTemps[nodeId][i] = weightedSum / totalFlow;
           } else {
             inputTemps[nodeId][i] = resolveConfiguredInputTemp(node, i, sr);
@@ -249,17 +248,11 @@ export function propagateTemperatures(
     const nodeOverrides = finalSettingsOverrides[node.id];
     const settings =
       nodeOverrides || node.data.settings ? { ...node.data.settings, ...nodeOverrides } : undefined;
-    const recipe = resolveActiveRecipe(
-      node.data.recipeId,
-      settings,
-      node.id,
-      getHelpers(node.id),
-      {
-        temperatureInputOverrides: inputTemps[node.id],
-        suppressStoreTemperatureOverrides: true,
-        globalSettings,
-      },
-    );
+    const recipe = resolveActiveRecipe(node.data.recipeId, settings, node.id, getHelpers(node.id), {
+      temperatureInputOverrides: inputTemps[node.id],
+      suppressStoreTemperatureOverrides: true,
+      globalSettings,
+    });
     if (recipe) {
       finalNodeOutputTemps[node.id] = recipe.outputs.map((out) => out.temperature ?? 18);
     } else {
@@ -269,7 +262,7 @@ export function propagateTemperatures(
 
   for (const edge of edges) {
     if (!edge.sourceHandle) continue;
-    if ((edgeFlows[edge.id] ?? 0) <= EFFECTIVE_TEMPERATURE_FLOW_EPSILON) {
+    if ((edgeFlows[edge.id] ?? 0) <= FLOW_STATUS_ABSOLUTE_TOLERANCE) {
       edgeTemps[edge.id] = 18;
       continue;
     }

@@ -712,7 +712,7 @@
     "id": "s_energy_solar_farm_1"
   },
   {
-    "name": "Large Scale Power Production",
+    "name": "Large Scale Power Output",
     "rp_cost": 500000,
     "category": "Energy",
     "prerequisites": [

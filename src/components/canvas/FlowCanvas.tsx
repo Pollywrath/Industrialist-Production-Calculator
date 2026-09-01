@@ -8,6 +8,7 @@ import { LoadingScreen } from '../shared/LoadingScreen';
 import { useAutosave } from '../../persistence/useAutosave';
 import { overlayPrefetchCache } from './overlayPrefetchCache';
 import { initRatioOptimizerWorker } from '../../solver/ratioOptimizer';
+import { getConfiguredScipBundlePath, getScipAssetPath } from '../../solver/scipBundle';
 import { ASSET_VERSION } from '../../data/productIcons';
 import { TutorialController } from '../tutorial/TutorialController';
 import { useTutorialStore } from '../../stores/useTutorialStore';
@@ -205,9 +206,9 @@ export function FlowCanvas() {
           }),
       ]);
 
-      const versionSuffix = ASSET_VERSION ? `?v=${ASSET_VERSION}` : '';
-      fetch(`/scip/scip.js${versionSuffix}`).catch(() => { });
-      fetch(`/scip/scip.wasm${versionSuffix}`).catch(() => { });
+      const scipBundlePath = getConfiguredScipBundlePath();
+      fetch(getScipAssetPath('scip.js', scipBundlePath, ASSET_VERSION)).catch(() => {});
+      fetch(getScipAssetPath('scip.wasm', scipBundlePath, ASSET_VERSION)).catch(() => {});
       import('../../layout').catch((err) => {
         console.warn('Failed to prefetch auto-layout module on idle:', err);
       });
@@ -242,7 +243,8 @@ export function FlowCanvas() {
       .getState()
       .confirm({
         title: 'First Production Chain Tutorial',
-        message: 'Would you like to walk through building your first Gearbox production chain?',
+        message:
+          'Would you like to walk through building your first production chain, using Gearbox as the example?',
         confirmLabel: 'START TUTORIAL',
         cancelLabel: 'SKIP',
         intent: 'info',

@@ -104,6 +104,22 @@ export function computeSelfHeatingSteadyState(waterSourceTemp: number) {
   };
 }
 
+function getMinimumCoolantTemperature(coolantId: string, waterTemp: number): number {
+  let low = -273.15;
+  let high = 1_000_000;
+
+  for (let iteration = 0; iteration < 48; iteration += 1) {
+    const midpoint = (low + high) / 2;
+    if (computeStandardSteadyState(coolantId, midpoint, waterTemp).isBoiling) {
+      high = midpoint;
+    } else {
+      low = midpoint;
+    }
+  }
+
+  return high + 1e-6;
+}
+
 export const boiler_standard: SpecialRecipe = {
   id: 'r_boiler_01',
   name: 'Standard',
@@ -142,6 +158,37 @@ export const boiler_standard: SpecialRecipe = {
     0: 'water_temp',
     1: 'coolant_temp',
   },
+  allowAutocompleteLinkedOutputRecirculation: true,
+  preventAutocompleteRecipeChaining: true,
+  getAutocompleteSettings: (defaults) => [
+    { ...defaults, enable_coolant: 'yes', heat_loss: 0 },
+    ...[120, 220, 320].map((temperature) => ({
+      ...defaults,
+      enable_coolant: 'yes',
+      water_temp: temperature,
+      coolant_temp: temperature,
+      heat_loss: 0,
+      __autocomplete_recirculate_coolant: true,
+      __autocomplete_minimum_water_temperature: temperature,
+    })),
+    { ...defaults, enable_coolant: 'no', water_temp: 120, heat_loss: 0 },
+  ],
+  getAutocompleteInputTemperatureRange: (settings, inputIndex, productId) => {
+    if (inputIndex === 0 && settings.__autocomplete_recirculate_coolant === true) {
+      return { min: Number(settings.__autocomplete_minimum_water_temperature) };
+    }
+    const isCoolantEnabled = (settings.enable_coolant as string) !== 'no';
+    if (isCoolantEnabled && inputIndex === 1) {
+      const waterTemp = (settings.water_temp as number) ?? 18;
+      return { min: getMinimumCoolantTemperature(productId, waterTemp) };
+    }
+    if (!isCoolantEnabled && inputIndex === 0) {
+      return { min: 118.750001 };
+    }
+    return null;
+  },
+  getAutocompleteLinkedInputProducts: (settings, inputIndex) =>
+    inputIndex === 1 && settings.__autocomplete_recirculate_coolant === true ? ['p_water'] : null,
   compute: (settings, _globalSettings, _nodeId, helpers) => {
     const isCoolantEnabled = (settings.enable_coolant as string) !== 'no';
     const waterTemp = (settings.water_temp as number) ?? 18;
@@ -170,7 +217,7 @@ export const boiler_standard: SpecialRecipe = {
         name: 'Standard',
         machine_id: 'm_boiler',
         cycle_time: 1,
-        power_consumption: 0,
+        power_use: 0,
         power_type: 'MV',
         pollution: 0,
         inputs: [
@@ -206,12 +253,10 @@ export const boiler_standard: SpecialRecipe = {
         name: 'Standard',
         machine_id: 'm_boiler',
         cycle_time: 1,
-        power_consumption: 0,
+        power_use: 0,
         power_type: 'MV',
         pollution: 0,
-        inputs: [
-          { product_id: 'p_water', quantity: 3 },
-        ],
+        inputs: [{ product_id: 'p_water', quantity: 3 }],
         outputs: [
           {
             product_id: 'p_steam',

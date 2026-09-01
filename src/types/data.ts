@@ -16,6 +16,7 @@ export interface Machine {
   subcategory: string;
   sandboxOnly?: boolean;
   sandboxPlusOnly?: boolean;
+  requiresManualOperation?: boolean;
 }
 
 export type ProductType = 'Item' | 'Fluid';
@@ -35,9 +36,10 @@ export type PowerType = 'MV' | 'HV';
 
 export interface RecipePowerEffect {
   power_type: PowerType;
-  power_consumption: number;
+  power_use: number;
   label?: string;
-  accounting?: 'normal' | 'production_delta';
+  accounting?: 'normal' | 'output_delta';
+  powerIndependentOfMachineCount?: boolean;
 }
 
 export interface RecipeInput {
@@ -47,6 +49,7 @@ export interface RecipeInput {
   product_link_id?: string;
   variable?: boolean;
   independentOfMachineCount?: boolean;
+  flowDependencies?: { sourceInputIndex: number; coefficient: number }[];
 }
 
 export interface RecipeOutput {
@@ -70,7 +73,7 @@ export interface Recipe {
   name: string;
   machine_id: string;
   cycle_time: number;
-  power_consumption: number;
+  power_use: number;
   power_type: PowerType;
   powerEffects?: RecipePowerEffect[];
   powerAccountingEffects?: RecipePowerEffect[];

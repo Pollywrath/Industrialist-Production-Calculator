@@ -1,10 +1,7 @@
 import type { ReactFlowNode, ReactFlowEdge } from '../types/solver';
 import type { HandleDataType } from '../types/data';
 import { getProduct, resolveActiveRecipe } from '../data/lookup';
-import {
-  getRecipeEntryHandleType,
-  productTypeToHandleDataType,
-} from './handleTypes';
+import { getRecipeEntryHandleType, productTypeToHandleDataType } from './handleTypes';
 import { parseHandleId, buildHandleId } from './idGenerator';
 
 export type EdgeLookupMap = Map<string, ReactFlowEdge[]>;
@@ -107,7 +104,16 @@ export function resolveHandleProduct(
       if (requestedHandleId === handleId) {
         return resolveFromConnectedHandles(s, idx);
       }
-      return resolveHandleProduct(nodeId, s, idx, nodesMap, edgeLookup, visited, cache, globalSettings);
+      return resolveHandleProduct(
+        nodeId,
+        s,
+        idx,
+        nodesMap,
+        edgeLookup,
+        visited,
+        cache,
+        globalSettings,
+      );
     },
     hasConnection: (s: 'input' | 'output', idx: number) => {
       const hId = buildHandleId(nodeId, s, idx);
@@ -228,7 +234,16 @@ export function computeResolvedProducts(
   for (const node of nodesMap.values()) {
     const helpers = {
       resolveProduct: (s: 'input' | 'output', idx: number) =>
-        resolveHandleProduct(node.id, s, idx, nodesMap, edgeLookup, new Set(), cache, globalSettings),
+        resolveHandleProduct(
+          node.id,
+          s,
+          idx,
+          nodesMap,
+          edgeLookup,
+          new Set(),
+          cache,
+          globalSettings,
+        ),
       hasConnection: (s: 'input' | 'output', idx: number) => {
         const hId = buildHandleId(node.id, s, idx);
         return (edgeLookup.get(hId)?.length ?? 0) > 0;
@@ -242,11 +257,29 @@ export function computeResolvedProducts(
 
     for (let idx = 0; idx < recipe.inputs.length; idx++) {
       const handleId = buildHandleId(node.id, 'input', idx);
-      resolved[handleId] = resolveHandleProduct(node.id, 'input', idx, nodesMap, edgeLookup, new Set(), cache, globalSettings);
+      resolved[handleId] = resolveHandleProduct(
+        node.id,
+        'input',
+        idx,
+        nodesMap,
+        edgeLookup,
+        new Set(),
+        cache,
+        globalSettings,
+      );
     }
     for (let idx = 0; idx < recipe.outputs.length; idx++) {
       const handleId = buildHandleId(node.id, 'output', idx);
-      resolved[handleId] = resolveHandleProduct(node.id, 'output', idx, nodesMap, edgeLookup, new Set(), cache, globalSettings);
+      resolved[handleId] = resolveHandleProduct(
+        node.id,
+        'output',
+        idx,
+        nodesMap,
+        edgeLookup,
+        new Set(),
+        cache,
+        globalSettings,
+      );
     }
   }
 

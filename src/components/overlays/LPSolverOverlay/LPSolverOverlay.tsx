@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useEffectEvent, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
@@ -8,71 +8,191 @@ import {
   isTutorialActive,
 } from '../../../stores/useTutorialStore';
 import {
+  buildRatioOptimizerPayload,
   solveRatios,
   cancelRatioOptimizer,
-  type RatioOptimizerSession,
+  type RatioOptimizerNode,
   type RatioFailureDiagnostics,
+  type RatioSolverProgress,
 } from '../../../solver/ratioOptimizer';
-import { getProductName, resolveActiveRecipe } from '../../../data/lookup';
+import {
+  cancelAutocomplete,
+  solveAutocomplete,
+  type AutocompletePlan,
+} from '../../../solver/autocomplete';
+import { getMachine, getProductName, resolveActiveRecipe } from '../../../data/lookup';
 import { INDUS_LOGO_SRC } from '../../../data/productIcons';
-import { getSpecialRecipe } from '../../../data/registry';
-import { formatPower, formatPollution } from '../../../utils/unitFormatting';
-import { getRecipeNetPower } from '../../../utils/recipePower';
+import {
+  formatCurrency,
+  formatMachineCount,
+  formatMachineSpace,
+  formatPollution,
+  formatPower,
+} from '../../../utils/unitFormatting';
+import {
+  areNearlyEqual,
+  ceilMachineCount,
+  snapToReferenceIfNearlyEqual,
+} from '../../../utils/precision';
 import { isRecipeNode } from '../../../types/nodes';
+import { constrainMachineCount } from '../../../utils/machineCountConstraint';
 import styles from './LPSolverOverlay.module.css';
 import { ALL_TIPS } from '../HelpOverlay/tips';
+import { OptimizationConfigurePanel } from './OptimizationConfigurePanel';
+import {
+  DEFAULT_OPTIMIZATION_CONFIGURATION,
+  type OptimizationConfiguration,
+} from '../../../solver/optimizationConfig';
 
 interface NodeChange {
   id: string;
   recipeName: string;
+  machineName: string;
   currentCount: number;
   proposedCount: number;
+  isNew?: boolean;
+}
+
+interface ObjectiveSummary {
+  powerUse: number;
+  powerOutput: number;
+  pollution: number;
+  machineCost: number;
+  machineSpace: number;
+  modelCount: number;
+}
+
+interface ObjectiveSummaryComparison {
+  current: ObjectiveSummary;
+  proposed: ObjectiveSummary;
+}
+
+function summarizeObjectives(
+  nodes: RatioOptimizerNode[],
+  machineCounts: Record<string, number>,
+): ObjectiveSummary {
+  const summary: ObjectiveSummary = {
+    powerUse: 0,
+    powerOutput: 0,
+    pollution: 0,
+    machineCost: 0,
+    machineSpace: 0,
+    modelCount: 0,
+  };
+
+  for (const node of nodes) {
+    const machineCount = machineCounts[node.id] ?? node.currentMachineCount;
+    const wholeMachineCount = ceilMachineCount(machineCount);
+    summary.powerUse += node.powerUse * machineCount;
+    summary.powerOutput += node.powerOutput * machineCount;
+    summary.pollution += node.pollution * machineCount;
+    summary.machineSpace +=
+      node.machineSpace * wholeMachineCount + node.machineSpaceIndependentOfMachineCount;
+    summary.modelCount +=
+      node.modelCount * wholeMachineCount + node.modelCountIndependentOfMachineCount;
+    if (wholeMachineCount > 0 && node.hasInfiniteMachineCost) {
+      summary.machineCost = Infinity;
+    } else if (Number.isFinite(summary.machineCost)) {
+      summary.machineCost +=
+        node.machineCost * wholeMachineCount + node.machineCostIndependentOfMachineCount;
+    }
+  }
+
+  return summary;
 }
 
 export function LPSolverOverlay() {
   const isLPSolverOpen = useUIStore((s) => s.isLPSolverOpen);
   const setIsLPSolverOpen = useUIStore((s) => s.setIsLPSolverOpen);
 
-  const [solverState, setSolverState] = useState<'solving' | 'results' | 'failed'>('solving');
+  const [solverState, setSolverState] = useState<'configure' | 'solving' | 'results' | 'failed'>(
+    'configure',
+  );
   const [elapsedMs, setElapsedMs] = useState(0);
   const [shuffledTips, setShuffledTips] = useState<string[]>([]);
   const [tipIndex, setTipIndex] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
-  const [failureDiagnostics, setFailureDiagnostics] = useState<RatioFailureDiagnostics | null>(null);
+  const [failureDiagnostics, setFailureDiagnostics] = useState<RatioFailureDiagnostics | null>(
+    null,
+  );
+  const [solverProgress, setSolverProgress] = useState<RatioSolverProgress | null>(null);
   const [changes, setChanges] = useState<NodeChange[]>([]);
   const [proposedMachineCounts, setProposedMachineCounts] = useState<Record<string, number>>({});
+  const [autocompletePlan, setAutocompletePlan] = useState<AutocompletePlan | null>(null);
+  const [resultMode, setResultMode] = useState<OptimizationConfiguration['mode']>('ratios');
+  const [resultMachineCountBasis, setResultMachineCountBasis] =
+    useState<OptimizationConfiguration['machineCountBasis']>('whole');
 
-  const [currentPowerTotal, setCurrentPowerTotal] = useState(0);
-  const [proposedPowerTotal, setProposedPowerTotal] = useState(0);
-  const [currentPollutionTotal, setCurrentPollutionTotal] = useState(0);
-  const [proposedPollutionTotal, setProposedPollutionTotal] = useState(0);
+  const [objectiveSummary, setObjectiveSummary] = useState<ObjectiveSummaryComparison | null>(null);
 
-  const sessionRef = useRef<RatioOptimizerSession | null>(null);
+  const sessionRef = useRef<{ promise: Promise<unknown> } | null>(null);
+  const activeModeRef = useRef<OptimizationConfiguration['mode']>('ratios');
   const startTimeRef = useRef(0);
+  const runTokenRef = useRef(0);
 
   useEffect(() => {
     if (!isLPSolverOpen) return;
-    let isDisposed = false;
-
+    const token = ++runTokenRef.current;
     Promise.resolve().then(() => {
-      if (isDisposed) return;
-      const tipsCopy = [...ALL_TIPS];
-      for (let i = tipsCopy.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [tipsCopy[i], tipsCopy[j]] = [tipsCopy[j], tipsCopy[i]];
-      }
-      setShuffledTips(tipsCopy);
+      if (runTokenRef.current !== token) return;
+      setSolverState('configure');
+      setElapsedMs(0);
       setTipIndex(0);
+      setErrorMsg('');
+      setFailureDiagnostics(null);
+      setSolverProgress(null);
+      setChanges([]);
+      setProposedMachineCounts({});
+      setAutocompletePlan(null);
+      setResultMode('ratios');
+      setObjectiveSummary(null);
     });
 
-    startTimeRef.current = performance.now();
+    return () => {
+      const latestToken = runTokenRef.current;
+      runTokenRef.current = latestToken + 1;
+      if (sessionRef.current) {
+        if (activeModeRef.current === 'autocomplete') cancelAutocomplete();
+        else cancelRatioOptimizer();
+        sessionRef.current = null;
+      }
+    };
+  }, [isLPSolverOpen]);
+
+  useEffect(() => {
+    if (!isLPSolverOpen || solverState !== 'solving') return;
     const timerInterval = setInterval(() => {
       setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
     }, 50);
-
     const tipsInterval = setInterval(() => {
       setTipIndex((prev) => (prev + 1) % ALL_TIPS.length);
     }, 5000);
+
+    return () => {
+      clearInterval(timerInterval);
+      clearInterval(tipsInterval);
+    };
+  }, [isLPSolverOpen, solverState]);
+
+  const handleStartOptimization = (configuration: OptimizationConfiguration) => {
+    const runToken = ++runTokenRef.current;
+    const tipsCopy = [...ALL_TIPS];
+    for (let i = tipsCopy.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [tipsCopy[i], tipsCopy[j]] = [tipsCopy[j], tipsCopy[i]];
+    }
+    setShuffledTips(tipsCopy);
+    setTipIndex(0);
+    setElapsedMs(0);
+    setSolverProgress(null);
+    setErrorMsg('');
+    setFailureDiagnostics(null);
+    setAutocompletePlan(null);
+    setResultMode(configuration.mode);
+    setResultMachineCountBasis(configuration.machineCountBasis);
+    setSolverState('solving');
+    activeModeRef.current = configuration.mode;
+    startTimeRef.current = performance.now();
 
     const { nodes: canvasNodes, edges } = useFlowStore.getState();
     const nodes = canvasNodes.filter(isRecipeNode);
@@ -80,15 +200,134 @@ export function LPSolverOverlay() {
     const recipeEdges = edges.filter(
       (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
     );
-    const session = solveRatios(nodes, recipeEdges);
+    const optimizerPayload = buildRatioOptimizerPayload(nodes, recipeEdges);
+    if (configuration.mode === 'autocomplete') {
+      const session = solveAutocomplete(canvasNodes, edges, {
+        configuration,
+        onProgress: (progress) => {
+          if (runTokenRef.current !== runToken) return;
+          setSolverProgress(progress);
+        },
+      });
+      sessionRef.current = session;
+
+      session.promise
+        .then((res) => {
+          if (runTokenRef.current !== runToken) return;
+          setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
+          if (res.telemetry) {
+            console.info('[Autocomplete Overlay] Solver telemetry:', res.telemetry);
+          }
+          if (!res.feasible || !res.plan) {
+            setErrorMsg(res.error || 'Autocomplete could not build a feasible production graph.');
+            setFailureDiagnostics(res.diagnostics ?? null);
+            setSolverState('failed');
+            return;
+          }
+          if (res.plan.warnings.length > 0) {
+            console.warn('[Autocomplete Overlay] Candidate warnings:', res.plan.warnings);
+          }
+
+          const planNodeMap = new Map(
+            res.plan.nodes.filter(isRecipeNode).map((node) => [node.id, node]),
+          );
+          const nodeChanges: NodeChange[] = [];
+          for (const node of nodes) {
+            const proposedNode = planNodeMap.get(node.id);
+            if (!proposedNode) continue;
+            const currentCount = node.data.machineCount ?? 0;
+            const proposedCount = proposedNode.data.machineCount ?? 0;
+            if (areNearlyEqual(currentCount, proposedCount)) continue;
+            const recipe = resolveActiveRecipe(
+              proposedNode.data.recipeId,
+              proposedNode.data.settings,
+              proposedNode.id,
+            );
+            if (!recipe) continue;
+            nodeChanges.push({
+              id: node.id,
+              recipeName: recipe.name,
+              machineName: getMachine(recipe.machine_id)?.name ?? recipe.machine_id,
+              currentCount,
+              proposedCount,
+            });
+          }
+          for (const nodeId of res.plan.addedNodeIds) {
+            const node = planNodeMap.get(nodeId);
+            if (!node) continue;
+            const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id);
+            if (!recipe) continue;
+            nodeChanges.push({
+              id: node.id,
+              recipeName: recipe.name,
+              machineName: getMachine(recipe.machine_id)?.name ?? recipe.machine_id,
+              currentCount: 0,
+              proposedCount: node.data.machineCount ?? 0,
+              isNew: true,
+            });
+          }
+
+          setFailureDiagnostics(null);
+          setChanges(nodeChanges);
+          setProposedMachineCounts({});
+          setAutocompletePlan(res.plan);
+          setObjectiveSummary({
+            current: summarizeObjectives(optimizerPayload.nodes, {}),
+            proposed: summarizeObjectives(res.plan.objectiveNodes, res.plan.machineCounts),
+          });
+          setSolverState('results');
+          completeTutorialAction({ type: 'solver-results' });
+        })
+        .catch((err: unknown) => {
+          if (runTokenRef.current !== runToken) return;
+          setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
+          console.error('[Autocomplete Overlay] Execution rejected:', err);
+          setErrorMsg(err instanceof Error ? err.message : String(err));
+          setFailureDiagnostics(null);
+          setSolverState('failed');
+        })
+        .finally(() => {
+          if (runTokenRef.current !== runToken) return;
+          setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
+          sessionRef.current = null;
+        });
+      return;
+    }
+
+    const session = solveRatios(nodes, recipeEdges, {
+      optimizationConfiguration: configuration,
+      objectiveWeights: {
+        powerUse: configuration.metrics.powerUse.enabled
+          ? configuration.metrics.powerUse.weight
+          : 0,
+        pollution: configuration.metrics.pollution.enabled
+          ? configuration.metrics.pollution.weight
+          : 0,
+        machineCost: configuration.metrics.machineCost.enabled
+          ? configuration.metrics.machineCost.weight
+          : 0,
+        modelCount: configuration.metrics.modelCount.enabled
+          ? configuration.metrics.modelCount.weight
+          : 0,
+      },
+      onProgress: (progress) => {
+        if (runTokenRef.current !== runToken) return;
+        setSolverProgress(progress);
+      },
+    });
     sessionRef.current = session;
 
     session.promise
       .then((res) => {
-        if (isDisposed) return;
+        if (runTokenRef.current !== runToken) return;
         setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
+        if (res.telemetry) {
+          console.info('[Ratio Optimizer Overlay] Solver telemetry:', res.telemetry);
+        }
         if (!res.feasible || !res.machineCounts) {
-          setErrorMsg(res.error || 'The model is infeasible with current target and connection constraints.');
+          setErrorMsg(
+            res.error || 'The model is infeasible with current target and connection constraints.',
+          );
           setFailureDiagnostics(res.diagnostics ?? null);
           setSolverState('failed');
           return;
@@ -96,50 +335,43 @@ export function LPSolverOverlay() {
         setFailureDiagnostics(null);
 
         const nodeChanges: NodeChange[] = [];
-        let curPower = 0;
-        let propPower = 0;
-        let curPollution = 0;
-        let propPollution = 0;
+        const machineCountsToApply: Record<string, number> = {};
 
         for (const node of nodes) {
           const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id);
           if (!recipe) continue;
 
-          const powerVal = getRecipeNetPower(recipe);
+          const currentCount = node.data.machineCount ?? 0;
+          const propCount = constrainMachineCount(
+            node.data,
+            snapToReferenceIfNearlyEqual(currentCount, res.machineCounts[node.id] ?? 0),
+          );
 
-          const sr = getSpecialRecipe(recipe.id);
-          const curPollMultiplier = sr?.pollutionIndependentOfMachineCount ? 1 : (node.data.machineCount ?? 0);
-          const propCount = res.machineCounts[node.id] ?? 0;
-          const propPollMultiplier = sr?.pollutionIndependentOfMachineCount ? 1 : propCount;
-
-          curPower += powerVal * (node.data.machineCount ?? 0);
-          propPower += powerVal * propCount;
-          curPollution += (recipe.pollution ?? 0) * curPollMultiplier;
-          propPollution += (recipe.pollution ?? 0) * propPollMultiplier;
-
-          const diff = Math.abs((node.data.machineCount ?? 0) - propCount);
-          if (diff > 1e-6) {
+          if (!areNearlyEqual(currentCount, propCount)) {
+            const machine = getMachine(recipe.machine_id);
             nodeChanges.push({
               id: node.id,
               recipeName: recipe.name || 'Unknown',
-              currentCount: node.data.machineCount ?? 0,
+              machineName: machine?.name || recipe.machine_id || 'Unknown',
+              currentCount,
               proposedCount: propCount,
             });
+            machineCountsToApply[node.id] = propCount;
           }
         }
 
         setChanges(nodeChanges);
-        setProposedMachineCounts(res.machineCounts);
-        setCurrentPowerTotal(curPower);
-        setProposedPowerTotal(propPower);
-        setCurrentPollutionTotal(curPollution);
-        setProposedPollutionTotal(propPollution);
+        setProposedMachineCounts(machineCountsToApply);
+        setObjectiveSummary({
+          current: summarizeObjectives(optimizerPayload.nodes, {}),
+          proposed: summarizeObjectives(optimizerPayload.nodes, res.machineCounts),
+        });
 
         setSolverState('results');
         completeTutorialAction({ type: 'solver-results' });
       })
       .catch((err: unknown) => {
-        if (isDisposed) return;
+        if (runTokenRef.current !== runToken) return;
         setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
         console.error('[Ratio Optimizer Overlay] Execution rejected:', err);
         setErrorMsg(err instanceof Error ? err.message : String(err));
@@ -147,30 +379,35 @@ export function LPSolverOverlay() {
         setSolverState('failed');
       })
       .finally(() => {
-        if (isDisposed) return;
+        if (runTokenRef.current !== runToken) return;
         setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
-        clearInterval(timerInterval);
-        clearInterval(tipsInterval);
         sessionRef.current = null;
       });
+  };
 
+  const startTutorialOptimization = useEffectEvent(() => {
+    handleStartOptimization(structuredClone(DEFAULT_OPTIMIZATION_CONFIGURATION));
+  });
+
+  useEffect(() => {
+    if (!isLPSolverOpen || solverState !== 'configure' || !isTutorialActive()) return;
+    let cancelled = false;
+    Promise.resolve().then(() => {
+      if (!cancelled) startTutorialOptimization();
+    });
     return () => {
-      isDisposed = true;
-      clearInterval(timerInterval);
-      clearInterval(tipsInterval);
-      if (sessionRef.current) {
-        cancelRatioOptimizer();
-        sessionRef.current = null;
-      }
+      cancelled = true;
     };
-  }, [isLPSolverOpen]);
+  }, [isLPSolverOpen, solverState]);
 
   if (!isLPSolverOpen) return null;
 
   const handleCancel = () => {
     if (isTutorialActive()) return;
+    runTokenRef.current++;
     if (sessionRef.current) {
-      cancelRatioOptimizer();
+      if (activeModeRef.current === 'autocomplete') cancelAutocomplete();
+      else cancelRatioOptimizer();
       sessionRef.current = null;
     }
     resetViewState();
@@ -180,6 +417,13 @@ export function LPSolverOverlay() {
   const handleApply = () => {
     if (isTutorialActive() && !canPerformTutorialAction({ type: 'solver-apply' })) return;
     const flowStore = useFlowStore.getState();
+    if (autocompletePlan) {
+      flowStore.setNodesAndEdges(autocompletePlan.nodes, autocompletePlan.edges);
+      resetViewState();
+      setIsLPSolverOpen(false);
+      completeTutorialAction({ type: 'solver-apply' });
+      return;
+    }
     flowStore.runTransaction(() => {
       Object.entries(proposedMachineCounts).forEach(([nodeId, count]) => {
         flowStore.updateNodeData(nodeId, { machineCount: count });
@@ -201,17 +445,17 @@ export function LPSolverOverlay() {
   };
 
   const resetViewState = () => {
-    setSolverState('solving');
+    setSolverState('configure');
     setElapsedMs(0);
     setTipIndex(0);
     setErrorMsg('');
     setFailureDiagnostics(null);
+    setSolverProgress(null);
     setChanges([]);
     setProposedMachineCounts({});
-    setCurrentPowerTotal(0);
-    setProposedPowerTotal(0);
-    setCurrentPollutionTotal(0);
-    setProposedPollutionTotal(0);
+    setAutocompletePlan(null);
+    setResultMode('ratios');
+    setObjectiveSummary(null);
   };
 
   const formatNodeLabel = (nodeId: string): string => {
@@ -232,8 +476,21 @@ export function LPSolverOverlay() {
     return `${rate.toFixed(4)} / sec`;
   };
 
+  const formatSolverName = (solver: RatioSolverProgress['solver']): string => {
+    if (resultMode === 'autocomplete') return 'Production builder (Experimental)';
+    switch (solver) {
+      case 'native':
+        return 'Ratio optimizer';
+      case 'mps':
+        return 'Ratio optimizer';
+      case 'unknown':
+      default:
+        return 'Preparing solver';
+    }
+  };
+
   const formatCauseLabel = (
-    causeKind: RatioFailureDiagnostics['rootCauses'][number]['kind']
+    causeKind: RatioFailureDiagnostics['rootCauses'][number]['kind'],
   ): string => {
     switch (causeKind) {
       case 'feedback_loop':
@@ -252,9 +509,7 @@ export function LPSolverOverlay() {
     }
   };
 
-  const formatRootCauseRate = (
-    cause: RatioFailureDiagnostics['rootCauses'][number]
-  ): string => {
+  const formatRootCauseRate = (cause: RatioFailureDiagnostics['rootCauses'][number]): string => {
     if (cause.kind === 'feedback_loop') {
       return `Loop shortage: ${formatRate(cause.deficiency)}`;
     }
@@ -270,21 +525,33 @@ export function LPSolverOverlay() {
   };
 
   const formatNodeList = (nodeIds: string[]): string => {
-    return nodeIds.length > 0
-      ? nodeIds.map((id) => formatNodeLabel(id)).join(', ')
-      : 'None';
+    return nodeIds.length > 0 ? nodeIds.map((id) => formatNodeLabel(id)).join(', ') : 'None';
+  };
+
+  const displayedSolverProgress: RatioSolverProgress = solverProgress ?? {
+    phase: 'queued',
+    message: 'Preparing ratio optimizer request.',
+    solver: 'unknown',
+    elapsedMs,
   };
 
   return createPortal(
     <div className={styles['solver-overlay']}>
       <div className={styles['solver-modal']} data-state={solverState} data-tutorial-solver="modal">
+        {solverState === 'configure' && (
+          <OptimizationConfigurePanel onClose={handleCancel} onStart={handleStartOptimization} />
+        )}
         {solverState === 'solving' && (
           <div className={styles['solving-container']}>
             <div className={styles['spinner-wrapper']}>
               <img src={INDUS_LOGO_SRC} className={styles['logo-spinner']} alt="Spinner" />
             </div>
-            <div className={styles['elapsed-timer']}>
-              {formatStopwatch(elapsedMs)}
+            <div className={styles['elapsed-timer']}>{formatStopwatch(elapsedMs)}</div>
+            <div className={styles['solver-progress']}>
+              <div className={styles['progress-phase']}>
+                {formatSolverName(displayedSolverProgress.solver)}
+              </div>
+              <div className={styles['progress-message']}>{displayedSolverProgress.message}</div>
             </div>
             <div className={styles['tip-box']}>
               <div className={styles['tip-label']}>TIPS & HINTS</div>
@@ -335,18 +602,11 @@ export function LPSolverOverlay() {
                               <span>Product: {getProductName(cause.productId)}</span>
                               <span>{formatRootCauseRate(cause)}</span>
                               <span>
-                                Blocks:
-                                {' '}
-                                {formatNodeLabel(cause.blockedInputNodeId)}
-                                {' '}
-                                input {cause.blockedInputIndex + 1}
+                                Blocks: {formatNodeLabel(cause.blockedInputNodeId)} input{' '}
+                                {cause.blockedInputIndex + 1}
                               </span>
                               {cause.boundaryNodeIds.length > 0 && (
-                                <span>
-                                  Loop Boundary:
-                                  {' '}
-                                  {formatNodeList(cause.boundaryNodeIds)}
-                                </span>
+                                <span>Loop Boundary: {formatNodeList(cause.boundaryNodeIds)}</span>
                               )}
                             </div>
                           </div>
@@ -387,7 +647,9 @@ export function LPSolverOverlay() {
             <div className={styles['results-content']}>
               {changes.length === 0 ? (
                 <div className={styles['no-changes-msg']}>
-                  No changes required. The current machine counts are already fully balanced!
+                  {resultMode === 'autocomplete'
+                    ? 'No recipes or machine-count changes are needed for the current targets.'
+                    : 'No changes required. The current machine counts are already fully balanced!'}
                 </div>
               ) : (
                 <>
@@ -395,7 +657,8 @@ export function LPSolverOverlay() {
                     <table className={styles['changes-table']}>
                       <thead>
                         <tr>
-                          <th>Recipe Node</th>
+                          <th>Recipe</th>
+                          <th>Machine</th>
                           <th className={styles['align-right']}>Current</th>
                           <th className={styles['align-center']}></th>
                           <th className={styles['align-left']}>Proposed</th>
@@ -405,7 +668,10 @@ export function LPSolverOverlay() {
                         {changes.map((c) => (
                           <tr key={c.id}>
                             <td>{c.recipeName}</td>
-                            <td className={styles['align-right']}>{c.currentCount.toFixed(2)}</td>
+                            <td className={styles['machine-name-cell']}>{c.machineName}</td>
+                            <td className={styles['align-right']}>
+                              {c.isNew ? 'New' : c.currentCount.toFixed(2)}
+                            </td>
                             <td className={styles['align-center']}>&rarr;</td>
                             <td className={styles['align-left']}>{c.proposedCount.toFixed(2)}</td>
                           </tr>
@@ -413,26 +679,59 @@ export function LPSolverOverlay() {
                       </tbody>
                     </table>
                   </div>
-
-                  <div className={styles['metrics-summary']}>
-                    <div className={styles['metric-row']}>
-                      <span>Total Power:</span>
-                      <span>
-                        {formatPower(currentPowerTotal)} &rarr; {formatPower(proposedPowerTotal)}
-                        {proposedPowerTotal > currentPowerTotal ? ' (+' : ' ('}
-                        {formatPower(proposedPowerTotal - currentPowerTotal)})
-                      </span>
-                    </div>
-                    <div className={styles['metric-row']}>
-                      <span>Total Pollution:</span>
-                      <span>
-                        {formatPollution(currentPollutionTotal)} &rarr; {formatPollution(proposedPollutionTotal)}
-                        {proposedPollutionTotal > currentPollutionTotal ? ' (+' : ' ('}
-                        {formatPollution(proposedPollutionTotal - currentPollutionTotal)})
-                      </span>
-                    </div>
-                  </div>
                 </>
+              )}
+              {objectiveSummary && (
+                <div className={styles['metrics-summary']}>
+                  {resultMachineCountBasis === 'continuous' && (
+                    <p className={styles['continuous-result-note']}>
+                      Cost, space, and model totals below use real rounded-up machines. The solver
+                      optimized fractional estimates, so these totals may not be minimal.
+                    </p>
+                  )}
+                  <div className={styles['metric-row']}>
+                    <span>Power Use:</span>
+                    <span>
+                      {formatPower(objectiveSummary.current.powerUse)} &rarr;{' '}
+                      {formatPower(objectiveSummary.proposed.powerUse)}
+                    </span>
+                  </div>
+                  <div className={styles['metric-row']}>
+                    <span>Power Output:</span>
+                    <span>
+                      {formatPower(objectiveSummary.current.powerOutput)} &rarr;{' '}
+                      {formatPower(objectiveSummary.proposed.powerOutput)}
+                    </span>
+                  </div>
+                  <div className={styles['metric-row']}>
+                    <span>Net Pollution:</span>
+                    <span>
+                      {formatPollution(objectiveSummary.current.pollution)} &rarr;{' '}
+                      {formatPollution(objectiveSummary.proposed.pollution)}
+                    </span>
+                  </div>
+                  <div className={styles['metric-row']}>
+                    <span>Machine Cost:</span>
+                    <span>
+                      {formatCurrency(objectiveSummary.current.machineCost)} &rarr;{' '}
+                      {formatCurrency(objectiveSummary.proposed.machineCost)}
+                    </span>
+                  </div>
+                  <div className={styles['metric-row']}>
+                    <span>Machine Space:</span>
+                    <span>
+                      {formatMachineSpace(objectiveSummary.current.machineSpace)} &rarr;{' '}
+                      {formatMachineSpace(objectiveSummary.proposed.machineSpace)}
+                    </span>
+                  </div>
+                  <div className={styles['metric-row']}>
+                    <span>Machine Model Count:</span>
+                    <span>
+                      {formatMachineCount(objectiveSummary.current.modelCount)} &rarr;{' '}
+                      {formatMachineCount(objectiveSummary.proposed.modelCount)}
+                    </span>
+                  </div>
+                </div>
               )}
             </div>
             <div className={styles['elapsed-summary']}>Elapsed: {formatStopwatch(elapsedMs)}</div>
@@ -441,9 +740,11 @@ export function LPSolverOverlay() {
               <button className={styles['action-btn-neutral']} onClick={handleCancel}>
                 Discard Changes
               </button>
-              {changes.length > 0 && (
+              {(changes.length > 0 || autocompletePlan !== null) && (
                 <button className={styles['action-btn-primary']} onClick={handleApply}>
-                  <span data-tutorial-solver="apply">Apply Changes</span>
+                  <span data-tutorial-solver="apply">
+                    {resultMode === 'autocomplete' ? 'Apply Production Plan' : 'Apply Changes'}
+                  </span>
                 </button>
               )}
             </div>
@@ -451,6 +752,6 @@ export function LPSolverOverlay() {
         )}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

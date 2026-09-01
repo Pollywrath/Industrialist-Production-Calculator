@@ -1,13 +1,7 @@
 import ELK from 'elkjs/lib/elk-api.js';
-import elkWorkerUrl from 'elkjs/lib/elk-worker.min.js?url';
+import ElkWorker from 'elkjs/lib/elk-worker.min.js?worker';
 import { buildHandleId } from '../utils/idGenerator';
-import {
-  GRID_X,
-  GROUP_PADDING,
-  NODE_HANDLE_SIZE,
-  ROOT_PADDING,
-  getLayoutPortY,
-} from './constants';
+import { GRID_X, GROUP_PADDING, NODE_HANDLE_SIZE, ROOT_PADDING, getLayoutPortY } from './constants';
 import type {
   ElkInputEdge,
   ElkInputNode,
@@ -23,8 +17,7 @@ import type {
 } from './types';
 
 const elk = new ELK({
-  workerUrl: elkWorkerUrl,
-  workerFactory: (url) => new Worker(url ?? elkWorkerUrl),
+  workerFactory: () => new ElkWorker({ name: 'elk-layout-worker' }),
 });
 
 function buildPortProperties(side: 'WEST' | 'EAST', displayIndex: number) {
@@ -41,11 +34,7 @@ function getElkPortOrder(order: number[], mode: PortOrderMode): number[] {
   return [...order].sort((a, b) => a - b);
 }
 
-function getElkPortIndex(
-  handleIndex: number,
-  displayIndex: number,
-  mode: PortOrderMode,
-): number {
+function getElkPortIndex(handleIndex: number, displayIndex: number, mode: PortOrderMode): number {
   return mode === 'stable' ? handleIndex : displayIndex;
 }
 
@@ -154,13 +143,7 @@ function buildHierarchicalElkNodes(
       id: node.id,
       width: node.width,
       height: node.height,
-      ports: buildPorts(
-        node,
-        node.inputOrder,
-        node.outputOrder,
-        portConstraints,
-        portOrderMode,
-      ),
+      ports: buildPorts(node, node.inputOrder, node.outputOrder, portConstraints, portOrderMode),
       properties: {
         portConstraints,
         'org.eclipse.elk.portConstraints': portConstraints,
@@ -171,10 +154,7 @@ function buildHierarchicalElkNodes(
   return (childrenByParentId.get(null) ?? []).map(buildNode);
 }
 
-function getEdgePriority(
-  edge: LayoutEdgeSpec,
-  options: ResolvedLayoutOptions,
-): LayoutEdgePriority {
+function getEdgePriority(edge: LayoutEdgeSpec, options: ResolvedLayoutOptions): LayoutEdgePriority {
   switch (edge.kind) {
     case 'self-loop':
       return options.edgePriority.selfLoop;

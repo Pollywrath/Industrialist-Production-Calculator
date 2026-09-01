@@ -5,6 +5,7 @@ import type { EdgeControlPoint } from '../types/edges';
 import { parseHandleId, buildHandleId, nextNodeId, nextEdgeId } from '../utils/idGenerator';
 import { getRecipe, resolveActiveRecipe } from '../data/lookup';
 import { cleanMachineCount } from '../utils/precision';
+import { sanitizeMachineCountConstraint } from '../utils/machineCountConstraint';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 
 import type {
@@ -15,7 +16,7 @@ import type {
   GlobalSettings,
 } from '../types/saves';
 
-export const CURRENT_SAVE_VERSION = 2;
+export const CURRENT_SAVE_VERSION = 3;
 
 function sanitizeSavedPoints(raw: unknown): EdgeControlPoint[] | undefined {
   if (!Array.isArray(raw)) return undefined;
@@ -157,6 +158,7 @@ export function migrateSaveData(rawData: unknown): SaveData {
       type: 'recipe',
       recipeId,
       machineCount,
+      machineCountConstraint: sanitizeMachineCountConstraint(n.machineCountConstraint),
       position,
       settings,
       isTarget: typeof n.isTarget === 'boolean' ? n.isTarget : undefined,
@@ -223,9 +225,12 @@ export function migrateSaveData(rawData: unknown): SaveData {
     globalSettings = {
       global_pollution: typeof gs.global_pollution === 'number' ? gs.global_pollution : 10,
       difficulty: typeof gs.difficulty === 'string' ? gs.difficulty : undefined,
-      unlockedResearchIds: Array.isArray(gs.unlockedResearchIds) ? gs.unlockedResearchIds.filter((x): x is string => typeof x === 'string') : undefined,
+      unlockedResearchIds: Array.isArray(gs.unlockedResearchIds)
+        ? gs.unlockedResearchIds.filter((x): x is string => typeof x === 'string')
+        : undefined,
       oreNodesEnabled: typeof gs.oreNodesEnabled === 'boolean' ? gs.oreNodesEnabled : undefined,
-      showVariantLimited: typeof gs.showVariantLimited === 'boolean' ? gs.showVariantLimited : undefined,
+      showVariantLimited:
+        typeof gs.showVariantLimited === 'boolean' ? gs.showVariantLimited : undefined,
     };
   }
 
@@ -272,6 +277,7 @@ export function serializeCanvas(
         type: 'recipe',
         recipeId: n.data.recipeId,
         machineCount: n.data.machineCount,
+        machineCountConstraint: n.data.machineCountConstraint,
         inputOrder: n.data.inputOrder,
         outputOrder: n.data.outputOrder,
         position: { x: n.position.x, y: n.position.y },
@@ -395,7 +401,7 @@ export function deserializeCanvas(saveData: SaveData): {
         },
       });
     } else {
-      const groupId = sn.groupId ? idMap.get(sn.groupId) ?? sn.groupId : undefined;
+      const groupId = sn.groupId ? (idMap.get(sn.groupId) ?? sn.groupId) : undefined;
       nodes.push({
         id: finalId,
         type: 'recipe',
@@ -404,6 +410,7 @@ export function deserializeCanvas(saveData: SaveData): {
         data: {
           recipeId: sn.recipeId,
           machineCount: sn.machineCount,
+          machineCountConstraint: sn.machineCountConstraint,
           inputOrder: sn.inputOrder,
           outputOrder: sn.outputOrder,
           settings: sn.settings,
@@ -437,9 +444,11 @@ export function deserializeCanvas(saveData: SaveData): {
     if (!sourceNode || !targetNode) continue;
 
     const sourceRecipe =
-      resolveActiveRecipe(sourceNode.recipeId, sourceNode.settings) ?? getRecipe(sourceNode.recipeId);
+      resolveActiveRecipe(sourceNode.recipeId, sourceNode.settings) ??
+      getRecipe(sourceNode.recipeId);
     const targetRecipe =
-      resolveActiveRecipe(targetNode.recipeId, targetNode.settings) ?? getRecipe(targetNode.recipeId);
+      resolveActiveRecipe(targetNode.recipeId, targetNode.settings) ??
+      getRecipe(targetNode.recipeId);
 
     if (!sourceRecipe || !targetRecipe) continue;
 

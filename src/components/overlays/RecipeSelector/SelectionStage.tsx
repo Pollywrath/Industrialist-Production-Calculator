@@ -2,7 +2,10 @@ import { useEffect, type RefObject } from 'react';
 import { X, Package, Droplet } from 'lucide-react';
 import type { Product, Machine } from '../../../types/data';
 import { SortableSelectorTable, type ColumnConfig } from '../../shared/SortableSelectorTable';
-import { PRODUCT_TABLE_VIEW_HEIGHT, MACHINE_TABLE_VIEW_HEIGHT } from '../../../constants/layoutConstants';
+import {
+  PRODUCT_TABLE_VIEW_HEIGHT,
+  MACHINE_TABLE_VIEW_HEIGHT,
+} from '../../../constants/layoutConstants';
 import { getAllMachines, getAllProducts, isMachineUnlocked } from '../../../data/lookup';
 import { sortItems } from '../../../utils/sorting';
 import {
@@ -50,7 +53,15 @@ const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multipl
     label: 'Sell Price',
     widthClass: 'col-25',
     renderCell: (p) => (
-      <span className={p.sell_price < 0 ? styles['sell-price-negative'] : (p.profit ? styles['sell-price-profit'] : '')}>
+      <span
+        className={
+          p.sell_price < 0
+            ? styles['sell-price-negative']
+            : p.profit
+              ? styles['sell-price-profit']
+              : ''
+        }
+      >
         {formatCurrency(p.sell_price)}
       </span>
     ),
@@ -201,10 +212,7 @@ export function SelectionStage({ inputRef }: SelectionStageProps) {
             Search by Machine
           </button>
         </div>
-        <button
-          className={styles['recipe-selector-close']}
-          onClick={handleClose}
-        >
+        <button className={styles['recipe-selector-close']} onClick={handleClose}>
           <X size={16} />
         </button>
       </div>
@@ -389,7 +397,10 @@ function ProductList() {
   const filteredProducts = sortItems(list, productSortField, productSortOrder);
 
   const handleProductSelect = (id: string) => {
-    if (isTutorialActive() && !canPerformTutorialAction({ type: 'selector-product', productId: id })) {
+    if (
+      isTutorialActive() &&
+      !canPerformTutorialAction({ type: 'selector-product', productId: id })
+    ) {
       return;
     }
     handleSelectItem(id);

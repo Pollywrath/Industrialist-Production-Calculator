@@ -8,9 +8,9 @@ import { propagateTemperatures } from './temperaturePropagator';
 import { computeResolvedProducts } from '../utils/productResolver';
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 import { buildHandleId } from '../utils/idGenerator';
+import { FLOW_STATUS_ABSOLUTE_TOLERANCE } from '../utils/precision';
 
 const MAX_TEMPERATURE_COUPLED_PASSES = 8;
-const NUMERIC_EQUALITY_EPSILON = 1e-6;
 
 type SettingsOverrides = Record<string, Record<string, unknown>>;
 
@@ -29,7 +29,7 @@ function areValuesEquivalent(a: unknown, b: unknown): boolean {
     if (!Number.isFinite(a) || !Number.isFinite(b)) {
       return a === b;
     }
-    return Math.abs(a - b) <= NUMERIC_EQUALITY_EPSILON;
+    return Math.abs(a - b) <= FLOW_STATUS_ABSOLUTE_TOLERANCE;
   }
   return a === b;
 }
@@ -126,10 +126,7 @@ function areNodePortsEquivalent(
   return true;
 }
 
-function areGraphNodesEquivalent(
-  prev: SolverGraph['nodes'],
-  next: SolverGraph['nodes'],
-): boolean {
+function areGraphNodesEquivalent(prev: SolverGraph['nodes'], next: SolverGraph['nodes']): boolean {
   const prevNodeIds = Object.keys(prev);
   const nextNodeIds = Object.keys(next);
   if (prevNodeIds.length !== nextNodeIds.length) return false;
@@ -191,13 +188,12 @@ function solveTemperatureCoupledPass(
     includesFlowDependentRecipes,
     globalSettings,
   );
-  const { edgeTemps, inputTemps, settingsOverrides: nextSettingsOverrides, iterationsRun } =
-    propagateTemperatures(
-      nodes,
-      edges,
-      edgeFlows,
-      globalSettings,
-    );
+  const {
+    edgeTemps,
+    inputTemps,
+    settingsOverrides: nextSettingsOverrides,
+    iterationsRun,
+  } = propagateTemperatures(nodes, edges, edgeFlows, globalSettings);
 
   return {
     results,
@@ -305,17 +301,11 @@ export function solveFlowPipeline(
       },
     };
 
-    const recipe = resolveActiveRecipe(
-      node.data.recipeId,
-      settings,
-      nodeId,
-      helpers,
-      {
-        temperatureInputOverrides: finalResult.inputTemps[nodeId],
-        suppressStoreTemperatureOverrides: true,
-        globalSettings,
-      },
-    );
+    const recipe = resolveActiveRecipe(node.data.recipeId, settings, nodeId, helpers, {
+      temperatureInputOverrides: finalResult.inputTemps[nodeId],
+      suppressStoreTemperatureOverrides: true,
+      globalSettings,
+    });
 
     if (recipe) {
       nodeRecipes[nodeId] = recipe;

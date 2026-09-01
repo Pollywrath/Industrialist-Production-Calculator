@@ -14,21 +14,24 @@ export const GROUP_TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'enable-multi-select',
     title: 'Enable Multi-Select',
-    description: 'Turn on Multi-select. The Add Recipe button will become Add Group while this mode is active.',
+    description:
+      'Turn on Multi-select. The Add Recipe button will become Add Group while this mode is active.',
     highlight: { kind: 'control', id: 'multi_select' },
     action: { type: 'control', id: 'multi_select' },
   },
   {
     id: 'add-group-mode',
     title: 'Add Group Mode',
-    description: 'Add Recipe has changed into Add Group. It becomes available once groupable nodes are selected.',
+    description:
+      'Add Recipe has changed into Add Group. It becomes available once groupable nodes are selected.',
     highlight: { kind: 'control', id: 'add_recipe' },
     action: { type: 'continue' },
   },
   {
     id: 'select-steel-branch',
     title: 'Select Steel Parts',
-    description: 'Select the Steel Plate, Gear, and Steel Rod nodes. These will become the first group.',
+    description:
+      'Select the Steel Plate, Gear, and Steel Rod nodes. These will become the first group.',
     highlight: { kind: 'node', alias: 'steelPlate' },
     secondaryHighlights: [
       { kind: 'node', alias: 'gear' },
@@ -84,7 +87,8 @@ export const GROUP_TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'gearbox-apply-chain',
     title: 'Apply To Chain',
-    description: 'Apply to Chain scales the connected production chain, including nodes inside collapsed groups.',
+    description:
+      'Apply to Chain scales the connected production chain, including nodes inside collapsed groups.',
     highlight: { kind: 'node-editor', id: 'apply-chain' },
     action: { type: 'node-editor-apply', mode: 'chain' },
   },
@@ -148,7 +152,8 @@ export const GROUP_TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'done',
     title: 'Groups Complete',
-    description: 'That is the core loop: select nodes, create groups, collapse when you need a compact view, and expand when you need direct access.',
+    description:
+      'That is the core loop: select nodes, create groups, collapse when you need a compact view, and expand when you need direct access.',
     highlight: { kind: 'node', alias: 'gearbox' },
     action: { type: 'continue' },
   },

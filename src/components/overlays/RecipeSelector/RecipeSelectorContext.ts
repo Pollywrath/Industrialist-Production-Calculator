@@ -7,7 +7,7 @@ import {
   isPotentialHandleTypeMatch,
   isProductEntryMatch,
 } from './productMatch';
-import { hasRecipePowerProduction } from '../../../utils/recipePower';
+import { hasRecipePowerOutput } from '../../../utils/recipePower';
 
 export interface RecipeSelectorState {
   stage: 'select' | 'recipes';
@@ -126,7 +126,7 @@ export function useRecipeSelectorFilters({
             inp.product_id !== 'any_fluid',
         );
 
-        const isPowerGenerator = hasRecipePowerProduction(r);
+        const isPowerGenerator = hasRecipePowerOutput(r);
         const producesHeat = r.outputs.some((out) => (out.temperature ?? 0) > 21);
         const hasSelectedExplicitInput = r.inputs.some(
           (inp) =>
@@ -138,15 +138,14 @@ export function useRecipeSelectorFilters({
             out.product_id === selectedProductId &&
             isEntryHandleTypeMatch(out, preselectedHandleType),
         );
-        const isHeatLoopForSelected = hasSelectedExplicitInput && hasSelectedExplicitOutput && producesHeat;
-        const isHeatPower = (isPowerGenerator || isHeatLoopForSelected) && (producesProduct || consumesProduct);
+        const isHeatLoopForSelected =
+          hasSelectedExplicitInput && hasSelectedExplicitOutput && producesHeat;
+        const isHeatPower =
+          (isPowerGenerator || isHeatLoopForSelected) && (producesProduct || consumesProduct);
 
         const isProducerConsumerClutterCase = isHeatLoopForSelected;
         const matchesProducer =
-          s.filterProducers &&
-          !isSellTrash &&
-          producesProduct &&
-          !isProducerConsumerClutterCase;
+          s.filterProducers && !isSellTrash && producesProduct && !isProducerConsumerClutterCase;
         const matchesConsumer =
           s.filterConsumers &&
           consumesProduct &&
@@ -164,8 +163,7 @@ export function useRecipeSelectorFilters({
       matchingRecipes = recipes.filter((r) => r.machine_id === s.selectedId);
       if (preselectedProductId && preselectedSourceSide) {
         matchingRecipes = matchingRecipes.filter((r) => {
-          const targetList =
-            preselectedSourceSide === 'input' ? r.outputs : r.inputs;
+          const targetList = preselectedSourceSide === 'input' ? r.outputs : r.inputs;
           return targetList.some((entry) =>
             isProductEntryMatch(entry, preselectedProductId, preselectedHandleType),
           );

@@ -20,6 +20,7 @@ export const festive_cooling_tower_01: SpecialRecipe = {
   machine_id: 'm_festive_cooling_tower',
   settings: settingDefinitions,
   inputTemperatureSettings,
+  getAutocompleteSettings: (defaults) => [{ ...defaults, distilled_water_temp: 63 }],
   compute: (settings) => {
     const inputTemp = (settings.distilled_water_temp as number) ?? 100;
     const outputTemp = Math.max(inputTemp / 3, 21);
@@ -29,7 +30,7 @@ export const festive_cooling_tower_01: SpecialRecipe = {
       name: 'Cools Distilled Water',
       machine_id: 'm_festive_cooling_tower',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 0,
       inputs: [{ product_id: 'p_distilled_water', quantity: 800 }],

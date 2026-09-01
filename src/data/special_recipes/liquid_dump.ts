@@ -21,6 +21,7 @@ export const liquid_dump_01: SpecialRecipe = {
   name: 'Dump Fluids',
   machine_id: 'm_liquid_dump',
   isSellTrash: true,
+  autocompleteDisposalPriority: 'primary',
   pollutionIndependentOfMachineCount: true,
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
@@ -42,7 +43,7 @@ export const liquid_dump_01: SpecialRecipe = {
       name: 'Dump Fluids',
       machine_id: 'm_liquid_dump',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution,
       inputs: [

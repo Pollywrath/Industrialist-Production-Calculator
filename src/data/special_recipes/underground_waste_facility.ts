@@ -39,14 +39,30 @@ export const underground_waste_facility_01: SpecialRecipe = {
       name: 'Underground Waste Disposal',
       machine_id: 'm_underground_waste_facility',
       cycle_time: 1,
-      power_consumption: 1000000,
+      power_use: 1000000,
       power_type: 'MV',
       pollution: 0,
       inputs: [
         { product_id: item1, quantity: 240, variable: true },
         { product_id: fluid1, quantity: 240, variable: true },
-        { product_id: 'p_concrete_block', quantity: concreteQuantity, independentOfMachineCount: true },
-        { product_id: 'p_lead_ingot', quantity: leadQuantity, independentOfMachineCount: true },
+        {
+          product_id: 'p_concrete_block',
+          quantity: concreteQuantity,
+          independentOfMachineCount: true,
+          flowDependencies: [
+            { sourceInputIndex: 0, coefficient: 140 / 7000 },
+            { sourceInputIndex: 1, coefficient: 140 / 7000 },
+          ],
+        },
+        {
+          product_id: 'p_lead_ingot',
+          quantity: leadQuantity,
+          independentOfMachineCount: true,
+          flowDependencies: [
+            { sourceInputIndex: 0, coefficient: 70 / 7000 },
+            { sourceInputIndex: 1, coefficient: 70 / 7000 },
+          ],
+        },
       ],
       outputs: [],
     };

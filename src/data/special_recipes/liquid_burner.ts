@@ -21,6 +21,7 @@ export const liquid_burner_01: SpecialRecipe = {
   name: 'Burn Fluid',
   machine_id: 'm_liquid_burner',
   isSellTrash: true,
+  autocompleteDisposalPriority: 'secondary',
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
     let resolvedFluid = 'any_fluid';
@@ -35,7 +36,7 @@ export const liquid_burner_01: SpecialRecipe = {
       name: 'Burn Fluid',
       machine_id: 'm_liquid_burner',
       cycle_time: 1,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution,
       inputs: [{ product_id: resolvedFluid, quantity: 120 }],

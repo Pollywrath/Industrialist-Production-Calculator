@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import type { HandleDataType } from '../../../types/data';
-import { getProductName, getMachineName, getAllRecipes, getMachine, isMachineUnlocked } from '../../../data/lookup';
+import { getProductName, getMachineName, getAllRecipes } from '../../../data/lookup';
 import { VirtualList } from '../../shared/VirtualList';
 import { RecipeCard } from './RecipeCard';
 import styles from './RecipeSelector.module.css';
@@ -15,6 +15,7 @@ import {
   isTutorialActive,
   useTutorialStore,
 } from '../../../stores/useTutorialStore';
+import { isRecipeAvailable } from '../../../utils/recipeAvailability';
 
 interface RecipeStageProps {
   clickedRateInfo: { clickedPerSecondRate: number } | null;
@@ -33,11 +34,7 @@ export function RecipeStage({
 }: RecipeStageProps) {
   const dbVersion = useDataStore((s) => s.dbVersion);
   const allRecipes = dbVersion !== -1 ? getAllRecipes() : [];
-  const unlockedResearchIdsArray = useGlobalSettingsStore((s) => s.settings.unlockedResearchIds);
-  const unlockedResearchIds = new Set(unlockedResearchIdsArray);
-  const oreNodesEnabled = useGlobalSettingsStore((s) => s.settings.oreNodesEnabled);
-  const showVariantLimited = useGlobalSettingsStore((s) => s.settings.showVariantLimited);
-  const difficulty = useGlobalSettingsStore((s) => s.settings.difficulty);
+  const globalSettings = useGlobalSettingsStore((s) => s.settings);
   const tutorialRecipeCardId = useTutorialStore((s) => {
     if (!s.activeTutorialId) return null;
     const step = s.getCurrentStep();
@@ -47,32 +44,7 @@ export function RecipeStage({
     return null;
   });
 
-  const unlockedRecipes = allRecipes.filter((r) => {
-    const machine = getMachine(r.machine_id);
-    if (!machine) return true;
-
-    if (!isMachineUnlocked(machine, unlockedResearchIds)) {
-      return false;
-    }
-    if (machine.id === 'm_industrial_drill' && !oreNodesEnabled) {
-      return false;
-    }
-    const isSandboxMode = difficulty === 'sandbox' || difficulty === 'sandbox_plus';
-    const isSandboxPlus = difficulty === 'sandbox_plus';
-    if (machine.sandboxPlusOnly && !isSandboxPlus) {
-      return false;
-    }
-    if (machine.sandboxOnly && !isSandboxMode) {
-      return false;
-    }
-    const isVariant = machine.variant && machine.variant !== 'none' && machine.variant !== '';
-    const isLimited = machine.limited;
-    if (!showVariantLimited && (isVariant || isLimited)) {
-      return false;
-    }
-
-    return true;
-  });
+  const unlockedRecipes = allRecipes.filter((recipe) => isRecipeAvailable(recipe, globalSettings));
 
   const {
     activeTab,
@@ -200,10 +172,7 @@ export function RecipeStage({
             Recipes
           </span>
         </div>
-        <button
-          className={styles['recipe-selector-close']}
-          onClick={handleClose}
-        >
+        <button className={styles['recipe-selector-close']} onClick={handleClose}>
           <X size={16} />
         </button>
       </div>

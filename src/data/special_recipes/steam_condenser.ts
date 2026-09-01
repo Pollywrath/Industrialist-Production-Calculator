@@ -79,16 +79,40 @@ function getConfiguredSteamFlow(settings: Record<string, unknown>): number {
   return (settings.steam_flow as number) ?? DEFAULT_STEAM_FLOW;
 }
 
+function getMaximumCoolantTemperature(settings: Record<string, unknown>): number | null {
+  const steamTemp = (settings.steam_temp as number) ?? 198;
+  const steamFlow = getConfiguredSteamFlow(settings);
+  let low = -273.15;
+  let high = 1_000_000;
+  if (!computeSteadyState(low, steamTemp, steamFlow).isCondensing) return null;
+
+  for (let iteration = 0; iteration < 48; iteration += 1) {
+    const midpoint = (low + high) / 2;
+    if (computeSteadyState(midpoint, steamTemp, steamFlow).isCondensing) {
+      low = midpoint;
+    } else {
+      high = midpoint;
+    }
+  }
+  return low - 1e-6;
+}
+
 export const steam_condenser_01: SpecialRecipe = {
   id: 'r_steam_condenser_01',
   name: 'Makes Distilled Water, Condensate',
   machine_id: 'm_steam_condenser',
-  description: 'Condenses low pressure steam back into condensate using distilled water as a coolant. Operating window: condensate temp must stay below half of steam temp (clamped 40°C - 100°C).',
+  description:
+    'Condenses low pressure steam back into condensate using distilled water as a coolant. Operating window: condensate temp must stay below half of steam temp (clamped 40°C - 100°C).',
   potentialInputs: ['p_distilled_water', 'p_low_pressure_steam'],
   potentialOutputs: ['p_distilled_water', 'p_condensate'],
   inputTemperatureSettings: {
     0: 'coolant_temp',
     1: 'steam_temp',
+  },
+  getAutocompleteInputTemperatureRange: (settings, inputIndex) => {
+    if (inputIndex !== 0) return null;
+    const maximum = getMaximumCoolantTemperature(settings);
+    return maximum === null ? null : { max: maximum };
   },
   settings: {
     coolant_temp: {
@@ -136,7 +160,7 @@ export const steam_condenser_01: SpecialRecipe = {
       name: 'Makes Distilled Water, Condensate',
       machine_id: 'm_steam_condenser',
       cycle_time: 1,
-      power_consumption: 500000,
+      power_use: 500000,
       power_type: 'MV',
       pollution: 0,
       inputs: [

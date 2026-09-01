@@ -1,10 +1,4 @@
-import type {
-  HandleDataType,
-  ProductType,
-  Recipe,
-  RecipeInput,
-  RecipeOutput,
-} from '../types/data';
+import type { HandleDataType, ProductType, Recipe, RecipeInput, RecipeOutput } from '../types/data';
 
 export function isHandleDataType(value: unknown): value is HandleDataType {
   return value === 'item' || value === 'fluid';

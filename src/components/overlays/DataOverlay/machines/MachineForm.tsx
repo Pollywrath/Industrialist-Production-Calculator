@@ -266,14 +266,12 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
           <label className={styles['form-label']}>Size X (Grid Units)</label>
           <ValidatedNumberInput
             value={activeMachine.size?.x}
-            onChange={(val) =>
-              {
-                if (!handleTutorialFieldChange('machine.size.x', val)) return;
-                updateMachinePendingEdit(selectedMachineId, {
+            onChange={(val) => {
+              if (!handleTutorialFieldChange('machine.size.x', val)) return;
+              updateMachinePendingEdit(selectedMachineId, {
                 size: { ...activeMachine.size, x: val } as MachineSize,
-                });
-              }
-            }
+              });
+            }}
             defaultValue={1}
             allowDecimals={false}
             allowNegatives={false}
@@ -289,14 +287,12 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
           <label className={styles['form-label']}>Size Y (Grid Units)</label>
           <ValidatedNumberInput
             value={activeMachine.size?.y}
-            onChange={(val) =>
-              {
-                if (!handleTutorialFieldChange('machine.size.y', val)) return;
-                updateMachinePendingEdit(selectedMachineId, {
+            onChange={(val) => {
+              if (!handleTutorialFieldChange('machine.size.y', val)) return;
+              updateMachinePendingEdit(selectedMachineId, {
                 size: { ...activeMachine.size, y: val } as MachineSize,
-                });
-              }
-            }
+              });
+            }}
             defaultValue={1}
             allowDecimals={false}
             allowNegatives={false}
@@ -352,7 +348,9 @@ export function MachineForm({ selectedMachineId, onSelectMachine }: MachineFormP
                 checked={!!activeMachine.sandboxPlusOnly}
                 onChange={(e) => {
                   if (isTutorialActive()) return;
-                  updateMachinePendingEdit(selectedMachineId, { sandboxPlusOnly: e.target.checked });
+                  updateMachinePendingEdit(selectedMachineId, {
+                    sandboxPlusOnly: e.target.checked,
+                  });
                 }}
               />
               <span className={styles['checkbox-label']}>Sandbox+ Only</span>

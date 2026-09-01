@@ -7,10 +7,6 @@ interface ProductsListProps {
 
 export function ProductsList({ selectedProductId, onSelectProduct }: ProductsListProps) {
   return (
-    <GenericDataList
-      type="product"
-      selectedId={selectedProductId}
-      onSelect={onSelectProduct}
-    />
+    <GenericDataList type="product" selectedId={selectedProductId} onSelect={onSelectProduct} />
   );
 }
