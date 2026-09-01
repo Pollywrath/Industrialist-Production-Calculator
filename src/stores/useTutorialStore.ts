@@ -119,10 +119,7 @@ interface TutorialState {
 }
 
 const clone = <T>(value: T): T => {
-  if (typeof structuredClone === 'function') {
-    return structuredClone(value);
-  }
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 };
 
 const createEmptyAffectedIds = (): AffectedDataIds => ({
