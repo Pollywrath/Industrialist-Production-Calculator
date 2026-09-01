@@ -29,7 +29,7 @@ export interface ColumnConfig<T, K extends string> {
   field: K;
   label: string;
   widthClass: string;
-  renderCell: (item: T) => ReactNode;
+  Cell: ({ item }: { item: T }) => ReactNode;
 }
 
 interface SortableSelectorTableProps<T extends { id: string }, K extends string> {
@@ -96,7 +96,7 @@ export function SortableSelectorTable<T extends { id: string }, K extends string
                   `${styles['cell-item']} ${isFirst ? '' : styles['text-center']} ${styles[col.widthClass]}`.trim();
                 return (
                   <div key={col.field} className={cellClass}>
-                    {col.renderCell(item)}
+                        <col.Cell item={item} />
                   </div>
                 );
               })}
