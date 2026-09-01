@@ -70,8 +70,9 @@ export function createInitialRecipeSelectorTutorialSnapshot(
       preselectedProductId && preselectedSourceSide ? preselectedSourceSide === 'input' : true,
     filterConsumers:
       preselectedProductId && preselectedSourceSide ? preselectedSourceSide === 'output' : true,
-    filterSellTrash:
-      preselectedProductId ? (getProduct(preselectedProductId)?.sell_price ?? 0) < 0 : false,
+    filterSellTrash: preselectedProductId
+      ? (getProduct(preselectedProductId)?.sell_price ?? 0) < 0
+      : false,
     filterHeatPower: false,
   };
 }

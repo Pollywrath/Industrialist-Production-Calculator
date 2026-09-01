@@ -37,7 +37,7 @@ export const steam_cracking_plant_01: SpecialRecipe = {
       name: 'Makes Paraxylene, Ethylene',
       machine_id: 'm_steam_cracking_plant',
       cycle_time: cycleTime,
-      power_consumption: 60000,
+      power_use: 60000,
       power_type: 'MV',
       pollution: 0.432,
       inputs: [
@@ -69,7 +69,7 @@ export const steam_cracking_plant_02: SpecialRecipe = {
       name: 'Makes Crude Diesel, Residue',
       machine_id: 'm_steam_cracking_plant',
       cycle_time: cycleTime,
-      power_consumption: 60000,
+      power_use: 60000,
       power_type: 'MV',
       pollution: 0.432,
       inputs: [
@@ -101,7 +101,7 @@ export const steam_cracking_plant_03: SpecialRecipe = {
       name: 'Makes Light Oil, Residue',
       machine_id: 'm_steam_cracking_plant',
       cycle_time: cycleTime,
-      power_consumption: 60000,
+      power_use: 60000,
       power_type: 'MV',
       pollution: 0.432,
       inputs: [
@@ -129,7 +129,7 @@ export const steam_cracking_plant_04: SpecialRecipe = {
       name: 'Makes Naphtha, Residue',
       machine_id: 'm_steam_cracking_plant',
       cycle_time: 3,
-      power_consumption: 60000,
+      power_use: 60000,
       power_type: 'MV',
       pollution: 0.432,
       inputs: [
@@ -156,7 +156,7 @@ export const steam_cracking_plant_05: SpecialRecipe = {
       name: 'Makes Light Oil, Residue',
       machine_id: 'm_steam_cracking_plant',
       cycle_time: 3,
-      power_consumption: 60000,
+      power_use: 60000,
       power_type: 'MV',
       pollution: 0.432,
       inputs: [

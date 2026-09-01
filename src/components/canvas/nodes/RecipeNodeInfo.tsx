@@ -1,5 +1,6 @@
-import { Ellipsis } from 'lucide-react';
+import { Ellipsis, Gauge, LockKeyhole } from 'lucide-react';
 import type { Recipe } from '../../../types/data';
+import type { MachineCountConstraint } from '../../../types/nodes';
 import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
 import { getSpecialRecipe } from '../../../data/registry';
 import { getNormalizedCycleTime } from '../../../utils/recipeComputation';
@@ -25,6 +26,7 @@ interface RecipeNodeInfoProps {
   receivedTemp?: number | null;
   machineTier?: number;
   isTarget?: boolean;
+  machineCountConstraint?: MachineCountConstraint;
   nodeId: string;
 }
 
@@ -36,6 +38,7 @@ export function RecipeNodeInfo({
   receivedTemp,
   machineTier = 1,
   isTarget = false,
+  machineCountConstraint,
   nodeId,
 }: RecipeNodeInfoProps) {
   const rateMode = useUIStore((s) => s.rateMode);
@@ -59,15 +62,14 @@ export function RecipeNodeInfo({
   };
 
   const displayName = recipe?.name || 'Unknown Recipe';
+  const constraintLabel = machineCountConstraint
+    ? `Machine count ${machineCountConstraint.kind === 'locked' ? 'locked' : 'capped'} at ${formatMachineCount(machineCountConstraint.value)}`
+    : undefined;
 
   return (
     <div className={styles['recipe-node-info']}>
       <div className={styles['recipe-node-info__badges']}>
-        {isTarget && (
-          <div className={styles['recipe-node-info__target-badge']}>
-            TARGET
-          </div>
-        )}
+        {isTarget && <div className={styles['recipe-node-info__target-badge']}>TARGET</div>}
       </div>
       {receivedTemp !== undefined && receivedTemp !== null && (
         <div className={styles['recipe-node-info__temp-badge-anchor']}>
@@ -93,7 +95,9 @@ export function RecipeNodeInfo({
               {formatTime(displayCycleTime)}
             </span>
           </div>
-          <div className={`${styles['recipe-node-info__stat']} ${styles['recipe-node-info__stat--power']}`}>
+          <div
+            className={`${styles['recipe-node-info__stat']} ${styles['recipe-node-info__stat--power']}`}
+          >
             <span className={styles['recipe-node-info__stat-label']}>Power: </span>
             <span className={styles['recipe-node-info__stat-value']}>
               {recipe ? formatRecipePowerLine(recipe, machineCount) : '0 MF/s'}
@@ -108,10 +112,26 @@ export function RecipeNodeInfo({
         </div>
 
         <div className={styles['recipe-node-info__col--right']}>
-          <div className={`${styles['recipe-node-info__machine-name']} ${styles[`tier-${machineTier}`]}`}>
+          <div
+            className={`${styles['recipe-node-info__machine-name']} ${styles[`tier-${machineTier}`]}`}
+          >
             {machineName}
           </div>
           <div className={styles['recipe-node-info__machine-count']}>
+            {machineCountConstraint && (
+              <span
+                className={styles['recipe-node-info__constraint-icon']}
+                data-kind={machineCountConstraint.kind}
+                title={constraintLabel}
+                aria-label={constraintLabel}
+              >
+                {machineCountConstraint.kind === 'locked' ? (
+                  <LockKeyhole aria-hidden="true" />
+                ) : (
+                  <Gauge aria-hidden="true" />
+                )}
+              </span>
+            )}
             {formatMachineCount(machineCount)}
           </div>
         </div>

@@ -28,7 +28,7 @@ export const polisher_01: SpecialRecipe = {
       name: 'Makes Distilled Water',
       machine_id: 'm_polisher',
       cycle_time: 1,
-      power_consumption: 500000,
+      power_use: 500000,
       power_type: 'MV',
       pollution: 0,
       inputs: [

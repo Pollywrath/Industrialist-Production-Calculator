@@ -20,6 +20,10 @@ import { SettingsEditor } from './SettingsEditor';
 import { getSpecialRecipe } from '../../../data/registry';
 import { isRecipeNode } from '../../../types/nodes';
 import {
+  constrainMachineCount,
+  createMachineCountConstraint,
+} from '../../../utils/machineCountConstraint';
+import {
   canPerformTutorialAction,
   completeTutorialAction,
   isTutorialActive,
@@ -83,23 +87,27 @@ function NodeEditorModal({
   const {
     machineCount,
     machineCountStr,
+    constraintMode,
     activeTab,
     handleMachineCountChange,
 
     handleMachineCountBlur,
     handleResetHandles,
     setActiveTab,
+    setConstraintMode,
     getCurrentRecipe,
   } = useNodeEditorStore(
     useShallow((s) => ({
       machineCount: s.machineCount,
       machineCountStr: s.machineCountStr,
+      constraintMode: s.constraintMode,
       activeTab: s.activeTab,
       settings: s.settings,
       handleMachineCountChange: s.handleMachineCountChange,
       handleMachineCountBlur: s.handleMachineCountBlur,
       handleResetHandles: s.handleResetHandles,
       setActiveTab: s.setActiveTab,
+      setConstraintMode: s.setConstraintMode,
       getCurrentRecipe: s.getCurrentRecipe,
     })),
   );
@@ -149,24 +157,22 @@ function NodeEditorModal({
       return;
     }
 
-    const {
-      settings,
-      clampedInputs,
-      clampedOutputs,
-      staleInputIndices,
-      staleOutputIndices,
-    } = prepareHandleSave();
+    const { settings, clampedInputs, clampedOutputs, staleInputIndices, staleOutputIndices } =
+      prepareHandleSave();
 
     const staleHandleIds = [
       ...buildStaleHandleIds(nodeId, 'input', staleInputIndices),
       ...buildStaleHandleIds(nodeId, 'output', staleOutputIndices),
     ];
 
+    const machineCountConstraint = createMachineCountConstraint(constraintMode, machineCount);
+
     runTransaction(() => {
       updateNodeDataAndDeleteEdges(
         nodeId,
         {
           machineCount: cleanMachineCount(machineCount),
+          machineCountConstraint,
           inputOrder: clampedInputs,
           outputOrder: clampedOutputs,
           settings: settings,
@@ -191,16 +197,12 @@ function NodeEditorModal({
       return;
     }
 
-    const {
-      settings,
-      clampedInputs,
-      clampedOutputs,
-      staleInputIndices,
-      staleOutputIndices,
-    } = prepareHandleSave();
+    const { settings, clampedInputs, clampedOutputs, staleInputIndices, staleOutputIndices } =
+      prepareHandleSave();
 
     const { nodes, edges } = useFlowStore.getState();
 
+    const machineCountConstraint = createMachineCountConstraint(constraintMode, machineCount);
     const factor = machineCount / initialMachineCount;
     const connectedIds = getConnectedNodes(nodeId, edges);
 
@@ -225,6 +227,7 @@ function NodeEditorModal({
             data: {
               ...node.data,
               machineCount: cleanMachineCount(machineCount),
+              machineCountConstraint,
               inputOrder: clampedInputs,
               outputOrder: clampedOutputs,
               settings: settings,
@@ -232,7 +235,10 @@ function NodeEditorModal({
           };
         } else {
           const currentCount = node.data.machineCount;
-          const scaledCount = cleanMachineCount(currentCount * factor);
+          const scaledCount = constrainMachineCount(
+            node.data,
+            cleanMachineCount(currentCount * factor),
+          );
           return {
             ...node,
             data: {
@@ -323,15 +329,28 @@ function NodeEditorModal({
             <>
               <div className={styles['node-editor-group']}>
                 <label>Machine Count</label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={machineCountStr}
-                  onChange={(e) => handleMachineCountInput(e.target.value)}
-                  onBlur={handleMachineCountBlur}
-                  className={styles['node-editor-input']}
-                  data-tutorial-node-editor="machine-count"
-                />
+                <div className={styles['machine-count-control']}>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    value={machineCountStr}
+                    onChange={(e) => handleMachineCountInput(e.target.value)}
+                    onBlur={handleMachineCountBlur}
+                    className={styles['node-editor-input']}
+                    data-tutorial-node-editor="machine-count"
+                  />
+                  <select
+                    value={constraintMode}
+                    onChange={(event) =>
+                      setConstraintMode(event.target.value as 'free' | 'locked' | 'capped')
+                    }
+                    aria-label="Machine count constraint"
+                  >
+                    <option value="free">Free</option>
+                    <option value="locked">Lock</option>
+                    <option value="capped">Cap</option>
+                  </select>
+                </div>
               </div>
 
               <HandleEditorColumns

@@ -147,6 +147,29 @@
   border-color: var(--theme-color-border-primary);
 }
 
+.node-editor-input:disabled {
+  color: var(--theme-color-text-dim);
+  background: var(--theme-color-secondary);
+}
+
+.machine-count-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px;
+  gap: 7px;
+}
+
+.machine-count-control select {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--theme-color-border-light);
+  border-radius: 6px;
+  color: var(--theme-color-text-primary);
+  background: var(--theme-color-primary-dark);
+  font: inherit;
+  font-size: 12px;
+}
+
 .node-editor-columns {
   display: flex;
   flex: 1;

@@ -116,7 +116,8 @@ export function validateMachine(
   }
 
   const rawCost = m.cost as unknown;
-  const costVal = typeof rawCost === 'string' && rawCost.toLowerCase() === 'infinity' ? Infinity : rawCost;
+  const costVal =
+    typeof rawCost === 'string' && rawCost.toLowerCase() === 'infinity' ? Infinity : rawCost;
   if (typeof costVal !== 'number' || isNaN(costVal)) {
     errors.push({ field: 'cost', message: 'Cost must be a valid number' });
   } else if (!isVirtualModular && costVal <= 0) {
@@ -160,7 +161,12 @@ export function validateMachine(
 
   if (typeof m.variant !== 'string') {
     errors.push({ field: 'variant', message: 'Variant must be a string' });
-  } else if (validMachineIds && m.variant && m.variant !== 'none' && !validMachineIds.has(m.variant)) {
+  } else if (
+    validMachineIds &&
+    m.variant &&
+    m.variant !== 'none' &&
+    !validMachineIds.has(m.variant)
+  ) {
     errors.push({
       field: 'variant',
       message: `Variant machine ID "${m.variant}" does not exist in machine database`,
@@ -177,6 +183,13 @@ export function validateMachine(
 
   if (m.sandboxPlusOnly !== undefined && typeof m.sandboxPlusOnly !== 'boolean') {
     errors.push({ field: 'sandboxPlusOnly', message: 'Sandbox+ Only must be a boolean' });
+  }
+
+  if (m.requiresManualOperation !== undefined && typeof m.requiresManualOperation !== 'boolean') {
+    errors.push({
+      field: 'requiresManualOperation',
+      message: 'Requires Manual Operation must be a boolean',
+    });
   }
 
   if (typeof m.research !== 'string') {
@@ -289,10 +302,10 @@ export function validateRecipe(
     });
   }
 
-  if (typeof r.power_consumption !== 'number' || isNaN(r.power_consumption)) {
+  if (typeof r.power_use !== 'number' || isNaN(r.power_use)) {
     errors.push({
-      field: 'power_consumption',
-      message: 'Power consumption must be a valid number',
+      field: 'power_use',
+      message: 'Power use must be a valid number',
     });
   }
 
@@ -333,24 +346,21 @@ export function validateRecipe(
         });
       }
 
-      if (
-        typeof typedEffect.power_consumption !== 'number' ||
-        isNaN(typedEffect.power_consumption)
-      ) {
+      if (typeof typedEffect.power_use !== 'number' || isNaN(typedEffect.power_use)) {
         errors.push({
-          field: `${field}[${idx}].power_consumption`,
-          message: 'Power effect consumption must be a valid number',
+          field: `${field}[${idx}].power_use`,
+          message: 'Power effect use must be a valid number',
         });
       }
 
       if (
         typedEffect.accounting !== undefined &&
         typedEffect.accounting !== 'normal' &&
-        typedEffect.accounting !== 'production_delta'
+        typedEffect.accounting !== 'output_delta'
       ) {
         errors.push({
           field: `${field}[${idx}].accounting`,
-          message: `Power effect accounting must be either "normal" or "production_delta" (got "${typedEffect.accounting}")`,
+          message: `Power effect accounting must be either "normal" or "output_delta" (got "${typedEffect.accounting}")`,
         });
       }
     });

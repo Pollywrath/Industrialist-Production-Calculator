@@ -22,10 +22,7 @@ export function RecipeSelectorProvider({
   const [store] = useState(() =>
     createStore(
       subscribeWithSelector<RecipeSelectorState>((set) => ({
-        ...createInitialRecipeSelectorTutorialSnapshot(
-          preselectedProductId,
-          preselectedSourceSide,
-        ),
+        ...createInitialRecipeSelectorTutorialSnapshot(preselectedProductId, preselectedSourceSide),
 
         setActiveTab: (activeTab) => set({ activeTab }),
         setSearchQuery: (searchQuery) => set({ searchQuery }),
@@ -61,8 +58,7 @@ export function RecipeSelectorProvider({
             stage: 'recipes',
             filterProducers: true,
             filterConsumers: true,
-            filterSellTrash:
-              createInitialRecipeSelectorTutorialSnapshot(id, null).filterSellTrash,
+            filterSellTrash: createInitialRecipeSelectorTutorialSnapshot(id, null).filterSellTrash,
             filterHeatPower: false,
           }),
         handleBack: () =>

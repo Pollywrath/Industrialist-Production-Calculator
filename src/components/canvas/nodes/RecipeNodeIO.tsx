@@ -21,6 +21,7 @@ import {
 import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
+import { constrainMachineCount } from '../../../utils/machineCountConstraint';
 import {
   getRecipeEntryHandleType,
   getRecipeEntryProductId,
@@ -100,9 +101,7 @@ function createProductLinkAnchor(
   const verticalOffset = ((maxCount - sideCount) * (RECT_HEIGHT + RECT_GAP)) / 2;
   const y = 17 + verticalOffset + ordinal * (RECT_HEIGHT + RECT_GAP) + RECT_HEIGHT / 2;
   const x =
-    ref.side === 'input'
-      ? SIDE_PADDING + leftWidth
-      : SIDE_PADDING + leftWidth + middleWidth;
+    ref.side === 'input' ? SIDE_PADDING + leftWidth : SIDE_PADDING + leftWidth + middleWidth;
 
   return {
     ref,
@@ -125,11 +124,7 @@ function buildProductLinkLines(
   const middleWidth = NODE_WIDTH - SIDE_PADDING * 2 - leftWidth - rightWidth;
   const groups = new Map<string, ProductLinkAnchor[]>();
 
-  const addAnchor = (
-    ref: HandleRef,
-    ordinal: number,
-    sideCount: number,
-  ) => {
+  const addAnchor = (ref: HandleRef, ordinal: number, sideCount: number) => {
     const linkId = getProductLinkId(ref, recipe);
     if (!linkId) return;
 
@@ -331,8 +326,7 @@ export function RecipeNodeIO({
   const flowResultDataDbVersion = useFlowResultStore((s) => s.dataDbVersion);
   const currentGraphVersion = useFlowStore((s) => s.graphVersion);
   const hasFreshSolveSnapshot =
-    flowResultGraphVersion === currentGraphVersion &&
-    flowResultDataDbVersion === dbVersion;
+    flowResultGraphVersion === currentGraphVersion && flowResultDataDbVersion === dbVersion;
   const resolvedProducts = useFlowResultStore(
     useShallow((s) => {
       const all = s.resolvedProducts;
@@ -483,6 +477,8 @@ export function RecipeNodeIO({
     const handleId = buildHandleId(nodeId, ref.side, ref.index);
     const { nodes, edges } = useFlowStore.getState();
     const recipeNodes = nodes.filter(isRecipeNode);
+    const targetNode = recipeNodes.find((node) => node.id === nodeId);
+    if (!targetNode || targetNode.data.machineCountConstraint?.kind === 'locked') return;
     const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
     const recipeEdges = edges.filter(
       (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
@@ -494,7 +490,10 @@ export function RecipeNodeIO({
     if (!hasEdges) return;
 
     const flowResults = useFlowResultStore.getState().results;
-    const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
+    const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
+      string,
+      unknown
+    >;
 
     const targetRate = calculateBalancedRate(
       nodeId,
@@ -508,7 +507,10 @@ export function RecipeNodeIO({
     );
     const q = resolveQuantity(ref, recipe);
     if (q <= 0) return;
-    const newMachineCount = calculateMachineCountFromRate(targetRate, recipe.cycle_time, q);
+    const newMachineCount = constrainMachineCount(
+      targetNode.data,
+      calculateMachineCountFromRate(targetRate, recipe.cycle_time, q),
+    );
     useFlowStore.getState().updateNodeData(nodeId, { machineCount: newMachineCount });
     completeTutorialAction({
       type: 'node-handle-double',
@@ -539,7 +541,8 @@ export function RecipeNodeIO({
           >
             {leftHandles.map((refVal) => {
               const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
-              const fallbackProductId = getRecipeEntryProductId(recipe, refVal.side, refVal.index) || '';
+              const fallbackProductId =
+                getRecipeEntryProductId(recipe, refVal.side, refVal.index) || '';
               const actualFlow = flowResult
                 ? ((refVal.side === 'input'
                     ? flowResult.inputFlows[refVal.index]?.connected
@@ -575,7 +578,8 @@ export function RecipeNodeIO({
           >
             {rightHandles.map((refVal) => {
               const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
-              const fallbackProductId = getRecipeEntryProductId(recipe, refVal.side, refVal.index) || '';
+              const fallbackProductId =
+                getRecipeEntryProductId(recipe, refVal.side, refVal.index) || '';
               const actualFlow = flowResult
                 ? ((refVal.side === 'input'
                     ? flowResult.inputFlows[refVal.index]?.connected

@@ -173,10 +173,7 @@ const BLOCKED_SEEDS: Record<GameDifficulty, string[]> = {
   sandbox_plus: [],
 };
 
-function computeBlockedSet(
-  seeds: string[],
-  dependentsMap: Map<string, string[]>,
-): Set<string> {
+function computeBlockedSet(seeds: string[], dependentsMap: Map<string, string[]>): Set<string> {
   const blocked = new Set<string>();
   for (let i = 0; i < seeds.length; i++) {
     const reachable = collectReachable(seeds[i], dependentsMap);
@@ -184,8 +181,6 @@ function computeBlockedSet(
   }
   return blocked;
 }
-
-
 
 const elk = new ELK();
 let categoryGraphCache: CategoryGraphMap | null = null;
@@ -207,10 +202,7 @@ function buildPolylinePath(points: Array<{ x: number; y: number }>): string {
   return path;
 }
 
-function collectReachable(
-  startId: string,
-  adjacency: Map<string, string[]>,
-): Set<string> {
+function collectReachable(startId: string, adjacency: Map<string, string[]>): Set<string> {
   const visited = new Set<string>();
   const stack = [startId];
 
@@ -238,7 +230,9 @@ function ResearchGraphNode({ data }: NodeProps<Node<ResearchGraphNodeData>>) {
   const blockedClass = data.blocked ? styles['is-blocked'] : '';
 
   return (
-    <div className={`${styles['research-node']} ${stateClass} ${selectedClass} ${blockedClass}`.trim()}>
+    <div
+      className={`${styles['research-node']} ${stateClass} ${selectedClass} ${blockedClass}`.trim()}
+    >
       <Handle
         id={TARGET_HANDLE_ID}
         type="target"
@@ -272,13 +266,13 @@ function MachineResearchEdge({
   const path = hasBendPoints
     ? buildPolylinePath([{ x: sourceX, y: sourceY }, ...bendPoints, { x: targetX, y: targetY }])
     : getSmoothStepPath({
-      sourceX,
-      sourceY,
-      sourcePosition: Position.Right,
-      targetX,
-      targetY,
-      targetPosition: Position.Left,
-    })[0];
+        sourceX,
+        sourceY,
+        sourcePosition: Position.Right,
+        targetX,
+        targetY,
+        targetPosition: Position.Left,
+      })[0];
 
   return (
     <BaseEdge
@@ -514,16 +508,17 @@ async function layoutGraph(
     }
 
     const bendPointsByEdgeId = new Map<string, Array<{ x: number; y: number }>>();
-    const layoutedEdges = (
-      layouted as unknown as {
-        edges?: Array<{
-          id: string;
-          sections?: Array<{
-            bendPoints?: Array<{ x: number; y: number }>;
+    const layoutedEdges =
+      (
+        layouted as unknown as {
+          edges?: Array<{
+            id: string;
+            sections?: Array<{
+              bendPoints?: Array<{ x: number; y: number }>;
+            }>;
           }>;
-        }>;
-      }
-    ).edges ?? [];
+        }
+      ).edges ?? [];
 
     for (let i = 0; i < layoutedEdges.length; i++) {
       const edge = layoutedEdges[i];
@@ -776,37 +771,40 @@ function MachineOverlayModal() {
     }
   }
 
-  const selectedResearch = selectedResearchId ? researchesById.get(selectedResearchId) ?? null : null;
+  const selectedResearch = selectedResearchId
+    ? (researchesById.get(selectedResearchId) ?? null)
+    : null;
 
   const isSandboxMode = difficulty === 'sandbox' || difficulty === 'sandbox_plus';
   const isSandboxPlus = difficulty === 'sandbox_plus';
 
   const unlockedMachines = selectedResearch
     ? machines
-      .filter((machine) => {
-        if (machine.sandboxPlusOnly && !isSandboxPlus) {
-          return false;
-        }
-        if (machine.sandboxOnly && !isSandboxMode) {
-          return false;
-        }
-        if (machine.research === selectedResearch.id) {
-          return true;
-        }
-        if (machine.variant && machine.variant !== 'none' && machine.variant !== '') {
-          let current = getMachine(machine.variant);
-          while (current) {
-            if (current.research === selectedResearch.id) {
-              return true;
-            }
-            current = (current.variant && current.variant !== 'none' && current.variant !== '')
-              ? getMachine(current.variant)
-              : undefined;
+        .filter((machine) => {
+          if (machine.sandboxPlusOnly && !isSandboxPlus) {
+            return false;
           }
-        }
-        return false;
-      })
-      .sort((a, b) => a.name.localeCompare(b.name))
+          if (machine.sandboxOnly && !isSandboxMode) {
+            return false;
+          }
+          if (machine.research === selectedResearch.id) {
+            return true;
+          }
+          if (machine.variant && machine.variant !== 'none' && machine.variant !== '') {
+            let current = getMachine(machine.variant);
+            while (current) {
+              if (current.research === selectedResearch.id) {
+                return true;
+              }
+              current =
+                current.variant && current.variant !== 'none' && current.variant !== ''
+                  ? getMachine(current.variant)
+                  : undefined;
+            }
+          }
+          return false;
+        })
+        .sort((a, b) => a.name.localeCompare(b.name))
     : [];
 
   const isSandbox = difficulty === 'sandbox' || difficulty === 'sandbox_plus';
@@ -885,8 +883,9 @@ function MachineOverlayModal() {
           {CATEGORY_TABS.map((category) => (
             <button
               key={category}
-              className={`${styles['machine-tab']} ${activeCategory === category ? styles['is-active'] : ''
-                }`}
+              className={`${styles['machine-tab']} ${
+                activeCategory === category ? styles['is-active'] : ''
+              }`}
               onClick={() => setActiveCategory(category)}
             >
               {category}
@@ -904,9 +903,7 @@ function MachineOverlayModal() {
                 <select
                   className={styles['option-select']}
                   value={difficulty}
-                  onChange={(e) =>
-                    handleDifficultyChange(e.target.value as GameDifficulty)
-                  }
+                  onChange={(e) => handleDifficultyChange(e.target.value as GameDifficulty)}
                 >
                   {DIFFICULTY_OPTIONS.map((d) => (
                     <option key={d} value={d}>
@@ -1000,7 +997,9 @@ function MachineOverlayModal() {
                     Unlocks Machines ({unlockedMachines.length})
                   </div>
                   {unlockedMachines.length === 0 ? (
-                    <div className={styles['sidebar-empty']}>No machine requires this research.</div>
+                    <div className={styles['sidebar-empty']}>
+                      No machine requires this research.
+                    </div>
                   ) : (
                     <div className={styles['machine-list']}>
                       {unlockedMachines.map((machine) => (

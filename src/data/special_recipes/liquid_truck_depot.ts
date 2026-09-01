@@ -6,6 +6,7 @@ export const liquid_truck_depot_01: SpecialRecipe = {
   name: 'Sell Fluid',
   machine_id: 'm_liquid_truck_depot',
   isSellTrash: true,
+  autocompleteDisposalPriority: 'last-resort',
   settings: {},
   compute: (_settings, _globalSettings, _nodeId, helpers) => {
     let resolvedFluid = 'any_fluid';
@@ -18,7 +19,7 @@ export const liquid_truck_depot_01: SpecialRecipe = {
       name: 'Sell Fluid',
       machine_id: 'm_liquid_truck_depot',
       cycle_time: 80,
-      power_consumption: 0,
+      power_use: 0,
       power_type: 'MV',
       pollution: 0.045,
       inputs: [{ product_id: resolvedFluid, quantity: 400 }],

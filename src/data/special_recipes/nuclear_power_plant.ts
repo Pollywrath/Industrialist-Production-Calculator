@@ -199,7 +199,7 @@ export interface Recipe {
   name: string;
   machine_id: string;
   cycle_time: number;
-  power_consumption: number;
+  power_use: number;
   power_type: 'MV' | 'HV';
   pollution: number;
   inputs: { product_id: string; quantity: number }[];
@@ -212,7 +212,7 @@ const recipes: Recipe[] = [
     name: 'Nuclear Power Plant',
     machine_id: 'm_nuclear_power_plant',
     cycle_time: 1,
-    power_consumption: 0,
+    power_use: 0,
     power_type: 'HV',
     pollution: 0,
     inputs: (COMPUTATION_MODE as string) === 'MANUAL' ? MANUAL_INPUTS : inputs,

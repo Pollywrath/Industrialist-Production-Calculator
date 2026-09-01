@@ -2,12 +2,14 @@ import { createContext, useContext } from 'react';
 import { useStore } from 'zustand';
 import type { StoreApi } from 'zustand';
 import type { Recipe } from '../../../types/data';
+import type { MachineCountConstraintMode } from '../../../utils/machineCountConstraint';
 
 export interface NodeEditorState {
   inputs: number[];
   outputs: number[];
   machineCount: number;
   machineCountStr: string;
+  constraintMode: MachineCountConstraintMode;
   qtyStrMap: Record<string, string>;
   activeTab: 'count' | 'settings';
   settings: Record<string, unknown>;
@@ -16,6 +18,7 @@ export interface NodeEditorState {
   setOutputs: (outputs: number[]) => void;
   setMachineCount: (count: number) => void;
   setMachineCountStr: (str: string) => void;
+  setConstraintMode: (mode: MachineCountConstraintMode) => void;
   setQtyStrMap: (
     updater: Record<string, string> | ((prev: Record<string, string>) => Record<string, string>),
   ) => void;

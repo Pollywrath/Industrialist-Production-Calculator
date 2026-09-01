@@ -118,7 +118,7 @@ interface TutorialState {
   registerSaveCreated: (id: string) => void;
 }
 
-const clone = <T,>(value: T): T => {
+const clone = <T>(value: T): T => {
   if (typeof structuredClone === 'function') {
     return structuredClone(value);
   }
@@ -394,7 +394,10 @@ function buildScopedOverrides(
   let scopedOverrides = overrides;
 
   if (definition.dataScope?.recipeIds?.length) {
-    const result = buildScopedOverridesFromRecipeIds(scopedOverrides, definition.dataScope.recipeIds);
+    const result = buildScopedOverridesFromRecipeIds(
+      scopedOverrides,
+      definition.dataScope.recipeIds,
+    );
     scopedOverrides = result.overrides;
     for (const id of result.affected.products) affected.products.add(id);
     for (const id of result.affected.machines) affected.machines.add(id);
@@ -477,7 +480,9 @@ function applySandboxSettings(rootSettings: GlobalSettings): void {
   });
 }
 
-function applyInitialCanvas(definition: TutorialDefinition): Partial<Record<TutorialAlias, string>> {
+function applyInitialCanvas(
+  definition: TutorialDefinition,
+): Partial<Record<TutorialAlias, string>> {
   const flow = useFlowStore.getState();
   if (definition.initialCanvas.type === 'empty') {
     flow.setNodesAndEdges([], [], { recordHistory: false, resetHistory: true });
@@ -532,7 +537,11 @@ function actionMatches(
     case 'selector-tab':
       return expected.tab === event.tab;
     case 'selector-search':
-      return String(event.query ?? '').trim().toLowerCase() === expected.query.toLowerCase();
+      return (
+        String(event.query ?? '')
+          .trim()
+          .toLowerCase() === expected.query.toLowerCase()
+      );
     case 'selector-product':
       return expected.productId === event.productId;
     case 'selector-filter':
@@ -570,9 +579,15 @@ function actionMatches(
     case 'node-editor-tab':
       return expected.tab === event.tab;
     case 'node-editor-machine-count':
-      return expectedAliasId(aliases, expected.alias) === event.nodeId && Number(event.value) === expected.value;
+      return (
+        expectedAliasId(aliases, expected.alias) === event.nodeId &&
+        Number(event.value) === expected.value
+      );
     case 'node-editor-setting':
-      return expected.key === event.key && (expected.value === undefined || expected.value === event.value);
+      return (
+        expected.key === event.key &&
+        (expected.value === undefined || expected.value === event.value)
+      );
     case 'node-editor-apply':
       return expected.mode === event.mode;
     case 'dashboard-diagnostic':
@@ -595,7 +610,9 @@ function actionMatches(
     case 'data-search':
       return (
         expected.entity === event.entity &&
-        String(event.query ?? '').trim().toLowerCase() === expected.query.toLowerCase()
+        String(event.query ?? '')
+          .trim()
+          .toLowerCase() === expected.query.toLowerCase()
       );
     case 'data-select':
       return expected.entity === event.entity && expected.id === event.id;
@@ -620,7 +637,9 @@ function getEventDataOverrides(
   event: TutorialActionEvent,
   fallback: DataOverride[],
 ): DataOverride[] {
-  return Array.isArray(event.dataOverrides) ? clone(event.dataOverrides as DataOverride[]) : fallback;
+  return Array.isArray(event.dataOverrides)
+    ? clone(event.dataOverrides as DataOverride[])
+    : fallback;
 }
 
 export const useTutorialStore = create<TutorialState>((set, get) => ({
@@ -813,7 +832,11 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
     if (!definition || !step || !actionMatches(step.action, event, state.aliases)) return false;
 
     const nextAliases = { ...state.aliases };
-    if (step.action.type === 'selector-recipe' && step.action.alias && typeof event.nodeId === 'string') {
+    if (
+      step.action.type === 'selector-recipe' &&
+      step.action.alias &&
+      typeof event.nodeId === 'string'
+    ) {
       nextAliases[step.action.alias] = event.nodeId;
     } else if (step.action.type === 'group-create' && typeof event.groupId === 'string') {
       nextAliases[step.action.alias] = event.groupId;

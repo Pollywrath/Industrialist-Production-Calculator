@@ -33,10 +33,7 @@ export function getPointArray(data: unknown, key: string): EdgeControlPoint[] {
   return Array.isArray(raw) ? toFinitePoints(raw) : [];
 }
 
-export function arePointsAtSamePosition(
-  a: EdgeControlPoint,
-  b: EdgeControlPoint,
-): boolean {
+export function arePointsAtSamePosition(a: EdgeControlPoint, b: EdgeControlPoint): boolean {
   return Math.abs(a.x - b.x) < POINT_EPSILON && Math.abs(a.y - b.y) < POINT_EPSILON;
 }
 

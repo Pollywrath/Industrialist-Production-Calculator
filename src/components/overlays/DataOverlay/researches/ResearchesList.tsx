@@ -7,10 +7,6 @@ interface ResearchesListProps {
 
 export function ResearchesList({ selectedResearchId, onSelectResearch }: ResearchesListProps) {
   return (
-    <GenericDataList
-      type="research"
-      selectedId={selectedResearchId}
-      onSelect={onSelectResearch}
-    />
+    <GenericDataList type="research" selectedId={selectedResearchId} onSelect={onSelectResearch} />
   );
 }

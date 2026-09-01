@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import type { HandleDataType, Recipe } from '../../../types/data';
 import { getProductIconPath } from '../../../data/productIcons';
-import { getMachineName, getProductName, getMachine, resolveActiveRecipe } from '../../../data/lookup';
+import {
+  getMachineName,
+  getProductName,
+  getMachine,
+  resolveActiveRecipe,
+} from '../../../data/lookup';
 import { getSpecialRecipe } from '../../../data/registry';
 import {
   getRateMultiplier,
@@ -101,9 +106,10 @@ export function RecipeCard({
   }
 
   const sr = getSpecialRecipe(initialRecipe.id);
-  const pollutionMultiplier = (recipe.pollutionIndependentOfMachineCount || sr?.pollutionIndependentOfMachineCount)
-    ? 1
-    : neededMachineCount;
+  const pollutionMultiplier =
+    recipe.pollutionIndependentOfMachineCount || sr?.pollutionIndependentOfMachineCount
+      ? 1
+      : neededMachineCount;
 
   return (
     <div
@@ -128,7 +134,10 @@ export function RecipeCard({
             />
           </button>
           <span className={styles['recipe-card-machine-name']}>
-            {formatMachineCount(neededMachineCount)}x <span className={styles[`tier-${machineTier}`]}>{getMachineName(recipe.machine_id)}</span>
+            {formatMachineCount(neededMachineCount)}x{' '}
+            <span className={styles[`tier-${machineTier}`]}>
+              {getMachineName(recipe.machine_id)}
+            </span>
           </span>
         </div>
         <div className={styles['recipe-card-top-right']}>
@@ -152,7 +161,11 @@ export function RecipeCard({
                 <div key={`${inp.product_id}-${idx}`} className={styles['recipe-card-io-item']}>
                   <div className={styles['recipe-card-io-square-wrapper']}>
                     <div className={styles['recipe-card-io-square']}>
-                      <ProductIcon key={inp.product_id} productId={inp.product_id} productName={productName} />
+                      <ProductIcon
+                        key={inp.product_id}
+                        productId={inp.product_id}
+                        productName={productName}
+                      />
                     </div>
                     <span className={styles['recipe-card-io-quantity']}>
                       {formatQuantity(inp.quantity * multiplier * scale)}
@@ -189,7 +202,11 @@ export function RecipeCard({
                 <div key={`${out.product_id}-${idx}`} className={styles['recipe-card-io-item']}>
                   <div className={styles['recipe-card-io-square-wrapper']}>
                     <div className={styles['recipe-card-io-square']}>
-                      <ProductIcon key={out.product_id} productId={out.product_id} productName={productName} />
+                      <ProductIcon
+                        key={out.product_id}
+                        productId={out.product_id}
+                        productName={productName}
+                      />
                     </div>
                     <span className={styles['recipe-card-io-quantity']}>
                       {formatQuantity(out.quantity * multiplier * scale)}

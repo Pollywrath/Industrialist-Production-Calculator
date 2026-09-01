@@ -8,11 +8,7 @@ import {
   RECT_HEIGHT,
   SNAP_GRID,
 } from '../constants/layoutConstants';
-import {
-  GROUP_HEADER_HEIGHT,
-  GROUP_PADDING_X,
-  GROUP_PADDING_Y,
-} from '../utils/groupBounds';
+import { GROUP_HEADER_HEIGHT, GROUP_PADDING_X, GROUP_PADDING_Y } from '../utils/groupBounds';
 import type { ResolvedLayoutOptions } from './types';
 
 export {

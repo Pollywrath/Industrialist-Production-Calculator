@@ -30,7 +30,12 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-export { CANONICAL_CATEGORY_MAP, UNIQUE_CATEGORIES, UNIQUE_SUBCATEGORIES, isValidTaxonomy } from './taxonomyData';
+export {
+  CANONICAL_CATEGORY_MAP,
+  UNIQUE_CATEGORIES,
+  UNIQUE_SUBCATEGORIES,
+  isValidTaxonomy,
+} from './taxonomyData';
 export {
   createVirtualModularMachine,
   validateModularConsistency,

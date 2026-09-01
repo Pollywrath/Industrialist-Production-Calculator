@@ -5,8 +5,7 @@ import {
 } from '../persistence/idb';
 
 export const INDUSTRIALIST_WIKI_API_URL =
-  import.meta.env.VITE_INDUSTRIALIST_WIKI_API_URL ??
-  'https://industrialist.miraheze.org/w/api.php';
+  import.meta.env.VITE_INDUSTRIALIST_WIKI_API_URL ?? 'https://industrialist.miraheze.org/w/api.php';
 
 export const INDUSTRIALIST_WIKI_BUCKET_PROXY_URL =
   import.meta.env.VITE_INDUSTRIALIST_WIKI_BUCKET_PROXY_URL ?? '/api/wiki-bucket';
@@ -94,8 +93,7 @@ export class WikiBucketApiError extends Error {
 
 const BUCKET_NAME_SET = new Set<string>(INDUSTRIALIST_BUCKETS);
 const FIELD_NAME_PATTERN = /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)?$/;
-const SHOULD_USE_BUCKET_PROXY =
-  import.meta.env.VITE_INDUSTRIALIST_WIKI_BUCKET_USE_PROXY === 'true';
+const SHOULD_USE_BUCKET_PROXY = import.meta.env.VITE_INDUSTRIALIST_WIKI_BUCKET_USE_PROXY === 'true';
 const SHOULD_ALLOW_DIRECT_FALLBACK =
   import.meta.env.VITE_INDUSTRIALIST_WIKI_BUCKET_ALLOW_DIRECT_FALLBACK === 'true';
 const DEFAULT_SELECT_FIELDS_BY_BUCKET: Record<IndustrialistBucketName, readonly string[]> = {
@@ -202,9 +200,10 @@ export function buildWikiBucketQuery(request: BucketQueryRequest): string {
   assertBucketName(request.bucket);
 
   let query = `bucket(${toLuaString(request.bucket)})`;
-  const selectedFields = request.select && request.select.length > 0
-    ? request.select
-    : DEFAULT_SELECT_FIELDS_BY_BUCKET[request.bucket];
+  const selectedFields =
+    request.select && request.select.length > 0
+      ? request.select
+      : DEFAULT_SELECT_FIELDS_BY_BUCKET[request.bucket];
 
   selectedFields.forEach(assertFieldName);
   query += `.select(${selectedFields.map(toLuaString).join(',')})`;
@@ -264,10 +263,7 @@ async function fetchWikiBucketDirect<TBucket>(
   });
 
   if (!response.ok) {
-    throw new WikiBucketApiError(
-      `Bucket API request failed with HTTP ${response.status}`,
-      query,
-    );
+    throw new WikiBucketApiError(`Bucket API request failed with HTTP ${response.status}`, query);
   }
 
   const payload = (await response.json()) as WikiBucketApiResponse<TBucket>;
@@ -339,10 +335,7 @@ async function fetchWikiBucketProxy<TBucket>(
   });
 
   if (!response.ok) {
-    throw new WikiBucketApiError(
-      `Bucket proxy request failed with HTTP ${response.status}`,
-      query,
-    );
+    throw new WikiBucketApiError(`Bucket proxy request failed with HTTP ${response.status}`, query);
   }
 
   const payload = (await response.json()) as WikiBucketApiResponse<TBucket>;

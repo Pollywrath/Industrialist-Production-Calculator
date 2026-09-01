@@ -127,7 +127,8 @@ export const useGlobalSettingsStore = create<GlobalSettingsState>((set) => {
       }),
     setUnlockedResearchIds: (value) =>
       set((state) => {
-        const nextIds = typeof value === 'function' ? value(state.settings.unlockedResearchIds) : value;
+        const nextIds =
+          typeof value === 'function' ? value(state.settings.unlockedResearchIds) : value;
         const nextSettings = { ...state.settings, unlockedResearchIds: nextIds };
         return { settings: nextSettings };
       }),

@@ -851,6 +851,7 @@
     },
     "variant": "none",
     "limited": false,
+    "requiresManualOperation": true,
     "research": "s_energy_hand_crank",
     "category": "Power",
     "subcategory": "Renewable"
@@ -866,6 +867,7 @@
     },
     "variant": "none",
     "limited": false,
+    "requiresManualOperation": true,
     "research": "",
     "category": "Power",
     "subcategory": "Renewable"
@@ -881,6 +883,7 @@
     },
     "variant": "none",
     "limited": false,
+    "requiresManualOperation": true,
     "research": "s_energy_hand_crank",
     "category": "Extractor",
     "subcategory": "Fluid Extractor"

@@ -140,6 +140,10 @@ export function formatMachineCount(value: number): string {
   return formatWithCommasAndCounting(value, (val) => toPlainString(val, 2), 100000);
 }
 
+export function formatMachineSpace(value: number): string {
+  return `${formatQuantity(value)} squares`;
+}
+
 export function toRomanNumeral(num: number): string {
   const romanNumerals = [
     { value: 1000, symbol: 'M' },
@@ -169,4 +173,3 @@ export function toRomanNumeral(num: number): string {
 
   return result;
 }
-

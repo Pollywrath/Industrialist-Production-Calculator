@@ -61,14 +61,14 @@ export function ValidatedNumberInput({
       let committed = parsed;
       if (min !== undefined) committed = Math.max(min, committed);
       if (max !== undefined) committed = Math.min(max, committed);
-      
+
       if (step !== undefined && step !== 'any') {
         const stepNum = typeof step === 'number' ? step : parseFloat(step);
         if (!isNaN(stepNum) && stepNum > 0) {
           committed = Math.round(committed / stepNum) * stepNum;
         }
       }
-      
+
       onChange(committed);
     }
   };

@@ -191,8 +191,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       'dashboard',
       'production stats',
       'more stats',
-      'power consumption',
-      'power production',
+      'power use',
+      'power output',
       'machine cost',
       'profit',
       'pollution',
@@ -204,7 +204,7 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Production Stats',
         items: [
-          'Production Stats shows Power Consumption, Power Production, Minimum Model Count, Machine Cost, Profit, and Net Pollution.',
+          'Production Stats shows Power Use, Power Output, Minimum Model Count, Machine Cost, Profit, and Net Pollution.',
           'The Rate control changes whether quantities are displayed per second, per minute, per hour, or as raw cycle quantities.',
           'Global Pollution in More Stats feeds the same global settings store used by recipes that depend on that value.',
         ],
@@ -223,7 +223,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
     id: 'controls-tray',
     tabId: 'controls',
     title: 'Controls Tray',
-    summary: 'The main action strip for adding nodes, modes, layout, compute, overlays, and rate display.',
+    summary:
+      'The main action strip for adding nodes, modes, layout, compute, overlays, and rate display.',
     Icon: MousePointerSquareDashed,
     keywords: [
       'controls tray',
@@ -384,7 +385,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
     id: 'machines-overlay',
     tabId: 'controls',
     title: 'Machines Overlay',
-    summary: 'Research category tabs, difficulty settings, unlock chains, and machine availability.',
+    summary:
+      'Research category tabs, difficulty settings, unlock chains, and machine availability.',
     Icon: PackageSearch,
     keywords: [
       'machines',
@@ -675,14 +677,29 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
     title: 'About & Credits',
     summary: 'Developer credits, game asset attributions, and contact links.',
     Icon: Info,
-    keywords: ['about', 'credits', 'attributions', 'authors', 'creators', 'pollywrath', 'mamytema', 'license', 'wiki', 'contact', 'support', 'github'],
+    keywords: [
+      'about',
+      'credits',
+      'attributions',
+      'authors',
+      'creators',
+      'pollywrath',
+      'mamytema',
+      'license',
+      'wiki',
+      'contact',
+      'support',
+      'github',
+    ],
     sections: [
       {
         title: 'Project Info',
         listStyle: 'none',
         items: [
           <span key="project-desc">
-            Industrialist Calculator is an interactive, flowchart-based calculator and factory solver for the Roblox game <strong>Industrialist</strong>. It is designed to help players design layouts, calculate production rates, and optimize factory setups.
+            Industrialist Calculator is an interactive, flowchart-based calculator and factory
+            solver for the Roblox game <strong>Industrialist</strong>. It is designed to help
+            players design layouts, calculate production rates, and optimize factory setups.
           </span>,
         ],
       },
@@ -703,13 +720,25 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
             ).
           </span>,
           <span key="game-ip">
-            All recipe data, machine stats, and formulas are based on the Roblox game <strong>Industrialist</strong> by <strong>Mamytema Studios</strong>.
+            All recipe data, machine stats, and formulas are based on the Roblox game{' '}
+            <strong>Industrialist</strong> by <strong>Mamytema Studios</strong>.
           </span>,
           <span key="wiki-assets">
-            Icons and sprites are sourced from the official <strong>Industrialist Wiki</strong> and are used under the <strong>Creative Commons CC BY-NC-SA 4.0</strong> license.
+            Icons and sprites are sourced from the official <strong>Industrialist Wiki</strong> and
+            are used under the <strong>Creative Commons CC BY-NC-SA 4.0</strong> license.
           </span>,
           <span key="scip-solve">
-            The LP Solver uses a WebAssembly build of the <strong>SCIP Optimization Suite</strong> (licensed under Apache 2.0), adapted from Jacob Strieb's Poker Chipper repository.
+            The ratio optimizer uses a custom WebAssembly build of the{' '}
+            <strong>SCIP Optimization Suite</strong> and its open-source solver components.{' '}
+            <a
+              href={`${import.meta.env.BASE_URL}scip/THIRD_PARTY_LICENSES.txt`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles['help-link']}
+            >
+              Third-party licenses
+            </a>
+            .
           </span>,
         ],
       },
@@ -730,7 +759,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
             .
           </span>,
           <span key="feedback">
-            Feedback and pull requests are welcome! Please open a GitHub issue to discuss potential changes.
+            Feedback and pull requests are welcome! Please open a GitHub issue to discuss potential
+            changes.
           </span>,
         ],
       },
@@ -785,10 +815,7 @@ const CHANGELOG_ARTICLES: HelpArticle[] = sortedGroups.map((group) => {
   };
 });
 
-const HELP_ARTICLES: HelpArticle[] = [
-  ...BASE_HELP_ARTICLES,
-  ...CHANGELOG_ARTICLES
-];
+const HELP_ARTICLES: HelpArticle[] = [...BASE_HELP_ARTICLES, ...CHANGELOG_ARTICLES];
 
 function articleMatches(article: HelpArticle, query: string): boolean {
   const haystack = [

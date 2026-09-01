@@ -1,25 +1,73 @@
 import type { Edge } from '@xyflow/react';
+import type { Recipe } from '../types/data';
 import type { RecipeNodeType } from '../types/nodes';
 import { ASSET_VERSION } from '../data/productIcons';
 import { useFlowStore } from '../stores/useFlowStore';
+import { getMachineCountBounds } from '../utils/machineCountConstraint';
 import { useFlowResultStore } from '../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { solveFlowPipeline } from './solverPipeline';
 import { getRateMultiplier } from '../utils/recipeComputation';
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 import { buildHandleId, parseHandleId } from '../utils/idGenerator';
-import { getRecipeNetPower } from '../utils/recipePower';
+import { getRecipeOptimizationMetrics } from '../utils/optimizationMetrics';
+import { getConfiguredScipBundlePath, type ScipBundlePath } from './scipBundle';
+import type { OptimizationConfiguration } from './optimizationConfig';
+
+export interface RatioObjectiveWeights {
+  powerUse: number;
+  pollution: number;
+  machineCost: number;
+  modelCount: number;
+}
+
+export const DEFAULT_RATIO_OBJECTIVE_WEIGHTS: RatioObjectiveWeights = {
+  powerUse: 1,
+  pollution: 1,
+  machineCost: 0,
+  modelCount: 0,
+};
+
+export const RATIO_OBJECTIVE_NORMALIZERS: RatioObjectiveWeights = {
+  powerUse: 1_000_000,
+  pollution: 1,
+  machineCost: 1_000_000,
+  modelCount: 10,
+};
+
+export function resolveRatioObjectiveWeights(
+  weights?: Partial<RatioObjectiveWeights>,
+): RatioObjectiveWeights {
+  const resolved = { ...DEFAULT_RATIO_OBJECTIVE_WEIGHTS, ...weights };
+  for (const key of Object.keys(resolved) as (keyof RatioObjectiveWeights)[]) {
+    const value = resolved[key];
+    resolved[key] = Number.isFinite(value) ? Math.max(0, value) : 0;
+  }
+  return resolved;
+}
 
 export interface RatioOptimizerNode {
   id: string;
   currentMachineCount: number;
+  minimumMachineCount: number;
+  maximumMachineCount: number | null;
   isTarget: boolean;
-  power: number;
+  powerUse: number;
+  powerOutput: number;
   pollution: number;
+  machineCost: number;
+  machineCostIndependentOfMachineCount: number;
+  hasInfiniteMachineCost: boolean;
+  modelCount: number;
+  modelCountIndependentOfMachineCount: number;
+  machineSpace: number;
+  machineSpaceIndependentOfMachineCount: number;
   inputs: {
     productId: string;
     quantity: number;
     isSink: boolean;
+    independentOfMachineCount: boolean;
+    flowDependencies: { sourceInputIndex: number; coefficient: number }[];
   }[];
   outputs: {
     productId: string;
@@ -37,17 +85,102 @@ export interface RatioOptimizerConnection {
 }
 
 export interface RatioOptimizerRequest {
+  type?: 'solve';
+  requestId?: number;
   origin: string;
+  scipBundlePath?: ScipBundlePath;
   nodes: RatioOptimizerNode[];
   connections: RatioOptimizerConnection[];
+  objectiveWeights?: RatioObjectiveWeights;
+  optimizationConfiguration?: OptimizationConfiguration;
+  excludeAvoidableInfiniteCostMachines?: boolean;
   version?: string;
 }
 
+export interface RatioOptimizerCancelRequest {
+  type: 'cancel';
+  requestId: number;
+}
+
+export type RatioSolverPhase =
+  | 'queued'
+  | 'warmup'
+  | 'loading'
+  | 'ready'
+  | 'building'
+  | 'solving'
+  | 'finalizing'
+  | 'complete'
+  | 'failed';
+
+export interface RatioSolverProgress {
+  phase: RatioSolverPhase;
+  message: string;
+  solver?: 'native' | 'mps' | 'unknown';
+  elapsedMs?: number;
+}
+
+export interface RatioSolverStageTelemetry {
+  name: string;
+  objectiveValue: number;
+  elapsedMs: number;
+}
+
+export interface RatioSolverTelemetry {
+  solver: 'native' | 'mps';
+  bundlePath?: ScipBundlePath;
+  initializedDuringSolve?: boolean;
+  initMs?: number;
+  solveMs?: number;
+  presolveOriginalNodeCount?: number;
+  presolveOriginalConnectionCount?: number;
+  presolveNodeCount?: number;
+  presolveConnectionCount?: number;
+  presolveRemovedNodeCount?: number;
+  presolveRemovedConnectionCount?: number;
+  presolveRemovedInvalidConnectionCount?: number;
+  presolveRemovedZeroDemandConnectionCount?: number;
+  presolveRemovedNoTargetConnectionCount?: number;
+  payloadBuildMs?: number;
+  payloadBytes?: number;
+  nativePayloadKind?: 'text' | 'f64';
+  nativePayloadParseMs?: number;
+  nativeModelBuildMs?: number;
+  nativeCallMs?: number;
+  resultParseMs?: number;
+  nativeResultDoubles?: number;
+  wasmMemoryBytes?: number;
+  nativeStatus?: string;
+  mipNodeCount?: number;
+  lpIterations?: number;
+  primalBound?: number;
+  dualBound?: number;
+  mipGap?: number;
+  roundedVariableCount?: number;
+  roundedMilpProfile?: string;
+  incumbentPolishMs?: number;
+  warmupMs?: number;
+  profileUsed?: string;
+  variableCount?: number;
+  constraintCount?: number;
+  nonzeroCount?: number;
+  valueScale?: number;
+  minCoefficient?: number;
+  maxCoefficient?: number;
+  minFiniteBound?: number;
+  maxFiniteBound?: number;
+  stageTelemetry?: RatioSolverStageTelemetry[];
+}
+
 export interface RatioOptimizerResponse {
+  type?: 'solve-result';
+  requestId?: number;
   feasible: boolean;
   error?: string;
   machineCounts?: Record<string, number>;
+  connectionFlows?: Record<string, number>;
   diagnostics?: RatioFailureDiagnostics;
+  telemetry?: RatioSolverTelemetry;
 }
 
 export interface RatioDeficientInputDiagnostic {
@@ -115,15 +248,57 @@ export interface RatioOptimizerSession {
   promise: Promise<RatioOptimizerResult>;
 }
 
+export interface RatioOptimizerSessionOptions {
+  onProgress?: (progress: RatioSolverProgress) => void;
+  objectiveWeights?: Partial<RatioObjectiveWeights>;
+  optimizationConfiguration?: OptimizationConfiguration;
+  modelSnapshot?: RatioOptimizerModelSnapshot;
+  minimizeLinkedOutputExcess?: boolean;
+  excludeAvoidableInfiniteCostMachines?: boolean;
+}
+
+export interface RatioOptimizerModelSnapshot {
+  nodeRecipes: Record<string, Recipe>;
+  resolvedProducts: Record<string, string>;
+}
+
+export interface RatioOptimizerWarmupRequest {
+  type: 'warmup';
+  origin: string;
+  scipBundlePath?: ScipBundlePath;
+  version?: string;
+}
+
+export interface RatioOptimizerProgressMessage {
+  type: 'progress';
+  requestId?: number;
+  progress: RatioSolverProgress;
+}
+
+export interface RatioOptimizerWarmupResult {
+  type: 'warmup-result';
+  feasible: boolean;
+  error?: string;
+  telemetry?: RatioSolverTelemetry;
+}
+
+export type RatioOptimizerWorkerRequest =
+  | RatioOptimizerWarmupRequest
+  | RatioOptimizerRequest
+  | RatioOptimizerCancelRequest;
+export type RatioOptimizerWorkerMessage =
+  | RatioOptimizerProgressMessage
+  | RatioOptimizerWarmupResult
+  | RatioOptimizerResponse;
+
 interface RatioOptimizerPayload {
   nodes: RatioOptimizerNode[];
   connections: RatioOptimizerConnection[];
 }
 
-function getCommittedSolverSnapshot(nodes: RecipeNodeType[]): Pick<
-  ReturnType<typeof solveFlowPipeline>,
-  'nodeRecipes' | 'resolvedProducts'
-> | null {
+function getCommittedSolverSnapshot(
+  nodes: RecipeNodeType[],
+): Pick<ReturnType<typeof solveFlowPipeline>, 'nodeRecipes' | 'resolvedProducts'> | null {
   const flowState = useFlowStore.getState();
   const resultState = useFlowResultStore.getState();
   if (resultState.graphVersion !== flowState.graphVersion) {
@@ -145,9 +320,13 @@ function getCommittedSolverSnapshot(nodes: RecipeNodeType[]): Pick<
 export function buildRatioOptimizerPayload(
   nodes: RecipeNodeType[],
   edges: Edge[],
+  options: Pick<RatioOptimizerSessionOptions, 'modelSnapshot' | 'minimizeLinkedOutputExcess'> = {},
 ): RatioOptimizerPayload {
-  const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<string, unknown>;
-  const committedSnapshot = getCommittedSolverSnapshot(nodes);
+  const globalSettings = useGlobalSettingsStore.getState().settings as unknown as Record<
+    string,
+    unknown
+  >;
+  const committedSnapshot = options.modelSnapshot ?? getCommittedSolverSnapshot(nodes);
   const { nodeRecipes, resolvedProducts } =
     committedSnapshot ?? solveFlowPipeline(nodes, edges, globalSettings);
 
@@ -173,7 +352,12 @@ export function buildRatioOptimizerPayload(
 
     const multiplier = getRateMultiplier(recipe.cycle_time, 'second');
 
-    const powerVal = getRecipeNetPower(recipe);
+    const optimizationMetrics = getRecipeOptimizationMetrics(
+      recipe,
+      node.data.settings,
+      globalSettings,
+      node.id,
+    );
 
     const inputs = recipe.inputs.map((inp, idx) => {
       const handleId = buildHandleId(node.id, 'input', idx);
@@ -181,6 +365,8 @@ export function buildRatioOptimizerPayload(
         productId: resolvedProducts[handleId] ?? inp.product_id,
         quantity: inp.quantity * multiplier,
         isSink: !!inp.variable,
+        independentOfMachineCount: !!inp.independentOfMachineCount,
+        flowDependencies: inp.flowDependencies ?? [],
       };
     });
 
@@ -189,22 +375,29 @@ export function buildRatioOptimizerPayload(
       const outgoingEdges = edgeLookup.get(handleId) ?? [];
       const sourceProductId = getResolvedPortProduct(node.id, 'output', idx);
 
-      const hasSinkConnection = outgoingEdges.some((edge) => {
-        if (edge.sourceHandle !== handleId) return false;
-        if (!edge.targetHandle) return false;
-        const targetParsed = parseHandleId(edge.targetHandle);
-        if (!targetParsed) return false;
-        if (targetParsed.side !== 'input') return false;
-        const targetNode = nodesById.get(edge.target);
-        if (!targetNode) return false;
-        const targetRecipe = nodeRecipes[targetNode.id];
-        if (!targetRecipe) return false;
-        const targetInput = targetRecipe.inputs[targetParsed.index];
-        const targetProductId = getResolvedPortProduct(edge.target, 'input', targetParsed.index);
-        if (sourceProductId !== targetProductId) return false;
-        const targetIsSinkNode = targetRecipe.outputs.length === 0;
-        return !!targetInput?.variable || targetIsSinkNode;
-      });
+      const hasSinkConnection =
+        !out.voidable &&
+        ((options.minimizeLinkedOutputExcess && !!out.product_link_id) ||
+          outgoingEdges.some((edge) => {
+            if (edge.sourceHandle !== handleId) return false;
+            if (!edge.targetHandle) return false;
+            const targetParsed = parseHandleId(edge.targetHandle);
+            if (!targetParsed) return false;
+            if (targetParsed.side !== 'input') return false;
+            const targetNode = nodesById.get(edge.target);
+            if (!targetNode) return false;
+            const targetRecipe = nodeRecipes[targetNode.id];
+            if (!targetRecipe) return false;
+            const targetInput = targetRecipe.inputs[targetParsed.index];
+            const targetProductId = getResolvedPortProduct(
+              edge.target,
+              'input',
+              targetParsed.index,
+            );
+            if (sourceProductId !== targetProductId) return false;
+            const targetIsSinkNode = targetRecipe.outputs.length === 0;
+            return !!targetInput?.variable || targetIsSinkNode;
+          }));
 
       return {
         productId: sourceProductId || out.product_id,
@@ -213,12 +406,25 @@ export function buildRatioOptimizerPayload(
       };
     });
 
+    const machineCountBounds = getMachineCountBounds(node.data);
     ratioNodes.push({
       id: node.id,
       currentMachineCount: node.data.machineCount ?? 0,
+      minimumMachineCount: machineCountBounds.lowerBound,
+      maximumMachineCount: machineCountBounds.upperBound,
       isTarget: !!node.data.isTarget,
-      power: powerVal,
-      pollution: recipe.pollution ?? 0,
+      powerUse: optimizationMetrics.powerUsePerMachine,
+      powerOutput: optimizationMetrics.powerOutputPerMachine,
+      pollution: optimizationMetrics.pollutionPerMachine,
+      machineCost: optimizationMetrics.machineCostPerWholeMachine,
+      machineCostIndependentOfMachineCount:
+        optimizationMetrics.machineCostIndependentOfMachineCount,
+      hasInfiniteMachineCost: optimizationMetrics.hasInfiniteMachineCost,
+      modelCount: optimizationMetrics.modelCountPerWholeMachine,
+      modelCountIndependentOfMachineCount: optimizationMetrics.modelCountIndependentOfMachineCount,
+      machineSpace: optimizationMetrics.machineSpacePerWholeMachine,
+      machineSpaceIndependentOfMachineCount:
+        optimizationMetrics.machineSpaceIndependentOfMachineCount,
       inputs,
       outputs,
     });
@@ -254,21 +460,79 @@ export function buildRatioOptimizerPayload(
 let activeWorker: Worker | null = null;
 let activeSolveInFlight = false;
 let activeSolveResolve: ((result: RatioOptimizerResult) => void) | null = null;
+let activeSolveProgress: ((progress: RatioSolverProgress) => void) | null = null;
+let activeSolveRequestId: number | null = null;
+let nextSolveRequestId = 1;
+let warmupKey: string | null = null;
+const cancelledSolveRequestIds = new Set<number>();
 
 function finalizeActiveSolve(result: RatioOptimizerResult): void {
   const resolve = activeSolveResolve;
   activeSolveResolve = null;
+  activeSolveProgress = null;
+  activeSolveRequestId = null;
   activeSolveInFlight = false;
   if (resolve) {
     resolve(result);
   }
 }
 
+function handleWorkerMessage(event: MessageEvent<RatioOptimizerWorkerMessage>): void {
+  const message = event.data;
+
+  if (message.type === 'progress') {
+    if (message.requestId !== undefined && cancelledSolveRequestIds.has(message.requestId)) {
+      return;
+    }
+    if (
+      activeSolveProgress &&
+      (message.requestId === undefined || message.requestId === activeSolveRequestId)
+    ) {
+      activeSolveProgress(message.progress);
+    }
+    return;
+  }
+
+  if (message.type === 'warmup-result') {
+    if (!message.feasible) {
+      warmupKey = null;
+      console.warn('[Ratio Optimizer Service] Warmup failed:', message.error);
+    } else if (message.telemetry) {
+      console.info('[Ratio Optimizer Service] Warmup complete:', message.telemetry);
+    }
+    return;
+  }
+
+  if (message.requestId !== undefined && message.requestId !== activeSolveRequestId) {
+    if (cancelledSolveRequestIds.delete(message.requestId)) {
+      return;
+    }
+    console.warn('[Ratio Optimizer Service] Ignored stale solver response:', message.requestId);
+    return;
+  }
+
+  finalizeActiveSolve(message);
+}
+
+function handleWorkerError(err: ErrorEvent): void {
+  console.error('[Ratio Optimizer Service] Worker thread error:', err);
+  activeWorker = null;
+  warmupKey = null;
+  if (activeSolveInFlight) {
+    finalizeActiveSolve({
+      feasible: false,
+      error: 'Background worker thread encountered a runtime error.',
+    });
+  }
+}
+
 function createWorker(): Worker {
-  return new Worker(
-    new URL('./ratioOptimizerWorker.ts', import.meta.url),
-    { type: 'module' }
-  );
+  const worker = new Worker(new URL('./ratioOptimizerWorker.ts', import.meta.url), {
+    type: 'module',
+  });
+  worker.onmessage = handleWorkerMessage;
+  worker.onerror = handleWorkerError;
+  return worker;
 }
 
 function getOrCreateWorker(): Worker {
@@ -279,7 +543,20 @@ function getOrCreateWorker(): Worker {
 }
 
 export function initRatioOptimizerWorker(): void {
-  getOrCreateWorker();
+  const worker = getOrCreateWorker();
+  if (typeof window === 'undefined') return;
+
+  const scipBundlePath = getConfiguredScipBundlePath();
+  const nextWarmupKey = `${window.location.origin}::${scipBundlePath}::${ASSET_VERSION}`;
+  if (warmupKey === nextWarmupKey) return;
+
+  warmupKey = nextWarmupKey;
+  worker.postMessage({
+    type: 'warmup',
+    origin: window.location.origin,
+    scipBundlePath,
+    version: ASSET_VERSION,
+  } satisfies RatioOptimizerWarmupRequest);
 }
 
 export function isRatioOptimizerRunning(): boolean {
@@ -287,9 +564,13 @@ export function isRatioOptimizerRunning(): boolean {
 }
 
 export function cancelRatioOptimizer(): void {
-  if (activeWorker) {
-    activeWorker.terminate();
-    activeWorker = null;
+  const requestId = activeSolveRequestId;
+  if (activeWorker && requestId !== null) {
+    cancelledSolveRequestIds.add(requestId);
+    activeWorker.postMessage({
+      type: 'cancel',
+      requestId,
+    });
   }
   if (activeSolveInFlight) {
     finalizeActiveSolve({
@@ -310,20 +591,22 @@ if (typeof window !== 'undefined') {
 
 export function solveRatios(
   nodes: RecipeNodeType[],
-  edges: Edge[]
+  edges: Edge[],
+  options: RatioOptimizerSessionOptions = {},
 ): RatioOptimizerSession {
   if (activeSolveInFlight) {
     return {
       promise: Promise.resolve({
         feasible: false,
-        error: 'Ratio optimizer is already running. Please wait for the current computation to finish.',
+        error:
+          'Ratio optimizer is already running. Please wait for the current computation to finish.',
       }),
     };
   }
 
   let payload: RatioOptimizerPayload;
   try {
-    payload = buildRatioOptimizerPayload(nodes, edges);
+    payload = buildRatioOptimizerPayload(nodes, edges, options);
   } catch (error) {
     return {
       promise: Promise.resolve({
@@ -337,38 +620,34 @@ export function solveRatios(
   }
 
   activeSolveInFlight = true;
+  const requestId = nextSolveRequestId++;
   const worker = getOrCreateWorker();
 
   const promise = new Promise<RatioOptimizerResult>((resolve) => {
     activeSolveResolve = resolve;
-
-    worker.onmessage = (event: MessageEvent<RatioOptimizerResponse>) => {
-      worker.onmessage = null;
-      worker.onerror = null;
-      finalizeActiveSolve(event.data);
-    };
-
-    worker.onerror = (err) => {
-      worker.onmessage = null;
-      worker.onerror = null;
-      console.error('[Ratio Optimizer Service] Worker thread error:', err);
-      finalizeActiveSolve({
-        feasible: false,
-        error: 'Background worker thread encountered a runtime error.',
-      });
-      activeWorker = null;
-    };
+    activeSolveProgress = options.onProgress ?? null;
+    activeSolveRequestId = requestId;
+    activeSolveProgress?.({
+      phase: 'queued',
+      message: 'Queued ratio optimizer request.',
+      solver: 'unknown',
+      elapsedMs: 0,
+    });
 
     try {
       worker.postMessage({
+        type: 'solve',
+        requestId,
         origin: window.location.origin,
+        scipBundlePath: getConfiguredScipBundlePath(),
         nodes: payload.nodes,
         connections: payload.connections,
+        objectiveWeights: resolveRatioObjectiveWeights(options.objectiveWeights),
+        optimizationConfiguration: options.optimizationConfiguration,
+        excludeAvoidableInfiniteCostMachines: options.excludeAvoidableInfiniteCostMachines,
         version: ASSET_VERSION,
-      });
+      } satisfies RatioOptimizerRequest);
     } catch (error) {
-      worker.onmessage = null;
-      worker.onerror = null;
       finalizeActiveSolve({
         feasible: false,
         error:

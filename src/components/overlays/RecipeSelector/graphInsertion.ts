@@ -2,7 +2,7 @@ import type { Edge } from '@xyflow/react';
 import type { HandleDataType, Recipe } from '../../../types/data';
 import { isGroupNode, isRecipeNode } from '../../../types/nodes';
 import type { CanvasNode, RecipeNodeType } from '../../../types/nodes';
-import { SNAP_GRID, NODE_WIDTH } from '../../../constants/layoutConstants';
+import { RECT_HEIGHT, RECT_GAP, SNAP_GRID, NODE_WIDTH } from '../../../constants/layoutConstants';
 import { calculateMachineCountFromRate } from '../../../utils/recipeComputation';
 import { nextNodeId, nextEdgeId, buildHandleId } from '../../../utils/idGenerator';
 import { findBestProductMatchIndex } from './productMatch';
@@ -32,7 +32,12 @@ function getInsertionAnchorNode(
   sourceSide: 'input' | 'output' | null,
   handleIndex: number | null,
 ): CanvasNode {
-  if (!isRecipeNode(existingNode) || !existingNode.data.groupId || !sourceSide || handleIndex === null) {
+  if (
+    !isRecipeNode(existingNode) ||
+    !existingNode.data.groupId ||
+    !sourceSide ||
+    handleIndex === null
+  ) {
     return existingNode;
   }
 
@@ -83,6 +88,10 @@ export function computeRecipeInsertion({
   let shouldAutoConnect = false;
   let autoEdge: Edge | null = null;
   let calculatedMachineCount = 1;
+  const clickedHandleVerticalOffset =
+    preselectedHandleIndex !== null
+      ? preselectedHandleIndex * (RECT_HEIGHT + RECT_GAP)
+      : 0;
 
   if (preselectedNodeId) {
     const existingNode = nodes.find((n) => n.id === preselectedNodeId);
@@ -122,7 +131,7 @@ export function computeRecipeInsertion({
         const horizontalGap = 150;
         if (preselectedSourceSide === 'input') {
           targetX = anchorNode.position.x - NODE_WIDTH - horizontalGap;
-          targetY = anchorNode.position.y;
+          targetY = anchorNode.position.y + clickedHandleVerticalOffset;
 
           if (matchingOutputIndex !== -1 && preselectedHandleIndex !== null) {
             shouldAutoConnect = true;
@@ -136,7 +145,7 @@ export function computeRecipeInsertion({
           }
         } else if (preselectedSourceSide === 'output') {
           targetX = anchorNode.position.x + NODE_WIDTH + horizontalGap;
-          targetY = anchorNode.position.y;
+          targetY = anchorNode.position.y + clickedHandleVerticalOffset;
 
           if (matchingInputIndex !== -1 && preselectedHandleIndex !== null) {
             shouldAutoConnect = true;

@@ -35,6 +35,36 @@ let initPromise: Promise<void> | null = null;
 let filteredProducts: Product[] = [];
 const PLACEHOLDER_PRODUCT_IDS = new Set(['any_fluid', 'any_item']);
 
+function migrateLegacyPowerEffect(raw: unknown): unknown {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return raw;
+  const effect = { ...(raw as Record<string, unknown>) };
+  if (effect.power_use === undefined && effect.power_consumption !== undefined) {
+    effect.power_use = effect.power_consumption;
+  }
+  if (effect.accounting === 'production_delta') {
+    effect.accounting = 'output_delta';
+  }
+  delete effect.power_consumption;
+  return effect;
+}
+
+function migrateLegacyRecipePowerData(raw: Record<string, unknown>): Record<string, unknown> {
+  const migrated = { ...raw };
+  if (migrated.power_use === undefined && migrated.power_consumption !== undefined) {
+    migrated.power_use = migrated.power_consumption;
+  }
+  delete migrated.power_consumption;
+
+  for (const key of ['powerEffects', 'powerAccountingEffects']) {
+    const effects = migrated[key];
+    if (Array.isArray(effects)) {
+      migrated[key] = effects.map(migrateLegacyPowerEffect);
+    }
+  }
+
+  return migrated;
+}
+
 function getSpecialPotentialProducts(
   sr: SpecialRecipe,
   kind: 'input' | 'output',
@@ -194,7 +224,10 @@ function normalizeSettings(
             `[Setting Normalization] Setting "${key}" has invalid value: ${JSON.stringify(value)}, not in options. Using default: ${JSON.stringify(normalizedDefault)}`,
           );
         }
-      } else if (typeof value === 'string' && options.some((opt) => typeof opt.value === 'number')) {
+      } else if (
+        typeof value === 'string' &&
+        options.some((opt) => typeof opt.value === 'number')
+      ) {
         const numValue = parseFloat(value);
         if (!isNaN(numValue) && options.some((opt) => opt.value === numValue)) {
           normalized[key] = numValue;
@@ -235,13 +268,21 @@ export function rebuildActiveDatabase(
     const rawCost = m.cost as unknown;
     return {
       ...m,
-      cost: typeof rawCost === 'string' && rawCost.toLowerCase() === 'infinity' ? Infinity : Number(rawCost),
+      cost:
+        typeof rawCost === 'string' && rawCost.toLowerCase() === 'infinity'
+          ? Infinity
+          : Number(rawCost),
     };
   });
+  const migratedOverrides = overrides.map((override) =>
+    override.id.startsWith('recipe:')
+      ? { ...override, data: migrateLegacyRecipePowerData(override.data) }
+      : override,
+  );
   recipes = processCategory(
     'recipe:',
     defaultRecipes,
-    overrides,
+    migratedOverrides,
     (entityId) => !getSpecialRecipe(entityId),
   );
   researches = processCategory('research:', defaultResearches, overrides);
@@ -318,11 +359,14 @@ export async function reloadDatabase(): Promise<void> {
   const overrides = await getDataOverrides();
   const specialRecipeEdits = overrides
     .filter((entry) => entry.id.startsWith('special_recipe:'))
-    .reduce((acc, entry) => {
-      const recipeId = entry.id.replace('special_recipe:', '');
-      acc[recipeId] = entry.data as unknown as SpecialRecipe;
-      return acc;
-    }, {} as Record<string, SpecialRecipe>);
+    .reduce(
+      (acc, entry) => {
+        const recipeId = entry.id.replace('special_recipe:', '');
+        acc[recipeId] = entry.data as unknown as SpecialRecipe;
+        return acc;
+      },
+      {} as Record<string, SpecialRecipe>,
+    );
 
   setSpecialRecipeOverrides(specialRecipeEdits);
   rebuildActiveDatabase(overrides);
@@ -339,12 +383,17 @@ export function initializeDatabase(): Promise<void> {
       import('../data/researches.json'),
     ]);
 
-    defaultRecipes = recipesJson.default as Recipe[];
+    defaultRecipes = (recipesJson.default as Record<string, unknown>[]).map(
+      migrateLegacyRecipePowerData,
+    ) as unknown as Recipe[];
     defaultMachines = (machinesJson.default as Record<string, unknown>[]).map((m) => {
       const rawCost = m.cost;
       return {
         ...m,
-        cost: typeof rawCost === 'string' && rawCost.toLowerCase() === 'infinity' ? Infinity : Number(rawCost),
+        cost:
+          typeof rawCost === 'string' && rawCost.toLowerCase() === 'infinity'
+            ? Infinity
+            : Number(rawCost),
       };
     }) as Machine[];
     defaultProducts = [
@@ -388,11 +437,14 @@ export function initializeDatabase(): Promise<void> {
 
     const specialRecipeEdits = overrides
       .filter((entry) => entry.id.startsWith('special_recipe:'))
-      .reduce((acc, entry) => {
-        const recipeId = entry.id.replace('special_recipe:', '');
-        acc[recipeId] = entry.data as unknown as SpecialRecipe;
-        return acc;
-      }, {} as Record<string, SpecialRecipe>);
+      .reduce(
+        (acc, entry) => {
+          const recipeId = entry.id.replace('special_recipe:', '');
+          acc[recipeId] = entry.data as unknown as SpecialRecipe;
+          return acc;
+        },
+        {} as Record<string, SpecialRecipe>,
+      );
 
     setSpecialRecipeOverrides(specialRecipeEdits);
 
@@ -400,7 +452,10 @@ export function initializeDatabase(): Promise<void> {
 
     const settingsStore = useGlobalSettingsStore.getState();
     const difficulty = settingsStore.settings.difficulty;
-    if ((difficulty === 'sandbox' || difficulty === 'sandbox_plus') && settingsStore.settings.unlockedResearchIds.length === 0) {
+    if (
+      (difficulty === 'sandbox' || difficulty === 'sandbox_plus') &&
+      settingsStore.settings.unlockedResearchIds.length === 0
+    ) {
       settingsStore.setUnlockedResearchIds(researches.map((r) => r.id));
     }
 
@@ -469,38 +524,44 @@ export function resolveActiveRecipe(
       ...(nodeSettings || {}),
     };
     nodeSettings = normalizeSettings(nodeSettings, sr.settings, productMap, globalSettings);
-    const activeHelpers = helpers ?? (() => {
-      const flowState = useFlowStore.getState();
-      const recipeNodes = flowState.nodes.filter(isRecipeNode);
-      const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
-      const recipeEdges = flowState.edges.filter(
-        (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
-      );
-      const resolutionContext = createGraphResolutionContext(recipeNodes, recipeEdges);
-      const fallbackHelpers = nodeId ? resolutionContext.createHelpers(nodeId) : null;
-      return {
-        resolveProduct: (side: 'input' | 'output', index: number) => {
-          if (!nodeId) return '';
-          const handleId = buildHandleId(nodeId, side, index);
-          return useFlowResultStore.getState().resolvedProducts[handleId] ?? fallbackHelpers?.resolveProduct(side, index) ?? '';
-        },
-        hasConnection: (side: 'input' | 'output', index: number) => {
-          if (!fallbackHelpers) return false;
-          return fallbackHelpers.hasConnection(side, index);
-        },
-        getFlowRate: (side: 'input' | 'output', index: number) => {
-          if (!nodeId) return 0;
-          const handleId = buildHandleId(nodeId, side, index);
-          const connectedEdges = resolutionContext.edgeLookup.get(handleId) ?? [];
-          const edgeFlows = useFlowResultStore.getState().edgeFlows;
-          let totalFlow = 0;
-          for (const edge of connectedEdges) {
-            totalFlow += edgeFlows[edge.id] ?? 0;
-          }
-          return totalFlow;
-        },
-      };
-    })();
+    const activeHelpers =
+      helpers ??
+      (() => {
+        const flowState = useFlowStore.getState();
+        const recipeNodes = flowState.nodes.filter(isRecipeNode);
+        const recipeNodeIds = new Set(recipeNodes.map((node) => node.id));
+        const recipeEdges = flowState.edges.filter(
+          (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
+        );
+        const resolutionContext = createGraphResolutionContext(recipeNodes, recipeEdges);
+        const fallbackHelpers = nodeId ? resolutionContext.createHelpers(nodeId) : null;
+        return {
+          resolveProduct: (side: 'input' | 'output', index: number) => {
+            if (!nodeId) return '';
+            const handleId = buildHandleId(nodeId, side, index);
+            return (
+              useFlowResultStore.getState().resolvedProducts[handleId] ??
+              fallbackHelpers?.resolveProduct(side, index) ??
+              ''
+            );
+          },
+          hasConnection: (side: 'input' | 'output', index: number) => {
+            if (!fallbackHelpers) return false;
+            return fallbackHelpers.hasConnection(side, index);
+          },
+          getFlowRate: (side: 'input' | 'output', index: number) => {
+            if (!nodeId) return 0;
+            const handleId = buildHandleId(nodeId, side, index);
+            const connectedEdges = resolutionContext.edgeLookup.get(handleId) ?? [];
+            const edgeFlows = useFlowResultStore.getState().edgeFlows;
+            let totalFlow = 0;
+            for (const edge of connectedEdges) {
+              totalFlow += edgeFlows[edge.id] ?? 0;
+            }
+            return totalFlow;
+          },
+        };
+      })();
 
     let resolvedSettings = nodeSettings;
     if (nodeId && sr.inputTemperatureSettings) {
