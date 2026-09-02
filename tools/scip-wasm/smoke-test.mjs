@@ -102,7 +102,7 @@ const NATIVE_MAGIC = 444926465;
 const NATIVE_RESULT_VERSION = 2;
 const NATIVE_RESULT_HEADER_DOUBLES = 28;
 const NATIVE_PAYLOAD_MAGIC = 444926466;
-const NATIVE_PAYLOAD_VERSION = 5;
+const NATIVE_PAYLOAD_VERSION = 6;
 const METRIC_IDS = [
   'powerUse',
   'powerOutput',
@@ -149,7 +149,7 @@ function makeNativePayload({
   const totalDoubles =
     41 +
     nodes.length * 15 +
-    flatInputs.length * 5 +
+    flatInputs.length * 6 +
     flatOutputs.length * 2 +
     connections.length * 4 +
     flatDependencies.length * 2;
@@ -179,7 +179,7 @@ function makeNativePayload({
   }
 
   const inputOffset = 41 + nodes.length * 15;
-  const outputOffset = inputOffset + flatInputs.length * 5;
+  const outputOffset = inputOffset + flatInputs.length * 6;
   const connectionOffset = outputOffset + flatOutputs.length * 2;
   const dependencyOffset = connectionOffset + connections.length * 4;
   let nextInput = 0;
@@ -218,8 +218,9 @@ function makeNativePayload({
           input.independentOfMachineCount ? 1 : 0,
           nextDependency,
           dependencies.length,
+          input.pollutionPerFlow ?? 0,
         ],
-        inputOffset + nextInput * 5,
+        inputOffset + nextInput * 6,
       );
       for (const dependency of dependencies) {
         payload.set(

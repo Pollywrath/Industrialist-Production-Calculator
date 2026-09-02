@@ -128,9 +128,9 @@ export function GenericDataFormShell({
 
           {children}
 
-          {!isReadOnly && (
+          {(onRestore || onDelete) && (
             <div className={styles['form-actions']}>
-              {isModified ? (
+              {isModified && onRestore ? (
                 <button
                   className={styles['btn-restore']}
                   onClick={() => void handleRestore()}
@@ -140,7 +140,7 @@ export function GenericDataFormShell({
                   <RotateCcw size={14} />
                   Restore Baseline Defaults
                 </button>
-              ) : (
+              ) : onDelete ? (
                 <button
                   className={styles['btn-delete']}
                   onClick={handleDelete}
@@ -149,7 +149,7 @@ export function GenericDataFormShell({
                   <Trash2 size={14} />
                   Delete {entityLabel} Record
                 </button>
-              )}
+              ) : null}
             </div>
           )}
         </div>

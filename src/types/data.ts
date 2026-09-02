@@ -50,6 +50,7 @@ export interface RecipeInput {
   variable?: boolean;
   independentOfMachineCount?: boolean;
   flowDependencies?: { sourceInputIndex: number; coefficient: number }[];
+  pollutionPerFlow?: number;
 }
 
 export interface RecipeOutput {

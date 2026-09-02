@@ -3,8 +3,7 @@ import { useFlowStore } from './useFlowStore';
 import { useFlowResultStore } from './useFlowResultStore';
 import { useUIStore } from './useUIStore';
 import { useGlobalSettingsStore } from './useGlobalSettingsStore';
-import { resolveActiveRecipe, getMachine, getProduct, getProductName } from '../data/lookup';
-import { createGraphResolutionContext } from '../utils/graphResolutionContext';
+import { getMachine, getProduct, getProductName } from '../data/lookup';
 import { getSpecialRecipe } from '../data/registry';
 import { buildHandleId } from '../utils/idGenerator';
 import { isRecipeNode } from '../types/nodes';
@@ -75,15 +74,11 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
     const flowStore = useFlowStore.getState();
     const nodes = flowStore.nodes.filter(isRecipeNode);
-    const recipeNodeIds = new Set(nodes.map((node) => node.id));
-    const edges = flowStore.edges.filter(
-      (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
-    );
     const flowResultState = useFlowResultStore.getState();
     const isSolutionFresh = flowResultState.graphVersion === flowStore.graphVersion;
-    const resolvedProducts = isSolutionFresh ? flowResultState.resolvedProducts : {};
-    const results = isSolutionFresh ? flowResultState.results : new Map();
-    const edgeFlows = isSolutionFresh ? flowResultState.edgeFlows : {};
+    if (!isSolutionFresh) return;
+    const resolvedProducts = flowResultState.resolvedProducts;
+    const results = flowResultState.results;
     const globalSettings = useGlobalSettingsStore.getState().settings;
 
     let totalPowerUse = 0;
@@ -105,25 +100,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     const excessesMap = new Map<string, ProductExcessGroup>();
 
     const rateModeFactor = rateMode === 'minute' ? 60 : rateMode === 'hour' ? 3600 : 1;
-    const resolutionContext = createGraphResolutionContext(nodes, edges);
-
     nodes.forEach((node) => {
-      const baseHelpers = resolutionContext.createHelpers(node.id);
-      const helpers = {
-        ...baseHelpers,
-        getFlowRate: (side: 'input' | 'output', index: number) => {
-          const handleId = buildHandleId(node.id, side, index);
-          const connectedEdges = resolutionContext.edgeLookup.get(handleId) ?? [];
-          let totalFlow = 0;
-          for (let i = 0; i < connectedEdges.length; i++) {
-            totalFlow += edgeFlows[connectedEdges[i].id] ?? 0;
-          }
-          return totalFlow;
-        },
-      };
-      const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id, helpers, {
-        globalSettings: globalSettings as unknown as Record<string, unknown>,
-      });
+      const recipe = flowResultState.nodeRecipes[node.id];
       if (!recipe) return;
 
       const sr = getSpecialRecipe(recipe.id);
@@ -230,7 +208,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             const rawProductId = inputEntry?.product_id;
             if (!rawProductId) continue;
             const handleId = buildHandleId(node.id, 'input', i);
-            const productId = resolvedProducts[handleId] || helpers.resolveProduct('input', i);
+            const productId = resolvedProducts[handleId] || inputEntry.product_id;
             if (!productId) continue;
             const defRate = (inputFlow.rate - inputFlow.connected) * rateModeFactor;
             if (defRate > 0.0001) {
@@ -261,7 +239,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
           if (outputFlow && outputFlow.hasExcess) {
             if (!outDef) continue;
             const handleId = buildHandleId(node.id, 'output', i);
-            const productId = resolvedProducts[handleId] || helpers.resolveProduct('output', i);
+            const productId = resolvedProducts[handleId] || outDef.product_id;
             if (!productId) continue;
             const excRate = (outputFlow.rate - outputFlow.connected) * rateModeFactor;
             if (excRate > 0.0001) {

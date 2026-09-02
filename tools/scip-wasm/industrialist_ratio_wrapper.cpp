@@ -41,10 +41,10 @@ constexpr double kBinaryResultMagic = 444926465.0; // "IRLP" as an exact small i
 constexpr double kBinaryResultVersion = 2.0;
 constexpr int kBinaryResultHeaderDoubles = 28;
 constexpr double kBinaryPayloadMagic = 444926466.0;
-constexpr double kBinaryPayloadVersion = 5.0;
+constexpr double kBinaryPayloadVersion = 6.0;
 constexpr int kBinaryPayloadHeaderDoubles = 41;
 constexpr int kBinaryPayloadNodeDoubles = 15;
-constexpr int kBinaryPayloadInputDoubles = 5;
+constexpr int kBinaryPayloadInputDoubles = 6;
 constexpr int kBinaryPayloadOutputDoubles = 2;
 constexpr int kBinaryPayloadConnectionDoubles = 4;
 constexpr int kBinaryPayloadFlowDependencyDoubles = 2;
@@ -93,6 +93,7 @@ struct InputPort {
   double quantity = 0.0;
   bool isSink = false;
   bool independentOfMachineCount = false;
+  double pollutionPerFlow = 0.0;
   std::vector<std::pair<int, double>> flowDependencies;
 };
 
@@ -471,6 +472,9 @@ bool parsePayloadArray(const double* payload, int payloadDoubleCount, NativeInpu
           ) ||
           !readNonnegativeInt(
             payload[inputBase + 4], "input.flowDependencyCount", dependencyCount, error
+          ) ||
+          !readFiniteDouble(
+            payload[inputBase + 5], "input.pollutionPerFlow", port.pollutionPerFlow, error
           )) {
         return false;
       }
@@ -727,7 +731,8 @@ bool validateNativeInput(const NativeInput& input, std::string& error) {
       return false;
     }
     for (const InputPort& port : node.inputs) {
-      if (!std::isfinite(port.quantity) || port.quantity < 0.0) {
+      if (!std::isfinite(port.quantity) || port.quantity < 0.0 ||
+          !std::isfinite(port.pollutionPerFlow)) {
         error = "Native ratio input rates must be finite and nonnegative.";
         return false;
       }
@@ -1202,6 +1207,7 @@ ModelSpec buildModelSpec(const NativeInput& input) {
   }
 
   const MetricConfig& pollutionConfig = input.metrics[Pollution];
+  size_t pollutionBurdenRowIndex = std::numeric_limits<size_t>::max();
   if (pollutionConfig.enabled) {
     VariableSpec burden;
     burden.name = "pollution_burden";
@@ -1219,6 +1225,7 @@ ModelSpec buildModelSpec(const NativeInput& input) {
         -input.nodes[static_cast<size_t>(nodeIndex)].pollution *
           componentInfo.valueScales[static_cast<size_t>(nodeIndex)]);
     }
+    pollutionBurdenRowIndex = model.rows.size();
     model.rows.push_back(std::move(row));
   }
 
@@ -1245,7 +1252,6 @@ ModelSpec buildModelSpec(const NativeInput& input) {
   };
   addContinuousLimit(PowerUse, "power_use", false);
   addContinuousLimit(PowerOutput, "power_output", true);
-  addContinuousLimit(Pollution, "pollution", false);
 
   if (input.metrics[MachineCost].limit >= 0.0) {
     RowSpec row;
@@ -1288,6 +1294,35 @@ ModelSpec buildModelSpec(const NativeInput& input) {
       var.ub = 0.0;
     }
     model.edgeVarByConnection[static_cast<size_t>(connectionIndex)] = addVariable(model, std::move(var));
+  }
+
+  const auto addFlowPollutionTerms = [&](RowSpec& row, double sign) {
+    for (int nodeIndex = 0; nodeIndex < static_cast<int>(input.nodes.size()); ++nodeIndex) {
+      const Node& node = input.nodes[static_cast<size_t>(nodeIndex)];
+      for (int inputIndex = 0; inputIndex < static_cast<int>(node.inputs.size()); ++inputIndex) {
+        const InputPort& inputPort = node.inputs[static_cast<size_t>(inputIndex)];
+        if (inputPort.pollutionPerFlow == 0.0) continue;
+        const std::vector<int>& incoming = incomingByInput[static_cast<size_t>(nodeIndex)]
+          [static_cast<size_t>(inputIndex)];
+        for (int connectionIndex : incoming) {
+          const Connection& connection = input.connections[static_cast<size_t>(connectionIndex)];
+          addRowTerm(
+            row,
+            model.edgeVarByConnection[static_cast<size_t>(connectionIndex)],
+            sign * inputPort.pollutionPerFlow *
+              componentInfo.valueScales[static_cast<size_t>(connection.sourceNode)]
+          );
+        }
+      }
+    }
+  };
+
+  if (pollutionBurdenRowIndex != std::numeric_limits<size_t>::max()) {
+    addFlowPollutionTerms(model.rows[pollutionBurdenRowIndex], -1.0);
+  }
+  addContinuousLimit(Pollution, "pollution", false);
+  if (pollutionConfig.limit >= 0.0 && !model.deferredLimitRows.empty()) {
+    addFlowPollutionTerms(model.deferredLimitRows.back(), 1.0);
   }
 
   for (int nodeIndex = 0; nodeIndex < static_cast<int>(input.nodes.size()); ++nodeIndex) {

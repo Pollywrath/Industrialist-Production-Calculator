@@ -47,8 +47,18 @@ export const liquid_dump_01: SpecialRecipe = {
       power_type: 'MV',
       pollution,
       inputs: [
-        { product_id: fluid1, quantity: 30, variable: true },
-        { product_id: fluid2, quantity: 30, variable: true },
+        {
+          product_id: fluid1,
+          quantity: 30,
+          variable: true,
+          pollutionPerFlow: calculatePollution(fluid1, 1),
+        },
+        {
+          product_id: fluid2,
+          quantity: 30,
+          variable: true,
+          pollutionPerFlow: calculatePollution(fluid2, 1),
+        },
       ],
       outputs: [],
     };

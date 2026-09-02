@@ -32,8 +32,8 @@ export const item_dump_01: SpecialRecipe = {
       power_type: 'MV',
       pollution,
       inputs: [
-        { product_id: item1, quantity: 30, variable: true },
-        { product_id: item2, quantity: 30, variable: true },
+        { product_id: item1, quantity: 30, variable: true, pollutionPerFlow: 13 / 600 },
+        { product_id: item2, quantity: 30, variable: true, pollutionPerFlow: 13 / 600 },
       ],
       outputs: [],
     };

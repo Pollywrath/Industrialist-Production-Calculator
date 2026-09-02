@@ -2,6 +2,7 @@ import { useState, useEffect, useEffectEvent, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
+import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import {
   canPerformTutorialAction,
   completeTutorialAction,
@@ -70,6 +71,8 @@ interface ObjectiveSummaryComparison {
 function summarizeObjectives(
   nodes: RatioOptimizerNode[],
   machineCounts: Record<string, number>,
+  connections: { id: string; targetNodeId: string; targetInputIndex: number }[] = [],
+  connectionFlows: Record<string, number> = {},
 ): ObjectiveSummary {
   const summary: ObjectiveSummary = {
     powerUse: 0,
@@ -86,6 +89,16 @@ function summarizeObjectives(
     summary.powerUse += node.powerUse * machineCount;
     summary.powerOutput += node.powerOutput * machineCount;
     summary.pollution += node.pollution * machineCount;
+    for (let inputIndex = 0; inputIndex < node.inputs.length; inputIndex += 1) {
+      const pollutionPerFlow = node.inputs[inputIndex].pollutionPerFlow;
+      if (!Number.isFinite(pollutionPerFlow) || pollutionPerFlow === 0) continue;
+      for (const connection of connections) {
+        if (connection.targetNodeId !== node.id || connection.targetInputIndex !== inputIndex) {
+          continue;
+        }
+        summary.pollution += pollutionPerFlow * (connectionFlows[connection.id] ?? 0);
+      }
+    }
     summary.machineSpace +=
       node.machineSpace * wholeMachineCount + node.machineSpaceIndependentOfMachineCount;
     summary.modelCount +=
@@ -201,6 +214,12 @@ export function LPSolverOverlay() {
       (edge) => recipeNodeIds.has(edge.source) && recipeNodeIds.has(edge.target),
     );
     const optimizerPayload = buildRatioOptimizerPayload(nodes, recipeEdges);
+    const currentConnectionFlows = Object.fromEntries(
+      optimizerPayload.connections.map((connection) => [
+        connection.id,
+        useFlowResultStore.getState().edgeFlows[connection.id] ?? 0,
+      ]),
+    );
     if (configuration.mode === 'autocomplete') {
       const session = solveAutocomplete(canvasNodes, edges, {
         configuration,
@@ -272,8 +291,18 @@ export function LPSolverOverlay() {
           setProposedMachineCounts({});
           setAutocompletePlan(res.plan);
           setObjectiveSummary({
-            current: summarizeObjectives(optimizerPayload.nodes, {}),
-            proposed: summarizeObjectives(res.plan.objectiveNodes, res.plan.machineCounts),
+            current: summarizeObjectives(
+              optimizerPayload.nodes,
+              {},
+              optimizerPayload.connections,
+              currentConnectionFlows,
+            ),
+            proposed: summarizeObjectives(
+              res.plan.objectiveNodes,
+              res.plan.machineCounts,
+              res.plan.objectiveConnections,
+              res.plan.objectiveConnectionFlows,
+            ),
           });
           setSolverState('results');
           completeTutorialAction({ type: 'solver-results' });
@@ -363,8 +392,18 @@ export function LPSolverOverlay() {
         setChanges(nodeChanges);
         setProposedMachineCounts(machineCountsToApply);
         setObjectiveSummary({
-          current: summarizeObjectives(optimizerPayload.nodes, {}),
-          proposed: summarizeObjectives(optimizerPayload.nodes, res.machineCounts),
+          current: summarizeObjectives(
+            optimizerPayload.nodes,
+            {},
+            optimizerPayload.connections,
+            currentConnectionFlows,
+          ),
+          proposed: summarizeObjectives(
+            optimizerPayload.nodes,
+            res.machineCounts,
+            optimizerPayload.connections,
+            res.connectionFlows,
+          ),
         });
 
         setSolverState('results');

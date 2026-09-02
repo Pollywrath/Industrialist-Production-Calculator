@@ -64,12 +64,18 @@ for (const path in modules) {
 }
 
 let SPECIAL_RECIPES: Record<string, SpecialRecipe> = { ...BASE_SPECIAL_RECIPES };
+let DELETED_SPECIAL_RECIPE_IDS = new Set<string>();
 
-export function setSpecialRecipeOverrides(overrides: Record<string, SpecialRecipe>): void {
+export function setSpecialRecipeOverrides(
+  overrides: Record<string, SpecialRecipe>,
+  deletedIds: Iterable<string> = [],
+): void {
   SPECIAL_RECIPES = {
     ...BASE_SPECIAL_RECIPES,
     ...overrides,
   };
+  DELETED_SPECIAL_RECIPE_IDS = new Set(deletedIds);
+  for (const id of DELETED_SPECIAL_RECIPE_IDS) delete SPECIAL_RECIPES[id];
 }
 
 export function getSpecialRecipe(recipeId: string): SpecialRecipe | undefined {
@@ -78,4 +84,8 @@ export function getSpecialRecipe(recipeId: string): SpecialRecipe | undefined {
 
 export function getAllSpecialRecipes(): SpecialRecipe[] {
   return Object.values(SPECIAL_RECIPES);
+}
+
+export function isSpecialRecipeDeleted(recipeId: string): boolean {
+  return DELETED_SPECIAL_RECIPE_IDS.has(recipeId);
 }

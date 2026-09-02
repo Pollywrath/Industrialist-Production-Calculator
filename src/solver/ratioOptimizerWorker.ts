@@ -158,10 +158,10 @@ const NATIVE_BINARY_RESULT_LEGACY_VERSION = 1;
 const NATIVE_BINARY_RESULT_HEADER_DOUBLES = 28;
 const NATIVE_BINARY_RESULT_LEGACY_HEADER_DOUBLES = 20;
 const NATIVE_PAYLOAD_F64_MAGIC = 444926466;
-const NATIVE_PAYLOAD_F64_VERSION = 5;
+const NATIVE_PAYLOAD_F64_VERSION = 6;
 const NATIVE_PAYLOAD_F64_HEADER_DOUBLES = 41;
 const NATIVE_PAYLOAD_F64_NODE_DOUBLES = 15;
-const NATIVE_PAYLOAD_F64_INPUT_DOUBLES = 5;
+const NATIVE_PAYLOAD_F64_INPUT_DOUBLES = 6;
 const NATIVE_PAYLOAD_F64_OUTPUT_DOUBLES = 2;
 const NATIVE_PAYLOAD_F64_CONNECTION_DOUBLES = 4;
 const NATIVE_PAYLOAD_F64_FLOW_DEPENDENCY_DOUBLES = 2;
@@ -968,6 +968,33 @@ export function buildMPS(
     }
   }
 
+  const addFlowPollutionTerms = (
+    expression: Map<string, number>,
+    coefficientScale: number,
+  ) => {
+    for (const node of nodes) {
+      for (let inputIndex = 0; inputIndex < node.inputs.length; inputIndex += 1) {
+        const pollutionPerFlow = node.inputs[inputIndex].pollutionPerFlow;
+        if (!Number.isFinite(pollutionPerFlow) || pollutionPerFlow === 0) continue;
+        for (const connection of connections) {
+          if (
+            connection.targetNodeId !== node.id ||
+            connection.targetInputIndex !== inputIndex
+          ) {
+            continue;
+          }
+          const flowVar = edgeFlowVars.get(connection.id);
+          if (flowVar) addExpressionCoeff(expression, flowVar, pollutionPerFlow * coefficientScale);
+        }
+      }
+    }
+  };
+  addFlowPollutionTerms(legacyObjCoeffs, 1e-5);
+  addFlowPollutionTerms(
+    objectiveExpressions.weighted,
+    objectiveWeights.pollution / RATIO_OBJECTIVE_NORMALIZERS.pollution,
+  );
+
   for (const node of nodes) {
     const mVar = nodeMachineVars.get(node.id)!;
     node.outputs.forEach((out, outputIndex) => {
@@ -1280,6 +1307,7 @@ export function buildNativeRatioPayloadArray(
       out[inputOffset + 2] = nativeBool(input.independentOfMachineCount);
       out[inputOffset + 3] = nextFlowDependencyIndex;
       out[inputOffset + 4] = input.flowDependencies.length;
+      out[inputOffset + 5] = safeNativeNumber(input.pollutionPerFlow);
       for (const dependency of input.flowDependencies) {
         const dependencyOffset =
           flowDependencySectionOffset +

@@ -1,6 +1,11 @@
 import type { Recipe, Machine, Product, ProductType, Research } from '../types/data';
 import type { SettingDefinition, SpecialRecipe } from '../types/specialRecipes';
-import { getAllSpecialRecipes, getSpecialRecipe, setSpecialRecipeOverrides } from './registry';
+import {
+  getAllSpecialRecipes,
+  getSpecialRecipe,
+  isSpecialRecipeDeleted,
+  setSpecialRecipeOverrides,
+} from './registry';
 import { getDataOverrides } from '../persistence/idb';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { useFlowStore } from '../stores/useFlowStore';
@@ -279,11 +284,14 @@ export function rebuildActiveDatabase(
       ? { ...override, data: migrateLegacyRecipePowerData(override.data) }
       : override,
   );
+  const activeDefaultRecipes = defaultRecipes.filter(
+    (recipe) => !isSpecialRecipeDeleted(recipe.id),
+  );
   recipes = processCategory(
     'recipe:',
-    defaultRecipes,
+    activeDefaultRecipes,
     migratedOverrides,
-    (entityId) => !getSpecialRecipe(entityId),
+    (entityId) => !getSpecialRecipe(entityId) && !isSpecialRecipeDeleted(entityId),
   );
   researches = processCategory('research:', defaultResearches, overrides);
 
@@ -357,19 +365,25 @@ export function rebuildActiveDatabase(
 
 export async function reloadDatabase(): Promise<void> {
   const overrides = await getDataOverrides();
-  const specialRecipeEdits = overrides
-    .filter((entry) => entry.id.startsWith('special_recipe:'))
-    .reduce(
-      (acc, entry) => {
-        const recipeId = entry.id.replace('special_recipe:', '');
-        acc[recipeId] = entry.data as unknown as SpecialRecipe;
-        return acc;
-      },
-      {} as Record<string, SpecialRecipe>,
-    );
-
-  setSpecialRecipeOverrides(specialRecipeEdits);
+  applySpecialRecipeOverrides(overrides);
   rebuildActiveDatabase(overrides);
+}
+
+function applySpecialRecipeOverrides(
+  overrides: { id: string; data: Record<string, unknown> }[],
+): void {
+  const specialRecipeEdits: Record<string, SpecialRecipe> = {};
+  const deletedSpecialRecipeIds = new Set<string>();
+  for (const entry of overrides) {
+    if (!entry.id.startsWith('special_recipe:')) continue;
+    const recipeId = entry.id.substring('special_recipe:'.length);
+    if (entry.data._tombstone) {
+      deletedSpecialRecipeIds.add(recipeId);
+    } else {
+      specialRecipeEdits[recipeId] = entry.data as unknown as SpecialRecipe;
+    }
+  }
+  setSpecialRecipeOverrides(specialRecipeEdits, deletedSpecialRecipeIds);
 }
 
 export function initializeDatabase(): Promise<void> {
@@ -435,18 +449,7 @@ export function initializeDatabase(): Promise<void> {
 
     const overrides = await getDataOverrides();
 
-    const specialRecipeEdits = overrides
-      .filter((entry) => entry.id.startsWith('special_recipe:'))
-      .reduce(
-        (acc, entry) => {
-          const recipeId = entry.id.replace('special_recipe:', '');
-          acc[recipeId] = entry.data as unknown as SpecialRecipe;
-          return acc;
-        },
-        {} as Record<string, SpecialRecipe>,
-      );
-
-    setSpecialRecipeOverrides(specialRecipeEdits);
+    applySpecialRecipeOverrides(overrides);
 
     rebuildActiveDatabase(overrides);
 

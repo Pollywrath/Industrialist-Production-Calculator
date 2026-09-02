@@ -5,6 +5,19 @@
     "patches": [
       {
         "hash": "pending",
+        "version": "v0.8.3",
+        "patch": 3,
+        "date": "2026-09-01",
+        "subject": "fix: harden wiki data comparison and proxy errors",
+        "items": [
+          "Hardened wiki data normalization and proxy error responses.",
+          "Added deletion and restoration support for special and modular recipes.",
+          "Fixed Modular Diesel Engine power allocation, component minimums, and efficiency calculation performance.",
+          "Fixed native ratio optimizer worker payload compatibility, flow-dependent pollution totals, and item/fluid spawner autocomplete availability."
+        ]
+      },
+      {
+        "hash": "pending",
         "version": "v0.8.2",
         "patch": 2,
         "date": "2026-08-25",

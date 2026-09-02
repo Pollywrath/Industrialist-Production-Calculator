@@ -68,6 +68,7 @@ export interface RatioOptimizerNode {
     isSink: boolean;
     independentOfMachineCount: boolean;
     flowDependencies: { sourceInputIndex: number; coefficient: number }[];
+    pollutionPerFlow: number;
   }[];
   outputs: {
     productId: string;
@@ -367,6 +368,7 @@ export function buildRatioOptimizerPayload(
         isSink: !!inp.variable,
         independentOfMachineCount: !!inp.independentOfMachineCount,
         flowDependencies: inp.flowDependencies ?? [],
+        pollutionPerFlow: inp.pollutionPerFlow ?? 0,
       };
     });
 

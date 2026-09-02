@@ -11,77 +11,271 @@ const FUEL_MAP: Record<string, { product_id: string; rate: number }> = {
   'Crude Diesel': { product_id: 'p_crude_diesel', rate: 300 },
 };
 
+const sumIntegers = (end: number): number => (end * (end + 1)) / 2;
+const sumSquares = (end: number): number => (end * (end + 1) * (2 * end + 1)) / 6;
+
 const getCylMap = (cyl: number): number => {
-  let sum = 0;
-  for (let i = 1; i <= Math.floor(cyl); i++) {
-    sum += clamp(10 - (i * i) / 30, 5, 30) * 4;
-  }
-  return sum;
+  const count = Math.max(0, Math.floor(cyl));
+  const belowMinimumTorque = Math.min(count, 12);
+  const minimumTorqueTotal = 40 * belowMinimumTorque - (2 * sumSquares(belowMinimumTorque)) / 15;
+  const cappedTorqueTotal = Math.max(0, count - 12) * 20;
+  return minimumTorqueTotal + cappedTorqueTotal;
 };
 
 const getSinFactor = (cyl: number): number => Math.abs(Math.sin(0.1 * cyl)) + 0.5 + 0.005 * cyl;
 
-const getEfficiencyBase = (crankshafts: number): number => {
+const getEfficiency = (crankshafts: number, flywheels: number): number => {
+  const count = Math.max(0, Math.floor(crankshafts));
+
+  if (count === 0) return clamp(99 + flywheels, 10, 99);
+
+  const sumLowerBound = 2 * (Math.sqrt(count + 1) - 1);
+  const sumUpperBound = 2 * Math.sqrt(count) - 1;
+  const boundMargin = Number.EPSILON * Math.max(1, Math.abs(flywheels), Math.sqrt(count)) * 8;
+
+  if (flywheels > sumUpperBound + boundMargin) return 99;
+  if (sumLowerBound > 89 + flywheels + boundMargin) return 10;
+
   let base = 99;
-  for (let i = 1; i <= Math.floor(crankshafts); i++) {
+
+  for (let i = 1; i <= count; i++) {
     base -= 1 / Math.sqrt(i);
+
+    if (base + flywheels <= 10) return 10;
   }
-  return base;
+
+  return clamp(base + flywheels, 10, 99);
 };
 
-const getEfficiency = (crankshafts: number, flywheels: number): number =>
-  clamp(getEfficiencyBase(crankshafts) + flywheels, 10, 99);
-
 const getTorqueMapSum = (n: number): number => {
-  let sum = 0;
-  for (let i = 1; i <= n; i++) {
-    const base = clamp((i * i) / 100, 5, 200);
-    const penalty = i > 90 ? (i - 100) ** 2 / 100 : 0;
-    sum += clamp(base - penalty, -25, 150);
+  const count = Math.max(0, Math.floor(n));
+  const lowTorqueCount = Math.min(count, 22);
+  let sum = lowTorqueCount * 5;
+
+  if (count > 22) {
+    const quadraticEnd = Math.min(count, 90);
+    sum += (sumSquares(quadraticEnd) - sumSquares(22)) / 100;
   }
+
+  if (count > 90) {
+    const linearEnd = Math.min(count, 125);
+    sum +=
+      2 * (sumIntegers(linearEnd) - sumIntegers(90)) -
+      100 * (linearEnd - 90);
+  }
+
+  if (count > 125) {
+    const plateauEnd = Math.min(count, 170);
+    sum += Math.max(0, plateauEnd - 125) * 150;
+  }
+
+  if (count > 170) {
+    const penaltyEnd = Math.min(count, 249);
+    const penaltyStart = 71;
+    const penaltyCount = penaltyEnd - 170;
+    sum +=
+      penaltyCount * 200 -
+      (sumSquares(penaltyEnd - 100) - sumSquares(penaltyStart - 1)) / 100;
+  }
+
+  if (count > 249) {
+    sum -= (count - 249) * 25;
+  }
+
   return sum;
 };
 
-const getBestGenerators = (torque: number): number => {
-  let bestG = 1;
-  let maxPower = -1;
-  for (let g = 1; g <= 20; g++) {
-    const n = Math.ceil(torque / g);
-    const power = clamp(Math.floor(getTorqueMapSum(n) * 2.6), 0, Infinity) * 30 * g;
-    if (power > maxPower) {
-      maxPower = power;
-      bestG = g;
-    }
-  }
-  return bestG;
+const getGeneratorUnitPower = (torque: number): number =>
+  Math.max(0, Math.floor(getTorqueMapSum(torque) * 2.6)) * 30;
+
+const getGeneratorPower = (torque: number, generators: number): number => {
+  const totalTorque = Math.max(0, Math.ceil(torque));
+  const torquePerGenerator = Math.floor(totalTorque / generators);
+  const remainder = totalTorque - torquePerGenerator * generators;
+
+  return (
+    (generators - remainder) * getGeneratorUnitPower(torquePerGenerator) +
+    remainder * getGeneratorUnitPower(torquePerGenerator + 1)
+  );
 };
 
-function resolveAutocompleteSettings(settings: Record<string, unknown>): Record<string, unknown> {
+const getMaximumGenerators = (maxTorque: number): number => Math.max(1, Math.ceil(maxTorque));
+
+const getEffectiveGenerators = (generators: number, maxTorque: number): number =>
+  Math.min(getMaximumGenerators(maxTorque), Math.max(1, Math.floor(generators)));
+
+const getBestGenerators = (torque: number, maxTorque = torque): number => {
+  const maximumGenerators = getMaximumGenerators(maxTorque);
+  const totalTorque = Math.max(0, Math.ceil(torque));
+  let generators = 1;
+  let bestGenerators = 1;
+  let bestPower = getGeneratorPower(torque, generators);
+
+  while (generators <= maximumGenerators) {
+    const torquePerGenerator = Math.floor(totalTorque / generators);
+    let intervalEnd = maximumGenerators;
+
+    if (torquePerGenerator > 0) {
+      intervalEnd = Math.min(maximumGenerators, Math.floor(totalTorque / torquePerGenerator));
+    }
+
+    intervalEnd = Math.max(generators, intervalEnd);
+    const currentUnitPower = getGeneratorUnitPower(torquePerGenerator);
+    const nextUnitPower = getGeneratorUnitPower(torquePerGenerator + 1);
+    const intervalSlope =
+      (torquePerGenerator + 1) * currentUnitPower - torquePerGenerator * nextUnitPower;
+    const candidateGenerators = intervalSlope > 0 ? intervalEnd : generators;
+    const intervalPower = getGeneratorPower(torque, candidateGenerators);
+    if (intervalPower > bestPower) {
+      bestGenerators = candidateGenerators;
+      bestPower = intervalPower;
+    }
+
+    generators = intervalEnd + 1;
+  }
+
+  return bestGenerators;
+};
+
+interface MdeMetrics {
+  cylinders: number;
+  throttle: number;
+  afr: number;
+  flywheels: number;
+  baseTorque: number;
+  maxTorque: number;
+  torque: number;
+  loadFactor: number;
+  loadRatio: number;
+  sinFactor: number;
+  fuelUsage: number;
+  airTotal: number;
+}
+
+interface MdeMinimums {
+  crankshafts: number;
+  sidewaysCrankshafts: number;
+  exhausts: number;
+}
+
+const getFuelDefinition = (fuelType: unknown) =>
+  FUEL_MAP[(fuelType as string) ?? 'Refined Diesel'] ?? FUEL_MAP['Refined Diesel'];
+
+function getMdeMetrics(settings: Record<string, unknown>): MdeMetrics {
   const cylinders = (settings.cylinders as number) ?? 32;
   const throttle = (settings.throttle as number) ?? 59;
   const afr = (settings.afr as number) ?? 14;
-  const crankshafts = (settings.crankshafts as number) ?? 20;
   const flywheels = (settings.flywheels as number) ?? 0;
-  const fuelType = (settings.fuel_type as string) ?? 'Refined Diesel';
-  const cylMap = getCylMap(cylinders);
-  const torque = cylMap * (throttle / 100) * (14 / afr);
-  const loadFactor = clamp((torque * torque) / (cylMap * cylMap), 0, 1);
-  const loadRatio = (torque + 1) / (cylMap + 1);
+  const baseTorque = getCylMap(cylinders);
+  const maxTorque = baseTorque * (14 / afr);
+  const torque = maxTorque * (throttle / 100);
+  const loadFactor = clamp((torque * torque) / (baseTorque * baseTorque), 0, 1);
+  const loadRatio = (torque + 1) / (baseTorque + 1);
   const sinFactor = getSinFactor(cylinders);
+  const fuelDefinition = getFuelDefinition(settings.fuel_type);
   const fuelUsage =
-    (cylinders * loadRatio * sinFactor * loadFactor * 13.5) / FUEL_MAP[fuelType].rate;
+    (cylinders * loadRatio * sinFactor * loadFactor * 13.5) / fuelDefinition.rate;
   const airTotal = cylinders * (sinFactor * loadRatio * 30 * loadFactor + flywheels * 0.2);
-  const efficiency = getEfficiency(crankshafts, flywheels);
+
+  return {
+    cylinders,
+    throttle,
+    afr,
+    flywheels,
+    baseTorque,
+    maxTorque,
+    torque,
+    loadFactor,
+    loadRatio,
+    sinFactor,
+    fuelUsage,
+    airTotal,
+  };
+}
+
+const getAirInputMinimum = (metrics: MdeMetrics): number =>
+  Math.max(1, Math.ceil(metrics.airTotal / 200));
+
+const getFuelInputMinimum = (metrics: MdeMetrics): number =>
+  Math.max(1, Math.ceil(metrics.fuelUsage / 0.7));
+
+const getExhaustMinimum = (metrics: MdeMetrics, crankshafts: number): number => {
+  const efficiency = getEfficiency(crankshafts, metrics.flywheels);
   const exhaustTotal =
-    cylinders * loadRatio * sinFactor * 30 * loadFactor * loadFactor * (1 - efficiency / 100);
+    metrics.cylinders *
+    metrics.loadRatio *
+    metrics.sinFactor *
+    30 *
+    metrics.loadFactor *
+    metrics.loadFactor *
+    (1 - efficiency / 100);
+  return Math.max(1, Math.ceil(exhaustTotal / 200));
+};
+
+const getSidewaysCrankshaftMinimum = (generators: number): number =>
+  Math.max(0, Math.ceil((generators - 2) / 2));
+
+function getMdeMinimums(
+  settings: Record<string, unknown>,
+  metrics: MdeMetrics = getMdeMetrics(settings),
+): MdeMinimums {
+  const generators = getEffectiveGenerators(
+    (settings.generators as number) ?? 2,
+    metrics.maxTorque,
+  );
+  const sidewaysCrankshafts = Math.max(
+    getSidewaysCrankshaftMinimum(generators),
+    Math.floor((settings.sideways_crankshafts as number) ?? 0),
+  );
+  const airInputs = Math.max(
+    getAirInputMinimum(metrics),
+    Math.floor((settings.air_inputs as number) ?? 1),
+  );
+  const fuelInputs = Math.max(
+    getFuelInputMinimum(metrics),
+    Math.floor((settings.fuel_inputs as number) ?? 1),
+  );
+  const configuredExhausts = Math.max(1, Math.floor((settings.exhausts as number) ?? 1));
+
+  let crankshafts = 1;
+  let exhausts = Math.max(configuredExhausts, getExhaustMinimum(metrics, crankshafts));
+
+  for (let i = 0; i < 32; i++) {
+    const attachmentMinimum =
+      Math.ceil(
+        (metrics.cylinders + exhausts + airInputs + fuelInputs + sidewaysCrankshafts - 2) / 2,
+      ) + sidewaysCrankshafts;
+    const nextCrankshafts = Math.max(1, attachmentMinimum);
+    const nextExhausts = Math.max(
+      configuredExhausts,
+      getExhaustMinimum(metrics, nextCrankshafts),
+    );
+    if (nextCrankshafts === crankshafts && nextExhausts === exhausts) break;
+    crankshafts = nextCrankshafts;
+    exhausts = nextExhausts;
+  }
+
+  return { crankshafts, sidewaysCrankshafts, exhausts };
+}
+
+function resolveAutocompleteSettings(settings: Record<string, unknown>): Record<string, unknown> {
+  const metrics = getMdeMetrics(settings);
+  const generators = getBestGenerators(metrics.torque, metrics.maxTorque);
+  const airInputs = getAirInputMinimum(metrics);
+  const fuelInputs = getFuelInputMinimum(metrics);
+  const minimums = getMdeMinimums(
+    { ...settings, generators, air_inputs: airInputs, fuel_inputs: fuelInputs },
+    metrics,
+  );
 
   return {
     ...settings,
-    generators: getBestGenerators(torque),
-    air_inputs: Math.max(1, Math.ceil(airTotal / 200)),
-    exhausts: Math.max(1, Math.ceil(exhaustTotal / 200)),
-    fuel_inputs: Math.max(1, Math.ceil(fuelUsage / 0.7)),
-    sideways_crankshafts: 0,
+    generators,
+    air_inputs: airInputs,
+    exhausts: minimums.exhausts,
+    fuel_inputs: fuelInputs,
+    crankshafts: minimums.crankshafts,
+    sideways_crankshafts: minimums.sidewaysCrankshafts,
   };
 }
 
@@ -100,6 +294,17 @@ export const modular_diesel_engine_01: SpecialRecipe = {
     return null;
   },
   settings: {
+    fuel_type: {
+      type: 'select',
+      label: 'Fuel Type',
+      default: 'Refined Diesel',
+      options: [
+        { label: 'Refined Diesel', value: 'Refined Diesel' },
+        { label: 'Diesel', value: 'Diesel' },
+        { label: 'Poor Quality Diesel', value: 'Poor Quality Diesel' },
+        { label: 'Crude Diesel', value: 'Crude Diesel' },
+      ],
+    },
     throttle: {
       type: 'number',
       label: 'Throttle (%)',
@@ -146,19 +351,13 @@ export const modular_diesel_engine_01: SpecialRecipe = {
       min: 1,
       step: 1,
       dynamicLabel: (settings) => {
-        const throttle = (settings.throttle as number) ?? 59;
-        const cylinders = (settings.cylinders as number) ?? 32;
-        const afr = (settings.afr as number) ?? 14;
-        const generators = (settings.generators as number) ?? 2;
-
-        const cylMap = getCylMap(cylinders);
-        const torque = cylMap * (throttle / 100) * (14 / afr);
-        const bestG = getBestGenerators(torque);
-        const currentPower =
-          clamp(Math.floor(getTorqueMapSum(Math.ceil(torque / generators)) * 2.6), 0, Infinity) *
-          30 *
-          generators;
-        return `Generators (Optimal: ${bestG}) - Power: ${formatPower(currentPower)}`;
+        const metrics = getMdeMetrics(settings);
+        const generators = getEffectiveGenerators(
+          (settings.generators as number) ?? 2,
+          metrics.maxTorque,
+        );
+        const bestG = getBestGenerators(metrics.torque, metrics.maxTorque);
+        return `Generators (Optimal: ${bestG}) - Power: ${formatPower(getGeneratorPower(metrics.torque, generators))}`;
       },
     },
     air_inputs: {
@@ -168,20 +367,7 @@ export const modular_diesel_engine_01: SpecialRecipe = {
       min: 1,
       step: 1,
       dynamicLabel: (settings) => {
-        const cylinders = (settings.cylinders as number) ?? 32;
-        const throttle = (settings.throttle as number) ?? 59;
-        const afr = (settings.afr as number) ?? 14;
-        const flywheels = (settings.flywheels as number) ?? 0;
-
-        const cylMap = getCylMap(cylinders);
-        const torque = cylMap * (throttle / 100) * (14 / afr);
-        const loadFactor = clamp((torque * torque) / (cylMap * cylMap), 0, 1);
-        const loadRatio = (torque + 1) / (cylMap + 1);
-        const sinFactor = getSinFactor(cylinders);
-
-        const airTotal = cylinders * (sinFactor * loadRatio * 30 * loadFactor + flywheels * 0.2);
-        const airInputs = Math.ceil(airTotal / 200);
-        return `Air Inputs (Min: ${airInputs})`;
+        return `Air Inputs (Min: ${getAirInputMinimum(getMdeMetrics(settings))})`;
       },
     },
     exhausts: {
@@ -191,23 +377,9 @@ export const modular_diesel_engine_01: SpecialRecipe = {
       min: 1,
       step: 1,
       dynamicLabel: (settings) => {
-        const cylinders = (settings.cylinders as number) ?? 32;
+        const metrics = getMdeMetrics(settings);
         const crankshafts = (settings.crankshafts as number) ?? 20;
-        const flywheels = (settings.flywheels as number) ?? 0;
-        const throttle = (settings.throttle as number) ?? 59;
-        const afr = (settings.afr as number) ?? 14;
-
-        const cylMap = getCylMap(cylinders);
-        const torque = cylMap * (throttle / 100) * (14 / afr);
-        const loadFactor = clamp((torque * torque) / (cylMap * cylMap), 0, 1);
-        const loadRatio = (torque + 1) / (cylMap + 1);
-        const sinFactor = getSinFactor(cylinders);
-
-        const efficiency = getEfficiency(crankshafts, flywheels);
-        const exhaustTotal =
-          cylinders * loadRatio * sinFactor * 30 * loadFactor * loadFactor * (1 - efficiency / 100);
-        const exhausts = Math.max(1, Math.ceil(exhaustTotal / 200));
-        return `Exhausts (Min: ${exhausts}) (Affected by crankshaft count)`;
+        return `Exhausts (Min: ${getExhaustMinimum(metrics, crankshafts)}) (Affected by crankshaft count)`;
       },
     },
     fuel_inputs: {
@@ -217,21 +389,7 @@ export const modular_diesel_engine_01: SpecialRecipe = {
       min: 1,
       step: 1,
       dynamicLabel: (settings) => {
-        const cylinders = (settings.cylinders as number) ?? 32;
-        const throttle = (settings.throttle as number) ?? 59;
-        const afr = (settings.afr as number) ?? 14;
-        const fuelType = (settings.fuel_type as string) ?? 'Refined Diesel';
-
-        const cylMap = getCylMap(cylinders);
-        const torque = cylMap * (throttle / 100) * (14 / afr);
-        const loadFactor = clamp((torque * torque) / (cylMap * cylMap), 0, 1);
-        const loadRatio = (torque + 1) / (cylMap + 1);
-        const sinFactor = getSinFactor(cylinders);
-
-        const fuelUsage =
-          (cylinders * loadRatio * sinFactor * loadFactor * 13.5) / FUEL_MAP[fuelType].rate;
-        const fuelInputCount = Math.max(1, Math.ceil(fuelUsage / 0.7));
-        return `Fuel Inputs (Min: ${fuelInputCount})`;
+        return `Fuel Inputs (Min: ${getFuelInputMinimum(getMdeMetrics(settings))})`;
       },
     },
     crankshafts: {
@@ -240,6 +398,10 @@ export const modular_diesel_engine_01: SpecialRecipe = {
       default: 20,
       min: 1,
       step: 1,
+      dynamicLabel: (settings) => {
+        const minimums = getMdeMinimums(settings);
+        return `Crankshafts (Min: ${minimums.crankshafts})`;
+      },
     },
     sideways_crankshafts: {
       type: 'number',
@@ -247,6 +409,14 @@ export const modular_diesel_engine_01: SpecialRecipe = {
       default: 1,
       min: 0,
       step: 1,
+      dynamicLabel: (settings) => {
+        const metrics = getMdeMetrics(settings);
+        const generators = getEffectiveGenerators(
+          (settings.generators as number) ?? 2,
+          metrics.maxTorque,
+        );
+        return `Sideways Crankshafts (Min: ${getSidewaysCrankshaftMinimum(generators)})`;
+      },
     },
     flywheels: {
       type: 'number',
@@ -255,49 +425,29 @@ export const modular_diesel_engine_01: SpecialRecipe = {
       min: 0,
       step: 1,
     },
-    fuel_type: {
-      type: 'select',
-      label: 'Fuel Type',
-      default: 'Refined Diesel',
-      options: [
-        { label: 'Refined Diesel', value: 'Refined Diesel' },
-        { label: 'Diesel', value: 'Diesel' },
-        { label: 'Poor Quality Diesel', value: 'Poor Quality Diesel' },
-        { label: 'Crude Diesel', value: 'Crude Diesel' },
-      ],
-    },
   },
   compute: (settings) => {
     const cylinders = (settings.cylinders as number) ?? 32;
-    const generators = (settings.generators as number) ?? 2;
-    const fuelType = (settings.fuel_type as string) ?? 'Refined Diesel';
-    const throttle = (settings.throttle as number) ?? 59;
-    const afr = (settings.afr as number) ?? 14;
     const exhaustsSetting = (settings.exhausts as number) ?? 1;
-
-    const cylMap = getCylMap(cylinders);
-    const torque = cylMap * (throttle / 100) * (14 / afr);
-    const loadFactor = clamp((torque * torque) / (cylMap * cylMap), 0, 1);
-    const loadRatio = (torque + 1) / (cylMap + 1);
-    const sinFactor = getSinFactor(cylinders);
-
-    const fuelUsage =
-      (cylinders * loadRatio * sinFactor * loadFactor * 13.5) / FUEL_MAP[fuelType].rate;
-
-    const power =
-      clamp(Math.floor(getTorqueMapSum(Math.ceil(torque / generators)) * 2.6), 0, Infinity) *
-      30 *
-      generators;
+    const metrics = getMdeMetrics(settings);
+    const generators = getEffectiveGenerators(
+      (settings.generators as number) ?? 2,
+      metrics.maxTorque,
+    );
+    const fuelDefinition = getFuelDefinition(settings.fuel_type);
+    const power = getGeneratorPower(metrics.torque, generators);
 
     const recipe: Recipe = {
       id: 'r_modular_diesel_engine_01',
-      name: `${cylinders} Cyl, ${afr}:${throttle} MDE`,
+      name: `${cylinders} Cyl, ${metrics.afr}:${metrics.throttle} MDE`,
       machine_id: 'm_modular_diesel_engine',
       cycle_time: 1,
       power_use: -roundTo(power, 6),
       power_type: 'MV',
       pollution: roundTo(0.648 * exhaustsSetting, 6),
-      inputs: [{ product_id: FUEL_MAP[fuelType].product_id, quantity: roundTo(fuelUsage, 6) }],
+      inputs: [
+        { product_id: fuelDefinition.product_id, quantity: roundTo(metrics.fuelUsage, 6) },
+      ],
       outputs: [],
     };
 

@@ -31,12 +31,6 @@ OUT_DIR="${OUT_DIR:-/workspace/public/scip}"
 WITH_PAPILO="${WITH_PAPILO:-ON}"
 WITH_TBB="${WITH_TBB:-ON}"
 WITH_PTHREADS="${WITH_PTHREADS:-ON}"
-# One pthread is reserved by the native async coordinator. Keep four additional
-# pthreads available for SCIP's concurrent MILP solver instances.
-# One pthread is reserved by the native async coordinator. Keep four additional
-# pthreads available for SCIP's concurrent MILP solver instances.
-# One pthread is reserved by the native async coordinator. Keep four additional
-# pthreads available for SCIP's concurrent MILP solver instances.
 PTHREAD_POOL_SIZE="${PTHREAD_POOL_SIZE:-5}"
 BUILD_JOBS="${BUILD_JOBS:-$(nproc)}"
 SCIP_CONFIGURE_LOG="${BUILD_ROOT}/scip-configure.log"

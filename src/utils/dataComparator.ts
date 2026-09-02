@@ -1,24 +1,17 @@
 import type { Product, Machine, Research, Recipe } from '../types/data';
 import { sortItems } from './sorting';
 
-function decodeWikiHtmlEntities(value: string): string {
-  return value
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#x([0-9a-f]+);/gi, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
-    .replace(/&#(\d+);/g, (_, code: string) => String.fromCodePoint(parseInt(code, 10)));
+function normalizeWikiMarkupValue(value: string): string {
+  const document = new DOMParser().parseFromString(value, 'text/html');
+  document.body.querySelectorAll('sup').forEach((node) => {
+    node.replaceWith(`^${node.textContent ?? ''}`);
+  });
+  return (document.body.textContent ?? '').replace(/\s+/g, ' ').trim();
 }
 
 export function normalizeWikiMarkup(val: unknown): string {
   if (val === null || val === undefined) return '';
-  return decodeWikiHtmlEntities(String(val))
-    .replace(/<\s*sup\s*>(.*?)<\s*\/\s*sup\s*>/gi, '^$1')
-    .replace(/<[^>]+>/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return normalizeWikiMarkupValue(String(val));
 }
 
 export function normalizeCompareKey(val: unknown): string {

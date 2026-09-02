@@ -255,19 +255,30 @@ function closeTutorialSurfaces(): void {
   });
 }
 
-function collectSpecialRecipeOverrides(overrides: DataOverride[]): Record<string, SpecialRecipe> {
+interface SpecialRecipeOverrideSet {
+  edits: Record<string, SpecialRecipe>;
+  deletedIds: Set<string>;
+}
+
+function collectSpecialRecipeOverrides(overrides: DataOverride[]): SpecialRecipeOverrideSet {
   const specialRecipeEdits: Record<string, SpecialRecipe> = {};
+  const deletedSpecialRecipeIds = new Set<string>();
   for (let i = 0; i < overrides.length; i++) {
     const entry = overrides[i];
     if (!entry.id.startsWith('special_recipe:')) continue;
-    specialRecipeEdits[entry.id.replace('special_recipe:', '')] =
-      entry.data as unknown as SpecialRecipe;
+    const recipeId = entry.id.substring('special_recipe:'.length);
+    if (entry.data._tombstone) {
+      deletedSpecialRecipeIds.add(recipeId);
+    } else {
+      specialRecipeEdits[recipeId] = entry.data as unknown as SpecialRecipe;
+    }
   }
-  return specialRecipeEdits;
+  return { edits: specialRecipeEdits, deletedIds: deletedSpecialRecipeIds };
 }
 
 function applyDataOverridesInMemory(overrides: DataOverride[]): void {
-  setSpecialRecipeOverrides(collectSpecialRecipeOverrides(overrides));
+  const specialRecipeOverrides = collectSpecialRecipeOverrides(overrides);
+  setSpecialRecipeOverrides(specialRecipeOverrides.edits, specialRecipeOverrides.deletedIds);
   rebuildActiveDatabase(overrides);
 }
 

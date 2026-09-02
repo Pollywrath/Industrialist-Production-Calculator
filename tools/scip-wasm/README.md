@@ -136,8 +136,9 @@ capability bitset is `31`:
 - Bit 3: in-solver cancellation.
 - Bit 4: exact rounded-objective MILP.
 
-Request payload version 5 adds explicit machine lower/upper bounds, the
-whole-versus-continuous accounting flag, and sparse input-flow dependency terms.
+Request payload version 6 adds explicit machine lower/upper bounds, the
+whole-versus-continuous accounting flag, sparse input-flow dependency terms, and
+linear pollution-per-input-flow terms.
 
 Result statuses are `optimal`, `cancelled`, `infeasible`, `unbounded`,
 `limit_reached_not_proven`, `numerical_failure`, `invalid_payload`, and

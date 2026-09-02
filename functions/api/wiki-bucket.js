@@ -43,6 +43,7 @@ const DEFAULT_SELECT_FIELDS_BY_BUCKET = {
   recipes_outputs: ['page_name', 'page_name_sub', 'id', 'machine', 'item', 'amount', 'amount_mode'],
 };
 const MAX_BUCKET_LIMIT = 1000;
+const GENERIC_REQUEST_ERROR = 'Unable to process wiki bucket request.';
 
 const jsonHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -196,9 +197,7 @@ export async function onRequest(context) {
     if (!wikiResponse.ok) {
       return jsonResponse(
         {
-          error: `Industrialist wiki request failed with HTTP ${wikiResponse.status}`,
-          query,
-          body: responseText,
+          error: 'Industrialist wiki request failed.',
         },
         502,
       );
@@ -211,8 +210,6 @@ export async function onRequest(context) {
       return jsonResponse(
         {
           error: 'Industrialist wiki returned non-JSON data.',
-          query,
-          body: responseText,
         },
         502,
       );
@@ -221,8 +218,7 @@ export async function onRequest(context) {
     if (payload.error) {
       return jsonResponse(
         {
-          error: payload.error,
-          query,
+          error: 'Industrialist wiki rejected the bucket request.',
         },
         502,
       );
@@ -232,10 +228,10 @@ export async function onRequest(context) {
       query,
       bucket: payload.bucket ?? [],
     });
-  } catch (error) {
+  } catch {
     return jsonResponse(
       {
-        error: error instanceof Error ? error.message : String(error),
+        error: GENERIC_REQUEST_ERROR,
       },
       400,
     );

@@ -1,5 +1,5 @@
 import type { Edge } from '@xyflow/react';
-import { getProduct, resolveActiveRecipe } from '../data/lookup';
+import { getProduct, getRecipe, resolveActiveRecipe } from '../data/lookup';
 import { getSpecialRecipe } from '../data/registry';
 import type { Recipe } from '../types/data';
 import { isRecipeNode, type CanvasNode, type RecipeNodeType } from '../types/nodes';
@@ -14,7 +14,10 @@ import {
 } from '../utils/precision';
 import { getRateMultiplier } from '../utils/recipeComputation';
 import { hasRecipePowerOutput } from '../utils/recipePower';
-import { getAvailableAutomationRecipes } from '../utils/recipeAvailability';
+import {
+  getAvailableAutomationRecipes,
+  isRecipeAvailableForAutomation,
+} from '../utils/recipeAvailability';
 import { constrainMachineCount } from '../utils/machineCountConstraint';
 import { useGlobalSettingsStore, type GlobalSettings } from '../stores/useGlobalSettingsStore';
 import { solveFlowPipeline } from './solverPipeline';
@@ -23,6 +26,7 @@ import {
   cancelRatioOptimizer,
   solveRatios,
   type RatioFailureDiagnostics,
+  type RatioOptimizerConnection,
   type RatioOptimizerModelSnapshot,
   type RatioOptimizerNode,
   type RatioSolverProgress,
@@ -36,6 +40,10 @@ const ACTIVE_FLOW_EPSILON = FLOW_STATUS_ABSOLUTE_TOLERANCE;
 const RECIPE_TEMPERATURE_EPSILON = 0.01;
 const MAX_COUPLED_SOLVES = 12;
 const MAX_FALLBACK_EXPANSIONS = 2;
+const FALLBACK_RECIPE_IDS = {
+  Item: 'r_item_spawner_01',
+  Fluid: 'r_fluid_spawner_01',
+} as const;
 
 type CandidateKind = 'existing' | 'generated' | 'fallback';
 
@@ -84,6 +92,8 @@ export interface AutocompletePlan {
   addedNodeIds: string[];
   machineCounts: Record<string, number>;
   objectiveNodes: RatioOptimizerNode[];
+  objectiveConnections: RatioOptimizerConnection[];
+  objectiveConnectionFlows: Record<string, number>;
   warnings: string[];
 }
 
@@ -224,12 +234,17 @@ function areRecipePortsEquivalent(
   if (previous.length !== next.length) return false;
   return previous.every((port, index) => {
     const nextPort = next[index];
+    const previousPollutionPerFlow =
+      'pollutionPerFlow' in port ? (port.pollutionPerFlow ?? 0) : 0;
+    const nextPollutionPerFlow =
+      'pollutionPerFlow' in nextPort ? (nextPort.pollutionPerFlow ?? 0) : 0;
     if (
       port.product_id !== nextPort.product_id ||
       port.handle_type !== nextPort.handle_type ||
       port.product_link_id !== nextPort.product_link_id ||
       port.variable !== nextPort.variable ||
       port.independentOfMachineCount !== nextPort.independentOfMachineCount ||
+      !areNearlyEqual(previousPollutionPerFlow, nextPollutionPerFlow) ||
       !areNearlyEqual(port.quantity, nextPort.quantity)
     ) {
       return false;
@@ -841,7 +856,11 @@ function addFallbackCandidate(
     }
   }
 
-  const recipeId = product.type === 'Fluid' ? 'r_fluid_spawner_01' : 'r_item_spawner_01';
+  const recipeId = FALLBACK_RECIPE_IDS[product.type];
+  const fallbackRecipe = getRecipe(recipeId);
+  if (!fallbackRecipe || !isRecipeAvailableForAutomation(fallbackRecipe, globalSettings)) {
+    return false;
+  }
   const settings: Record<string, unknown> = {
     product_id: productId,
     quantity,
@@ -1287,6 +1306,8 @@ function materializePlan(
     addedNodeIds: positionedNewNodes.map((node) => node.id),
     machineCounts: objectiveMachineCounts,
     objectiveNodes: objectivePayload.nodes,
+    objectiveConnections: objectivePayload.connections,
+    objectiveConnectionFlows: verification.edgeFlows,
     warnings: model.warnings,
   };
 }

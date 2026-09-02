@@ -11,7 +11,7 @@ import {
   getAllRecipes,
   reloadDatabase,
 } from '../data/lookup';
-import { getSpecialRecipe } from '../data/registry';
+import { getSpecialRecipe, isSpecialRecipeDeleted } from '../data/registry';
 import {
   batchSaveDataOverrides,
   clearDataOverrides,
@@ -591,8 +591,6 @@ export const useDataStore = create<DataState>((set, get) => ({
 
   deleteRecipe: (id: string) =>
     set((state) => {
-      if (getSpecialRecipe(id)) return state;
-
       const pending = state.pendingEdits.recipes[id];
       const nextRecipes = { ...state.pendingEdits.recipes };
 
@@ -705,7 +703,8 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
 
   restoreRecipeDefault: async (id: string) => {
-    const dbKey = `recipe:${id}`;
+    const isSpecial = !!getSpecialRecipe(id) || isSpecialRecipeDeleted(id);
+    const dbKey = `${isSpecial ? 'special_recipe' : 'recipe'}:${id}`;
     await deleteDataOverride(dbKey);
     await reloadDatabase();
     set((state) => {
@@ -911,8 +910,9 @@ export const useDataStore = create<DataState>((set, get) => ({
     }
 
     for (const [id, editData] of Object.entries(pendingEdits.recipes)) {
-      if (getSpecialRecipe(id)) continue;
-      const dbKey = `recipe:${id}`;
+      const isSpecial = !!getSpecialRecipe(id) || isSpecialRecipeDeleted(id);
+      if (isSpecial && !editData._tombstone) continue;
+      const dbKey = `${isSpecial ? 'special_recipe' : 'recipe'}:${id}`;
       if (editData._tombstone) {
         batch.push({ id: dbKey, data: { _tombstone: true } });
       } else {
@@ -958,6 +958,9 @@ export const useDataStore = create<DataState>((set, get) => ({
   restoreDefaults: async (category) => {
     if (category) {
       await clearCategoryDataOverrides(category);
+      if (category === 'recipes') {
+        await clearCategoryDataOverrides('special_recipes');
+      }
     } else {
       await clearDataOverrides();
     }
