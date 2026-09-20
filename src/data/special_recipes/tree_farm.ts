@@ -13,7 +13,7 @@ const CANDY_CANE_TREE_ID = 'm_candy_cane_tree';
 const BASE_LOGS_PER_TREE = 2;
 const IGLOO_WINTER_LOG_MULTIPLIER = 1.5;
 const MIN_TREE_COUNT = 1;
-const MAX_TREE_COUNT = 650;
+const MAX_TREE_COUNT = 776;
 const MIN_HARVESTER_COUNT = 1;
 const MAX_HARVESTER_COUNT = 30;
 
