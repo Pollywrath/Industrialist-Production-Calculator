@@ -33,6 +33,8 @@ function areFlowResultsEqual(a: NodeFlowResult, b: NodeFlowResult): boolean {
     if (
       fA.rate !== fB.rate ||
       fA.connected !== fB.connected ||
+      fA.deficit !== fB.deficit ||
+      fA.excess !== fB.excess ||
       fA.hasDeficiency !== fB.hasDeficiency ||
       fA.hasExcess !== fB.hasExcess
     ) {
@@ -46,6 +48,8 @@ function areFlowResultsEqual(a: NodeFlowResult, b: NodeFlowResult): boolean {
     if (
       fA.rate !== fB.rate ||
       fA.connected !== fB.connected ||
+      fA.deficit !== fB.deficit ||
+      fA.excess !== fB.excess ||
       fA.hasDeficiency !== fB.hasDeficiency ||
       fA.hasExcess !== fB.hasExcess
     ) {

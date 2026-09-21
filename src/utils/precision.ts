@@ -9,6 +9,9 @@ export function cleanFlow(val: number): number {
 }
 
 export const EPSILON = 1e-11;
+export const RATE_NUMERICAL_ZERO = 1e-12;
+export const RATE_ABSOLUTE_TOLERANCE = 1e-12;
+export const RATE_RELATIVE_TOLERANCE = 1e-9;
 export const FLOW_STATUS_ABSOLUTE_TOLERANCE = 1e-6;
 export const FLOW_STATUS_RELATIVE_TOLERANCE = 1e-12;
 export const MACHINE_INTEGER_ABSOLUTE_TOLERANCE = 1e-7;
@@ -17,6 +20,42 @@ export const MACHINE_INTEGER_RELATIVE_TOLERANCE = Number.EPSILON * 8;
 export function getMachineIntegerTolerance(value: number): number {
   if (!Number.isFinite(value)) return MACHINE_INTEGER_ABSOLUTE_TOLERANCE;
   return MACHINE_INTEGER_ABSOLUTE_TOLERANCE + Math.abs(value) * MACHINE_INTEGER_RELATIVE_TOLERANCE;
+}
+
+/** Preserve finite positive solver rates above the numerical-zero threshold. */
+export function normalizeSolverRate(value: number): number {
+  if (!Number.isFinite(value) || value <= RATE_NUMERICAL_ZERO) return 0;
+  return Number(value.toPrecision(15));
+}
+
+export function getRateTolerance(required: number, supplied = 0): number {
+  const scale = Math.max(Math.abs(required), Math.abs(supplied));
+  return Math.max(RATE_ABSOLUTE_TOLERANCE, scale * RATE_RELATIVE_TOLERANCE);
+}
+
+export function getRateDeficit(required: number, supplied: number): number {
+  return Math.max(0, normalizeSolverRate(required) - normalizeSolverRate(supplied));
+}
+
+export function getRateExcess(produced: number, routed: number): number {
+  return Math.max(0, normalizeSolverRate(produced) - normalizeSolverRate(routed));
+}
+
+export function hasMeaningfulExcess(produced: number, routed: number): boolean {
+  return getRateExcess(produced, routed) > getRateTolerance(produced, routed);
+}
+
+export function isPositiveSolverFlow(value: number | undefined): boolean {
+  return value !== undefined && normalizeSolverRate(value) > 0;
+}
+
+export function isMachineCountNumericallyZero(value: number | undefined): boolean {
+  return value === undefined || !Number.isFinite(value) || value <= RATE_NUMERICAL_ZERO;
+}
+
+export function isMachineCountNearInteger(value: number): boolean {
+  if (!Number.isFinite(value)) return false;
+  return Math.abs(value - Math.round(value)) <= getMachineIntegerTolerance(value);
 }
 
 export function ceilMachineCount(value: number): number {

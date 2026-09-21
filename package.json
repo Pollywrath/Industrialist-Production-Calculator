@@ -7,6 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint src",
+    "test:flow-precision": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/flow-precision-test.mjs",
+    "test:precision": "node --experimental-strip-types tools/precision-contract-test.mjs",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "preview": "vite preview"

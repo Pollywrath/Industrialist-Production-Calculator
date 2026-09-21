@@ -4,6 +4,8 @@ import type { RecipeNodeType } from './nodes';
 export interface HandleFlowStatus {
   rate: number;
   connected: number;
+  deficit: number;
+  excess: number;
   hasDeficiency: boolean;
   hasExcess: boolean;
 }

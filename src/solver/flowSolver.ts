@@ -6,10 +6,13 @@ import type {
   FlowResults,
 } from '../types/solver';
 import {
-  clampFlow,
-  EPSILON,
-  hasMeaningfulDeficit,
-  snapToReferenceIfNearlyEqual,
+  getRateDeficit,
+  getRateExcess,
+  getRateTolerance,
+  normalizeSolverRate,
+  RATE_ABSOLUTE_TOLERANCE,
+  RATE_RELATIVE_TOLERANCE,
+  RATE_NUMERICAL_ZERO,
 } from '../utils/precision';
 import {
   findProductConnectedComponents,
@@ -204,7 +207,7 @@ function dinic(network: FlowNetwork): {
       for (let i = 0; i < adjV.length; i++) {
         const edge = edges[adjV[i]];
         const residual = edge.cap - edge.flow;
-        if (level[edge.to] < 0 && residual > EPSILON) {
+        if (level[edge.to] < 0 && residual > RATE_NUMERICAL_ZERO) {
           level[edge.to] = level[v] + 1;
           queue.push(edge.to);
         }
@@ -226,13 +229,13 @@ function dinic(network: FlowNetwork): {
       const to = edge.to;
       const cap = edge.cap - edge.flow;
 
-      if (level[u] + 1 === level[to] && cap > EPSILON) {
+      if (level[u] + 1 === level[to] && cap > RATE_NUMERICAL_ZERO) {
         const tr = dfs(to, Math.min(pushed - totalPushed, cap));
         if (tr > 0) {
           edge.flow += tr;
           edges[edge.rev].flow -= tr;
           totalPushed += tr;
-          if (totalPushed >= pushed - EPSILON) {
+          if (totalPushed >= pushed - RATE_NUMERICAL_ZERO) {
             break;
           }
         }
@@ -258,7 +261,7 @@ function dinic(network: FlowNetwork): {
   for (let i = 0; i < edges.length; i++) {
     const edge = edges[i];
     if (edge.connIndex >= 0) {
-      connectionFlows[edge.connIndex] = clampFlow(edge.flow);
+      connectionFlows[edge.connIndex] = normalizeSolverRate(edge.flow);
     }
   }
 
@@ -282,16 +285,20 @@ function runFlowPass(
   for (const [nodeId, node] of Object.entries(graph.nodes)) {
     results.set(nodeId, {
       inputFlows: node.inputs.map((inp) => ({
-        rate: inp.rate,
+        rate: normalizeSolverRate(inp.rate),
         connected: 0,
-        hasDeficiency: inp.rate > 0,
+        deficit: normalizeSolverRate(inp.rate),
+        excess: 0,
+        hasDeficiency: isMeaningfulRateDifference(inp.rate, 0),
         hasExcess: false,
       })),
       outputFlows: node.outputs.map((out) => ({
-        rate: out.rate,
+        rate: normalizeSolverRate(out.rate),
         connected: 0,
+        deficit: 0,
+        excess: normalizeSolverRate(out.rate),
         hasDeficiency: false,
-        hasExcess: out.rate > 0,
+        hasExcess: isMeaningfulRateDifference(out.rate, 0),
       })),
     });
   }
@@ -327,7 +334,7 @@ function runFlowPass(
           .reduce((sum, p) => sum + p.rate, 0);
 
         connFlowMap = {};
-        if (totalProduction < EPSILON) {
+        if (totalProduction <= RATE_NUMERICAL_ZERO) {
           component.connections.forEach((conn) => {
             connFlowMap![conn.id] = 0;
           });
@@ -366,26 +373,39 @@ function runFlowPass(
 
   for (const [, nodeResult] of results) {
     for (const inputFlow of nodeResult.inputFlows) {
-      inputFlow.rate = clampFlow(inputFlow.rate);
-      inputFlow.connected = snapToReferenceIfNearlyEqual(
-        inputFlow.rate,
-        clampFlow(inputFlow.connected),
-      );
-      inputFlow.hasDeficiency = hasMeaningfulDeficit(inputFlow.rate, inputFlow.connected);
+      inputFlow.rate = normalizeSolverRate(inputFlow.rate);
+      inputFlow.connected = snapSolverRate(inputFlow.rate, inputFlow.connected);
+      inputFlow.deficit = getRateDeficit(inputFlow.rate, inputFlow.connected);
+      inputFlow.excess = 0;
+      inputFlow.hasDeficiency = isMeaningfulRateDifference(inputFlow.rate, inputFlow.connected);
       inputFlow.hasExcess = false;
     }
     for (const outputFlow of nodeResult.outputFlows) {
-      outputFlow.rate = clampFlow(outputFlow.rate);
-      outputFlow.connected = snapToReferenceIfNearlyEqual(
-        outputFlow.rate,
-        clampFlow(outputFlow.connected),
-      );
-      outputFlow.hasExcess = hasMeaningfulDeficit(outputFlow.rate, outputFlow.connected);
+      outputFlow.rate = normalizeSolverRate(outputFlow.rate);
+      outputFlow.connected = snapSolverRate(outputFlow.rate, outputFlow.connected);
+      outputFlow.deficit = 0;
+      outputFlow.excess = getRateExcess(outputFlow.rate, outputFlow.connected);
+      outputFlow.hasExcess = isMeaningfulRateDifference(outputFlow.rate, outputFlow.connected);
       outputFlow.hasDeficiency = false;
     }
   }
 
   return { results, edgeFlows };
+}
+
+function isMeaningfulRateDifference(a: number, b: number): boolean {
+  return Math.abs(a - b) > getRateTolerance(a, b);
+}
+
+function snapSolverRate(reference: number, value: number): number {
+  const normalizedValue = normalizeSolverRate(value);
+  return Math.abs(reference - normalizedValue) <=
+    Math.max(
+      RATE_ABSOLUTE_TOLERANCE,
+      Math.max(Math.abs(reference), Math.abs(normalizedValue)) * RATE_RELATIVE_TOLERANCE,
+    )
+    ? reference
+    : normalizedValue;
 }
 
 export function calculateFlows(
