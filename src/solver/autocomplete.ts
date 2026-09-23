@@ -8,9 +8,10 @@ import { buildHandleId, nextEdgeId, nextNodeId, parseHandleId } from '../utils/i
 import { resolveOptimizationSettings } from '../utils/optimizationMetrics';
 import {
   areNearlyEqual,
-  FLOW_STATUS_ABSOLUTE_TOLERANCE,
-  getScaledTolerance,
-  MACHINE_INTEGER_ABSOLUTE_TOLERANCE,
+  getRateTolerance,
+  isMachineCountNumericallyZero,
+  isPositiveSolverFlow,
+  normalizeSolverRate,
 } from '../utils/precision';
 import { getRateMultiplier } from '../utils/recipeComputation';
 import { hasRecipePowerOutput } from '../utils/recipePower';
@@ -35,9 +36,9 @@ import {
 import type { OptimizationConfiguration } from './optimizationConfig';
 
 const PLACEHOLDER_PRODUCTS = new Set(['any_fluid', 'any_item']);
-const SELECTED_COUNT_EPSILON = MACHINE_INTEGER_ABSOLUTE_TOLERANCE;
-const ACTIVE_FLOW_EPSILON = FLOW_STATUS_ABSOLUTE_TOLERANCE;
+const AUTOCOMPLETE_TEMPERATURE_RANGE_TOLERANCE = 1e-6;
 const RECIPE_TEMPERATURE_EPSILON = 0.01;
+const AUTOCOMPLETE_OUTPUT_NOISE_RELATIVE_TOLERANCE = 1e-7;
 const MAX_COUPLED_SOLVES = 12;
 const MAX_FALLBACK_EXPANSIONS = 2;
 const FALLBACK_RECIPE_IDS = {
@@ -63,7 +64,6 @@ interface RecipeDescriptorSource {
 interface RecipeDescriptorCatalog {
   sources: RecipeDescriptorSource[];
   sourcesByOutput: Map<string, RecipeDescriptorSource[]>;
-  disposalSources: Record<'primary' | 'secondary' | 'last-resort', RecipeDescriptorSource[]>;
   getDescriptors: (source: RecipeDescriptorSource, outputProduct?: string) => RecipeDescriptor[];
 }
 
@@ -80,7 +80,6 @@ interface AutocompleteModel {
   edges: Edge[];
   descriptorCatalog: RecipeDescriptorCatalog;
   protectedOutputHandles: Set<string>;
-  disposalProducts: Set<string>;
   fallbackKeys: Set<string>;
   preservedEdgeEndpointKeys: Set<string>;
   warnings: string[];
@@ -137,11 +136,186 @@ function isTemperatureInRange(
   range: AutocompleteTemperatureRange | null,
 ): boolean {
   if (!range) return true;
-  if (range.min !== undefined && temperature < range.min - FLOW_STATUS_ABSOLUTE_TOLERANCE)
+  if (range.min !== undefined && temperature < range.min - AUTOCOMPLETE_TEMPERATURE_RANGE_TOLERANCE)
     return false;
-  if (range.max !== undefined && temperature > range.max + FLOW_STATUS_ABSOLUTE_TOLERANCE)
+  if (range.max !== undefined && temperature > range.max + AUTOCOMPLETE_TEMPERATURE_RANGE_TOLERANCE)
     return false;
   return true;
+}
+
+function areRecipeRatesEquivalent(previous: number, next: number): boolean {
+  if (!Number.isFinite(previous) || !Number.isFinite(next)) return previous === next;
+  return Math.abs(previous - next) <= getRateTolerance(previous, next);
+}
+
+function hasActiveCandidateFlow(
+  candidate: AutocompleteCandidate,
+  edges: Edge[],
+  connectionFlows: Record<string, number>,
+): boolean {
+  return edges.some(
+    (edge) =>
+      (edge.source === candidate.node.id || edge.target === candidate.node.id) &&
+      isAutocompleteEdgeActive(connectionFlows[edge.id]),
+  );
+}
+
+function hasIndependentSolverRate(candidate: AutocompleteCandidate): boolean {
+  const multiplier = getRateMultiplier(candidate.recipe.cycle_time, 'second');
+  return [...candidate.recipe.inputs, ...candidate.recipe.outputs].some(
+    (port) =>
+      port.independentOfMachineCount === true && isPositiveSolverFlow(port.quantity * multiplier),
+  );
+}
+
+export function isAutocompleteEdgeActive(flow: number | undefined): boolean {
+  return isPositiveSolverFlow(flow);
+}
+
+export function isAutocompleteCandidateActive(
+  isTarget: boolean | undefined,
+  machineCount: number,
+  hasActiveFlow: boolean,
+  hasIndependentRate: boolean,
+): boolean {
+  return (
+    isTarget === true ||
+    !isMachineCountNumericallyZero(machineCount) ||
+    hasActiveFlow ||
+    hasIndependentRate
+  );
+}
+
+function isCandidateSolverActive(
+  candidate: AutocompleteCandidate,
+  edges: Edge[],
+  machineCount: number,
+  connectionFlows: Record<string, number>,
+): boolean {
+  return isAutocompleteCandidateActive(
+    candidate.node.data.isTarget,
+    machineCount,
+    hasActiveCandidateFlow(candidate, edges, connectionFlows),
+    hasIndependentSolverRate(candidate),
+  );
+}
+
+interface AutocompleteOutputNoiseProfile {
+  targetMachineScale: number;
+  targetRateByProduct: Map<string, number>;
+}
+
+function getPortRate(
+  recipe: Recipe,
+  port: Recipe['inputs'][number] | Recipe['outputs'][number],
+  machineCount: number,
+): number {
+  const multiplier = getRateMultiplier(recipe.cycle_time, 'second');
+  const scale = port.independentOfMachineCount ? 1 : Math.max(0, machineCount);
+  return normalizeSolverRate(Math.max(0, port.quantity) * multiplier * scale);
+}
+
+function buildOutputNoiseProfile(model: AutocompleteModel): AutocompleteOutputNoiseProfile {
+  const targetRateByProduct = new Map<string, number>();
+  let targetMachineScale = 0;
+  for (const candidate of model.candidates) {
+    if (!candidate.node.data.isTarget) continue;
+    const machineCount = Math.max(0, candidate.node.data.machineCount ?? 0);
+    targetMachineScale = Math.max(targetMachineScale, machineCount);
+    for (const port of [...candidate.recipe.inputs, ...candidate.recipe.outputs]) {
+      if (PLACEHOLDER_PRODUCTS.has(port.product_id) || port.quantity <= 0) continue;
+      const rate = getPortRate(candidate.recipe, port, machineCount);
+      targetRateByProduct.set(
+        port.product_id,
+        Math.max(targetRateByProduct.get(port.product_id) ?? 0, rate),
+      );
+    }
+  }
+  return { targetMachineScale, targetRateByProduct };
+}
+
+function getAutocompleteOutputNoiseMachineTolerance(
+  profile: AutocompleteOutputNoiseProfile,
+): number {
+  return Math.max(1e-12, profile.targetMachineScale * AUTOCOMPLETE_OUTPUT_NOISE_RELATIVE_TOLERANCE);
+}
+
+function getAutocompleteOutputNoiseRateTolerance(
+  profile: AutocompleteOutputNoiseProfile,
+  productId: string,
+): number {
+  const targetRate = profile.targetRateByProduct.get(productId) ?? 0;
+  return Math.max(1e-12, targetRate * AUTOCOMPLETE_OUTPUT_NOISE_RELATIVE_TOLERANCE);
+}
+
+function hasPreservedCandidateEdge(model: AutocompleteModel, candidateId: string): boolean {
+  return model.edges.some(
+    (edge) =>
+      (edge.source === candidateId || edge.target === candidateId) &&
+      model.preservedEdgeEndpointKeys.has(edgeEndpointKey(edge)),
+  );
+}
+
+export function getGeneratedOutputNoiseIds(
+  model: AutocompleteModel,
+  machineCounts: Record<string, number>,
+  connectionFlows: Record<string, number>,
+): Set<string> {
+  const profile = buildOutputNoiseProfile(model);
+  const machineTolerance = getAutocompleteOutputNoiseMachineTolerance(profile);
+  const noiseIds = new Set<string>();
+
+  for (const candidate of model.candidates) {
+    if (candidate.kind !== 'generated' || candidate.node.data.isTarget) continue;
+    const machineCount = Math.max(0, machineCounts[candidate.node.id] ?? 0);
+    if (machineCount > machineTolerance || hasIndependentSolverRate(candidate)) continue;
+    if (hasPreservedCandidateEdge(model, candidate.node.id)) continue;
+
+    const activeEdges = model.edges.filter(
+      (edge) =>
+        (edge.source === candidate.node.id || edge.target === candidate.node.id) &&
+        isAutocompleteEdgeActive(connectionFlows[edge.id]),
+    );
+    const hasMeaningfulFlow = activeEdges.some((edge) => {
+      const port =
+        edge.source === candidate.node.id
+          ? candidate.recipe.outputs[parseHandleId(edge.sourceHandle ?? '')?.index ?? -1]
+          : candidate.recipe.inputs[parseHandleId(edge.targetHandle ?? '')?.index ?? -1];
+      const productId = port?.product_id;
+      if (!productId) return true;
+      return (
+        normalizeSolverRate(connectionFlows[edge.id] ?? 0) >
+        getAutocompleteOutputNoiseRateTolerance(profile, productId)
+      );
+    });
+    if (!hasMeaningfulFlow) noiseIds.add(candidate.node.id);
+  }
+  return noiseIds;
+}
+
+function getGeneratedOutputNoiseEdgeIds(
+  model: AutocompleteModel,
+  connectionFlows: Record<string, number>,
+): Set<string> {
+  const profile = buildOutputNoiseProfile(model);
+  const noiseIds = new Set<string>();
+  for (const edge of model.edges) {
+    if (model.preservedEdgeEndpointKeys.has(edgeEndpointKey(edge))) continue;
+    const source = model.candidates.find((candidate) => candidate.node.id === edge.source);
+    const target = model.candidates.find((candidate) => candidate.node.id === edge.target);
+    if (!source || !target || (source.kind !== 'generated' && target.kind !== 'generated')) {
+      continue;
+    }
+    const flow = normalizeSolverRate(connectionFlows[edge.id] ?? 0);
+    if (!isAutocompleteEdgeActive(flow)) continue;
+    const targetPort = target.recipe.inputs[parseHandleId(edge.targetHandle ?? '')?.index ?? -1];
+    const tolerance = getAutocompleteOutputNoiseRateTolerance(
+      profile,
+      targetPort?.product_id ?? '',
+    );
+    if (flow <= tolerance) noiseIds.add(edge.id);
+  }
+  return noiseIds;
 }
 
 function getInputTemperatureRange(
@@ -234,8 +408,7 @@ function areRecipePortsEquivalent(
   if (previous.length !== next.length) return false;
   return previous.every((port, index) => {
     const nextPort = next[index];
-    const previousPollutionPerFlow =
-      'pollutionPerFlow' in port ? (port.pollutionPerFlow ?? 0) : 0;
+    const previousPollutionPerFlow = 'pollutionPerFlow' in port ? (port.pollutionPerFlow ?? 0) : 0;
     const nextPollutionPerFlow =
       'pollutionPerFlow' in nextPort ? (nextPort.pollutionPerFlow ?? 0) : 0;
     if (
@@ -245,7 +418,7 @@ function areRecipePortsEquivalent(
       port.variable !== nextPort.variable ||
       port.independentOfMachineCount !== nextPort.independentOfMachineCount ||
       !areNearlyEqual(previousPollutionPerFlow, nextPollutionPerFlow) ||
-      !areNearlyEqual(port.quantity, nextPort.quantity)
+      !areRecipeRatesEquivalent(port.quantity, nextPort.quantity)
     ) {
       return false;
     }
@@ -303,8 +476,13 @@ function refreshSelectedCandidateRecipes(
   globalSettings: GlobalSettings,
   connectionFlows: Record<string, number>,
 ): boolean {
-  const selectedCandidates = model.candidates.filter(
-    (candidate) => (candidate.node.data.machineCount ?? 0) > SELECTED_COUNT_EPSILON,
+  const selectedCandidates = model.candidates.filter((candidate) =>
+    isCandidateSolverActive(
+      candidate,
+      model.edges,
+      candidate.node.data.machineCount ?? 0,
+      connectionFlows,
+    ),
   );
   if (selectedCandidates.length === 0) return false;
 
@@ -332,7 +510,7 @@ function refreshSelectedCandidateRecipes(
     (edge) =>
       selectedIds.has(edge.source) &&
       selectedIds.has(edge.target) &&
-      (connectionFlows[edge.id] ?? 0) > ACTIVE_FLOW_EPSILON,
+      isAutocompleteEdgeActive(connectionFlows[edge.id]),
   );
   const snapshot = solveFlowPipeline(
     selectedCandidates.map((candidate) => candidate.node),
@@ -398,18 +576,6 @@ function buildRecipeDescriptorCatalog(
       sourcesByOutput.set(productId, productSources);
     }
   }
-  const disposalSources: RecipeDescriptorCatalog['disposalSources'] = {
-    primary: sources.filter(
-      (source) => source.specialRecipe?.autocompleteDisposalPriority === 'primary',
-    ),
-    secondary: sources.filter(
-      (source) => source.specialRecipe?.autocompleteDisposalPriority === 'secondary',
-    ),
-    'last-resort': sources.filter(
-      (source) => source.specialRecipe?.autocompleteDisposalPriority === 'last-resort',
-    ),
-  };
-
   const cache = new Map<string, RecipeDescriptor[]>();
   const getDescriptors = (
     source: RecipeDescriptorSource,
@@ -456,7 +622,7 @@ function buildRecipeDescriptorCatalog(
     return descriptors;
   };
 
-  return { sources, sourcesByOutput, disposalSources, getDescriptors };
+  return { sources, sourcesByOutput, getDescriptors };
 }
 
 function getConcreteInputProducts(recipe: Recipe): string[] {
@@ -564,69 +730,6 @@ function getLinkedWildcardBindings(
   return bindings;
 }
 
-function bindDisposalDescriptor(
-  descriptor: RecipeDescriptor,
-  productId: string,
-  globalSettings: GlobalSettings,
-): RecipeDescriptor | null {
-  const product = getProduct(productId);
-  if (!product) return null;
-  const inputIndex = descriptor.recipe.inputs.findIndex(
-    (input) =>
-      input.product_id === productId ||
-      (input.product_id === 'any_fluid' && product.type === 'Fluid') ||
-      (input.product_id === 'any_item' && product.type === 'Item'),
-  );
-  if (inputIndex < 0) return null;
-  if (descriptor.recipe.inputs[inputIndex].product_id === productId) return descriptor;
-
-  const recipe = resolveActiveRecipe(
-    descriptor.recipeId,
-    descriptor.settings,
-    `autocomplete-disposal-${descriptor.recipeId}-${productId}`,
-    {
-      resolveProduct: (side, index) => {
-        const ports = side === 'input' ? descriptor.recipe.inputs : descriptor.recipe.outputs;
-        return side === 'input' && index === inputIndex
-          ? productId
-          : (ports[index]?.product_id ?? '');
-      },
-      hasConnection: (side, index) => side === 'input' && index === inputIndex,
-    },
-    {
-      globalSettings: globalSettings as unknown as Record<string, unknown>,
-      suppressStoreTemperatureOverrides: true,
-    },
-  );
-  if (!recipe || recipe.inputs[inputIndex]?.product_id !== productId) return null;
-  return {
-    ...descriptor,
-    key: `${descriptor.key}::dispose:${inputIndex}:${productId}`,
-    recipe,
-  };
-}
-
-function getDisposalDescriptors(
-  catalog: RecipeDescriptorCatalog,
-  productId: string,
-  globalSettings: GlobalSettings,
-): RecipeDescriptor[] {
-  for (const priority of ['primary', 'secondary', 'last-resort'] as const) {
-    const descriptors: RecipeDescriptor[] = [];
-    const seen = new Set<string>();
-    for (const source of catalog.disposalSources[priority]) {
-      for (const descriptor of catalog.getDescriptors(source)) {
-        const bound = bindDisposalDescriptor(descriptor, productId, globalSettings);
-        if (!bound || seen.has(bound.key)) continue;
-        seen.add(bound.key);
-        descriptors.push(bound);
-      }
-    }
-    if (descriptors.length > 0) return descriptors;
-  }
-  return [];
-}
-
 function buildInitialModel(
   existingNodes: RecipeNodeType[],
   existingEdges: Edge[],
@@ -700,6 +803,18 @@ function buildInitialModel(
 
   const addConcreteDescriptor = (descriptor: RecipeDescriptor): void => {
     if (candidateKeys.has(descriptor.key)) return;
+    // An existing node with the same resolved recipe already provides this
+    // production option. Reuse it so autocomplete scales the user's node
+    // instead of creating a duplicate generated route.
+    if (
+      candidates.some(
+        (candidate) =>
+          candidate.kind === 'existing' &&
+          areResolvedRecipesEquivalent(candidate.recipe, descriptor.recipe),
+      )
+    ) {
+      return;
+    }
     const node = createRecipeNode(descriptor.recipe, descriptor.settings, 0);
     candidates.push({
       kind: 'generated',
@@ -757,7 +872,6 @@ function buildInitialModel(
     edges: [],
     descriptorCatalog,
     protectedOutputHandles,
-    disposalProducts: new Set(),
     fallbackKeys: new Set(),
     preservedEdgeEndpointKeys: new Set(existingEdges.map(edgeEndpointKey)),
     warnings: [...warnings],
@@ -765,73 +879,6 @@ function buildInitialModel(
   pruneUnproducibleGeneratedCandidates(model);
   rebuildCandidateEdges(model, globalSettings);
   return model;
-}
-
-function addNeededDisposalCandidates(
-  model: AutocompleteModel,
-  machineCounts: Record<string, number>,
-  connectionFlows: Record<string, number>,
-  globalSettings: GlobalSettings,
-): boolean {
-  const outgoingFlowByHandle = new Map<string, number>();
-  for (const edge of model.edges) {
-    if (!edge.sourceHandle) continue;
-    outgoingFlowByHandle.set(
-      edge.sourceHandle,
-      (outgoingFlowByHandle.get(edge.sourceHandle) ?? 0) +
-        Math.max(0, connectionFlows[edge.id] ?? 0),
-    );
-  }
-
-  const excessProducts = new Set<string>();
-  for (const candidate of model.candidates) {
-    const machineCount = Math.max(0, machineCounts[candidate.node.id] ?? 0);
-    if (machineCount <= SELECTED_COUNT_EPSILON || candidate.recipe.outputs.length === 0) continue;
-    const multiplier = getRateMultiplier(candidate.recipe.cycle_time, 'second');
-
-    for (let outputIndex = 0; outputIndex < candidate.recipe.outputs.length; outputIndex += 1) {
-      const output = candidate.recipe.outputs[outputIndex];
-      const handleId = buildHandleId(candidate.node.id, 'output', outputIndex);
-      if (
-        model.protectedOutputHandles.has(handleId) ||
-        output.voidable ||
-        output.product_link_id ||
-        PLACEHOLDER_PRODUCTS.has(output.product_id)
-      ) {
-        continue;
-      }
-      const produced = output.quantity * multiplier * machineCount;
-      const routed = outgoingFlowByHandle.get(handleId) ?? 0;
-      if (produced - routed > getScaledTolerance(produced, routed)) {
-        excessProducts.add(output.product_id);
-      }
-    }
-  }
-
-  const candidateKeys = new Set(model.candidates.map((candidate) => candidate.key));
-  let added = false;
-  for (const productId of excessProducts) {
-    if (model.disposalProducts.has(productId)) continue;
-    model.disposalProducts.add(productId);
-    const descriptors = getDisposalDescriptors(model.descriptorCatalog, productId, globalSettings);
-    if (descriptors.length === 0) {
-      const productName = getProduct(productId)?.name ?? productId;
-      model.warnings.push(`No unlocked disposal recipe can accept excess ${productName}.`);
-      continue;
-    }
-    for (const descriptor of descriptors) {
-      if (candidateKeys.has(descriptor.key)) continue;
-      candidateKeys.add(descriptor.key);
-      model.candidates.push({
-        kind: 'generated',
-        key: descriptor.key,
-        node: createRecipeNode(descriptor.recipe, descriptor.settings, 0),
-        recipe: descriptor.recipe,
-      });
-      added = true;
-    }
-  }
-  return added;
 }
 
 function addFallbackCandidate(
@@ -999,6 +1046,15 @@ function pruneUnproducibleGeneratedCandidates(model: AutocompleteModel): boolean
     const removableIds = new Set<string>();
     for (const target of model.candidates) {
       if (target.kind !== 'generated') continue;
+      // Keep solver-selected fractional candidates until materialization has
+      // verified their complete graph. Removing one here can remove the only
+      // producer for a tiny but real input flow.
+      if (
+        !isMachineCountNumericallyZero(target.node.data.machineCount) ||
+        hasIndependentSolverRate(target)
+      ) {
+        continue;
+      }
       const hasUnproducibleInput = target.recipe.inputs.some((input, inputIndex) => {
         if (
           input.variable ||
@@ -1126,11 +1182,14 @@ function getFallbackRequestsFromDiagnostics(
 function updateCandidateCounts(
   candidates: AutocompleteCandidate[],
   machineCounts: Record<string, number>,
+  edges: Edge[],
+  connectionFlows: Record<string, number>,
 ): void {
   for (const candidate of candidates) {
     const solvedCount = Math.max(0, machineCounts[candidate.node.id] ?? 0);
-    const machineCount =
-      candidate.node.data.isTarget || solvedCount > SELECTED_COUNT_EPSILON ? solvedCount : 0;
+    const machineCount = isCandidateSolverActive(candidate, edges, solvedCount, connectionFlows)
+      ? solvedCount
+      : 0;
     candidate.node = {
       ...candidate.node,
       data: {
@@ -1171,6 +1230,8 @@ function materializePlan(
   machineCounts: Record<string, number>,
   connectionFlows: Record<string, number>,
   globalSettings: GlobalSettings,
+  excludedGeneratedIds: Set<string> = new Set(),
+  excludedGeneratedEdgeIds: Set<string> = new Set(),
 ): AutocompletePlan | { error: string } {
   const selectedCandidateIds = new Set<string>();
   const newRecipeNodes: RecipeNodeType[] = [];
@@ -1178,16 +1239,25 @@ function materializePlan(
   const appliedMachineCounts: Record<string, number> = {};
 
   for (const candidate of model.candidates) {
+    if (candidate.kind === 'generated' && excludedGeneratedIds.has(candidate.node.id)) continue;
     const rawSolvedCount = Math.max(0, machineCounts[candidate.node.id] ?? 0);
-    const solvedCount =
-      candidate.node.data.isTarget || rawSolvedCount > SELECTED_COUNT_EPSILON ? rawSolvedCount : 0;
+    const solvedCount = isCandidateSolverActive(
+      candidate,
+      model.edges,
+      rawSolvedCount,
+      connectionFlows,
+    )
+      ? rawSolvedCount
+      : 0;
     if (candidate.kind === 'existing') {
       materializedIdByCandidateId.set(candidate.node.id, candidate.node.id);
       appliedMachineCounts[candidate.node.id] = solvedCount;
-      if (solvedCount > SELECTED_COUNT_EPSILON) selectedCandidateIds.add(candidate.node.id);
+      if (isCandidateSolverActive(candidate, model.edges, solvedCount, connectionFlows)) {
+        selectedCandidateIds.add(candidate.node.id);
+      }
       continue;
     }
-    if (solvedCount <= SELECTED_COUNT_EPSILON) continue;
+    if (!isCandidateSolverActive(candidate, model.edges, solvedCount, connectionFlows)) continue;
 
     let settings = getCandidateResolvedSettings(candidate);
     let materializedCount = solvedCount;
@@ -1235,7 +1305,8 @@ function materializePlan(
   );
   const nextEdges = [...canvasEdges];
   for (const edge of model.edges) {
-    if ((connectionFlows[edge.id] ?? 0) <= ACTIVE_FLOW_EPSILON) continue;
+    if (excludedGeneratedEdgeIds.has(edge.id)) continue;
+    if (!isAutocompleteEdgeActive(connectionFlows[edge.id])) continue;
     if (!selectedCandidateIds.has(edge.source) || !selectedCandidateIds.has(edge.target)) continue;
 
     const sourceId = materializedIdByCandidateId.get(edge.source);
@@ -1271,8 +1342,40 @@ function materializePlan(
     recipeEdges,
     globalSettings as unknown as Record<string, unknown>,
   );
+
+  const materializedEndpointKeys = new Set(
+    recipeEdges.map(
+      (edge) => `${edge.sourceHandle ?? edge.source}::${edge.targetHandle ?? edge.target}`,
+    ),
+  );
+  for (const modelEdge of model.edges) {
+    if (excludedGeneratedEdgeIds.has(modelEdge.id)) continue;
+    if (!isAutocompleteEdgeActive(connectionFlows[modelEdge.id])) continue;
+    if (
+      !selectedCandidateIds.has(modelEdge.source) ||
+      !selectedCandidateIds.has(modelEdge.target)
+    ) {
+      continue;
+    }
+    const sourceId = materializedIdByCandidateId.get(modelEdge.source);
+    const targetId = materializedIdByCandidateId.get(modelEdge.target);
+    if (!sourceId || !targetId || !modelEdge.sourceHandle || !modelEdge.targetHandle) continue;
+    const sourcePort = parseHandleId(modelEdge.sourceHandle);
+    const targetPort = parseHandleId(modelEdge.targetHandle);
+    if (sourcePort?.side !== 'output' || targetPort?.side !== 'input') continue;
+    const sourceHandle = buildHandleId(sourceId, 'output', sourcePort.index);
+    const targetHandle = buildHandleId(targetId, 'input', targetPort.index);
+    const endpointKey = `${sourceHandle}::${targetHandle}`;
+    if (!materializedEndpointKeys.has(endpointKey)) {
+      const targetNode = recipeNodes.find((node) => node.id === targetId);
+      return {
+        error: `The generated graph omitted an active input connection for ${verification.nodeRecipes[targetId]?.name ?? targetNode?.data.recipeId ?? targetId}.`,
+      };
+    }
+  }
+
   for (const node of recipeNodes) {
-    if ((node.data.machineCount ?? 0) <= SELECTED_COUNT_EPSILON) continue;
+    if (!selectedCandidateIds.has(node.id)) continue;
     const result = verification.results.get(node.id);
     if (result?.inputFlows.some((input) => input.hasDeficiency)) {
       return {
@@ -1405,18 +1508,12 @@ async function runAutocomplete(
     }
 
     finalTelemetry = result.telemetry;
-    updateCandidateCounts(model.candidates, result.machineCounts);
-    if (
-      addNeededDisposalCandidates(
-        model,
-        result.machineCounts,
-        result.connectionFlows,
-        globalSettings,
-      )
-    ) {
-      rebuildCandidateEdges(model, globalSettings);
-      continue;
-    }
+    updateCandidateCounts(
+      model.candidates,
+      result.machineCounts,
+      model.edges,
+      result.connectionFlows,
+    );
     const recipesChanged = refreshSelectedCandidateRecipes(
       model,
       globalSettings,
@@ -1445,14 +1542,32 @@ async function runAutocomplete(
     message: 'Verifying and laying out the generated production graph.',
     solver: 'native',
   });
-  const plan = materializePlan(
+  const outputNoiseIds = getGeneratedOutputNoiseIds(
+    model,
+    finalMachineCounts,
+    finalConnectionFlows,
+  );
+  const outputNoiseEdgeIds = getGeneratedOutputNoiseEdgeIds(model, finalConnectionFlows);
+  let plan = materializePlan(
     canvasNodes,
     canvasEdges,
     model,
     finalMachineCounts,
     finalConnectionFlows,
     globalSettings,
+    outputNoiseIds,
+    outputNoiseEdgeIds,
   );
+  if ('error' in plan && outputNoiseIds.size > 0) {
+    plan = materializePlan(
+      canvasNodes,
+      canvasEdges,
+      model,
+      finalMachineCounts,
+      finalConnectionFlows,
+      globalSettings,
+    );
+  }
   if ('error' in plan) {
     return { feasible: false, error: plan.error, telemetry: finalTelemetry };
   }

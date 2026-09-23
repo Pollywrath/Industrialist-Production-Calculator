@@ -32,6 +32,7 @@ import {
   OPTIMIZATION_METRIC_IDS,
   OPTIMIZATION_NORMALIZERS,
   sanitizeOptimizationConfiguration,
+  type MachineCountBasis,
   type OptimizationConfiguration,
 } from './optimizationConfig';
 import {
@@ -39,7 +40,12 @@ import {
   FLOW_STATUS_ABSOLUTE_TOLERANCE,
   FLOW_STATUS_RELATIVE_TOLERANCE,
   MACHINE_INTEGER_ABSOLUTE_TOLERANCE,
+  RATE_NUMERICAL_ZERO,
+  getRateTolerance,
   getMachineIntegerTolerance,
+  isMachineCountNumericallyZero,
+  isPositiveSolverFlow,
+  normalizeSolverRate,
 } from '../utils/precision';
 
 interface SCIPRuntime {
@@ -183,8 +189,13 @@ function getTargetMachineLowerBound(node: RatioOptimizerNode): number | null {
   return Math.max(0, node.minimumMachineCount);
 }
 
-function getStageBoundRhs(value: number): number {
+function getStageBoundRhs(value: number, bound: RatioObjectiveBoundKey): number {
   const normalizedValue = Math.max(0, value);
+  if (bound === 'shortage' || bound === 'sinkExcess') {
+    if (normalizedValue <= RATE_NUMERICAL_ZERO) return 0;
+    return normalizedValue + getRateTolerance(normalizedValue, 0);
+  }
+
   if (normalizedValue <= EPSILON) return 0;
   return (
     normalizedValue +
@@ -310,7 +321,7 @@ function getConnectionEndpoints(
 }
 
 function isEffectivelyZeroRate(value: number): boolean {
-  return Number.isFinite(value) && Math.abs(value) <= EPSILON;
+  return !isPositiveSolverFlow(value);
 }
 
 function hasFlowDependentDemand(input: RatioOptimizerNode['inputs'][number]): boolean {
@@ -1087,7 +1098,9 @@ export function buildMPS(
     if (!Number.isFinite(optimum)) {
       throw new Error(`Cannot add ${name} objective bound because the optimum is not finite.`);
     }
-    const rowName = registerRow(`limit_${name}`, 'L', getStageBoundRhs(optimum));
+    const bound: RatioObjectiveBoundKey =
+      name === 'sink_excess' ? 'sinkExcess' : name === 'shortage' ? 'shortage' : 'weighted';
+    const rowName = registerRow(`limit_${name}`, 'L', getStageBoundRhs(optimum, bound));
     expression.forEach((coeff, varName) => addRowTerm(rowName, varName, coeff));
   };
 
@@ -1101,15 +1114,36 @@ export function buildMPS(
   ) => {
     if (optimum === undefined || expression.size === 0) return;
     if (!Number.isFinite(optimum)) return;
-    const rhs = getStageBoundRhs(optimum);
+    const rhs = getStageBoundRhs(optimum, 'weighted');
     expression.forEach((coeff, varName) => {
       if (coeff <= 0) return;
       tightenUpperBound(varName, rhs / coeff);
     });
   };
 
-  addObjectiveDerivedVariableBounds(objectiveExpressions.shortage, options.bounds?.shortage);
-  addObjectiveDerivedVariableBounds(objectiveExpressions.sinkExcess, options.bounds?.sinkExcess);
+  const addFlowObjectiveDerivedVariableBounds = (
+    expression: Map<string, number>,
+    optimum: number | undefined,
+    bound: 'shortage' | 'sinkExcess',
+  ) => {
+    if (optimum === undefined || expression.size === 0 || !Number.isFinite(optimum)) return;
+    const rhs = getStageBoundRhs(optimum, bound);
+    expression.forEach((coeff, varName) => {
+      if (coeff <= 0) return;
+      tightenUpperBound(varName, rhs / coeff);
+    });
+  };
+
+  addFlowObjectiveDerivedVariableBounds(
+    objectiveExpressions.shortage,
+    options.bounds?.shortage,
+    'shortage',
+  );
+  addFlowObjectiveDerivedVariableBounds(
+    objectiveExpressions.sinkExcess,
+    options.bounds?.sinkExcess,
+    'sinkExcess',
+  );
   addObjectiveDerivedVariableBounds(objectiveExpressions.weighted, options.bounds?.weighted);
 
   const objCoeffs = getObjectiveExpression(objectiveMode, objectiveExpressions, legacyObjCoeffs);
@@ -1351,12 +1385,50 @@ export function buildNativeRatioPayloadArray(
   return out;
 }
 
-function buildResponseFromRawValues(
+function getRequiredInputRate(
+  node: RatioOptimizerNode | undefined,
+  machineCounts: Record<string, number>,
+  inputIndex: number,
+): number {
+  const input = node?.inputs[inputIndex];
+  if (!input) return 0;
+  const machineCount = machineCounts[node.id] ?? 0;
+  return normalizeSolverRate(
+    input.independentOfMachineCount ? input.quantity : machineCount * input.quantity,
+  );
+}
+
+function getSuppliedInputRate(
+  rawValues: Record<string, number>,
+  connections: RatioOptimizerConnection[],
+  nodeId: string,
+  inputIndex: number,
+): number {
+  let supplied = 0;
+  for (const connection of connections) {
+    if (connection.targetNodeId !== nodeId || connection.targetInputIndex !== inputIndex) {
+      continue;
+    }
+    supplied = normalizeSolverRate(supplied + getRawFlowValue(rawValues, connection.id));
+  }
+  return supplied;
+}
+
+function isMeaningfulDeficit(value: number, requiredRate: number, suppliedRate: number): boolean {
+  const deficit = normalizeSolverRate(value);
+  return deficit > getRateTolerance(requiredRate, suppliedRate);
+}
+
+function compareRateDelta(delta: number, left: number, right: number): number {
+  return Math.abs(delta) > getRateTolerance(left, right) ? delta : 0;
+}
+
+export function buildResponseFromRawValues(
   rawValues: Record<string, number>,
   connections: RatioOptimizerConnection[],
   nodes: RatioOptimizerNode[],
-  deficiencyEpsilon: number,
   telemetry?: RatioSolverTelemetry,
+  machineCountBasis: MachineCountBasis = 'whole',
 ): RatioOptimizerResponse {
   const machineCounts: Record<string, number> = {};
   for (const node of nodes) {
@@ -1370,7 +1442,11 @@ function buildResponseFromRawValues(
     ) {
       count = targetMachineLowerBound;
     }
-    if (count <= MACHINE_INTEGER_ABSOLUTE_TOLERANCE) {
+    if (
+      machineCountBasis === 'whole'
+        ? count <= MACHINE_INTEGER_ABSOLUTE_TOLERANCE
+        : isMachineCountNumericallyZero(count)
+    ) {
       count = 0;
     }
     machineCounts[node.id] = count;
@@ -1385,13 +1461,28 @@ function buildResponseFromRawValues(
   let unresolvedDeficiencyCount = 0;
   const unresolvedDeficits: Array<{ name: string; value: number }> = [];
   const rawEntries = Object.entries(rawValues);
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
   for (let i = 0; i < rawEntries.length; i++) {
     const [varName, value] = rawEntries[i];
     if (!varName.startsWith('deficit_')) continue;
-    if (!Number.isFinite(value) || value <= deficiencyEpsilon) continue;
-    unresolvedDeficiencyTotal += value;
+    const parsed = parseDeficitVarName(varName);
+    if (!parsed) continue;
+    const requiredRate = getRequiredInputRate(
+      nodeById.get(parsed.nodeId),
+      machineCounts,
+      parsed.inputIndex,
+    );
+    const suppliedRate = getSuppliedInputRate(
+      rawValues,
+      connections,
+      parsed.nodeId,
+      parsed.inputIndex,
+    );
+    const normalizedValue = normalizeSolverRate(value);
+    if (!isMeaningfulDeficit(normalizedValue, requiredRate, suppliedRate)) continue;
+    unresolvedDeficiencyTotal = normalizeSolverRate(unresolvedDeficiencyTotal + normalizedValue);
     unresolvedDeficiencyCount += 1;
-    unresolvedDeficits.push({ name: varName, value });
+    unresolvedDeficits.push({ name: varName, value: normalizedValue });
   }
 
   if (unresolvedDeficiencyCount > 0) {
@@ -1430,6 +1521,7 @@ function buildResponseFromNativeBinaryResult(
   resultConnections: RatioOptimizerConnection[],
   resultNodes: RatioOptimizerNode[],
   fallbackTelemetry: RatioSolverTelemetry,
+  machineCountBasis: MachineCountBasis,
 ): RatioOptimizerResponse {
   const rawValues: Record<string, number> = {};
 
@@ -1451,8 +1543,8 @@ function buildResponseFromNativeBinaryResult(
   for (const node of solvedNodes) {
     for (let inputIndex = 0; inputIndex < node.inputs.length; inputIndex += 1) {
       const value = binaryResult.inputDeficits[inputValueIndex];
-      if (Number.isFinite(value) && Math.abs(value) > EPSILON) {
-        rawValues[`deficit_${node.id}_${inputIndex}`] = value;
+      if (isPositiveSolverFlow(value)) {
+        rawValues[`deficit_${node.id}_${inputIndex}`] = normalizeSolverRate(value);
       }
       inputValueIndex += 1;
     }
@@ -1469,8 +1561,8 @@ function buildResponseFromNativeBinaryResult(
     rawValues,
     resultConnections,
     resultNodes,
-    FLOW_STATUS_ABSOLUTE_TOLERANCE,
     telemetry,
+    machineCountBasis,
   );
 }
 
@@ -1496,6 +1588,8 @@ async function solveRatioStagesNative(
   resultConnections = connections,
   requestId?: number,
 ): Promise<RatioOptimizerResponse> {
+  const machineCountBasis =
+    configuration?.machineCountBasis ?? DEFAULT_OPTIMIZATION_CONFIGURATION.machineCountBasis;
   if (!runtime.nativeRatioSolver) {
     throw new Error('The native ratio optimizer is unavailable.');
   }
@@ -1574,6 +1668,7 @@ async function solveRatioStagesNative(
     resultConnections,
     resultNodes,
     fallbackTelemetry,
+    machineCountBasis,
   );
   response.nativeFailure = binaryResult.nativeFailure;
   response.telemetry = {
@@ -1947,12 +2042,9 @@ function buildFailureDiagnostics(
     const node = nodeById.get(nodeId);
     const input = node?.inputs[inputIndex];
     const productId = input?.productId ?? 'unknown';
-    const requiredRate = Math.max(0, (machineCounts[nodeId] ?? 0) * (input?.quantity ?? 0));
+    const requiredRate = getRequiredInputRate(node, machineCounts, inputIndex);
     const inputConnections = incomingByInput.get(`${nodeId}::${inputIndex}`) ?? [];
-    const suppliedRate = inputConnections.reduce(
-      (sum, connection) => sum + getRawFlowValue(rawValues, connection.id),
-      0,
-    );
+    const suppliedRate = getSuppliedInputRate(rawValues, connections, nodeId, inputIndex);
 
     const upstreamContributions = inputConnections.map((connection) => {
       const sourceNode = nodeById.get(connection.sourceNodeId);
@@ -1985,9 +2077,19 @@ function buildFailureDiagnostics(
 
     upstreamContributions.sort((a, b) => {
       const deficiencyDelta = b.directDeficiency - a.directDeficiency;
-      if (Math.abs(deficiencyDelta) > FLOW_STATUS_ABSOLUTE_TOLERANCE) return deficiencyDelta;
+      const meaningfulDeficiencyDelta = compareRateDelta(
+        deficiencyDelta,
+        b.directDeficiency,
+        a.directDeficiency,
+      );
+      if (meaningfulDeficiencyDelta !== 0) return meaningfulDeficiencyDelta;
       const suppliedDelta = a.suppliedRate - b.suppliedRate;
-      if (Math.abs(suppliedDelta) > FLOW_STATUS_ABSOLUTE_TOLERANCE) return suppliedDelta;
+      const meaningfulSuppliedDelta = compareRateDelta(
+        suppliedDelta,
+        a.suppliedRate,
+        b.suppliedRate,
+      );
+      if (meaningfulSuppliedDelta !== 0) return meaningfulSuppliedDelta;
       return a.nodeId.localeCompare(b.nodeId);
     });
 
@@ -2037,7 +2139,12 @@ function buildFailureDiagnostics(
 
   const sortedDeficientNodeIds = [...deficientNodeIds].sort((a, b) => {
     const deficiencyDelta = (deficiencyByNode.get(b) ?? 0) - (deficiencyByNode.get(a) ?? 0);
-    if (Math.abs(deficiencyDelta) > FLOW_STATUS_ABSOLUTE_TOLERANCE) return deficiencyDelta;
+    const meaningfulDeficiencyDelta = compareRateDelta(
+      deficiencyDelta,
+      deficiencyByNode.get(b) ?? 0,
+      deficiencyByNode.get(a) ?? 0,
+    );
+    if (meaningfulDeficiencyDelta !== 0) return meaningfulDeficiencyDelta;
     return a.localeCompare(b);
   });
 
@@ -2148,7 +2255,7 @@ function traceRootCausesFromInput(
   context: RatioRootCauseTraceContext,
   visitedInputKeys: Set<string>,
 ): RatioRootCauseDiagnostic[] {
-  const inputKey = `${input.nodeId}::${input.inputIndex}::${input.deficiency.toFixed(9)}`;
+  const inputKey = `${input.nodeId}::${input.inputIndex}::${normalizeSolverRate(input.deficiency)}`;
   const cached = context.rootCauseCache.get(inputKey);
   if (cached) return cached;
 
@@ -2174,7 +2281,7 @@ function traceRootCausesFromInput(
   const rootCauses: RatioRootCauseDiagnostic[] = [];
 
   for (const contribution of input.upstreamContributions) {
-    if (!contribution.productMatches || contribution.unitOutputRate <= EPSILON) {
+    if (!contribution.productMatches || !isPositiveSolverFlow(contribution.unitOutputRate)) {
       rootCauses.push(createContributionRootCause(input, contribution));
       continue;
     }
@@ -2197,10 +2304,7 @@ function traceRootCausesFromInput(
     }
 
     const upstreamDeficientInputs = context.deficientInputsByNode.get(contribution.nodeId) ?? [];
-    if (
-      contribution.directDeficiency > FLOW_STATUS_ABSOLUTE_TOLERANCE &&
-      upstreamDeficientInputs.length > 0
-    ) {
+    if (isPositiveSolverFlow(contribution.directDeficiency) && upstreamDeficientInputs.length > 0) {
       for (const upstreamInput of upstreamDeficientInputs) {
         rootCauses.push(...traceRootCausesFromInput(upstreamInput, context, visitedInputKeys));
       }
@@ -2229,7 +2333,7 @@ function getConnectedRequiredInputsForNode(
   const structuralInputs: RatioDeficientInputDiagnostic[] = [];
   for (let inputIndex = 0; inputIndex < node.inputs.length; inputIndex++) {
     const input = node.inputs[inputIndex];
-    if (!input || input.isSink || input.quantity <= EPSILON) continue;
+    if (!input || input.isSink || !isPositiveSolverFlow(input.quantity)) continue;
 
     const existingInput = context.deficientInputsByNode
       .get(nodeId)
@@ -2296,8 +2400,8 @@ function getSummaryRootCauses(
 ): RatioRootCauseDiagnostic[] {
   const summaryInputs = deficientInputs.filter(
     (input) =>
-      !input.upstreamContributions.some(
-        (contribution) => contribution.directDeficiency > FLOW_STATUS_ABSOLUTE_TOLERANCE,
+      !input.upstreamContributions.some((contribution) =>
+        isPositiveSolverFlow(contribution.directDeficiency),
       ),
   );
 
@@ -2393,7 +2497,7 @@ function getContributionRootCauseKind(
     return 'product_mismatch';
   }
 
-  if (contribution.unitOutputRate <= EPSILON) {
+  if (!isPositiveSolverFlow(contribution.unitOutputRate)) {
     return 'upstream_not_producing';
   }
 
@@ -2451,7 +2555,8 @@ function mergeRootCauses(rootCauses: RatioRootCauseDiagnostic[]): RatioRootCause
     const priorityDelta = getRootCausePriority(a.kind) - getRootCausePriority(b.kind);
     if (priorityDelta !== 0) return priorityDelta;
     const deficiencyDelta = b.deficiency - a.deficiency;
-    if (Math.abs(deficiencyDelta) > FLOW_STATUS_ABSOLUTE_TOLERANCE) return deficiencyDelta;
+    const meaningfulDeficiencyDelta = compareRateDelta(deficiencyDelta, b.deficiency, a.deficiency);
+    if (meaningfulDeficiencyDelta !== 0) return meaningfulDeficiencyDelta;
     return a.nodeId.localeCompare(b.nodeId);
   });
 }
@@ -2488,8 +2593,7 @@ function getRootCausePriority(kind: RatioDeficiencyCauseKind): number {
 
 function getRawFlowValue(rawValues: Record<string, number>, edgeId: string): number {
   const value = rawValues[`f_${edgeId}`] ?? 0;
-  if (!Number.isFinite(value) || Math.abs(value) < EPSILON) return 0;
-  return value;
+  return normalizeSolverRate(value);
 }
 
 function classifyDeficiencyCause(
@@ -2513,14 +2617,18 @@ function classifyDeficiencyCause(
   }
 
   if (
-    upstreamContributions.some(
-      (contribution) => contribution.directDeficiency > FLOW_STATUS_ABSOLUTE_TOLERANCE,
+    upstreamContributions.some((contribution) =>
+      isPositiveSolverFlow(contribution.directDeficiency),
     )
   ) {
     return 'upstream_input_deficient';
   }
 
-  if (upstreamContributions.every((contribution) => contribution.unitOutputRate <= EPSILON)) {
+  if (
+    upstreamContributions.every(
+      (contribution) => !isPositiveSolverFlow(contribution.unitOutputRate),
+    )
+  ) {
     return 'upstream_not_producing';
   }
 
@@ -2577,7 +2685,12 @@ function getLikelyRootNodeIds(
 
   return [...likelyRootNodeIds].sort((a, b) => {
     const deficiencyDelta = (deficiencyByNode.get(b) ?? 0) - (deficiencyByNode.get(a) ?? 0);
-    if (Math.abs(deficiencyDelta) > FLOW_STATUS_ABSOLUTE_TOLERANCE) return deficiencyDelta;
+    const meaningfulDeficiencyDelta = compareRateDelta(
+      deficiencyDelta,
+      deficiencyByNode.get(b) ?? 0,
+      deficiencyByNode.get(a) ?? 0,
+    );
+    if (meaningfulDeficiencyDelta !== 0) return meaningfulDeficiencyDelta;
     return a.localeCompare(b);
   });
 }

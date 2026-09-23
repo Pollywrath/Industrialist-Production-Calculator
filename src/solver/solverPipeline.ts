@@ -8,7 +8,7 @@ import { propagateTemperatures } from './temperaturePropagator';
 import { computeResolvedProducts } from '../utils/productResolver';
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 import { buildHandleId } from '../utils/idGenerator';
-import { FLOW_STATUS_ABSOLUTE_TOLERANCE } from '../utils/precision';
+import { getRateTolerance, normalizeSolverRate } from '../utils/precision';
 
 const MAX_TEMPERATURE_COUPLED_PASSES = 8;
 
@@ -24,14 +24,31 @@ export interface SolverPipelineResult {
   iterationsRun?: number;
 }
 
-function areValuesEquivalent(a: unknown, b: unknown): boolean {
+const SETTINGS_NUMERIC_TOLERANCE = 1e-6;
+
+function areSettingsEquivalent(a: unknown, b: unknown): boolean {
   if (typeof a === 'number' && typeof b === 'number') {
     if (!Number.isFinite(a) || !Number.isFinite(b)) {
       return a === b;
     }
-    return Math.abs(a - b) <= FLOW_STATUS_ABSOLUTE_TOLERANCE;
+    return Math.abs(a - b) <= SETTINGS_NUMERIC_TOLERANCE;
   }
   return a === b;
+}
+
+function areRatesEquivalent(a: number, b: number): boolean {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return a === b;
+  const normalizedA = normalizeSolverRate(a);
+  const normalizedB = normalizeSolverRate(b);
+  return Math.abs(normalizedA - normalizedB) <= getRateTolerance(normalizedA, normalizedB);
+}
+
+function normalizeEdgeFlows(edgeFlows: Record<string, number>): Record<string, number> {
+  const normalized: Record<string, number> = {};
+  for (const [edgeId, flow] of Object.entries(edgeFlows)) {
+    normalized[edgeId] = normalizeSolverRate(flow);
+  }
+  return normalized;
 }
 
 function areOverridesEquivalent(
@@ -55,7 +72,7 @@ function areOverridesEquivalent(
 
     for (let j = 0; j < nextKeys.length; j++) {
       const key = nextKeys[j];
-      if (!areValuesEquivalent(prevNodeOverrides[key], nextNodeOverrides[key])) {
+      if (!areSettingsEquivalent(prevNodeOverrides[key], nextNodeOverrides[key])) {
         return false;
       }
     }
@@ -81,7 +98,7 @@ function hasMeaningfulOverrides(
     const overrideKeys = Object.keys(nodeOverrides);
     for (let j = 0; j < overrideKeys.length; j++) {
       const key = overrideKeys[j];
-      if (!areValuesEquivalent(currentSettings[key], nodeOverrides[key])) {
+      if (!areSettingsEquivalent(currentSettings[key], nodeOverrides[key])) {
         return true;
       }
     }
@@ -110,7 +127,7 @@ function areNodePortsEquivalent(
   for (let i = 0; i < a.inputs.length; i++) {
     const left = a.inputs[i];
     const right = b.inputs[i];
-    if (left.productId !== right.productId || !areValuesEquivalent(left.rate, right.rate)) {
+    if (left.productId !== right.productId || !areRatesEquivalent(left.rate, right.rate)) {
       return false;
     }
   }
@@ -118,7 +135,7 @@ function areNodePortsEquivalent(
   for (let i = 0; i < a.outputs.length; i++) {
     const left = a.outputs[i];
     const right = b.outputs[i];
-    if (left.productId !== right.productId || !areValuesEquivalent(left.rate, right.rate)) {
+    if (left.productId !== right.productId || !areRatesEquivalent(left.rate, right.rate)) {
       return false;
     }
   }
@@ -154,7 +171,11 @@ function solveFlowsForPipeline(
   edgeFlows: Record<string, number>;
 } {
   const initialGraph = buildSolverGraph(nodes, edges, settingsOverrides, undefined, globalSettings);
-  const firstPass = calculateFlows(initialGraph);
+  const firstPassResult = calculateFlows(initialGraph);
+  const firstPass = {
+    ...firstPassResult,
+    edgeFlows: normalizeEdgeFlows(firstPassResult.edgeFlows),
+  };
 
   if (!includesFlowDependentRecipes) {
     return firstPass;
@@ -171,7 +192,11 @@ function solveFlowsForPipeline(
     return firstPass;
   }
 
-  return calculateFlows(correctedGraph, true);
+  const correctedResult = calculateFlows(correctedGraph, true);
+  return {
+    ...correctedResult,
+    edgeFlows: normalizeEdgeFlows(correctedResult.edgeFlows),
+  };
 }
 
 function solveTemperatureCoupledPass(
@@ -295,7 +320,7 @@ export function solveFlowPipeline(
         const connectedEdges = resolutionContext.edgeLookup.get(handleId) ?? [];
         let totalFlow = 0;
         for (const edge of connectedEdges) {
-          totalFlow += finalResult.edgeFlows[edge.id] ?? 0;
+          totalFlow = normalizeSolverRate(totalFlow + (finalResult.edgeFlows[edge.id] ?? 0));
         }
         return totalFlow;
       },

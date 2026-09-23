@@ -53,7 +53,7 @@ export function NodeEditorProvider({
       inputs: initialData.inputOrder ?? recipe.inputs.map((_, i) => i),
       outputs: initialData.outputOrder ?? recipe.outputs.map((_, i) => i),
       machineCount: initialData.machineCount,
-      machineCountStr: toPlainString(initialData.machineCount, 12),
+      machineCountStr: toPlainString(initialData.machineCount, 10),
       constraintMode: initialConstraint?.kind ?? 'free',
       qtyStrMap: computeQuantityMap(
         initialRecipe,
@@ -120,7 +120,7 @@ export function NodeEditorProvider({
             const newMachineCount = cleanMachineCount(cleaned / normalizedBaseQuantity);
             set({
               machineCount: newMachineCount,
-              machineCountStr: toPlainString(newMachineCount, 12),
+              machineCountStr: toPlainString(newMachineCount, 10),
               qtyStrMap: computeQuantityMap(
                 get().getCurrentRecipe(),
                 inputs,
@@ -165,7 +165,7 @@ export function NodeEditorProvider({
             const newMachineCount = cleanMachineCount(cleaned / normalizedBaseQuantity);
             set({
               machineCount: newMachineCount,
-              machineCountStr: toPlainString(newMachineCount, 12),
+              machineCountStr: toPlainString(newMachineCount, 10),
               qtyStrMap: computeQuantityMap(
                 get().getCurrentRecipe(),
                 inputs,
@@ -199,7 +199,7 @@ export function NodeEditorProvider({
       },
 
       handleMachineCountChange: (rawVal) => {
-        if (!/^\d*(\.\d{0,12})?$/.test(rawVal)) return;
+        if (!/^\d*(\.\d{0,10})?$/.test(rawVal)) return;
 
         const { inputs, outputs } = get();
         set({ machineCountStr: rawVal });
@@ -232,7 +232,7 @@ export function NodeEditorProvider({
           const cleaned = cleanMachineCount(parsed);
           set({
             machineCount: cleaned,
-            machineCountStr: toPlainString(cleaned, 12),
+            machineCountStr: toPlainString(cleaned, 10),
             qtyStrMap: computeQuantityMap(
               get().getCurrentRecipe(),
               inputs,

@@ -8,7 +8,7 @@ import type { Recipe } from '../types/data';
 import type { HandleRef } from '../types/nodes';
 import { buildHandleId, parseHandleId } from '../utils/idGenerator';
 import { solveFlowPipeline } from './solverPipeline';
-import { EPSILON } from '../utils/precision';
+import { getRateTolerance, normalizeSolverRate, RATE_NUMERICAL_ZERO } from '../utils/precision';
 
 const PHI = (Math.sqrt(5) - 1) / 2;
 
@@ -108,7 +108,8 @@ function getUnmet(flowResults: Map<string, NodeFlowResult>, port: ComponentPortR
   const nodeFlows = flowResults.get(port.nodeId);
   const flow =
     port.side === 'input' ? nodeFlows?.inputFlows[port.index] : nodeFlows?.outputFlows[port.index];
-  return flow ? Math.max(0, flow.rate - flow.connected) : 0;
+  if (!flow) return 0;
+  return normalizeSolverRate(port.side === 'input' ? flow.deficit : flow.excess);
 }
 
 export function calculateBalancedRate(
@@ -199,7 +200,7 @@ function solveAnalytically(
       ref.side === 'input'
         ? (inputNeighborRates.get(ref.index) ?? 0)
         : (outputNeighborRates.get(ref.index) ?? 0);
-    return Number(singleRate.toFixed(8));
+    return normalizeSolverRate(singleRate);
   }
 
   const breakpoints: number[] = [];
@@ -238,7 +239,7 @@ function solveAnalytically(
 
   const quantity = resolvePortQuantity(recipe, ref.side, ref.index);
   if (quantity <= 0) return 0;
-  return Number(((bestMachineCount * quantity) / cycleTime).toFixed(8));
+  return normalizeSolverRate((bestMachineCount * quantity) / cycleTime);
 }
 
 function solveGoldenSection(
@@ -289,14 +290,25 @@ function solveGoldenSection(
   };
 
   let a = 0;
-  let b = (flowStatus.rate + deficiency + excess) * 1.2 + 1.0;
+  const currentRate = normalizeSolverRate(flowStatus.rate);
+  const unmetRate = normalizeSolverRate(deficiency + excess);
+  const scopedUpperRate = Math.max(
+    currentRate + normalizeSolverRate(deficiency),
+    currentRate + normalizeSolverRate(excess),
+    unmetRate,
+    RATE_NUMERICAL_ZERO,
+  );
+  let b = scopedUpperRate * 1.2;
+  if (b <= scopedUpperRate) {
+    b = scopedUpperRate + getRateTolerance(scopedUpperRate, 0);
+  }
   let x1 = b - PHI * (b - a);
   let x2 = a + PHI * (b - a);
   let f1 = evaluateTrialMetric(x1);
   let f2 = evaluateTrialMetric(x2);
 
   for (let iter = 0; iter < 40; iter++) {
-    if (b - a < EPSILON) break;
+    if (b - a <= getRateTolerance(a, b)) break;
     if (f1 <= f2) {
       b = x2;
       x2 = x1;
@@ -312,5 +324,5 @@ function solveGoldenSection(
     }
   }
 
-  return Number(((a + b) / 2).toFixed(8));
+  return normalizeSolverRate((a + b) / 2);
 }

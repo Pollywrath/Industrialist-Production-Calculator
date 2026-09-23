@@ -9,6 +9,11 @@
     "lint": "eslint src",
     "test:flow-precision": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/flow-precision-test.mjs",
     "test:precision": "node --experimental-strip-types tools/precision-contract-test.mjs",
+    "test:ratio-worker-precision": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/ratio-worker-precision-test.mjs",
+    "test:autocomplete-precision": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/autocomplete-precision-test.mjs",
+    "test:solver-pipeline-precision": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/solver-pipeline-precision-test.mjs",
+    "test:systemic-balancer-precision": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/systemic-balancer-precision-test.mjs",
+    "test:temperature-diagnostics": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/temperature-diagnostics-test.mjs",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "preview": "vite preview"

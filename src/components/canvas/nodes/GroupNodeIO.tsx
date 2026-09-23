@@ -476,11 +476,12 @@ export function GroupNodeIO({
       '';
     const isVariable = !!entry?.variable;
 
-    const actualFlow = flowResult
-      ? ((parsed.side === 'input'
-          ? flowResult.inputFlows[parsed.index]?.connected
-          : flowResult.outputFlows[parsed.index]?.connected) ?? 0)
-      : 0;
+    const actualFlow =
+      hasFreshSolveSnapshot && flowResult
+        ? ((parsed.side === 'input'
+            ? flowResult.inputFlows[parsed.index]?.connected
+            : flowResult.outputFlows[parsed.index]?.connected) ?? 0)
+        : 0;
 
     let rate = 0;
     if (isVariable) {
@@ -493,7 +494,7 @@ export function GroupNodeIO({
     }
 
     let isFlipped = false;
-    if (flowResult && !isVariable) {
+    if (hasFreshSolveSnapshot && flowResult && !isVariable) {
       if (parsed.side === 'input') {
         isFlipped = flowResult.inputFlows[parsed.index]?.hasDeficiency ?? false;
       } else {

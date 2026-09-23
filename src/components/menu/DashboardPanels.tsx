@@ -21,7 +21,7 @@ import {
   formatCurrency,
   formatPower,
   formatPollution,
-  formatQuantity,
+  formatDiagnosticQuantity,
   formatMachineCount,
   formatMachineSpace,
 } from '../../utils/unitFormatting';
@@ -371,135 +371,155 @@ export function DashboardPanels() {
             </div>
 
             <div data-tutorial-dashboard="outputs">
-            <div className={styles['diagnostic-section-title']}>Deficiencies (Shortages)</div>
-            <div className={styles['diagnostic-container']}>
-              {flatDeficiencies.length === 0 ? (
-                <div className={styles['empty-message']}>No shortages detected</div>
-              ) : (
-                <VirtualList<DiagnosticVirtualItem>
-                  items={flatDeficiencies}
-                  itemHeight={28}
-                  height={Math.min(flatDeficiencies.length * 28, 140)}
-                  getKey={(item) => item.key}
-                >
-                  {(item) =>
-                    item.type === 'header' ? (
-                      <div
-                        className={styles['diagnostic-row-header']}
-                        onClick={() =>
-                          handleDiagnosticHeaderClick(
-                            'deficiency',
-                            item.productId,
-                            `def-${item.productId}`,
-                          )
-                        }
-                        data-tutorial-diagnostic-status="deficiency"
-                        data-tutorial-diagnostic-product={item.productId}
-                      >
-                        <div className={styles['diagnostic-header-left']}>
-                          {item.isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                          <span className={styles['diagnostic-product-name']}>
-                            {item.productName}
-                          </span>
+              <div className={styles['diagnostic-section-title']}>Deficiencies (Shortages)</div>
+              <div className={styles['diagnostic-container']}>
+                {flatDeficiencies.length === 0 ? (
+                  <div className={styles['empty-message']}>No shortages detected</div>
+                ) : (
+                  <VirtualList<DiagnosticVirtualItem>
+                    items={flatDeficiencies}
+                    itemHeight={28}
+                    height={Math.min(flatDeficiencies.length * 28, 140)}
+                    getKey={(item) => item.key}
+                  >
+                    {(item) =>
+                      item.type === 'header' ? (
+                        <div
+                          className={styles['diagnostic-row-header']}
+                          onClick={() =>
+                            handleDiagnosticHeaderClick(
+                              'deficiency',
+                              item.productId,
+                              `def-${item.productId}`,
+                            )
+                          }
+                          data-tutorial-diagnostic-status="deficiency"
+                          data-tutorial-diagnostic-product={item.productId}
+                        >
+                          <div className={styles['diagnostic-header-left']}>
+                            {item.isExpanded ? (
+                              <ChevronDown size={10} />
+                            ) : (
+                              <ChevronRight size={10} />
+                            )}
+                            <span className={styles['diagnostic-product-name']}>
+                              {item.productName}
+                            </span>
+                          </div>
+                          <div className={styles['diagnostic-header-right']}>
+                            <span
+                              className={`${styles['diagnostic-rate']} ${styles['deficiency']}`}
+                            >
+                              -{formatDiagnosticQuantity(item.rate)}
+                              {getRateSuffix()}
+                            </span>
+                          </div>
                         </div>
-                        <div className={styles['diagnostic-header-right']}>
-                          <span className={`${styles['diagnostic-rate']} ${styles['deficiency']}`}>
-                            -{formatQuantity(item.rate)}
-                            {getRateSuffix()}
+                      ) : (
+                        <div
+                          className={styles['diagnostic-row-node']}
+                          onClick={() => handleNodeClick(item.nodeId, 'deficiency', item.productId)}
+                          data-tutorial-diagnostic-status="deficiency"
+                          data-tutorial-diagnostic-product={item.productId}
+                          data-tutorial-diagnostic-node={item.nodeId}
+                        >
+                          <span className={styles['diagnostic-node-indent']}>
+                            |- {item.nodeName}
                           </span>
+                          <div className={styles['diagnostic-node-right']}>
+                            <span
+                              className={`${styles['diagnostic-rate-sub']} ${styles['deficiency']}`}
+                            >
+                              -{formatDiagnosticQuantity(item.rate)}
+                              {getRateSuffix()}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div
-                        className={styles['diagnostic-row-node']}
-                        onClick={() => handleNodeClick(item.nodeId, 'deficiency', item.productId)}
-                        data-tutorial-diagnostic-status="deficiency"
-                        data-tutorial-diagnostic-product={item.productId}
-                        data-tutorial-diagnostic-node={item.nodeId}
-                      >
-                        <span className={styles['diagnostic-node-indent']}>|- {item.nodeName}</span>
-                        <div className={styles['diagnostic-node-right']}>
-                          <span
-                            className={`${styles['diagnostic-rate-sub']} ${styles['deficiency']}`}
-                          >
-                            -{formatQuantity(item.rate)}
-                            {getRateSuffix()}
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  }
-                </VirtualList>
-              )}
-            </div>
+                      )
+                    }
+                  </VirtualList>
+                )}
+              </div>
 
-            <div className={`${styles['diagnostic-section-title']} ${styles['is-spaced']}`}>
-              Excess Byproducts
-            </div>
-            <div className={styles['diagnostic-container']}>
-              {flatExcesses.length === 0 ? (
-                <div className={styles['empty-message']}>No excesses detected</div>
-              ) : (
-                <VirtualList<DiagnosticVirtualItem>
-                  items={flatExcesses}
-                  itemHeight={28}
-                  height={Math.min(flatExcesses.length * 28, 140)}
-                  getKey={(item) => item.key}
-                >
-                  {(item) =>
-                    item.type === 'header' ? (
-                      <div
-                        className={styles['diagnostic-row-header']}
-                        onClick={() =>
-                          handleDiagnosticHeaderClick(
-                            'excess',
-                            item.productId,
-                            `exc-${item.productId}`,
-                          )
-                        }
-                        data-tutorial-diagnostic-status="excess"
-                        data-tutorial-diagnostic-product={item.productId}
-                      >
-                        <div className={styles['diagnostic-header-left']}>
-                          {item.isExpanded ? <ChevronDown size={10} /> : <ChevronRight size={10} />}
-                          <span className={styles['diagnostic-product-name']}>
-                            {item.productName}
-                          </span>
+              <div className={`${styles['diagnostic-section-title']} ${styles['is-spaced']}`}>
+                Excess Byproducts
+              </div>
+              <div className={styles['diagnostic-container']}>
+                {flatExcesses.length === 0 ? (
+                  <div className={styles['empty-message']}>No excesses detected</div>
+                ) : (
+                  <VirtualList<DiagnosticVirtualItem>
+                    items={flatExcesses}
+                    itemHeight={28}
+                    height={Math.min(flatExcesses.length * 28, 140)}
+                    getKey={(item) => item.key}
+                  >
+                    {(item) =>
+                      item.type === 'header' ? (
+                        <div
+                          className={styles['diagnostic-row-header']}
+                          onClick={() =>
+                            handleDiagnosticHeaderClick(
+                              'excess',
+                              item.productId,
+                              `exc-${item.productId}`,
+                            )
+                          }
+                          data-tutorial-diagnostic-status="excess"
+                          data-tutorial-diagnostic-product={item.productId}
+                        >
+                          <div className={styles['diagnostic-header-left']}>
+                            {item.isExpanded ? (
+                              <ChevronDown size={10} />
+                            ) : (
+                              <ChevronRight size={10} />
+                            )}
+                            <span className={styles['diagnostic-product-name']}>
+                              {item.productName}
+                            </span>
+                          </div>
+                          <div className={styles['diagnostic-header-right']}>
+                            <span className={`${styles['diagnostic-rate']} ${styles['excess']}`}>
+                              +{formatDiagnosticQuantity(item.rate)}
+                              {getRateSuffix()}
+                            </span>
+                            {item.voidable && (
+                              <span className={`${styles['badge']} ${styles['voided']}`}>
+                                Voided
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className={styles['diagnostic-header-right']}>
-                          <span className={`${styles['diagnostic-rate']} ${styles['excess']}`}>
-                            +{formatQuantity(item.rate)}
-                            {getRateSuffix()}
+                      ) : (
+                        <div
+                          className={styles['diagnostic-row-node']}
+                          onClick={() => handleNodeClick(item.nodeId, 'excess', item.productId)}
+                          data-tutorial-diagnostic-status="excess"
+                          data-tutorial-diagnostic-product={item.productId}
+                          data-tutorial-diagnostic-node={item.nodeId}
+                        >
+                          <span className={styles['diagnostic-node-indent']}>
+                            |- {item.nodeName}
                           </span>
-                          {item.voidable && (
-                            <span className={`${styles['badge']} ${styles['voided']}`}>Voided</span>
-                          )}
+                          <div className={styles['diagnostic-node-right']}>
+                            <span
+                              className={`${styles['diagnostic-rate-sub']} ${styles['excess']}`}
+                            >
+                              +{formatDiagnosticQuantity(item.rate)}
+                              {getRateSuffix()}
+                            </span>
+                            {item.voidable && (
+                              <span className={`${styles['badge']} ${styles['voided']}`}>
+                                Voided
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div
-                        className={styles['diagnostic-row-node']}
-                        onClick={() => handleNodeClick(item.nodeId, 'excess', item.productId)}
-                        data-tutorial-diagnostic-status="excess"
-                        data-tutorial-diagnostic-product={item.productId}
-                        data-tutorial-diagnostic-node={item.nodeId}
-                      >
-                        <span className={styles['diagnostic-node-indent']}>|- {item.nodeName}</span>
-                        <div className={styles['diagnostic-node-right']}>
-                          <span className={`${styles['diagnostic-rate-sub']} ${styles['excess']}`}>
-                            +{formatQuantity(item.rate)}
-                            {getRateSuffix()}
-                          </span>
-                          {item.voidable && (
-                            <span className={`${styles['badge']} ${styles['voided']}`}>Voided</span>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  }
-                </VirtualList>
-              )}
-            </div>
+                      )
+                    }
+                  </VirtualList>
+                )}
+              </div>
             </div>
           </div>
         )}

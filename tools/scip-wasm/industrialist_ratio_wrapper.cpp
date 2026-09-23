@@ -36,6 +36,8 @@ EM_JS(void, industrialist_post_native_stage, (int request_id, int stage_code, do
 namespace {
 
 constexpr double kStageBoundAbsoluteTolerance = 1e-6;
+constexpr double kRateAbsoluteTolerance = 1e-12;
+constexpr double kRateRelativeTolerance = 1e-9;
 constexpr double kTargetMachineBoundCap = 1e4;
 constexpr double kValidationAbsoluteTolerance = 1e-6;
 constexpr double kValidationRelativeTolerance = 1e-7;
@@ -648,13 +650,29 @@ GraphComponentInfo analyzeGraphComponents(const NativeInput& input) {
   return result;
 }
 
-double getStageBoundRhs(const ModelSpec& model, double value) {
+double getRateTolerance(double required, double supplied) {
+  const double scale = std::max(std::abs(required), std::abs(supplied));
+  return std::max(kRateAbsoluteTolerance, scale * kRateRelativeTolerance);
+}
+
+bool isFlowObjective(ObjectiveMode objective) {
+  return objective == ObjectiveMode::Shortage || objective == ObjectiveMode::SinkExcess;
+}
+
+double getStageBoundRhs(
+  const ModelSpec& model,
+  ObjectiveMode objective,
+  double value
+) {
   const double normalizedValue = std::max(0.0, value);
   if (normalizedValue == 0.0) return 0.0;
   const double roundoffFactor = std::numeric_limits<double>::epsilon() *
     static_cast<double>(std::max<size_t>(64, model.vars.size() * 4));
+  const double absoluteTolerance = isFlowObjective(objective)
+    ? kRateAbsoluteTolerance
+    : kStageBoundAbsoluteTolerance;
   return normalizedValue + std::max(
-    kStageBoundAbsoluteTolerance,
+    absoluteTolerance,
     std::abs(normalizedValue) * roundoffFactor
   );
 }
@@ -840,7 +858,7 @@ RowSpec makeExpressionBoundRow(
   RowSpec row;
   row.name = "limit_" + name;
   row.lhs = -std::numeric_limits<double>::infinity();
-  row.rhs = getStageBoundRhs(model, optimum);
+  row.rhs = getStageBoundRhs(model, objective, optimum);
   row.terms.reserve(model.vars.size());
 
   for (int i = 0; i < static_cast<int>(model.vars.size()); ++i) {
@@ -894,6 +912,45 @@ double getValidationTolerance(double activity, double bound) {
   return std::max(kValidationAbsoluteTolerance, scale * kValidationRelativeTolerance);
 }
 
+bool isFlowBalanceRow(const RowSpec& row) {
+  return row.name.rfind("flow_in_", 0) == 0 ||
+    row.name.rfind("flow_out_", 0) == 0 ||
+    row.name.rfind("sink_cap_", 0) == 0;
+}
+
+double getFlowValidationTolerance(
+  const ModelSpec& model,
+  const RowSpec& row,
+  double activity,
+  double bound
+) {
+  double physicalScale = 1.0;
+  for (const TermSpec& term : row.terms) {
+    if (term.varIndex < 0 || term.varIndex >= static_cast<int>(model.vars.size())) continue;
+    const double variableScale = model.vars[static_cast<size_t>(term.varIndex)].physicalScale;
+    if (std::isfinite(variableScale) && variableScale > 0.0) {
+      physicalScale = variableScale;
+      break;
+    }
+  }
+
+  return std::max(
+    kRateAbsoluteTolerance,
+    getRateTolerance(activity * physicalScale, bound * physicalScale) / physicalScale
+  );
+}
+
+double getFlowRowCancellationTolerance(long double absoluteTermMagnitude) {
+  const long double scaledMagnitude = std::max(1.0L, absoluteTermMagnitude);
+  const long double roundoffTolerance =
+    128.0L * static_cast<long double>(std::numeric_limits<double>::epsilon()) *
+    scaledMagnitude;
+  return std::max(
+    kRateAbsoluteTolerance,
+    static_cast<double>(roundoffTolerance)
+  );
+}
+
 double ceilMachineCount(double value) {
   if (!std::isfinite(value) || value <= 0.0) return 0.0;
   const double nearestInteger = std::round(value);
@@ -921,7 +978,7 @@ void tightenObjectiveVariableBounds(
   double optimum
 ) {
   if (!std::isfinite(optimum)) return;
-  const double rhs = getStageBoundRhs(model, optimum);
+  const double rhs = getStageBoundRhs(model, objective, optimum);
   for (VariableSpec& var : model.vars) {
     const double coeff = getObjectiveCoeff(var, objective);
     if (coeff <= 0.0) continue;
@@ -1045,6 +1102,7 @@ bool validateStageSolution(
     }
 
     long double activityAccumulator = 0.0;
+    long double absoluteTermMagnitude = 0.0;
     for (const TermSpec& term : row.terms) {
       if (term.varIndex < 0 || term.varIndex >= static_cast<int>(values.size())) {
         error = "Native validation failed because row " + row.name + " referenced an invalid variable.";
@@ -1054,8 +1112,10 @@ bool validateStageSolution(
         error = "Native validation failed because row " + row.name + " had a non-finite coefficient.";
         return false;
       }
-      activityAccumulator += static_cast<long double>(term.coeff) *
+      const long double termValue = static_cast<long double>(term.coeff) *
         static_cast<long double>(values[static_cast<size_t>(term.varIndex)]);
+      activityAccumulator += termValue;
+      absoluteTermMagnitude += std::abs(termValue);
     }
 
     const double activity = static_cast<double>(activityAccumulator);
@@ -1064,29 +1124,47 @@ bool validateStageSolution(
       return false;
     }
 
+    const double flowRowCancellationTolerance = isFlowBalanceRow(row)
+      ? getFlowRowCancellationTolerance(absoluteTermMagnitude)
+      : 0.0;
+
     if (std::isfinite(row.lhs)) {
-      const double tolerance = getValidationTolerance(activity, row.lhs);
+      const double tolerance = isFlowBalanceRow(row)
+        ? std::max(
+            getFlowValidationTolerance(model, row, activity, row.lhs),
+            flowRowCancellationTolerance
+          )
+        : getValidationTolerance(activity, row.lhs);
       if (activity + tolerance < row.lhs) {
         std::ostringstream out;
         out << std::setprecision(17)
             << "Native validation failed: row " << row.name
             << " activity " << activity
             << " is below lhs " << row.lhs
-            << " by " << (row.lhs - activity) << ".";
+            << " by " << (row.lhs - activity)
+            << " (tolerance " << tolerance
+            << ", term magnitude " << static_cast<double>(absoluteTermMagnitude) << ").";
         error = out.str();
         return false;
       }
     }
 
     if (std::isfinite(row.rhs)) {
-      const double tolerance = getValidationTolerance(activity, row.rhs);
+      const double tolerance = isFlowBalanceRow(row)
+        ? std::max(
+            getFlowValidationTolerance(model, row, activity, row.rhs),
+            flowRowCancellationTolerance
+          )
+        : getValidationTolerance(activity, row.rhs);
       if (activity - tolerance > row.rhs) {
         std::ostringstream out;
         out << std::setprecision(17)
             << "Native validation failed: row " << row.name
             << " activity " << activity
             << " is above rhs " << row.rhs
-            << " by " << (activity - row.rhs) << ".";
+            << " by " << (activity - row.rhs)
+            << " (tolerance " << tolerance
+            << ", term magnitude " << static_cast<double>(absoluteTermMagnitude) << ").";
         error = out.str();
         return false;
       }
@@ -1639,7 +1717,7 @@ class StagedLpEngine {
     std::string& error
   ) {
     if (!std::isfinite(optimum)) return true;
-    const double rhs = getStageBoundRhs(activeModel_, optimum);
+    const double rhs = getStageBoundRhs(activeModel_, objective, optimum);
     for (int i = 0; i < static_cast<int>(activeModel_.vars.size()); ++i) {
       VariableSpec& var = activeModel_.vars[static_cast<size_t>(i)];
       const double coeff = getObjectiveCoeff(var, objective);
@@ -1695,6 +1773,8 @@ class SoplexStagedLpEngine final : public StagedLpEngine {
     try {
       solver_.setIntParam(soplex::SoPlex::OBJSENSE, soplex::SoPlex::OBJSENSE_MINIMIZE);
       solver_.setIntParam(soplex::SoPlex::VERBOSITY, soplex::SoPlex::VERBOSITY_ERROR);
+      solver_.setRealParam(soplex::SoPlex::FEASTOL, 1e-9);
+      solver_.setRealParam(soplex::SoPlex::OPTTOL, 1e-9);
 
       for (const VariableSpec& var : activeModel_.vars) {
         const soplex::DSVector emptyColumn(0);
@@ -2306,7 +2386,7 @@ void tightenRoundedModelFromIncumbent(
     return;
   }
 
-  const double incumbentRhs = getStageBoundRhs(model, incumbentObjective);
+  const double incumbentRhs = getStageBoundRhs(model, ObjectiveMode::Tier1, incumbentObjective);
   for (int nodeIndex = 0; nodeIndex < static_cast<int>(model.roundedVarByNode.size()); ++nodeIndex) {
     const int roundedVarIndex = model.roundedVarByNode[static_cast<size_t>(nodeIndex)];
     if (roundedVarIndex < 0) continue;
@@ -2524,7 +2604,8 @@ bool polishRoundedIncumbent(
       [](double value) { return value >= 0.0; }
     );
     if (found && polished.values.size() == startValues.size() &&
-        (hasRoundedLimit || polished.objectiveValue <= getStageBoundRhs(model, incumbentObjective))) {
+        (hasRoundedLimit || polished.objectiveValue <=
+          getStageBoundRhs(model, ObjectiveMode::Tier1, incumbentObjective))) {
       startValues = std::move(polished.values);
       incumbentObjective = polished.objectiveValue;
     }
@@ -2545,43 +2626,13 @@ bool normalizeRoundedMachineVariables(
     return false;
   }
 
-  for (int nodeIndex = 0;
-       nodeIndex < static_cast<int>(model.roundedVarByNode.size());
-       ++nodeIndex) {
-    const int roundedVarIndex = model.roundedVarByNode[static_cast<size_t>(nodeIndex)];
-    if (roundedVarIndex < 0) continue;
-    const int machineVarIndex = model.machineVarByNode[static_cast<size_t>(nodeIndex)];
-    if (machineVarIndex < 0 || machineVarIndex >= static_cast<int>(model.vars.size()) ||
-        roundedVarIndex >= static_cast<int>(model.vars.size())) {
-      error = "Rounded machine normalization found an invalid variable mapping.";
-      return false;
-    }
-
-    const double physicalMachineCount = std::max(
-      0.0,
-      solution.values[static_cast<size_t>(machineVarIndex)] *
-        model.vars[static_cast<size_t>(machineVarIndex)].physicalScale
-    );
-    const double exactRoundedCount = ceilMachineCount(physicalMachineCount);
-    const VariableSpec& roundedVar = model.vars[static_cast<size_t>(roundedVarIndex)];
-    if ((std::isfinite(roundedVar.lb) && exactRoundedCount < roundedVar.lb) ||
-        (std::isfinite(roundedVar.ub) && exactRoundedCount > roundedVar.ub)) {
-      error = "Rounded machine normalization produced a value outside its proven bounds.";
-      return false;
-    }
-    const double solvedRoundedCount = solution.values[static_cast<size_t>(roundedVarIndex)];
-    if (solvedRoundedCount + kIntegralityTolerance < exactRoundedCount) {
-      // SCIP can accept a value on the wrong side of the integrality boundary
-      // when the linking row is within its feasibility tolerance. The
-      // canonical whole-machine count is still unambiguous, so repair the
-      // integer output before validating the complete solution. This keeps a
-      // solver tolerance artifact from reaching the frontend as an undercount.
-      solution.values[static_cast<size_t>(roundedVarIndex)] = exactRoundedCount;
-      repairCount += 1;
-    } else {
-      solution.values[static_cast<size_t>(roundedVarIndex)] = exactRoundedCount;
-    }
-  }
+  // The rounded integer variables are part of the solved MILP and are the
+  // authoritative whole-machine accounting. Do not recompute them from the
+  // continuous machine variables after the objective-lock rows have been
+  // applied: changing them here can invalidate an otherwise feasible locked
+  // tier. The linking rows remain responsible for relating the two variable
+  // representations, while validation checks the returned integer values.
+  repairCount = 0;
 
   solution.objectiveValue = recomputeObjectiveValue(
     model,

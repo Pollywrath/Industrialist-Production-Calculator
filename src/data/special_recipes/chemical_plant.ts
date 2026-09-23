@@ -312,6 +312,13 @@ export const chemical_plant_recipes: SpecialRecipe[] = baseRecipes.map((base) =>
       step: 5,
     },
   },
+  getAutocompleteSettings: (defaults) => [
+    {
+      ...defaults,
+      speed_factor: 200,
+      efficiency_factor: 120,
+    },
+  ],
   compute: (settings) => {
     const speed = (settings.speed_factor as number) ?? 100;
     const efficiency = (settings.efficiency_factor as number) ?? 100;

@@ -3,9 +3,7 @@ export function cleanMachineCount(val: number): number {
 }
 
 export function cleanFlow(val: number): number {
-  if (val <= 0) return 0;
-  const cleaned = Number(val.toFixed(10));
-  return cleaned === 0 ? 1e-10 : cleaned;
+  return normalizeSolverRate(val);
 }
 
 export const EPSILON = 1e-11;
@@ -16,10 +14,25 @@ export const FLOW_STATUS_ABSOLUTE_TOLERANCE = 1e-6;
 export const FLOW_STATUS_RELATIVE_TOLERANCE = 1e-12;
 export const MACHINE_INTEGER_ABSOLUTE_TOLERANCE = 1e-7;
 export const MACHINE_INTEGER_RELATIVE_TOLERANCE = Number.EPSILON * 8;
+export const MACHINE_COUNT_RESULT_ABSOLUTE_TOLERANCE = 1e-10;
+export const MACHINE_COUNT_RESULT_RELATIVE_TOLERANCE = Number.EPSILON * 8;
 
 export function getMachineIntegerTolerance(value: number): number {
   if (!Number.isFinite(value)) return MACHINE_INTEGER_ABSOLUTE_TOLERANCE;
   return MACHINE_INTEGER_ABSOLUTE_TOLERANCE + Math.abs(value) * MACHINE_INTEGER_RELATIVE_TOLERANCE;
+}
+
+export function getMachineCountComparisonTolerance(left: number, right: number): number {
+  const scale = Math.max(Math.abs(left), Math.abs(right));
+  return Math.max(
+    MACHINE_COUNT_RESULT_ABSOLUTE_TOLERANCE,
+    scale * MACHINE_COUNT_RESULT_RELATIVE_TOLERANCE,
+  );
+}
+
+export function hasMeaningfulMachineCountDifference(left: number, right: number): boolean {
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return left !== right;
+  return Math.abs(left - right) > getMachineCountComparisonTolerance(left, right);
 }
 
 /** Preserve finite positive solver rates above the numerical-zero threshold. */
@@ -59,9 +72,11 @@ export function isMachineCountNearInteger(value: number): boolean {
 }
 
 export function ceilMachineCount(value: number): number {
-  if (!Number.isFinite(value) || value <= 0) return 0;
+  if (!Number.isFinite(value) || value <= RATE_NUMERICAL_ZERO) return 0;
   const nearestInteger = Math.round(value);
-  if (Math.abs(value - nearestInteger) <= getMachineIntegerTolerance(value)) {
+  // The integrality tolerance is for values near a real positive integer.
+  // It must not erase a small but valid positive count by snapping it to zero.
+  if (nearestInteger > 0 && Math.abs(value - nearestInteger) <= getMachineIntegerTolerance(value)) {
     return nearestInteger;
   }
   return Math.ceil(value);
@@ -84,15 +99,6 @@ export function areNearlyEqual(
   relativeTolerance = FLOW_STATUS_RELATIVE_TOLERANCE,
 ): boolean {
   return Math.abs(a - b) <= getScaledTolerance(a, b, absoluteTolerance, relativeTolerance);
-}
-
-export function snapToReferenceIfNearlyEqual(
-  reference: number,
-  value: number,
-  absoluteTolerance = FLOW_STATUS_ABSOLUTE_TOLERANCE,
-  relativeTolerance = FLOW_STATUS_RELATIVE_TOLERANCE,
-): number {
-  return areNearlyEqual(reference, value, absoluteTolerance, relativeTolerance) ? reference : value;
 }
 
 export function hasMeaningfulDeficit(

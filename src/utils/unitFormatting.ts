@@ -133,11 +133,27 @@ export function formatQuantity(value: number): string {
   return formatWithCommasAndCounting(value, (val) => toPlainString(val, 4), 100000);
 }
 
+export function formatDiagnosticQuantity(value: number): string {
+  if (!Number.isFinite(value)) {
+    return formatQuantity(value);
+  }
+  if (value !== 0 && Math.abs(value) < 0.00005) {
+    return value.toExponential(2);
+  }
+  return formatQuantity(value);
+}
+
 export function formatMachineCount(value: number): string {
   if (!Number.isFinite(value)) {
     return value < 0 ? '-∞' : '∞';
   }
   return formatWithCommasAndCounting(value, (val) => toPlainString(val, 2), 100000);
+}
+
+export function formatMachineCountChange(value: number, reference: number): string {
+  if (!Number.isFinite(value)) return formatMachineCount(value);
+  if (Math.abs(value - reference) < 0.01) return toPlainString(value, 10);
+  return formatMachineCount(value);
 }
 
 export function formatMachineSpace(value: number): string {

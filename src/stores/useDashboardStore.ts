@@ -3,6 +3,7 @@ import { useFlowStore } from './useFlowStore';
 import { useFlowResultStore } from './useFlowResultStore';
 import { useUIStore } from './useUIStore';
 import { useGlobalSettingsStore } from './useGlobalSettingsStore';
+import { useDataStore } from './useDataStore';
 import { getMachine, getProduct, getProductName } from '../data/lookup';
 import { getSpecialRecipe } from '../data/registry';
 import { buildHandleId } from '../utils/idGenerator';
@@ -75,7 +76,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     const flowStore = useFlowStore.getState();
     const nodes = flowStore.nodes.filter(isRecipeNode);
     const flowResultState = useFlowResultStore.getState();
-    const isSolutionFresh = flowResultState.graphVersion === flowStore.graphVersion;
+    const isSolutionFresh =
+      flowResultState.graphVersion === flowStore.graphVersion &&
+      flowResultState.dataDbVersion === useDataStore.getState().dbVersion;
     if (!isSolutionFresh) return;
     const resolvedProducts = flowResultState.resolvedProducts;
     const results = flowResultState.results;
@@ -210,25 +213,23 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             const handleId = buildHandleId(node.id, 'input', i);
             const productId = resolvedProducts[handleId] || inputEntry.product_id;
             if (!productId) continue;
-            const defRate = (inputFlow.rate - inputFlow.connected) * rateModeFactor;
-            if (defRate > 0.0001) {
-              let group = deficienciesMap.get(productId);
-              if (!group) {
-                group = {
-                  productId,
-                  productName: getProductName(productId),
-                  totalRate: 0,
-                  nodes: [],
-                };
-                deficienciesMap.set(productId, group);
-              }
-              group.totalRate += defRate;
-              group.nodes.push({
-                nodeId: node.id,
-                nodeName: machineName,
-                rate: defRate,
-              });
+            const defRate = inputFlow.deficit * rateModeFactor;
+            let group = deficienciesMap.get(productId);
+            if (!group) {
+              group = {
+                productId,
+                productName: getProductName(productId),
+                totalRate: 0,
+                nodes: [],
+              };
+              deficienciesMap.set(productId, group);
             }
+            group.totalRate += defRate;
+            group.nodes.push({
+              nodeId: node.id,
+              nodeName: machineName,
+              rate: defRate,
+            });
           }
         }
 
@@ -241,31 +242,29 @@ export const useDashboardStore = create<DashboardState>((set) => ({
             const handleId = buildHandleId(node.id, 'output', i);
             const productId = resolvedProducts[handleId] || outDef.product_id;
             if (!productId) continue;
-            const excRate = (outputFlow.rate - outputFlow.connected) * rateModeFactor;
-            if (excRate > 0.0001) {
-              let group = excessesMap.get(productId);
-              if (!group) {
-                group = {
-                  productId,
-                  productName: getProductName(productId),
-                  totalRate: 0,
-                  allVoidable: true,
-                  nodes: [],
-                };
-                excessesMap.set(productId, group);
-              }
-              group.totalRate += excRate;
-              const isVoidable = !!outDef.voidable;
-              if (!isVoidable) {
-                group.allVoidable = false;
-              }
-              group.nodes.push({
-                nodeId: node.id,
-                nodeName: machineName,
-                rate: excRate,
-                voidable: isVoidable,
-              });
+            const excRate = outputFlow.excess * rateModeFactor;
+            let group = excessesMap.get(productId);
+            if (!group) {
+              group = {
+                productId,
+                productName: getProductName(productId),
+                totalRate: 0,
+                allVoidable: true,
+                nodes: [],
+              };
+              excessesMap.set(productId, group);
             }
+            group.totalRate += excRate;
+            const isVoidable = !!outDef.voidable;
+            if (!isVoidable) {
+              group.allVoidable = false;
+            }
+            group.nodes.push({
+              nodeId: node.id,
+              nodeName: machineName,
+              rate: excRate,
+              voidable: isVoidable,
+            });
           }
         }
       }

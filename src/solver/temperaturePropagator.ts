@@ -3,7 +3,7 @@ import { resolveActiveRecipe } from '../data/lookup';
 import { getSpecialRecipe } from '../data/registry';
 import { parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
-import { FLOW_STATUS_ABSOLUTE_TOLERANCE } from '../utils/precision';
+import { isPositiveSolverFlow, normalizeSolverRate } from '../utils/precision';
 
 export interface TemperaturePropagationResult {
   edgeTemps: Record<string, number>;
@@ -29,7 +29,7 @@ export function propagateTemperatures(
         let totalFlow = 0;
 
         for (const edge of connectedEdges) {
-          totalFlow += edgeFlows[edge.id] ?? 0;
+          totalFlow = normalizeSolverRate(totalFlow + (edgeFlows[edge.id] ?? 0));
         }
 
         return totalFlow;
@@ -136,7 +136,7 @@ export function propagateTemperatures(
 
     for (const edge of edges) {
       if (!edge.sourceHandle) continue;
-      if ((edgeFlows[edge.id] ?? 0) <= FLOW_STATUS_ABSOLUTE_TOLERANCE) {
+      if (!isPositiveSolverFlow(edgeFlows[edge.id])) {
         edgeTemps[edge.id] = 18;
         continue;
       }
@@ -195,12 +195,12 @@ export function propagateTemperatures(
           let weightedSum = 0;
           for (const edge of connected) {
             const flow = edgeFlows[edge.id] ?? 0;
-            if (flow <= FLOW_STATUS_ABSOLUTE_TOLERANCE) continue;
-            totalFlow += flow;
+            if (!isPositiveSolverFlow(flow)) continue;
+            totalFlow = normalizeSolverRate(totalFlow + flow);
             weightedSum += flow * edgeTemps[edge.id];
           }
 
-          if (totalFlow > FLOW_STATUS_ABSOLUTE_TOLERANCE) {
+          if (isPositiveSolverFlow(totalFlow)) {
             inputTemps[nodeId][i] = weightedSum / totalFlow;
           } else {
             inputTemps[nodeId][i] = resolveConfiguredInputTemp(node, i, sr);
@@ -262,7 +262,7 @@ export function propagateTemperatures(
 
   for (const edge of edges) {
     if (!edge.sourceHandle) continue;
-    if ((edgeFlows[edge.id] ?? 0) <= FLOW_STATUS_ABSOLUTE_TOLERANCE) {
+    if (!isPositiveSolverFlow(edgeFlows[edge.id])) {
       edgeTemps[edge.id] = 18;
       continue;
     }

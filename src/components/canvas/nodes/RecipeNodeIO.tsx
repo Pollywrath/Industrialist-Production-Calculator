@@ -346,7 +346,7 @@ export function RecipeNodeIO({
     const entry = list[ref.index];
     if (entry?.variable) return false;
 
-    if (!flowResult) return false;
+    if (!hasFreshSolveSnapshot || !flowResult) return false;
     if (ref.side === 'input') {
       const status = flowResult.inputFlows[ref.index];
       return status ? status.hasDeficiency : false;
@@ -553,11 +553,12 @@ export function RecipeNodeIO({
               const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
               const fallbackProductId =
                 getRecipeEntryProductId(recipe, refVal.side, refVal.index) || '';
-              const actualFlow = flowResult
-                ? ((refVal.side === 'input'
-                    ? flowResult.inputFlows[refVal.index]?.connected
-                    : flowResult.outputFlows[refVal.index]?.connected) ?? 0)
-                : 0;
+              const actualFlow =
+                hasFreshSolveSnapshot && flowResult
+                  ? ((refVal.side === 'input'
+                      ? flowResult.inputFlows[refVal.index]?.connected
+                      : flowResult.outputFlows[refVal.index]?.connected) ?? 0)
+                  : 0;
               const actualFlowScaled = actualFlow * scaleFactor;
               const productId =
                 (hasFreshSolveSnapshot ? resolvedProducts[handleId] : '') || fallbackProductId;
@@ -590,11 +591,12 @@ export function RecipeNodeIO({
               const handleId = buildHandleId(nodeId, refVal.side, refVal.index);
               const fallbackProductId =
                 getRecipeEntryProductId(recipe, refVal.side, refVal.index) || '';
-              const actualFlow = flowResult
-                ? ((refVal.side === 'input'
-                    ? flowResult.inputFlows[refVal.index]?.connected
-                    : flowResult.outputFlows[refVal.index]?.connected) ?? 0)
-                : 0;
+              const actualFlow =
+                hasFreshSolveSnapshot && flowResult
+                  ? ((refVal.side === 'input'
+                      ? flowResult.inputFlows[refVal.index]?.connected
+                      : flowResult.outputFlows[refVal.index]?.connected) ?? 0)
+                  : 0;
               const actualFlowScaled = actualFlow * scaleFactor;
               const productId =
                 (hasFreshSolveSnapshot ? resolvedProducts[handleId] : '') || fallbackProductId;

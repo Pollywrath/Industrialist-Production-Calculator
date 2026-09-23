@@ -107,10 +107,11 @@ application units. The model-wide `valueScale` telemetry field reports the
 largest component scale; it is not used as a global conversion factor.
 
 Stage optima are locked in physical objective units. A zero optimum is locked
-to exactly zero. A nonzero optimum permits only the larger of `1e-6` physical
-units and a model-size-aware floating-point roundoff allowance. This avoids the
-large relative lock slack that could otherwise trade away real shortage in a
-later stage.
+to exactly zero. Flow-rate stages (shortage and sink excess) use the shared
+scale-aware rate tolerance, with a `1e-12` absolute floor and `1e-9` relative
+term. Other objective stages retain the larger of `1e-6` physical units and a
+model-size-aware floating-point roundoff allowance. This keeps tiny real flows
+from being locked away while avoiding large relative slack in later stages.
 
 Target machine counts remain lower bounds: the optimizer may increase a target
 to support downstream targets, but it must not reduce it. A locked node uses the

@@ -26,15 +26,12 @@ import { INDUS_LOGO_SRC } from '../../../data/productIcons';
 import {
   formatCurrency,
   formatMachineCount,
+  formatMachineCountChange,
   formatMachineSpace,
   formatPollution,
   formatPower,
 } from '../../../utils/unitFormatting';
-import {
-  areNearlyEqual,
-  ceilMachineCount,
-  snapToReferenceIfNearlyEqual,
-} from '../../../utils/precision';
+import { ceilMachineCount, hasMeaningfulMachineCountDifference } from '../../../utils/precision';
 import { isRecipeNode } from '../../../types/nodes';
 import { constrainMachineCount } from '../../../utils/machineCountConstraint';
 import styles from './LPSolverOverlay.module.css';
@@ -256,7 +253,7 @@ export function LPSolverOverlay() {
             if (!proposedNode) continue;
             const currentCount = node.data.machineCount ?? 0;
             const proposedCount = proposedNode.data.machineCount ?? 0;
-            if (areNearlyEqual(currentCount, proposedCount)) continue;
+            if (!hasMeaningfulMachineCountDifference(currentCount, proposedCount)) continue;
             const recipe = resolveActiveRecipe(
               proposedNode.data.recipeId,
               proposedNode.data.settings,
@@ -371,12 +368,9 @@ export function LPSolverOverlay() {
           if (!recipe) continue;
 
           const currentCount = node.data.machineCount ?? 0;
-          const propCount = constrainMachineCount(
-            node.data,
-            snapToReferenceIfNearlyEqual(currentCount, res.machineCounts[node.id] ?? 0),
-          );
+          const propCount = constrainMachineCount(node.data, res.machineCounts[node.id] ?? 0);
 
-          if (!areNearlyEqual(currentCount, propCount)) {
+          if (hasMeaningfulMachineCountDifference(currentCount, propCount)) {
             const machine = getMachine(recipe.machine_id);
             nodeChanges.push({
               id: node.id,
@@ -709,10 +703,14 @@ export function LPSolverOverlay() {
                             <td>{c.recipeName}</td>
                             <td className={styles['machine-name-cell']}>{c.machineName}</td>
                             <td className={styles['align-right']}>
-                              {c.isNew ? 'New' : c.currentCount.toFixed(2)}
+                              {c.isNew
+                                ? 'New'
+                                : formatMachineCountChange(c.currentCount, c.proposedCount)}
                             </td>
                             <td className={styles['align-center']}>&rarr;</td>
-                            <td className={styles['align-left']}>{c.proposedCount.toFixed(2)}</td>
+                            <td className={styles['align-left']}>
+                              {formatMachineCountChange(c.proposedCount, c.currentCount)}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

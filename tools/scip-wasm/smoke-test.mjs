@@ -303,6 +303,42 @@ function makeConnectedAboveIntegerProducerPayload() {
   });
 }
 
+function makeTinyContinuousProducerPayload(targetMachineCount) {
+  return makeNativePayload({
+    nodes: [
+      { outputs: [{ quantity: 1 }] },
+      { outputs: [{ quantity: 1 }] },
+      {
+        currentMachineCount: targetMachineCount,
+        minimumMachineCount: targetMachineCount,
+        isTarget: true,
+        inputs: [{ quantity: 0.133333333333333 }, { quantity: 0.266666666666667 }],
+      },
+    ],
+    connections: [
+      { sourceNode: 0, sourceOutputIndex: 0, targetNode: 2, targetInputIndex: 0 },
+      { sourceNode: 1, sourceOutputIndex: 0, targetNode: 2, targetInputIndex: 1 },
+    ],
+    useWholeMachineCounts: false,
+  });
+}
+
+function makeCancellationSensitiveFlowPayload() {
+  return makeNativePayload({
+    nodes: [
+      { outputs: [{ quantity: 100 }] },
+      {
+        currentMachineCount: 1,
+        minimumMachineCount: 1,
+        isTarget: true,
+        inputs: [{ quantity: 100 }],
+      },
+    ],
+    connections: [{ sourceNode: 0, sourceOutputIndex: 0, targetNode: 1, targetInputIndex: 0 }],
+    useWholeMachineCounts: false,
+  });
+}
+
 function makeIncumbentPolishPayload() {
   return makeNativePayload({
     nodes: Array.from({ length: 24 }, (_, index) => ({
@@ -579,6 +615,49 @@ if (incumbentPolishJob.result[25] !== 24 || incumbentPolishJob.result[27] <= 0) 
 }
 
 console.log('Smoke: remaining native ratio cases.');
+
+for (const targetMachineCount of [1e-6, 1e-7, 1e-8]) {
+  const tinyJob = await runNativeJob(makeTinyContinuousProducerPayload(targetMachineCount));
+  if (tinyJob.nativeError || tinyJob.result[3] !== 1) {
+    throw new Error(
+      `Tiny continuous-flow job failed at ${targetMachineCount}: status=${tinyJob.result[3]}, error=${tinyJob.nativeError}`,
+    );
+  }
+  const tinyOffsets = getNativeResultSectionOffsets(tinyJob.result);
+  const tinyMachines = tinyJob.result.slice(
+    tinyOffsets.machineOffset,
+    tinyOffsets.machineOffset + tinyJob.result[16],
+  );
+  const tinyFlows = tinyJob.result.slice(
+    tinyOffsets.machineOffset + tinyJob.result[16],
+    tinyOffsets.deficitOffset,
+  );
+  const tinyDeficits = tinyJob.result.slice(
+    tinyOffsets.deficitOffset,
+    tinyOffsets.deficitOffset + tinyJob.result[17],
+  );
+  if (
+    tinyMachines[0] <= 1e-12 ||
+    tinyMachines[1] <= 1e-12 ||
+    tinyFlows[0] <= 1e-12 ||
+    tinyFlows[1] <= 1e-12 ||
+    tinyDeficits.some((deficit) => deficit > 1e-12)
+  ) {
+    throw new Error(
+      `Tiny continuous-flow job lost a fractional source at ${targetMachineCount}: machines=${tinyMachines.join(', ')}, flows=${tinyFlows.join(', ')}, deficits=${tinyDeficits.join(', ')}.`,
+    );
+  }
+}
+console.log('Smoke: tiny continuous producer flows preserved.');
+
+const cancellationSensitiveJob = await runNativeJob(makeCancellationSensitiveFlowPayload());
+if (cancellationSensitiveJob.nativeError || cancellationSensitiveJob.result[3] !== 1) {
+  throw new Error(
+    `Cancellation-sensitive balanced flow failed: status=${cancellationSensitiveJob.result[3]}, error=${cancellationSensitiveJob.nativeError}.`,
+  );
+}
+console.log('Smoke: cancellation-sensitive balanced flow validated.');
+
 console.log('Smoke: bounded producer with locked minimum/maximum.');
 const lockedProducerJob = await runNativeJob(
   makeBoundedProducerPayload({ minimum: 4, maximum: 4 }),
