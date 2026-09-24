@@ -108,7 +108,7 @@ const getComputedValues = (settings: Record<string, unknown>) => {
 
 export const logic_assembler_01: SpecialRecipe = {
   id: 'r_logic_assembler_01',
-  name: 'Logic Assembler',
+  name: 'Microchip Assembly',
   machine_id: 'm_logic_assembler',
   settings: settingDefinitions,
   potentialOutputs: [...CHIP_STAGES.map((c) => c.productId), 'p_microchip_scrap'],
@@ -134,7 +134,7 @@ export const logic_assembler_01: SpecialRecipe = {
     return null;
   },
   compute: (settings) => {
-    const { cycleTime, totalStages, hasMachineOil, failStep, targetChip, scrapQuantity } =
+    const { cycleTime, totalStages, hasMachineOil, failStep, targetChip, scrapQuantity, stage } =
       getComputedValues(settings);
 
     const inputsList = CORRECT_ORDER.map((id) => ({
@@ -159,7 +159,7 @@ export const logic_assembler_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_logic_assembler_01',
-      name: 'Logic Assembler',
+      name: failStep ? `${stage.name} Assembly Fail` : `${stage.name} Assembly`,
       machine_id: 'm_logic_assembler',
       cycle_time: cycleTime,
       power_use: 3000000,

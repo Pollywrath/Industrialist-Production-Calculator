@@ -16,7 +16,7 @@ const inputTemperatureSettings = {
 
 export const polisher_01: SpecialRecipe = {
   id: 'r_polisher_01',
-  name: 'Makes Distilled Water',
+  name: 'Condensate Purification',
   machine_id: 'm_polisher',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -25,7 +25,7 @@ export const polisher_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_polisher_01',
-      name: 'Makes Distilled Water',
+      name: 'Condensate Purification',
       machine_id: 'm_polisher',
       cycle_time: 1,
       power_use: 500000,

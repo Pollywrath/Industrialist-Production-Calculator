@@ -99,7 +99,7 @@ function getMaximumCoolantTemperature(settings: Record<string, unknown>): number
 
 export const steam_condenser_01: SpecialRecipe = {
   id: 'r_steam_condenser_01',
-  name: 'Makes Distilled Water, Condensate',
+  name: 'Steam Condensation',
   machine_id: 'm_steam_condenser',
   description:
     'Condenses low pressure steam back into condensate using distilled water as a coolant. Operating window: condensate temp must stay below half of steam temp (clamped 40°C - 100°C).',
@@ -157,7 +157,7 @@ export const steam_condenser_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_steam_condenser_01',
-      name: 'Makes Distilled Water, Condensate',
+      name: 'Steam Condensation',
       machine_id: 'm_steam_condenser',
       cycle_time: 1,
       power_use: 500000,

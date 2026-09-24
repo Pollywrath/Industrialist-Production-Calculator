@@ -5,6 +5,18 @@
     "patches": [
       {
         "hash": "pending",
+        "version": "v0.8.6",
+        "patch": 6,
+        "date": "2026-09-24",
+        "subject": "data: update facility recipes and recipe names",
+        "items": [
+          "Updated Advanced Oxidation Plant recipe values.",
+          "Updated Ore Enrichment Facility recipe values.",
+          "Renamed recipes for clearer naming and consistency."
+        ]
+      },
+      {
+        "hash": "pending",
         "version": "v0.8.5",
         "patch": 5,
         "date": "2026-09-17",

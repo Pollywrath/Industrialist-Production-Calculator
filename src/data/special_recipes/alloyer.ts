@@ -21,7 +21,7 @@ const inputTemperatureSettings = {
 
 export const alloyer_ferroaluminium: SpecialRecipe = {
   id: 'r_alloyer_01',
-  name: 'Makes Molten Ferroaluminium Alloy',
+  name: 'FeAl Alloying',
   machine_id: 'm_alloyer',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -31,7 +31,7 @@ export const alloyer_ferroaluminium: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_alloyer_01',
-      name: 'Makes Molten Ferroaluminium Alloy',
+      name: 'FeAl Alloying',
       machine_id: 'm_alloyer',
       cycle_time: cycleTime,
       power_use: 150000,
@@ -57,7 +57,7 @@ export const alloyer_ferroaluminium: SpecialRecipe = {
 
 export const alloyer_purple_gold: SpecialRecipe = {
   id: 'r_alloyer_02',
-  name: 'Makes Molten Purple Gold',
+  name: 'Purple Gold Alloying',
   machine_id: 'm_alloyer',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -67,7 +67,7 @@ export const alloyer_purple_gold: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_alloyer_02',
-      name: 'Makes Molten Purple Gold',
+      name: 'Purple Gold Alloying',
       machine_id: 'm_alloyer',
       cycle_time: cycleTime,
       power_use: 150000,
@@ -93,7 +93,7 @@ export const alloyer_purple_gold: SpecialRecipe = {
 
 export const alloyer_brass: SpecialRecipe = {
   id: 'r_alloyer_03',
-  name: 'Makes Liquid Brass',
+  name: 'Brass Alloying',
   machine_id: 'm_alloyer',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -103,7 +103,7 @@ export const alloyer_brass: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_alloyer_03',
-      name: 'Makes Liquid Brass',
+      name: 'Brass Alloying',
       machine_id: 'm_alloyer',
       cycle_time: cycleTime,
       power_use: 150000,

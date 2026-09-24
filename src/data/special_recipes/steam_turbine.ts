@@ -47,7 +47,7 @@ const inputTemperatureSettings = {
 
 export const steam_turbine_01: SpecialRecipe = {
   id: 'r_steam_turbine_01',
-  name: 'Makes Power',
+  name: 'Steam Power + Water',
   machine_id: 'm_steam_turbine',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -58,7 +58,7 @@ export const steam_turbine_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_steam_turbine_01',
-      name: 'Steam Turbine Power Generation',
+      name: 'Steam Power + Water',
       machine_id: 'm_steam_turbine',
       cycle_time: 1,
       power_use: -actualPowerOutput,

@@ -63,7 +63,7 @@ function getCoolantInputs(coolant: Coolant): Recipe['inputs'] {
 
 export const hv_transformer_01: SpecialRecipe = {
   id: 'r_hv_transformer_01',
-  name: 'Converts Power',
+  name: 'MV to HV Conversion / HV to MV Conversion',
   machine_id: 'm_hv_transformer',
   settings: settingDefinitions,
   compute: (settings) => {
@@ -75,7 +75,7 @@ export const hv_transformer_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_hv_transformer_01',
-      name: direction === 'mv_to_hv' ? 'Converts MV to HV' : 'Converts HV to MV',
+      name: direction === 'mv_to_hv' ? 'MV to HV Conversion' : 'HV to MV Conversion',
       machine_id: 'm_hv_transformer',
       cycle_time: 1,
       power_use: 0,

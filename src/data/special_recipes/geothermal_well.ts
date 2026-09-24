@@ -19,7 +19,7 @@ const outputQty = 6.05;
 
 export const geothermal_well_01: SpecialRecipe = {
   id: 'r_geothermal_well_01',
-  name: 'Heats Water',
+  name: 'Geothermal Water Heating',
   machine_id: 'm_geothermal_well',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -29,7 +29,7 @@ export const geothermal_well_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_geothermal_well_01',
-      name: 'Heats Water',
+      name: 'Geothermal Water Heating',
       machine_id: 'm_geothermal_well',
       cycle_time: 1,
       power_use: 3000,
@@ -45,7 +45,7 @@ export const geothermal_well_01: SpecialRecipe = {
 
 export const geothermal_well_02: SpecialRecipe = {
   id: 'r_geothermal_well_02',
-  name: 'Heats Filtered Water',
+  name: 'Geothermal Filtered Water Heating',
   machine_id: 'm_geothermal_well',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -55,7 +55,7 @@ export const geothermal_well_02: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_geothermal_well_02',
-      name: 'Heats Filtered Water',
+      name: 'Geothermal Filtered Water Heating',
       machine_id: 'm_geothermal_well',
       cycle_time: 1,
       power_use: 3000,
@@ -71,7 +71,7 @@ export const geothermal_well_02: SpecialRecipe = {
 
 export const geothermal_well_03: SpecialRecipe = {
   id: 'r_geothermal_well_03',
-  name: 'Heats Distilled Water',
+  name: 'Geothermal Distilled Water Heating',
   machine_id: 'm_geothermal_well',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -81,7 +81,7 @@ export const geothermal_well_03: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_geothermal_well_03',
-      name: 'Heats Distilled Water',
+      name: 'Geothermal Distilled Water Heating',
       machine_id: 'm_geothermal_well',
       cycle_time: 1,
       power_use: 3000,

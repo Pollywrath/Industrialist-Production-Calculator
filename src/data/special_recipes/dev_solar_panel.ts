@@ -6,13 +6,13 @@ const HV_POWER_OUTPUT = 3141600000000;
 
 export const dev_solar_panel_01: SpecialRecipe = {
   id: 'r_dev_solar_panel_01',
-  name: 'Produces Power',
+  name: 'Massive Power Generation',
   machine_id: 'm_dev_solar_panel',
   settings: {},
   compute: () => {
     const recipe: Recipe = {
       id: 'r_dev_solar_panel_01',
-      name: 'Produces Power',
+      name: 'Massive Power Generation',
       machine_id: 'm_dev_solar_panel',
       cycle_time: 1,
       power_use: 0,

@@ -21,7 +21,7 @@ const settingDefinitions = {
 
 export const footstep_power_generator_01: SpecialRecipe = {
   id: 'r_footstep_power_generator_01',
-  name: 'Produces Power',
+  name: 'Footstep Power',
   machine_id: 'm_footstep_power_generator',
   settings: settingDefinitions,
   compute: (settings) => {
@@ -30,7 +30,7 @@ export const footstep_power_generator_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_footstep_power_generator_01',
-      name: 'Produces Power',
+      name: 'Footstep Power',
       machine_id: 'm_footstep_power_generator',
       cycle_time: 1,
       power_use: -(stepsPerSecond * powerPerStep),

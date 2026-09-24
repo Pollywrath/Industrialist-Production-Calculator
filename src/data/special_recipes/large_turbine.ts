@@ -58,7 +58,7 @@ const getComputedValues = (settings: Record<string, unknown>) => {
 
 export const large_turbine_01: SpecialRecipe = {
   id: 'r_large_turbine_01',
-  name: 'Makes Power. Makes Water',
+  name: 'Steam Power + Water',
   machine_id: 'm_large_turbine',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -67,7 +67,7 @@ export const large_turbine_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_large_turbine_01',
-      name: 'Makes Power. Makes Water',
+      name: 'Steam Power + Water',
       machine_id: 'm_large_turbine',
       cycle_time: 1,
       power_use: -actualPowerOutput,

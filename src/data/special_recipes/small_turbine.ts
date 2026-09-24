@@ -58,7 +58,7 @@ const getComputedValues = (settings: Record<string, unknown>) => {
 
 export const small_turbine_01: SpecialRecipe = {
   id: 'r_small_turbine_01',
-  name: 'Makes Power. Makes Water',
+  name: 'Steam Power + Water',
   machine_id: 'm_small_turbine',
   description:
     'Converts a steam into power and water. Uses 1/5 of the Steam of Large Turbine but is 25% more efficient',
@@ -69,7 +69,7 @@ export const small_turbine_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_small_turbine_01',
-      name: 'Makes Power. Makes Water',
+      name: 'Steam Power + Water',
       machine_id: 'm_small_turbine',
       cycle_time: 1,
       power_use: -actualPowerOutput,

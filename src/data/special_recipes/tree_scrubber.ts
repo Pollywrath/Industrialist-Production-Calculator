@@ -29,7 +29,7 @@ const calculatePollution = (globalPollution: number): number => {
 
 export const tree_scrubber_01: SpecialRecipe = {
   id: 'r_tree_scrubber_01',
-  name: 'Makes Residue',
+  name: 'Pollution Scrubbing',
   machine_id: 'm_tree_scrubber',
   settings: {},
   compute: (_settings, globalSettings) => {
@@ -39,7 +39,7 @@ export const tree_scrubber_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_tree_scrubber_01',
-      name: 'Makes Residue',
+      name: 'Pollution Scrubbing',
       machine_id: 'm_tree_scrubber',
       cycle_time: 1,
       power_use: 0,

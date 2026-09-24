@@ -14,7 +14,7 @@ const settingDefinitions = {
 
 export const hand_crank_mk2_01: SpecialRecipe = {
   id: 'r_hand_crank_mk2_01',
-  name: 'Produces Power',
+  name: 'Manual Power Generation ({crankers} Crankers)',
   machine_id: 'm_hand_crank_mk2',
   settings: settingDefinitions,
   compute: (settings) => {
@@ -23,7 +23,7 @@ export const hand_crank_mk2_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_hand_crank_mk2_01',
-      name: 'Produces Power',
+      name: `Manual Power Generation (${crankers} Crankers)`,
       machine_id: 'm_hand_crank_mk2',
       cycle_time: 1,
       power_use: powerUse,

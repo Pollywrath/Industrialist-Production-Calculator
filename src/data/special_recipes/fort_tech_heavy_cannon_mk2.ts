@@ -20,7 +20,7 @@ const minTemp = -273.15;
 
 export const fort_tech_heavy_cannon_mk2_01: SpecialRecipe = {
   id: 'r_fort_tech_heavy_cannon_mk2_01',
-  name: 'Cools Water',
+  name: 'Water Cooling',
   machine_id: 'm_fort_tech_heavy_cannon_mk2',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -30,7 +30,7 @@ export const fort_tech_heavy_cannon_mk2_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_fort_tech_heavy_cannon_mk2_01',
-      name: 'Cools Water',
+      name: 'Water Cooling',
       machine_id: 'm_fort_tech_heavy_cannon_mk2',
       cycle_time: 1,
       power_use: 0,
@@ -52,14 +52,14 @@ export const fort_tech_heavy_cannon_mk2_01: SpecialRecipe = {
 
 export const fort_tech_heavy_cannon_mk2_02: SpecialRecipe = {
   id: 'r_fort_tech_heavy_cannon_mk2_02',
-  name: 'Cools Water',
+  name: 'Cannon Pollution Control',
   machine_id: 'm_fort_tech_heavy_cannon_mk2',
   settings: settingDefinitions,
   inputTemperatureSettings,
   compute: () => {
     const recipe: Recipe = {
       id: 'r_fort_tech_heavy_cannon_mk2_02',
-      name: 'Cools Water',
+      name: 'Cannon Pollution Control',
       machine_id: 'm_fort_tech_heavy_cannon_mk2',
       cycle_time: 1,
       power_use: 0,

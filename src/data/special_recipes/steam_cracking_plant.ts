@@ -24,7 +24,7 @@ const inputTemperatureSettings = {
 
 export const steam_cracking_plant_01: SpecialRecipe = {
   id: 'r_steam_cracking_plant_01',
-  name: 'Makes Paraxylene, Ethylene',
+  name: 'Crude Oil Cracking',
   machine_id: 'm_steam_cracking_plant',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -34,7 +34,7 @@ export const steam_cracking_plant_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_steam_cracking_plant_01',
-      name: 'Makes Paraxylene, Ethylene',
+      name: 'Crude Oil Cracking',
       machine_id: 'm_steam_cracking_plant',
       cycle_time: cycleTime,
       power_use: 60000,
@@ -56,7 +56,7 @@ export const steam_cracking_plant_01: SpecialRecipe = {
 
 export const steam_cracking_plant_02: SpecialRecipe = {
   id: 'r_steam_cracking_plant_02',
-  name: 'Makes Crude Diesel, Residue',
+  name: 'Light Oil Cracking',
   machine_id: 'm_steam_cracking_plant',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -66,7 +66,7 @@ export const steam_cracking_plant_02: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_steam_cracking_plant_02',
-      name: 'Makes Crude Diesel, Residue',
+      name: 'Light Oil Cracking',
       machine_id: 'm_steam_cracking_plant',
       cycle_time: cycleTime,
       power_use: 60000,
@@ -88,7 +88,7 @@ export const steam_cracking_plant_02: SpecialRecipe = {
 
 export const steam_cracking_plant_03: SpecialRecipe = {
   id: 'r_steam_cracking_plant_03',
-  name: 'Makes Light Oil, Residue',
+  name: 'Heavy Oil Cracking (Steam)',
   machine_id: 'm_steam_cracking_plant',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -98,7 +98,7 @@ export const steam_cracking_plant_03: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_steam_cracking_plant_03',
-      name: 'Makes Light Oil, Residue',
+      name: 'Heavy Oil Cracking (Steam)',
       machine_id: 'm_steam_cracking_plant',
       cycle_time: cycleTime,
       power_use: 60000,
@@ -120,13 +120,13 @@ export const steam_cracking_plant_03: SpecialRecipe = {
 
 export const steam_cracking_plant_04: SpecialRecipe = {
   id: 'r_steam_cracking_plant_04',
-  name: 'Makes Naphtha, Residue',
+  name: 'Heavy Oil Cracking (Hydrogen)',
   machine_id: 'm_steam_cracking_plant',
   settings: {},
   compute: () => {
     const recipe: Recipe = {
       id: 'r_steam_cracking_plant_04',
-      name: 'Makes Naphtha, Residue',
+      name: 'Heavy Oil Cracking (Hydrogen)',
       machine_id: 'm_steam_cracking_plant',
       cycle_time: 3,
       power_use: 60000,
@@ -147,13 +147,13 @@ export const steam_cracking_plant_04: SpecialRecipe = {
 
 export const steam_cracking_plant_05: SpecialRecipe = {
   id: 'r_steam_cracking_plant_05',
-  name: 'Makes Light Oil, Residue',
+  name: 'Naphtha Cracking (Hydrogen)',
   machine_id: 'm_steam_cracking_plant',
   settings: {},
   compute: () => {
     const recipe: Recipe = {
       id: 'r_steam_cracking_plant_05',
-      name: 'Makes Light Oil, Residue',
+      name: 'Naphtha Cracking (Hydrogen)',
       machine_id: 'm_steam_cracking_plant',
       cycle_time: 3,
       power_use: 60000,

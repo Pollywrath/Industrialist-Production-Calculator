@@ -22,7 +22,7 @@ const getMultiplier = (settings: Record<string, unknown>) => {
 
 export const m_industrial_drill_01: SpecialRecipe = {
   id: 'r_industrial_drill_01',
-  name: 'Extract Raw Iron',
+  name: 'Raw Iron Extraction',
   machine_id: 'm_industrial_drill',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -31,7 +31,7 @@ export const m_industrial_drill_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_industrial_drill_01',
-      name: 'Extract Raw Iron',
+      name: 'Raw Iron Extraction',
       machine_id: 'm_industrial_drill',
       cycle_time: 8,
       power_use: 0,
@@ -47,7 +47,7 @@ export const m_industrial_drill_01: SpecialRecipe = {
 
 export const m_industrial_drill_02: SpecialRecipe = {
   id: 'r_industrial_drill_02',
-  name: 'Extract Raw Copper',
+  name: 'Raw Copper Extraction',
   machine_id: 'm_industrial_drill',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -56,7 +56,7 @@ export const m_industrial_drill_02: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_industrial_drill_02',
-      name: 'Extract Raw Copper',
+      name: 'Raw Copper Extraction',
       machine_id: 'm_industrial_drill',
       cycle_time: 8,
       power_use: 0,
@@ -72,7 +72,7 @@ export const m_industrial_drill_02: SpecialRecipe = {
 
 export const m_industrial_drill_03: SpecialRecipe = {
   id: 'r_industrial_drill_03',
-  name: 'Extract Bauxite Residue',
+  name: 'Bauxite Residue Extraction',
   machine_id: 'm_industrial_drill',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -81,7 +81,7 @@ export const m_industrial_drill_03: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_industrial_drill_03',
-      name: 'Extract Bauxite Residue',
+      name: 'Bauxite Residue Extraction',
       machine_id: 'm_industrial_drill',
       cycle_time: 8,
       power_use: 0,

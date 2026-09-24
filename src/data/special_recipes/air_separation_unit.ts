@@ -4,7 +4,7 @@ import { clamp } from '../../utils/precision';
 
 export const air_separation_unit: SpecialRecipe = {
   id: 'r_air_separation_unit_01',
-  name: 'Standard Separation',
+  name: 'Air Separation',
   machine_id: 'm_air_separation_unit',
   settings: {},
   compute: (_settings, globalSettings) => {
@@ -13,7 +13,7 @@ export const air_separation_unit: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_air_separation_unit_01',
-      name: 'Standard Separation',
+      name: 'Air Separation',
       machine_id: 'm_air_separation_unit',
       cycle_time: 1,
       power_use: 20000000,

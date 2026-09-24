@@ -16,7 +16,7 @@ const inputTemperatureSettings = {
 
 export const cooling_tower_01: SpecialRecipe = {
   id: 'r_cooling_tower_01',
-  name: 'Cools Distilled Water',
+  name: 'Distilled Water Cooling',
   machine_id: 'm_cooling_tower',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -27,7 +27,7 @@ export const cooling_tower_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_cooling_tower_01',
-      name: 'Cools Distilled Water',
+      name: 'Distilled Water Cooling',
       machine_id: 'm_cooling_tower',
       cycle_time: 1,
       power_use: 0,

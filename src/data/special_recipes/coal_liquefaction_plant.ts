@@ -23,7 +23,7 @@ const inputTemperatureSettings = {
 
 export const coal_liquefaction_01: SpecialRecipe = {
   id: 'r_coal_liquefaction_plant_01',
-  name: 'Makes Residue, Heavy Oil, Light Oil',
+  name: 'Coal Liquefaction',
   machine_id: 'm_coal_liquefaction_plant',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -33,7 +33,7 @@ export const coal_liquefaction_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_coal_liquefaction_plant_01',
-      name: 'Makes Residue, Heavy Oil, Light Oil',
+      name: 'Coal Liquefaction',
       machine_id: 'm_coal_liquefaction_plant',
       cycle_time: cycleTime,
       power_use: 1000000,

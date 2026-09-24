@@ -44,7 +44,7 @@ export function computeChemicalPlantMultipliers(speedFactor: number, efficiencyF
 const baseRecipes: Recipe[] = [
   {
     id: 'r_chemical_plant_01',
-    name: 'Makes Ammonia',
+    name: 'Ammonia Production',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
     power_use: 100000,
@@ -58,7 +58,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_02',
-    name: 'Makes Hardened Plastic Pellets',
+    name: 'Hardened Plastic Production',
     machine_id: 'm_chemical_plant',
     cycle_time: 5,
     power_use: 1000000,
@@ -72,7 +72,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_03',
-    name: 'Makes Hydrogen',
+    name: 'Hydrogen Production',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
     power_use: 500000,
@@ -86,7 +86,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_04',
-    name: 'Makes Unenriched UF6 Gas',
+    name: 'Unenriched UF6 Production',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
     power_use: 500000,
@@ -100,7 +100,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_05',
-    name: 'Makes Residue, Reprocessed Uranium, Plutonium Oxide Pellets',
+    name: 'Nuclear Fuel Reprocessing',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
     power_use: 500000,
@@ -120,7 +120,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_06',
-    name: 'Makes Hydrofluoric Acid, Residue',
+    name: 'Hydrofluoric Acid Production',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
     power_use: 100000,
@@ -137,7 +137,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_07',
-    name: 'Makes Slightly Enriched UF6 Gas',
+    name: 'Slightly Enriched UF6 Production',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
     power_use: 100000,
@@ -151,7 +151,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_08',
-    name: 'Makes Boric Acid, Residue',
+    name: 'Boric Acid Production (HCl)',
     machine_id: 'm_chemical_plant',
     cycle_time: 10,
     power_use: 250000,
@@ -168,7 +168,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_09',
-    name: 'Makes Boric Acid, Residue',
+    name: 'Boric Acid Production (Sulfuric)',
     machine_id: 'm_chemical_plant',
     cycle_time: 10,
     power_use: 250000,
@@ -185,7 +185,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_10',
-    name: 'Makes Phosphorus Oxychloride, Residue',
+    name: 'Phosphorus Oxychloride Production',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
     power_use: 1000000,
@@ -202,7 +202,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_11',
-    name: 'Makes Tributyl Phosphate, Hydrochloric Acid',
+    name: 'Tributyl Phosphate Production',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
     power_use: 1100000,
@@ -220,7 +220,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_12',
-    name: 'Makes Enriched UO2 Pellets, Residue',
+    name: 'Enriched UO2 Production (TBP)',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
     power_use: 2000000,
@@ -238,7 +238,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_13',
-    name: 'Makes Enriched UO2 Pellets, Residue',
+    name: 'Enriched UO2 Production (Hydrogen)',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
     power_use: 2500000,
@@ -256,7 +256,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_14',
-    name: 'Makes Sulfuric Acid, Residue',
+    name: 'Sulfuric Acid Production',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
     power_use: 1500000,
@@ -274,7 +274,7 @@ const baseRecipes: Recipe[] = [
   },
   {
     id: 'r_chemical_plant_15',
-    name: 'Makes Hydrochloric Acid',
+    name: 'Hydrochloric Acid Production',
     machine_id: 'm_chemical_plant',
     cycle_time: 1,
     power_use: 1500000,

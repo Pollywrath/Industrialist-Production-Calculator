@@ -50,7 +50,7 @@ const commonPotentialInputs = Object.values(FUEL_MAP).map((f) => f.product_id);
 
 export const industrial_firebox_01: SpecialRecipe = {
   id: 'r_industrial_firebox_01',
-  name: 'Makes Sulfur Dioxide',
+  name: 'Sulfur Dioxide ({fuel})',
   machine_id: 'm_industrial_firebox',
   settings: settingDefinitions,
   potentialInputs: commonPotentialInputs,
@@ -62,7 +62,7 @@ export const industrial_firebox_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_industrial_firebox_01',
-      name: 'Makes Sulfur Dioxide',
+      name: `Sulfur Dioxide (${(settings.fuel_type as string) ?? 'Coal'})`,
       machine_id: 'm_industrial_firebox',
       cycle_time: cycleTime,
       power_use: 0,
@@ -81,7 +81,7 @@ export const industrial_firebox_01: SpecialRecipe = {
 
 export const industrial_firebox_02: SpecialRecipe = {
   id: 'r_industrial_firebox_02',
-  name: 'Makes Boron',
+  name: 'Boron Production ({fuel})',
   machine_id: 'm_industrial_firebox',
   settings: settingDefinitions,
   potentialInputs: commonPotentialInputs,
@@ -93,7 +93,7 @@ export const industrial_firebox_02: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_industrial_firebox_02',
-      name: 'Makes Boron',
+      name: `Boron Production (${(settings.fuel_type as string) ?? 'Coal'})`,
       machine_id: 'm_industrial_firebox',
       cycle_time: cycleTime,
       power_use: 0,
@@ -112,7 +112,7 @@ export const industrial_firebox_02: SpecialRecipe = {
 
 export const industrial_firebox_03: SpecialRecipe = {
   id: 'r_industrial_firebox_03',
-  name: 'Heats Water',
+  name: 'Water Heating ({fuel})',
   machine_id: 'm_industrial_firebox',
   settings: settingDefinitions,
   potentialInputs: commonPotentialInputs,
@@ -124,7 +124,7 @@ export const industrial_firebox_03: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_industrial_firebox_03',
-      name: 'Heats Water',
+      name: `Water Heating (${(settings.fuel_type as string) ?? 'Coal'})`,
       machine_id: 'm_industrial_firebox',
       cycle_time: cycleTime,
       power_use: 0,
@@ -143,7 +143,7 @@ export const industrial_firebox_03: SpecialRecipe = {
 
 export const industrial_firebox_04: SpecialRecipe = {
   id: 'r_industrial_firebox_04',
-  name: 'Heats Filtered Water',
+  name: 'Filtered Water Heating ({fuel})',
   machine_id: 'm_industrial_firebox',
   settings: settingDefinitions,
   potentialInputs: commonPotentialInputs,
@@ -155,7 +155,7 @@ export const industrial_firebox_04: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_industrial_firebox_04',
-      name: 'Heats Filtered Water',
+      name: `Filtered Water Heating (${(settings.fuel_type as string) ?? 'Coal'})`,
       machine_id: 'm_industrial_firebox',
       cycle_time: cycleTime,
       power_use: 0,
@@ -174,7 +174,7 @@ export const industrial_firebox_04: SpecialRecipe = {
 
 export const industrial_firebox_05: SpecialRecipe = {
   id: 'r_industrial_firebox_05',
-  name: 'Heats Distilled Water',
+  name: 'Distilled Water Heating ({fuel})',
   machine_id: 'm_industrial_firebox',
   settings: settingDefinitions,
   potentialInputs: commonPotentialInputs,
@@ -186,7 +186,7 @@ export const industrial_firebox_05: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_industrial_firebox_05',
-      name: 'Heats Distilled Water',
+      name: `Distilled Water Heating (${(settings.fuel_type as string) ?? 'Coal'})`,
       machine_id: 'm_industrial_firebox',
       cycle_time: cycleTime,
       power_use: 0,
@@ -207,7 +207,7 @@ export const industrial_firebox_05: SpecialRecipe = {
 
 export const industrial_firebox_06: SpecialRecipe = {
   id: 'r_industrial_firebox_06',
-  name: 'Makes Water, Table Salt',
+  name: 'Salt Solution Separation ({fuel})',
   machine_id: 'm_industrial_firebox',
   settings: settingDefinitions,
   potentialInputs: commonPotentialInputs,
@@ -219,7 +219,7 @@ export const industrial_firebox_06: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_industrial_firebox_06',
-      name: 'Makes Water, Table Salt',
+      name: `Salt Solution Separation (${(settings.fuel_type as string) ?? 'Coal'})`,
       machine_id: 'm_industrial_firebox',
       cycle_time: cycleTime,
       power_use: 0,
@@ -241,13 +241,13 @@ export const industrial_firebox_06: SpecialRecipe = {
 
 export const industrial_firebox_07: SpecialRecipe = {
   id: 'r_industrial_firebox_07',
-  name: 'Makes Sodium Carbonate',
+  name: 'Sodium Carbonate Production',
   machine_id: 'm_industrial_firebox',
   settings: {},
   compute: () => {
     const recipe: Recipe = {
       id: 'r_industrial_firebox_07',
-      name: 'Makes Sodium Carbonate',
+      name: 'Sodium Carbonate Production',
       machine_id: 'm_industrial_firebox',
       cycle_time: 1,
       power_use: 0,

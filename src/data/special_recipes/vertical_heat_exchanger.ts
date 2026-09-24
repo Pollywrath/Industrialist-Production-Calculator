@@ -39,7 +39,7 @@ export function calculateSinkSteadyState(inputs: SteadyStateInputs): SteadyState
 
 export const vertical_heat_exchanger_distilled_water: SpecialRecipe = {
   id: 'r_vertical_heat_exchanger_01',
-  name: 'Distilled Water Coolant',
+  name: 'Steam Generation (Distilled Coolant)',
   machine_id: 'm_vertical_heat_exchanger',
   description:
     'Feed distilled water and distilled water into the vertical heat exchanger. Coolant heats the water to produce high pressure steam.',
@@ -88,7 +88,7 @@ export const vertical_heat_exchanger_distilled_water: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_vertical_heat_exchanger_01',
-      name: 'Distilled Water Coolant',
+      name: 'Steam Generation (Distilled Coolant)',
       machine_id: 'm_vertical_heat_exchanger',
       cycle_time: 1,
       power_use: 0,
@@ -122,7 +122,7 @@ export const vertical_heat_exchanger_distilled_water: SpecialRecipe = {
 
 export const vertical_heat_exchanger_contaminated_water: SpecialRecipe = {
   id: 'r_vertical_heat_exchanger_02',
-  name: 'Contaminated Water Coolant',
+  name: 'Steam Generation (Contaminated Coolant)',
   machine_id: 'm_vertical_heat_exchanger',
   description:
     'Feed distilled water and contaminated water into the vertical heat exchanger. Coolant heats the water to produce high pressure steam.',
@@ -171,7 +171,7 @@ export const vertical_heat_exchanger_contaminated_water: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_vertical_heat_exchanger_02',
-      name: 'Contaminated Water Coolant',
+      name: 'Steam Generation (Contaminated Coolant)',
       machine_id: 'm_vertical_heat_exchanger',
       cycle_time: 1,
       power_use: 0,

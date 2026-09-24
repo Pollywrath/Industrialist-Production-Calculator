@@ -33,7 +33,7 @@ const getPowerType = (settings: Record<string, unknown>) => {
 
 export const electric_water_heater_01: SpecialRecipe = {
   id: 'r_electric_water_heater_01',
-  name: 'Heats Water',
+  name: 'Water Heating to {target}°C',
   machine_id: 'm_electric_water_heater',
   settings: settingDefinitions,
   compute: (settings) => {
@@ -43,7 +43,7 @@ export const electric_water_heater_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_electric_water_heater_01',
-      name: 'Heats Water',
+      name: `Water Heating to ${target}°C`,
       machine_id: 'm_electric_water_heater',
       cycle_time: 1,
       power_use: powerUse,
@@ -59,7 +59,7 @@ export const electric_water_heater_01: SpecialRecipe = {
 
 export const electric_water_heater_02: SpecialRecipe = {
   id: 'r_electric_water_heater_02',
-  name: 'Heats Filtered Water',
+  name: 'Filtered Water Heating to {target}°C',
   machine_id: 'm_electric_water_heater',
   settings: settingDefinitions,
   compute: (settings) => {
@@ -69,7 +69,7 @@ export const electric_water_heater_02: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_electric_water_heater_02',
-      name: 'Heats Filtered Water',
+      name: `Filtered Water Heating to ${target}°C`,
       machine_id: 'm_electric_water_heater',
       cycle_time: 1,
       power_use: powerUse,
@@ -85,7 +85,7 @@ export const electric_water_heater_02: SpecialRecipe = {
 
 export const electric_water_heater_03: SpecialRecipe = {
   id: 'r_electric_water_heater_03',
-  name: 'Heats Distilled Water',
+  name: 'Distilled Water Heating to {target}°C',
   machine_id: 'm_electric_water_heater',
   settings: settingDefinitions,
   compute: (settings) => {
@@ -95,7 +95,7 @@ export const electric_water_heater_03: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_electric_water_heater_03',
-      name: 'Heats Distilled Water',
+      name: `Distilled Water Heating to ${target}°C`,
       machine_id: 'm_electric_water_heater',
       cycle_time: 1,
       power_use: powerUse * 4,

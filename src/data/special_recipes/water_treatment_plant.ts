@@ -24,7 +24,7 @@ const calculateOutputTemperature = (tempC: number): number => {
 
 export const water_treatment_plant_01: SpecialRecipe = {
   id: 'r_water_treatment_plant_01',
-  name: 'Makes Distilled Water',
+  name: 'Water Distillation',
   machine_id: 'm_water_treatment_plant',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -35,7 +35,7 @@ export const water_treatment_plant_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_water_treatment_plant_01',
-      name: 'Makes Distilled Water',
+      name: 'Water Distillation',
       machine_id: 'm_water_treatment_plant',
       cycle_time: 1,
       power_use: 2000000,
@@ -60,7 +60,7 @@ export const water_treatment_plant_01: SpecialRecipe = {
 
 export const water_treatment_plant_02: SpecialRecipe = {
   id: 'r_water_treatment_plant_02',
-  name: 'Makes Distilled Water',
+  name: 'Condensate Distillation',
   machine_id: 'm_water_treatment_plant',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -71,7 +71,7 @@ export const water_treatment_plant_02: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_water_treatment_plant_02',
-      name: 'Makes Distilled Water',
+      name: 'Condensate Distillation',
       machine_id: 'm_water_treatment_plant',
       cycle_time: 1,
       power_use: 2000000,
@@ -96,7 +96,7 @@ export const water_treatment_plant_02: SpecialRecipe = {
 
 export const water_treatment_plant_03: SpecialRecipe = {
   id: 'r_water_treatment_plant_03',
-  name: 'Makes Distilled Water',
+  name: 'Contaminated Water Distillation',
   machine_id: 'm_water_treatment_plant',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -107,7 +107,7 @@ export const water_treatment_plant_03: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_water_treatment_plant_03',
-      name: 'Makes Distilled Water',
+      name: 'Contaminated Water Distillation',
       machine_id: 'm_water_treatment_plant',
       cycle_time: 1,
       power_use: 2000000,

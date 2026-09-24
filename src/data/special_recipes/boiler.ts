@@ -122,7 +122,7 @@ function getMinimumCoolantTemperature(coolantId: string, waterTemp: number): num
 
 export const boiler_standard: SpecialRecipe = {
   id: 'r_boiler_01',
-  name: 'Standard',
+  name: 'Steam Generation',
   machine_id: 'm_boiler',
   description: 'Feed water and coolant into the boiler. Coolant heats the water to produce steam.',
   settings: {
@@ -219,7 +219,7 @@ export const boiler_standard: SpecialRecipe = {
 
       const recipe: Recipe = {
         id: 'r_boiler_01',
-        name: 'Standard',
+        name: 'Steam Generation',
         machine_id: 'm_boiler',
         cycle_time: 1,
         power_use: 0,
@@ -260,7 +260,7 @@ export const boiler_standard: SpecialRecipe = {
 
       const recipe: Recipe = {
         id: 'r_boiler_01',
-        name: 'Standard',
+        name: 'Steam w/o Coolant',
         machine_id: 'm_boiler',
         cycle_time: 1,
         power_use: 0,

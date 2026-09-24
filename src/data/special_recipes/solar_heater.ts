@@ -16,7 +16,7 @@ const inputTemperatureSettings = {
 
 export const solar_heater_01: SpecialRecipe = {
   id: 'r_solar_heater_01',
-  name: 'Heats Water',
+  name: 'Solar Water Heating',
   machine_id: 'm_solar_heater',
   settings: settingDefinitions,
   inputTemperatureSettings,
@@ -26,7 +26,7 @@ export const solar_heater_01: SpecialRecipe = {
 
     const recipe: Recipe = {
       id: 'r_solar_heater_01',
-      name: 'Heats Water',
+      name: 'Solar Water Heating',
       machine_id: 'm_solar_heater',
       cycle_time: 1,
       power_use: 0,

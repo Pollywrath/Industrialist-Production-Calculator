@@ -1,7 +1,7 @@
 [
   {
     "id": "r_large_pumpjack_01",
-    "name": "Extracts Crude Oil",
+    "name": "Crude Oil Extraction",
     "machine_id": "m_large_pumpjack",
     "cycle_time": 1,
     "power_use": 30000,
@@ -18,7 +18,7 @@
   },
   {
     "id": "r_large_pumpjack_02",
-    "name": "Extracts Crude Oil",
+    "name": "Crude Oil Extraction w/ HCl",
     "machine_id": "m_large_pumpjack",
     "cycle_time": 1,
     "power_use": 15000,
@@ -40,7 +40,7 @@
   },
   {
     "id": "r_large_pumpjack_03",
-    "name": "Extracts Crude Oil",
+    "name": "Crude Oil Extraction w/ Sulfuric",
     "machine_id": "m_large_pumpjack",
     "cycle_time": 1,
     "power_use": 30000,
@@ -62,7 +62,7 @@
   },
   {
     "id": "r_large_pumpjack_04",
-    "name": "Extracts Crude Oil",
+    "name": "Crude Oil Extraction w/ Acetic",
     "machine_id": "m_large_pumpjack",
     "cycle_time": 1,
     "power_use": 30000,
@@ -84,7 +84,7 @@
   },
   {
     "id": "r_lithium_brine_extractor_01",
-    "name": "Extracts Lithium Brine, Residue",
+    "name": "Lithium Brine Production",
     "machine_id": "m_lithium_brine_extractor",
     "cycle_time": 120,
     "power_use": 100000,
@@ -111,7 +111,7 @@
   },
   {
     "id": "r_natural_gas_well_01",
-    "name": "Extracts Raw Gas",
+    "name": "Raw Gas Extraction",
     "machine_id": "m_natural_gas_well",
     "cycle_time": 1,
     "power_use": 45000,
@@ -128,7 +128,7 @@
   },
   {
     "id": "r_oil_fracking_tower_01",
-    "name": "Extracts Fracking Oil",
+    "name": "Fracking Oil Extraction",
     "machine_id": "m_oil_fracking_tower",
     "cycle_time": 8,
     "power_use": 62500,
@@ -163,7 +163,7 @@
   },
   {
     "id": "r_oil_fracking_tower_02",
-    "name": "Extracts Fracking Oil",
+    "name": "Fracking Oil Extraction",
     "machine_id": "m_oil_fracking_tower",
     "cycle_time": 8,
     "power_use": 62500,
@@ -198,7 +198,7 @@
   },
   {
     "id": "r_oil_rig_01",
-    "name": "Extracts Crude Oil",
+    "name": "Crude Oil Extraction",
     "machine_id": "m_oil_rig",
     "cycle_time": 1,
     "power_use": 3000,
@@ -215,7 +215,7 @@
   },
   {
     "id": "r_water_pump_01",
-    "name": "Extracts Water",
+    "name": "Water Extraction",
     "machine_id": "m_water_pump",
     "cycle_time": 1,
     "power_use": 600,
@@ -232,7 +232,7 @@
   },
   {
     "id": "r_water_pump2_01",
-    "name": "Extracts Water",
+    "name": "Water Extraction",
     "machine_id": "m_water_pump2",
     "cycle_time": 6,
     "power_use": 700,
@@ -249,7 +249,7 @@
   },
   {
     "id": "r_hand_pump_01",
-    "name": "Extracts Water",
+    "name": "Water Extraction",
     "machine_id": "m_hand_pump",
     "cycle_time": 3,
     "power_use": 0,
@@ -266,7 +266,7 @@
   },
   {
     "id": "r_advanced_coal_drill_01",
-    "name": "Extracts Coal",
+    "name": "Coal Extraction",
     "machine_id": "m_advanced_coal_drill",
     "cycle_time": 12,
     "power_use": 9000,
@@ -283,7 +283,7 @@
   },
   {
     "id": "r_advanced_copper_drill_01",
-    "name": "Extracts Raw Copper",
+    "name": "Raw Copper Extraction",
     "machine_id": "m_advanced_copper_drill",
     "cycle_time": 12,
     "power_use": 6000,
@@ -300,7 +300,7 @@
   },
   {
     "id": "r_coal_drill_01",
-    "name": "Extracts Coal",
+    "name": "Coal Extraction",
     "machine_id": "m_coal_drill",
     "cycle_time": 4,
     "power_use": 120,
@@ -317,7 +317,7 @@
   },
   {
     "id": "r_copper_drill_01",
-    "name": "Extracts Raw Copper",
+    "name": "Raw Copper Extraction",
     "machine_id": "m_copper_drill",
     "cycle_time": 9,
     "power_use": 360,
@@ -334,7 +334,7 @@
   },
   {
     "id": "r_iron_drill_01",
-    "name": "Extracts Raw Iron",
+    "name": "Raw Iron Extraction",
     "machine_id": "m_iron_drill",
     "cycle_time": 15,
     "power_use": 1200,
@@ -351,7 +351,7 @@
   },
   {
     "id": "r_lithium_ore_drill_01",
-    "name": "Extracts Lithium Ore",
+    "name": "Lithium Ore Extraction",
     "machine_id": "m_lithium_ore_drill",
     "cycle_time": 10,
     "power_use": 1000000,
@@ -373,7 +373,7 @@
   },
   {
     "id": "r_quarry_01",
-    "name": "Extracts Soil, Clay",
+    "name": "Soil/Clay Extraction",
     "machine_id": "m_quarry",
     "cycle_time": 20,
     "power_use": 50000,
@@ -397,7 +397,7 @@
   },
   {
     "id": "r_quarry_02",
-    "name": "Extracts Sand",
+    "name": "Sand Extraction",
     "machine_id": "m_quarry",
     "cycle_time": 20,
     "power_use": 50000,
@@ -415,7 +415,7 @@
   },
   {
     "id": "r_quarry_03",
-    "name": "Extracts Limestone",
+    "name": "Limestone Extraction",
     "machine_id": "m_quarry",
     "cycle_time": 20,
     "power_use": 50000,
@@ -433,7 +433,7 @@
   },
   {
     "id": "r_quarry_04",
-    "name": "Extracts Soil, Clay",
+    "name": "Soil/Clay Extraction w/ Water",
     "machine_id": "m_quarry",
     "cycle_time": 20,
     "power_use": 50000,
@@ -462,7 +462,7 @@
   },
   {
     "id": "r_quarry_05",
-    "name": "Extracts Sand",
+    "name": "Sand Extraction w/ Water",
     "machine_id": "m_quarry",
     "cycle_time": 20,
     "power_use": 50000,
@@ -485,7 +485,7 @@
   },
   {
     "id": "r_quarry_06",
-    "name": "Extracts Limestone",
+    "name": "Limestone Extraction w/ Water",
     "machine_id": "m_quarry",
     "cycle_time": 20,
     "power_use": 50000,
@@ -508,7 +508,7 @@
   },
   {
     "id": "r_advanced_assembler_01",
-    "name": "Makes Chair",
+    "name": "Chair Assembly",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -534,7 +534,7 @@
   },
   {
     "id": "r_advanced_assembler_02",
-    "name": "Makes Tire",
+    "name": "Tire Assembly",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -560,7 +560,7 @@
   },
   {
     "id": "r_advanced_assembler_03",
-    "name": "Makes Tire Rim",
+    "name": "Tire Rim Assembly",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -586,7 +586,7 @@
   },
   {
     "id": "r_advanced_assembler_04",
-    "name": "Makes Insulated Wire",
+    "name": "Insulated Wire Assembly",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 1,
     "power_use": 1000000,
@@ -612,7 +612,7 @@
   },
   {
     "id": "r_advanced_assembler_05",
-    "name": "Makes Crankshaft",
+    "name": "Crankshaft Assembly",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -638,7 +638,7 @@
   },
   {
     "id": "r_advanced_assembler_06",
-    "name": "Makes Gearbox",
+    "name": "Gearbox Assembly w/ Crankshaft",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -664,7 +664,7 @@
   },
   {
     "id": "r_advanced_assembler_07",
-    "name": "Makes Gearbox",
+    "name": "Gearbox Assembly w/ Steel Parts",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 10,
     "power_use": 100000,
@@ -694,7 +694,7 @@
   },
   {
     "id": "r_advanced_assembler_08",
-    "name": "Makes Gearbox",
+    "name": "Hardened Gearbox Assembly",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -724,7 +724,7 @@
   },
   {
     "id": "r_advanced_assembler_09",
-    "name": "Makes Toy",
+    "name": "Toy Assembly",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -750,7 +750,7 @@
   },
   {
     "id": "r_advanced_assembler_10",
-    "name": "Makes Uncharged Lithium-Ion Battery",
+    "name": "Li-Ion Battery Assembly (Iron)",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 10,
     "power_use": 100000,
@@ -780,7 +780,7 @@
   },
   {
     "id": "r_advanced_assembler_11",
-    "name": "Makes Uncharged Lithium-Ion Battery",
+    "name": "Li-Ion Battery Assembly (Zinc)",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 10,
     "power_use": 100000,
@@ -810,7 +810,7 @@
   },
   {
     "id": "r_advanced_assembler_12",
-    "name": "Makes Lithium Battery Pack",
+    "name": "Lithium Battery Pack Assembly",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 10,
     "power_use": 100000,
@@ -840,7 +840,7 @@
   },
   {
     "id": "r_advanced_assembler_13",
-    "name": "Makes Filter",
+    "name": "Filter Assembly w/ Sand",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -874,7 +874,7 @@
   },
   {
     "id": "r_advanced_assembler_14",
-    "name": "Makes Filter",
+    "name": "Filter Assembly w/ Gravel",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -908,7 +908,7 @@
   },
   {
     "id": "r_advanced_assembler_15",
-    "name": "Makes Electromagnet",
+    "name": "Electromagnet Assembly",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -934,7 +934,7 @@
   },
   {
     "id": "r_advanced_assembler_16",
-    "name": "Makes Dynamite",
+    "name": "Dynamite Assembly",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -960,7 +960,7 @@
   },
   {
     "id": "r_advanced_assembler_17",
-    "name": "Makes Electric Motor",
+    "name": "Electric Motor Assembly w/ FeAl",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -998,7 +998,7 @@
   },
   {
     "id": "r_advanced_assembler_18",
-    "name": "Makes Electric Motor",
+    "name": "Electric Motor Assembly",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 5,
     "power_use": 200000,
@@ -1032,7 +1032,7 @@
   },
   {
     "id": "r_advanced_assembler_19",
-    "name": "Makes Present Box",
+    "name": "Present Box Assembly",
     "machine_id": "m_advanced_assembler",
     "cycle_time": 8,
     "power_use": 125000,
@@ -1058,7 +1058,7 @@
   },
   {
     "id": "r_craft_assembler_01",
-    "name": "Makes Chair",
+    "name": "Chair Assembly",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
     "power_use": 4000,
@@ -1084,7 +1084,7 @@
   },
   {
     "id": "r_craft_assembler_02",
-    "name": "Makes Tire",
+    "name": "Tire Assembly",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
     "power_use": 4000,
@@ -1110,7 +1110,7 @@
   },
   {
     "id": "r_craft_assembler_03",
-    "name": "Makes Tire Rim",
+    "name": "Tire Rim Assembly",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
     "power_use": 4000,
@@ -1136,7 +1136,7 @@
   },
   {
     "id": "r_craft_assembler_04",
-    "name": "Makes Insulated Wire",
+    "name": "Insulated Wire Assembly",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
     "power_use": 4000,
@@ -1162,7 +1162,7 @@
   },
   {
     "id": "r_craft_assembler_05",
-    "name": "Makes Crankshaft",
+    "name": "Crankshaft Assembly",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
     "power_use": 4000,
@@ -1188,7 +1188,7 @@
   },
   {
     "id": "r_craft_assembler_06",
-    "name": "Makes Gearbox",
+    "name": "Gearbox Assembly",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
     "power_use": 4000,
@@ -1214,7 +1214,7 @@
   },
   {
     "id": "r_craft_assembler_07",
-    "name": "Makes Toy",
+    "name": "Toy Assembly",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
     "power_use": 4000,
@@ -1240,7 +1240,7 @@
   },
   {
     "id": "r_craft_assembler_08",
-    "name": "Makes Present Box",
+    "name": "Present Box Assembly",
     "machine_id": "m_craft_assembler",
     "cycle_time": 15,
     "power_use": 4000,
@@ -1266,7 +1266,7 @@
   },
   {
     "id": "r_precision_assembler_01",
-    "name": "Makes Logic Plate",
+    "name": "Logic Plate Assembly",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
     "power_use": 1000000,
@@ -1296,7 +1296,7 @@
   },
   {
     "id": "r_precision_assembler_02",
-    "name": "Makes Semiconductor",
+    "name": "Semiconductor Assembly",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
     "power_use": 1000000,
@@ -1322,7 +1322,7 @@
   },
   {
     "id": "r_precision_assembler_03",
-    "name": "Makes 8x Microchip",
+    "name": "8x Microchip Assembly",
     "machine_id": "m_precision_assembler",
     "cycle_time": 30,
     "power_use": 167000,
@@ -1356,7 +1356,7 @@
   },
   {
     "id": "r_precision_assembler_04",
-    "name": "Makes Graphite-Iron Electrode",
+    "name": "Graphite-Iron Electrode Assembly",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
     "power_use": 1000000,
@@ -1382,7 +1382,7 @@
   },
   {
     "id": "r_precision_assembler_05",
-    "name": "Makes Graphite-Zinc Electrode",
+    "name": "Graphite-Zinc Electrode Assembly",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
     "power_use": 1000000,
@@ -1408,7 +1408,7 @@
   },
   {
     "id": "r_precision_assembler_06",
-    "name": "Makes Standard Fuel Rod",
+    "name": "Standard Fuel Rod Assembly",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
     "power_use": 1000000,
@@ -1434,7 +1434,7 @@
   },
   {
     "id": "r_precision_assembler_07",
-    "name": "Makes Control Rod",
+    "name": "Control Rod Assembly",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
     "power_use": 1000000,
@@ -1460,7 +1460,7 @@
   },
   {
     "id": "r_precision_assembler_08",
-    "name": "Makes MOX Fuel Rod",
+    "name": "MOX Fuel Rod Assembly",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
     "power_use": 1000000,
@@ -1490,7 +1490,7 @@
   },
   {
     "id": "r_precision_assembler_09",
-    "name": "Makes Low Enrichment Fuel Rod",
+    "name": "Low Enrichment Fuel Rod Assembly",
     "machine_id": "m_precision_assembler",
     "cycle_time": 5,
     "power_use": 1000000,
@@ -1516,7 +1516,7 @@
   },
   {
     "id": "r_precision_assembler_10",
-    "name": "Makes Uncharged Lithium-Ion Battery",
+    "name": "Li-Ion Battery Assembly (Iron)",
     "machine_id": "m_precision_assembler",
     "cycle_time": 20,
     "power_use": 1000000,
@@ -1546,7 +1546,7 @@
   },
   {
     "id": "r_precision_assembler_11",
-    "name": "Makes Uncharged Lithium-Ion Battery",
+    "name": "Li-Ion Battery Assembly (Zinc)",
     "machine_id": "m_precision_assembler",
     "cycle_time": 20,
     "power_use": 1000000,
@@ -1576,7 +1576,7 @@
   },
   {
     "id": "r_blast_furnace_01",
-    "name": "Makes Steel Ingot",
+    "name": "Steel Smelting (Ingot/Coal)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1602,7 +1602,7 @@
   },
   {
     "id": "r_blast_furnace_02",
-    "name": "Makes Steel Ingot",
+    "name": "Steel Smelting (Mix/Coal)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1628,7 +1628,7 @@
   },
   {
     "id": "r_blast_furnace_03",
-    "name": "Makes Iron Mix",
+    "name": "Iron Mix Smelting (Powder/Coal)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1654,7 +1654,7 @@
   },
   {
     "id": "r_blast_furnace_04",
-    "name": "Makes Copper Mix",
+    "name": "Copper Mix Smelting (Powder/Coal)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1680,7 +1680,7 @@
   },
   {
     "id": "r_blast_furnace_05",
-    "name": "Makes Coke Fuel",
+    "name": "Coke Production (Coal)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1706,7 +1706,7 @@
   },
   {
     "id": "r_blast_furnace_06",
-    "name": "Makes Silicon",
+    "name": "Silicon Smelting (Coal)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1732,7 +1732,7 @@
   },
   {
     "id": "r_blast_furnace_07",
-    "name": "Makes Silicon",
+    "name": "Silicon Smelting (Coke)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1758,7 +1758,7 @@
   },
   {
     "id": "r_blast_furnace_08",
-    "name": "Makes Alumina",
+    "name": "Alumina Smelting",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1784,7 +1784,7 @@
   },
   {
     "id": "r_blast_furnace_09",
-    "name": "Makes Steel Ingot",
+    "name": "Steel Smelting (Ingot/Coke)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1810,7 +1810,7 @@
   },
   {
     "id": "r_blast_furnace_10",
-    "name": "Makes Steel Ingot",
+    "name": "Steel Smelting (Mix/Coke)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1836,7 +1836,7 @@
   },
   {
     "id": "r_blast_furnace_11",
-    "name": "Makes Iron Mix",
+    "name": "Iron Mix Smelting (Powder/Coke)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1862,7 +1862,7 @@
   },
   {
     "id": "r_blast_furnace_12",
-    "name": "Makes Copper Mix",
+    "name": "Copper Mix Smelting (Powder/Coke)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1888,7 +1888,7 @@
   },
   {
     "id": "r_blast_furnace_13",
-    "name": "Makes Iron Mix",
+    "name": "Iron Mix Smelting (Rock/Coke)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1914,7 +1914,7 @@
   },
   {
     "id": "r_blast_furnace_14",
-    "name": "Makes Iron Mix",
+    "name": "Iron Mix Smelting (Rock/Coal)",
     "machine_id": "m_blast_furnace",
     "cycle_time": 5,
     "power_use": 15000,
@@ -1940,7 +1940,7 @@
   },
   {
     "id": "r_blast_furnace_MK2_01",
-    "name": "Makes Steel Ingot",
+    "name": "Steel Smelting (Ingot/Coal)",
     "machine_id": "m_blast_furnace_mk2",
     "cycle_time": 20,
     "power_use": 1250000,
@@ -1966,7 +1966,7 @@
   },
   {
     "id": "r_blast_furnace_MK2_02",
-    "name": "Makes Coke Fuel",
+    "name": "Coke Production (Coal)",
     "machine_id": "m_blast_furnace_mk2",
     "cycle_time": 20,
     "power_use": 1250000,
@@ -1992,7 +1992,7 @@
   },
   {
     "id": "r_blast_furnace_MK2_03",
-    "name": "Makes Coke Fuel",
+    "name": "Coke Production (Coke)",
     "machine_id": "m_blast_furnace_mk2",
     "cycle_time": 20,
     "power_use": 1250000,
@@ -2018,7 +2018,7 @@
   },
   {
     "id": "r_blast_furnace_MK2_04",
-    "name": "Makes Steel Ingot",
+    "name": "Steel Smelting (Ingot/Coke)",
     "machine_id": "m_blast_furnace_mk2",
     "cycle_time": 20,
     "power_use": 1250000,
@@ -2044,7 +2044,7 @@
   },
   {
     "id": "r_electric_furnace_01",
-    "name": "Makes Liquid Copper",
+    "name": "Raw Copper Smelting",
     "machine_id": "m_electric_furnace",
     "cycle_time": 3,
     "power_use": 400,
@@ -2066,7 +2066,7 @@
   },
   {
     "id": "r_electric_furnace_02",
-    "name": "Makes Liquid Iron",
+    "name": "Raw Iron Smelting",
     "machine_id": "m_electric_furnace",
     "cycle_time": 5,
     "power_use": 240,
@@ -2088,7 +2088,7 @@
   },
   {
     "id": "r_electric_furnace_03",
-    "name": "Makes Liquid Iron",
+    "name": "Iron Ingot Smelting",
     "machine_id": "m_electric_furnace",
     "cycle_time": 10,
     "power_use": 120,
@@ -2110,7 +2110,7 @@
   },
   {
     "id": "r_electric_furnace_04",
-    "name": "Makes Liquid Copper",
+    "name": "Copper Ingot Smelting",
     "machine_id": "m_electric_furnace",
     "cycle_time": 6,
     "power_use": 200,
@@ -2132,7 +2132,7 @@
   },
   {
     "id": "r_electric_furnace_05",
-    "name": "Makes Liquid Copper",
+    "name": "Copper Mix Smelting",
     "machine_id": "m_electric_furnace",
     "cycle_time": 3,
     "power_use": 400,
@@ -2154,7 +2154,7 @@
   },
   {
     "id": "r_electric_furnace_06",
-    "name": "Makes Liquid Iron",
+    "name": "Iron Mix Smelting",
     "machine_id": "m_electric_furnace",
     "cycle_time": 5,
     "power_use": 240,
@@ -2176,7 +2176,7 @@
   },
   {
     "id": "r_electric_furnace_07",
-    "name": "Makes Liquid Sulfur",
+    "name": "Sulfur Smelting",
     "machine_id": "m_electric_furnace",
     "cycle_time": 5,
     "power_use": 240,
@@ -2198,7 +2198,7 @@
   },
   {
     "id": "r_industrial_electric_furnace_01",
-    "name": "Makes Liquid Gold",
+    "name": "24 Karat Gold Smelting",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
     "power_use": 200000,
@@ -2220,7 +2220,7 @@
   },
   {
     "id": "r_industrial_electric_furnace_02",
-    "name": "Makes Liquid Gold",
+    "name": "18 Karat Gold Smelting",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
     "power_use": 200000,
@@ -2242,7 +2242,7 @@
   },
   {
     "id": "r_industrial_electric_furnace_03",
-    "name": "Makes Liquid Gold",
+    "name": "12 Karat Gold Smelting",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
     "power_use": 200000,
@@ -2264,7 +2264,7 @@
   },
   {
     "id": "r_industrial_electric_furnace_04",
-    "name": "Makes Liquid Gold",
+    "name": "10 Karat Gold Smelting",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
     "power_use": 200000,
@@ -2286,7 +2286,7 @@
   },
   {
     "id": "r_industrial_electric_furnace_05",
-    "name": "Makes Liquid Gold",
+    "name": "8 Karat Gold Smelting",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
     "power_use": 200000,
@@ -2308,7 +2308,7 @@
   },
   {
     "id": "r_industrial_electric_furnace_06",
-    "name": "Makes Liquid Aluminium",
+    "name": "Aluminium Smelting",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
     "power_use": 200000,
@@ -2330,7 +2330,7 @@
   },
   {
     "id": "r_industrial_electric_furnace_07",
-    "name": "Makes Liquid Glass",
+    "name": "Glass Smelting",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
     "power_use": 200000,
@@ -2352,7 +2352,7 @@
   },
   {
     "id": "r_industrial_electric_furnace_08",
-    "name": "Makes Liquid Iron",
+    "name": "Treated Iron Smelting",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
     "power_use": 200000,
@@ -2374,7 +2374,7 @@
   },
   {
     "id": "r_industrial_electric_furnace_09",
-    "name": "Makes Liquid Copper",
+    "name": "Treated Copper Smelting",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
     "power_use": 200000,
@@ -2396,7 +2396,7 @@
   },
   {
     "id": "r_industrial_electric_furnace_10",
-    "name": "Makes Liquid Lead",
+    "name": "Raw Lead Smelting",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
     "power_use": 200000,
@@ -2418,7 +2418,7 @@
   },
   {
     "id": "r_industrial_electric_furnace_11",
-    "name": "Makes Liquid Sulfur",
+    "name": "Sulfur Smelting",
     "machine_id": "m_industrial_electric_furnace",
     "cycle_time": 5,
     "power_use": 200000,
@@ -2440,7 +2440,7 @@
   },
   {
     "id": "r_industrial_kiln_01",
-    "name": "Makes Iron Mix",
+    "name": "Iron Mix Production (Powder/Coal)",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
     "power_use": 15000,
@@ -2466,7 +2466,7 @@
   },
   {
     "id": "r_industrial_kiln_02",
-    "name": "Makes Copper Mix",
+    "name": "Copper Mix Production (Powder/Coal)",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
     "power_use": 15000,
@@ -2492,7 +2492,7 @@
   },
   {
     "id": "r_industrial_kiln_03",
-    "name": "Makes Alumina Dust",
+    "name": "Alumina Dust Production",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
     "power_use": 15000,
@@ -2518,7 +2518,7 @@
   },
   {
     "id": "r_industrial_kiln_04",
-    "name": "Makes Iron Mix",
+    "name": "Iron Mix Production (Rock/Coal)",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
     "power_use": 15000,
@@ -2544,7 +2544,7 @@
   },
   {
     "id": "r_industrial_kiln_05",
-    "name": "Makes Cement",
+    "name": "Cement Production (Coal)",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
     "power_use": 15000,
@@ -2570,7 +2570,7 @@
   },
   {
     "id": "r_industrial_kiln_06",
-    "name": "Makes Cement",
+    "name": "Cement Production (Coke)",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
     "power_use": 15000,
@@ -2596,7 +2596,7 @@
   },
   {
     "id": "r_industrial_kiln_07",
-    "name": "Makes Iron Mix",
+    "name": "Iron Mix Production (Rock/Coke)",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
     "power_use": 15000,
@@ -2622,7 +2622,7 @@
   },
   {
     "id": "r_industrial_kiln_08",
-    "name": "Makes Iron Mix",
+    "name": "Iron Mix Production (Powder/Coke)",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
     "power_use": 15000,
@@ -2648,7 +2648,7 @@
   },
   {
     "id": "r_industrial_kiln_09",
-    "name": "Makes Copper Mix",
+    "name": "Copper Mix Production (Powder/Coke)",
     "machine_id": "m_industrial_kiln",
     "cycle_time": 20,
     "power_use": 15000,
@@ -2674,7 +2674,7 @@
   },
   {
     "id": "r_kiln_01",
-    "name": "Makes Brick",
+    "name": "Brick Firing",
     "machine_id": "m_kiln",
     "cycle_time": 60,
     "power_use": 7220,
@@ -2696,7 +2696,7 @@
   },
   {
     "id": "r_battery_charger_01",
-    "name": "Makes Charged Lithium-Ion Battery",
+    "name": "Li-Ion Battery Charging",
     "machine_id": "m_battery_charger",
     "cycle_time": 11,
     "power_use": 318000,
@@ -2718,7 +2718,7 @@
   },
   {
     "id": "r_chemical_reactor_01",
-    "name": "Makes Residue, Rubber",
+    "name": "Rubber Synthesis",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
     "power_use": 500000,
@@ -2749,7 +2749,7 @@
   },
   {
     "id": "r_chemical_reactor_02",
-    "name": "Makes Sulfuric Acid",
+    "name": "Sulfuric Acid Synthesis",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
     "power_use": 500000,
@@ -2775,7 +2775,7 @@
   },
   {
     "id": "r_chemical_reactor_03",
-    "name": "Makes Sulfuric Acid",
+    "name": "Sulfuric Acid Synthesis w/ Acid",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 3,
     "power_use": 1000000,
@@ -2805,7 +2805,7 @@
   },
   {
     "id": "r_chemical_reactor_04",
-    "name": "Makes Sulfuric Acid",
+    "name": "Sulfuric Acid Synthesis w/ Distilled Water",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 3,
     "power_use": 1000000,
@@ -2835,7 +2835,7 @@
   },
   {
     "id": "r_chemical_reactor_05",
-    "name": "Makes GasolineE10",
+    "name": "GasolineE10 Blending",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
     "power_use": 500000,
@@ -2861,7 +2861,7 @@
   },
   {
     "id": "r_chemical_reactor_06",
-    "name": "Makes Leaded Gasoline",
+    "name": "Leaded Gasoline Blending",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
     "power_use": 500000,
@@ -2887,7 +2887,7 @@
   },
   {
     "id": "r_chemical_reactor_07",
-    "name": "Makes Gold Ingot",
+    "name": "Gold Recovery",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
     "power_use": 500000,
@@ -2921,7 +2921,7 @@
   },
   {
     "id": "r_chemical_reactor_08",
-    "name": "Makes Dirty Lithium Sulfate",
+    "name": "Dirty Lithium Sulfate Synthesis",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 2,
     "power_use": 1500000,
@@ -2947,7 +2947,7 @@
   },
   {
     "id": "r_chemical_reactor_09",
-    "name": "Makes Lithium Carbonate",
+    "name": "Lithium Carbonate Synthesis",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 4,
     "power_use": 750000,
@@ -2977,7 +2977,7 @@
   },
   {
     "id": "r_chemical_reactor_10",
-    "name": "Makes Lithium Sulfate",
+    "name": "Lithium Sulfate Processing",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 2,
     "power_use": 1500000,
@@ -3007,7 +3007,7 @@
   },
   {
     "id": "r_chemical_reactor_11",
-    "name": "Makes Hydrochloric Acid, Residue",
+    "name": "Hydrochloric Acid from Salt",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 4,
     "power_use": 1500000,
@@ -3038,7 +3038,7 @@
   },
   {
     "id": "r_chemical_reactor_12",
-    "name": "Makes Zinc Sulfate, Residue",
+    "name": "Zinc Sulfate Synthesis",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 5,
     "power_use": 600000,
@@ -3069,7 +3069,7 @@
   },
   {
     "id": "r_chemical_reactor_13",
-    "name": "Makes Hydrochloric Acid",
+    "name": "Hydrochloric Acid from Gases",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 5,
     "power_use": 600000,
@@ -3099,7 +3099,7 @@
   },
   {
     "id": "r_chemical_reactor_14",
-    "name": "Makes Treated Raw Iron, Residue",
+    "name": "Raw Iron Treatment",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 5,
     "power_use": 600000,
@@ -3130,7 +3130,7 @@
   },
   {
     "id": "r_chemical_reactor_15",
-    "name": "Makes Treated Raw Copper, Residue",
+    "name": "Raw Copper Treatment",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 5,
     "power_use": 600000,
@@ -3161,7 +3161,7 @@
   },
   {
     "id": "r_chemical_reactor_16",
-    "name": "Makes Galvanized Steel",
+    "name": "Galvanized Steel Coating",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 5,
     "power_use": 600000,
@@ -3187,7 +3187,7 @@
   },
   {
     "id": "r_chemical_reactor_17",
-    "name": "Makes Tetraethyllead",
+    "name": "Tetraethyllead Synthesis",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 5,
     "power_use": 600000,
@@ -3213,7 +3213,7 @@
   },
   {
     "id": "r_chemical_reactor_18",
-    "name": "Makes Powdered Tungsten Carbide",
+    "name": "Tungsten Carbide Synthesis",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
     "power_use": 500000,
@@ -3243,7 +3243,7 @@
   },
   {
     "id": "r_chemical_reactor_19",
-    "name": "Makes Gunpowder",
+    "name": "Gunpowder Mixing",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 6,
     "power_use": 500000,
@@ -3273,7 +3273,7 @@
   },
   {
     "id": "r_chemical_reactor_20",
-    "name": "Makes Sulfur",
+    "name": "Treated Rock to Sulfur",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 4,
     "power_use": 750000,
@@ -3299,7 +3299,7 @@
   },
   {
     "id": "r_chemical_reactor_21",
-    "name": "Makes Zirconium Chloride, Residue",
+    "name": "Zirconium Chloride Synthesis",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 4,
     "power_use": 750000,
@@ -3330,7 +3330,7 @@
   },
   {
     "id": "r_chemical_reactor_22",
-    "name": "Makes Zirconium Dioxide, Hydrochloric Acid",
+    "name": "Zirconium Dioxide Processing",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 4,
     "power_use": 750000,
@@ -3361,7 +3361,7 @@
   },
   {
     "id": "r_chemical_reactor_23",
-    "name": "Makes Residue, Hydrofluoric Acid",
+    "name": "Hydrofluoric Acid Extraction",
     "machine_id": "m_chemical_reactor",
     "cycle_time": 4,
     "power_use": 750000,
@@ -3392,7 +3392,7 @@
   },
   {
     "id": "r_condenser_01",
-    "name": "Makes Crude Oil, Water, Water-Free Gas",
+    "name": "Raw Gas Condensation",
     "machine_id": "m_condenser",
     "cycle_time": 1,
     "power_use": 21000,
@@ -3424,7 +3424,7 @@
   },
   {
     "id": "r_liquid_boiler_01",
-    "name": "Makes Hot Crude Oil",
+    "name": "Crude Oil Heating",
     "machine_id": "m_liquid_boiler",
     "cycle_time": 1,
     "power_use": 10000,
@@ -3446,7 +3446,7 @@
   },
   {
     "id": "r_liquid_boiler_02",
-    "name": "Heats Water",
+    "name": "Water Heating",
     "machine_id": "m_liquid_boiler",
     "cycle_time": 1,
     "power_use": 10000,
@@ -3468,7 +3468,7 @@
   },
   {
     "id": "r_paper_mill_01",
-    "name": "Makes Paper",
+    "name": "Paper Production",
     "machine_id": "m_paper_mill",
     "cycle_time": 4,
     "power_use": 62500,
@@ -3490,7 +3490,7 @@
   },
   {
     "id": "r_paper_mill_02",
-    "name": "Makes Paper",
+    "name": "Paper Production w/ Chlorine",
     "machine_id": "m_paper_mill",
     "cycle_time": 2,
     "power_use": 125000,
@@ -3516,7 +3516,7 @@
   },
   {
     "id": "r_plastic_production_facility_01",
-    "name": "Makes Plastic Pellets",
+    "name": "Plastic Pellet Production",
     "machine_id": "m_plastic_production_facility",
     "cycle_time": 6,
     "power_use": 80000,
@@ -3542,7 +3542,7 @@
   },
   {
     "id": "r_pressurized_water_filter_01",
-    "name": "Makes Residue, 8 Karat Gold",
+    "name": "8K Gold from Rich Soil",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
     "power_use": 200000,
@@ -3573,7 +3573,7 @@
   },
   {
     "id": "r_pressurized_water_filter_02",
-    "name": "Makes Residue, 12 Karat Gold",
+    "name": "12K Gold from 10K Gold",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
     "power_use": 200000,
@@ -3604,7 +3604,7 @@
   },
   {
     "id": "r_pressurized_water_filter_03",
-    "name": "Makes Residue, 24 Karat Gold",
+    "name": "24K Gold from 18K Gold",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
     "power_use": 200000,
@@ -3635,7 +3635,7 @@
   },
   {
     "id": "r_pressurized_water_filter_04",
-    "name": "Makes Residue, Lithium Sulfate",
+    "name": "Lithium Sulfate Purification",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
     "power_use": 200000,
@@ -3666,7 +3666,7 @@
   },
   {
     "id": "r_pressurized_water_filter_05",
-    "name": "Makes Concentrated Salt Solution, Raw Iron",
+    "name": "Raw Iron from Medium Earth",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
     "power_use": 200000,
@@ -3697,7 +3697,7 @@
   },
   {
     "id": "r_pressurized_water_filter_06",
-    "name": "Makes Naphtha, Coal",
+    "name": "Naphtha and Coal from Deep Earth",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
     "power_use": 200000,
@@ -3728,7 +3728,7 @@
   },
   {
     "id": "r_pressurized_water_filter_07",
-    "name": "Makes Residue, Rock",
+    "name": "Rock from Treated Rock",
     "machine_id": "m_pressurized_water_filter",
     "cycle_time": 5,
     "power_use": 200000,
@@ -3759,7 +3759,7 @@
   },
   {
     "id": "r_vaporizer_01",
-    "name": "Makes Nitrogen",
+    "name": "Liquid Nitrogen Vaporization",
     "machine_id": "m_vaporizer",
     "cycle_time": 1,
     "power_use": 15000,
@@ -3781,7 +3781,7 @@
   },
   {
     "id": "r_vaporizer_02",
-    "name": "Makes Oxygen",
+    "name": "Liquid Oxygen Vaporization",
     "machine_id": "m_vaporizer",
     "cycle_time": 1,
     "power_use": 15000,
@@ -3803,7 +3803,7 @@
   },
   {
     "id": "r_vaporizer_03",
-    "name": "Makes Argon",
+    "name": "Liquid Argon Vaporization",
     "machine_id": "m_vaporizer",
     "cycle_time": 1,
     "power_use": 15000,
@@ -3825,7 +3825,7 @@
   },
   {
     "id": "r_foundry_01",
-    "name": "Makes Lead Ingot",
+    "name": "Lead Ingot Casting (Raw/Coke)",
     "machine_id": "m_foundry",
     "cycle_time": 182,
     "power_use": 6000000,
@@ -3855,7 +3855,7 @@
   },
   {
     "id": "r_foundry_02",
-    "name": "Makes Copper Ingot",
+    "name": "Copper Ingot Casting (Raw/Coke)",
     "machine_id": "m_foundry",
     "cycle_time": 182,
     "power_use": 6000000,
@@ -3885,7 +3885,7 @@
   },
   {
     "id": "r_foundry_03",
-    "name": "Makes Iron Ingot",
+    "name": "Iron Ingot Casting (Raw/Coke)",
     "machine_id": "m_foundry",
     "cycle_time": 182,
     "power_use": 6000000,
@@ -3915,7 +3915,7 @@
   },
   {
     "id": "r_foundry_04",
-    "name": "Makes Copper Ingot",
+    "name": "Copper Ingot Casting (Treated/Coke)",
     "machine_id": "m_foundry",
     "cycle_time": 182,
     "power_use": 6000000,
@@ -3945,7 +3945,7 @@
   },
   {
     "id": "r_foundry_05",
-    "name": "Makes Iron Ingot",
+    "name": "Iron Ingot Casting (Treated/Coke)",
     "machine_id": "m_foundry",
     "cycle_time": 182,
     "power_use": 6000000,
@@ -3975,7 +3975,7 @@
   },
   {
     "id": "r_foundry_06",
-    "name": "Makes Lead Ingot",
+    "name": "Lead Ingot Casting (Raw/Coal)",
     "machine_id": "m_foundry",
     "cycle_time": 182,
     "power_use": 6000000,
@@ -4005,7 +4005,7 @@
   },
   {
     "id": "r_foundry_07",
-    "name": "Makes Copper Ingot",
+    "name": "Copper Ingot Casting (Raw/Coal)",
     "machine_id": "m_foundry",
     "cycle_time": 182,
     "power_use": 6000000,
@@ -4035,7 +4035,7 @@
   },
   {
     "id": "r_foundry_08",
-    "name": "Makes Iron Ingot",
+    "name": "Iron Ingot Casting (Raw/Coal)",
     "machine_id": "m_foundry",
     "cycle_time": 182,
     "power_use": 6000000,
@@ -4065,7 +4065,7 @@
   },
   {
     "id": "r_foundry_09",
-    "name": "Makes Copper Ingot",
+    "name": "Copper Ingot Casting (Treated/Coal)",
     "machine_id": "m_foundry",
     "cycle_time": 182,
     "power_use": 6000000,
@@ -4095,7 +4095,7 @@
   },
   {
     "id": "r_foundry_10",
-    "name": "Makes Iron Ingot",
+    "name": "Iron Ingot Casting (Treated/Coal)",
     "machine_id": "m_foundry",
     "cycle_time": 182,
     "power_use": 6000000,
@@ -4125,7 +4125,7 @@
   },
   {
     "id": "r_industrial_plastic_molder_01",
-    "name": "Makes Plastic Bottle",
+    "name": "Plastic Bottle Molding",
     "machine_id": "m_industrial_plastic_molder",
     "cycle_time": 12,
     "power_use": 20000,
@@ -4147,7 +4147,7 @@
   },
   {
     "id": "r_industrial_plastic_molder_02",
-    "name": "Makes Plastic Casing",
+    "name": "Plastic Casing Molding",
     "machine_id": "m_industrial_plastic_molder",
     "cycle_time": 12,
     "power_use": 20000,
@@ -4169,7 +4169,7 @@
   },
   {
     "id": "r_industrial_plastic_molder_03",
-    "name": "Makes Hardened Plastic Casing",
+    "name": "Hardened Casing Molding",
     "machine_id": "m_industrial_plastic_molder",
     "cycle_time": 12,
     "power_use": 20000,
@@ -4191,7 +4191,7 @@
   },
   {
     "id": "r_ingot_molder_01",
-    "name": "Makes Copper Ingot",
+    "name": "Copper Ingot Casting",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
     "power_use": 150,
@@ -4213,7 +4213,7 @@
   },
   {
     "id": "r_ingot_molder_02",
-    "name": "Makes Sulfur",
+    "name": "Sulfur Casting",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
     "power_use": 150,
@@ -4235,7 +4235,7 @@
   },
   {
     "id": "r_ingot_molder_03",
-    "name": "Makes Iron Ingot",
+    "name": "Iron Ingot Casting",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
     "power_use": 150,
@@ -4257,7 +4257,7 @@
   },
   {
     "id": "r_ingot_molder_04",
-    "name": "Makes Gold Ingot",
+    "name": "Gold Ingot Casting",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
     "power_use": 150,
@@ -4279,7 +4279,7 @@
   },
   {
     "id": "r_ingot_molder_05",
-    "name": "Makes Ferroaluminium Alloy Ingot",
+    "name": "FeAl Alloy Casting",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
     "power_use": 150,
@@ -4301,7 +4301,7 @@
   },
   {
     "id": "r_ingot_molder_06",
-    "name": "Makes Purple Gold Ingot",
+    "name": "Purple Gold Ingot Casting",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
     "power_use": 150,
@@ -4323,7 +4323,7 @@
   },
   {
     "id": "r_ingot_molder_07",
-    "name": "Makes Aluminium Ingot",
+    "name": "Aluminium Ingot Casting",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
     "power_use": 150,
@@ -4345,7 +4345,7 @@
   },
   {
     "id": "r_ingot_molder_08",
-    "name": "Makes Glass",
+    "name": "Glass Casting",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
     "power_use": 150,
@@ -4367,7 +4367,7 @@
   },
   {
     "id": "r_ingot_molder_09",
-    "name": "Makes Lead Ingot",
+    "name": "Lead Ingot Casting",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
     "power_use": 150,
@@ -4389,7 +4389,7 @@
   },
   {
     "id": "r_ingot_molder_10",
-    "name": "Makes Brass Ingot",
+    "name": "Brass Ingot Casting",
     "machine_id": "m_ingot_molder",
     "cycle_time": 4,
     "power_use": 150,
@@ -4411,7 +4411,7 @@
   },
   {
     "id": "r_plastic_molding_machine_01",
-    "name": "Makes Plastic Bottle",
+    "name": "Plastic Bottle Molding",
     "machine_id": "m_plastic_molding_machine",
     "cycle_time": 7,
     "power_use": 14000,
@@ -4433,7 +4433,7 @@
   },
   {
     "id": "r_plastic_molding_machine_02",
-    "name": "Makes Plastic Casing",
+    "name": "Plastic Casing Molding",
     "machine_id": "m_plastic_molding_machine",
     "cycle_time": 7,
     "power_use": 14000,
@@ -4455,7 +4455,7 @@
   },
   {
     "id": "r_advanced_oxidation_plant_01",
-    "name": "Makes Yellowcake",
+    "name": "Yellowcake Production (Oxygen)",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 40,
     "power_use": 1000000,
@@ -4485,9 +4485,9 @@
   },
   {
     "id": "r_advanced_oxidation_plant_02",
-    "name": "Makes Yellowcake",
+    "name": "Yellowcake Production (Ammonia)",
     "machine_id": "m_advanced_oxidation_plant",
-    "cycle_time": 20,
+    "cycle_time": 40,
     "power_use": 1000000,
     "power_type": "HV",
     "pollution": 0,
@@ -4515,7 +4515,7 @@
   },
   {
     "id": "r_advanced_oxidation_plant_03",
-    "name": "Makes Mixed Fissile Oxides, Fission Byproducts, Residue",
+    "name": "Fissile Oxide Processing (Oxygen)",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 2,
     "power_use": 1000000,
@@ -4559,7 +4559,7 @@
   },
   {
     "id": "r_advanced_oxidation_plant_04",
-    "name": "Makes Mixed Fissile Oxides, Fission Byproducts, Residue",
+    "name": "Fissile Oxide Processing (TBP)",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 2,
     "power_use": 1000000,
@@ -4603,7 +4603,7 @@
   },
   {
     "id": "r_advanced_oxidation_plant_05",
-    "name": "Makes Ethanol, Hydrogen",
+    "name": "Ethanol Production",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 6,
     "power_use": 2000000,
@@ -4634,7 +4634,7 @@
   },
   {
     "id": "r_advanced_oxidation_plant_06",
-    "name": "Makes Acetic Acid",
+    "name": "Acetic Acid Production",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 2,
     "power_use": 1000000,
@@ -4660,7 +4660,7 @@
   },
   {
     "id": "r_advanced_oxidation_plant_07",
-    "name": "Makes MEG",
+    "name": "MEG Production",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 2,
     "power_use": 1000000,
@@ -4686,7 +4686,7 @@
   },
   {
     "id": "r_advanced_oxidation_plant_08",
-    "name": "Makes Liquid Sulfur",
+    "name": "Liquid Sulfur Production",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 2,
     "power_use": 1000000,
@@ -4712,7 +4712,7 @@
   },
   {
     "id": "r_advanced_oxidation_plant_09",
-    "name": "Makes Sulfur Trioxide",
+    "name": "Sulfur Trioxide Production",
     "machine_id": "m_advanced_oxidation_plant",
     "cycle_time": 2,
     "power_use": 1000000,
@@ -4738,7 +4738,7 @@
   },
   {
     "id": "r_atmospheric_distillation_plant_01",
-    "name": "Makes Residue, Heavy Oil, Light Oil, Naphtha, Gasoline, Water-Free Gas, Crude Oil",
+    "name": "Fracking Oil Distillation",
     "machine_id": "m_atmospheric_distillation_plant",
     "cycle_time": 8,
     "power_use": 625000,
@@ -4790,7 +4790,7 @@
   },
   {
     "id": "r_atmospheric_distillation_plant_02",
-    "name": "Makes Concentrated Salt Solution, Distilled Water",
+    "name": "Water Distillation",
     "machine_id": "m_atmospheric_distillation_plant",
     "cycle_time": 8,
     "power_use": 625000,
@@ -4817,7 +4817,7 @@
   },
   {
     "id": "r_bottling_plant_01",
-    "name": "Makes Water Bottle",
+    "name": "Water Bottling",
     "machine_id": "m_bottling_plant",
     "cycle_time": 3.5,
     "power_use": 2860,
@@ -4843,7 +4843,7 @@
   },
   {
     "id": "r_bottling_plant_02",
-    "name": "Makes Cheap Water Bottle",
+    "name": "Cheap Water Bottling",
     "machine_id": "m_bottling_plant",
     "cycle_time": 3.5,
     "power_use": 2860,
@@ -4869,7 +4869,7 @@
   },
   {
     "id": "r_bottling_plant_03",
-    "name": "Makes Residue Bottle",
+    "name": "Residue Bottling",
     "machine_id": "m_bottling_plant",
     "cycle_time": 3.5,
     "power_use": 2860,
@@ -4895,7 +4895,7 @@
   },
   {
     "id": "r_bottling_plant_04",
-    "name": "Makes Refined Diesel Bottle",
+    "name": "Refined Diesel Bottling",
     "machine_id": "m_bottling_plant",
     "cycle_time": 3.5,
     "power_use": 2860,
@@ -4921,7 +4921,7 @@
   },
   {
     "id": "r_bottling_plant_05",
-    "name": "Makes Oil Bottle",
+    "name": "Oil Bottling",
     "machine_id": "m_bottling_plant",
     "cycle_time": 3.5,
     "power_use": 2860,
@@ -4947,7 +4947,7 @@
   },
   {
     "id": "r_concrete_plant_01",
-    "name": "Makes Clay Brick",
+    "name": "Clay Brick Production",
     "machine_id": "m_concrete_plant",
     "cycle_time": 10,
     "power_use": 4000,
@@ -4973,7 +4973,7 @@
   },
   {
     "id": "r_concrete_plant_02",
-    "name": "Makes Clay Brick",
+    "name": "Clay Brick Production (Iron)",
     "machine_id": "m_concrete_plant",
     "cycle_time": 10,
     "power_use": 4000,
@@ -5003,7 +5003,7 @@
   },
   {
     "id": "r_concrete_plant_03",
-    "name": "Makes Clay Brick",
+    "name": "Clay Brick Production (Limestone)",
     "machine_id": "m_concrete_plant",
     "cycle_time": 10,
     "power_use": 4000,
@@ -5033,7 +5033,7 @@
   },
   {
     "id": "r_concrete_plant_04",
-    "name": "Makes Wet Concrete",
+    "name": "Wet Concrete Production",
     "machine_id": "m_concrete_plant",
     "cycle_time": 10,
     "power_use": 4000,
@@ -5063,7 +5063,7 @@
   },
   {
     "id": "r_concrete_plant_05",
-    "name": "Makes Concrete Block",
+    "name": "Concrete Block Production",
     "machine_id": "m_concrete_plant",
     "cycle_time": 10,
     "power_use": 4000,
@@ -5089,7 +5089,7 @@
   },
   {
     "id": "r_concrete_plant_06",
-    "name": "Makes Reinforced Concrete Block",
+    "name": "Reinforced Block Production",
     "machine_id": "m_concrete_plant",
     "cycle_time": 10,
     "power_use": 4000,
@@ -5115,7 +5115,7 @@
   },
   {
     "id": "r_electrolysis_plant_01",
-    "name": "Makes Oxygen, Hydrogen",
+    "name": "Water Electrolysis",
     "machine_id": "m_electrolysis_plant",
     "cycle_time": 30,
     "power_use": 750000,
@@ -5144,7 +5144,7 @@
   },
   {
     "id": "r_electrolysis_plant_02",
-    "name": "Makes Chlorine, Sodium Hydroxide Solution",
+    "name": "Salt Solution Electrolysis",
     "machine_id": "m_electrolysis_plant",
     "cycle_time": 30,
     "power_use": 750000,
@@ -5173,7 +5173,7 @@
   },
   {
     "id": "r_electrolysis_plant_03",
-    "name": "Makes Residue, Zinc",
+    "name": "Zinc Sulfate Electrolysis",
     "machine_id": "m_electrolysis_plant",
     "cycle_time": 30,
     "power_use": 750000,
@@ -5202,7 +5202,7 @@
   },
   {
     "id": "r_filtration_plant_01",
-    "name": "Makes Filtered Water",
+    "name": "Water to Filtered Water",
     "machine_id": "m_filtration_plant",
     "cycle_time": 2,
     "power_use": 7500,
@@ -5224,7 +5224,7 @@
   },
   {
     "id": "r_filtration_plant_02",
-    "name": "Makes Water",
+    "name": "Filtered Water to Water",
     "machine_id": "m_filtration_plant",
     "cycle_time": 2,
     "power_use": 7500,
@@ -5246,7 +5246,7 @@
   },
   {
     "id": "r_filtration_plant_03",
-    "name": "Makes Crude Diesel",
+    "name": "Gasoline to Crude Diesel",
     "machine_id": "m_filtration_plant",
     "cycle_time": 2,
     "power_use": 7500,
@@ -5268,7 +5268,7 @@
   },
   {
     "id": "r_filtration_plant_04",
-    "name": "Makes Machine Oil",
+    "name": "Refined Diesel to Machine Oil",
     "machine_id": "m_filtration_plant",
     "cycle_time": 2,
     "power_use": 7500,
@@ -5290,7 +5290,7 @@
   },
   {
     "id": "r_filtration_plant_05",
-    "name": "Makes Residue",
+    "name": "Residue Concentration",
     "machine_id": "m_filtration_plant",
     "cycle_time": 2,
     "power_use": 7500,
@@ -5312,7 +5312,7 @@
   },
   {
     "id": "r_filtration_plant_06",
-    "name": "Makes Crude Oil",
+    "name": "Heavy Oil to Crude Oil",
     "machine_id": "m_filtration_plant",
     "cycle_time": 2,
     "power_use": 7500,
@@ -5334,7 +5334,7 @@
   },
   {
     "id": "r_lng_plant_01",
-    "name": "Makes LNG",
+    "name": "LNG Production",
     "machine_id": "m_lng_plant",
     "cycle_time": 1,
     "power_use": 2250000,
@@ -5356,7 +5356,7 @@
   },
   {
     "id": "r_oxidation_plant_01",
-    "name": "Makes Acetic Acid",
+    "name": "Acetic Acid Oxidation",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 20,
     "power_use": 500000,
@@ -5378,7 +5378,7 @@
   },
   {
     "id": "r_oxidation_plant_02",
-    "name": "Makes MEG",
+    "name": "MEG Oxidation",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 20,
     "power_use": 500000,
@@ -5400,7 +5400,7 @@
   },
   {
     "id": "r_oxidation_plant_03",
-    "name": "Makes Liquid Sulfur",
+    "name": "Liquid Sulfur Oxidation",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 20,
     "power_use": 500000,
@@ -5422,7 +5422,7 @@
   },
   {
     "id": "r_oxidation_plant_04",
-    "name": "Makes Sulfur Trioxide",
+    "name": "Sulfur Trioxide Oxidation",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 12,
     "power_use": 833000,
@@ -5444,7 +5444,7 @@
   },
   {
     "id": "r_oxidation_plant_05",
-    "name": "Makes Acetic Acid",
+    "name": "Acetic Acid Oxidation (Oxygen)",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 5,
     "power_use": 1000000,
@@ -5470,7 +5470,7 @@
   },
   {
     "id": "r_oxidation_plant_06",
-    "name": "Makes MEG",
+    "name": "MEG Oxidation (Oxygen)",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 5,
     "power_use": 1000000,
@@ -5496,7 +5496,7 @@
   },
   {
     "id": "r_oxidation_plant_07",
-    "name": "Makes Liquid Sulfur",
+    "name": "Liquid Sulfur Oxidation (Oxygen)",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 5,
     "power_use": 1000000,
@@ -5522,7 +5522,7 @@
   },
   {
     "id": "r_oxidation_plant_08",
-    "name": "Makes Sulfur Trioxide",
+    "name": "Sulfur Trioxide Oxidation (Oxygen)",
     "machine_id": "m_oxidation_plant",
     "cycle_time": 3,
     "power_use": 1670000,
@@ -5548,7 +5548,7 @@
   },
   {
     "id": "r_grinder_01",
-    "name": "Makes Black Dye",
+    "name": "Black Dye Grinding",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5570,7 +5570,7 @@
   },
   {
     "id": "r_grinder_02",
-    "name": "Makes Paper",
+    "name": "Paper Grinding",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5596,7 +5596,7 @@
   },
   {
     "id": "r_grinder_03",
-    "name": "Makes Iron Powder",
+    "name": "Iron Powder Grinding (Raw)",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5618,7 +5618,7 @@
   },
   {
     "id": "r_grinder_04",
-    "name": "Makes Iron Powder",
+    "name": "Iron Powder Grinding (Ingot)",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5640,7 +5640,7 @@
   },
   {
     "id": "r_grinder_05",
-    "name": "Makes Copper Powder",
+    "name": "Copper Powder Grinding (Raw)",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5662,7 +5662,7 @@
   },
   {
     "id": "r_grinder_06",
-    "name": "Makes Copper Powder",
+    "name": "Copper Powder Grinding (Ingot)",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5684,7 +5684,7 @@
   },
   {
     "id": "r_grinder_07",
-    "name": "Makes Sand",
+    "name": "Sand Grinding",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5706,7 +5706,7 @@
   },
   {
     "id": "r_grinder_08",
-    "name": "Makes Crushed Bauxite",
+    "name": "Bauxite Crushing",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5728,7 +5728,7 @@
   },
   {
     "id": "r_grinder_09",
-    "name": "Makes Alumina Dust",
+    "name": "Alumina Dust Grinding",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5750,7 +5750,7 @@
   },
   {
     "id": "r_grinder_10",
-    "name": "Makes Gold Ingot",
+    "name": "Gold Recovery",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5776,7 +5776,7 @@
   },
   {
     "id": "r_grinder_11",
-    "name": "Makes Gravel",
+    "name": "Gravel Grinding (Soil)",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5798,7 +5798,7 @@
   },
   {
     "id": "r_grinder_12",
-    "name": "Makes Gravel",
+    "name": "Gravel Grinding (Rock)",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5820,7 +5820,7 @@
   },
   {
     "id": "r_grinder_13",
-    "name": "Makes Raw Iron",
+    "name": "Raw Iron from Shallow Earth",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5846,7 +5846,7 @@
   },
   {
     "id": "r_grinder_14",
-    "name": "Makes Rock",
+    "name": "Rock from Shallow Earth",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5868,7 +5868,7 @@
   },
   {
     "id": "r_grinder_15",
-    "name": "Makes Shallow Earth Fragment",
+    "name": "Shallow Earth from Medium Earth",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5894,7 +5894,7 @@
   },
   {
     "id": "r_grinder_16",
-    "name": "Makes Treated Rock",
+    "name": "Treated Rock Processing",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5916,7 +5916,7 @@
   },
   {
     "id": "r_grinder_17",
-    "name": "Makes Rich Soil",
+    "name": "Rich Soil Processing",
     "machine_id": "m_grinder",
     "cycle_time": 12,
     "power_use": 33000,
@@ -5938,7 +5938,7 @@
   },
   {
     "id": "r_grinder_mk2_01",
-    "name": "Makes Impure Boron",
+    "name": "Impure Boron from Treated Rock",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -5964,7 +5964,7 @@
   },
   {
     "id": "r_grinder_mk2_02",
-    "name": "Makes Iron Powder",
+    "name": "Iron Powder Grinding (Raw)",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -5986,7 +5986,7 @@
   },
   {
     "id": "r_grinder_mk2_03",
-    "name": "Makes Copper Powder",
+    "name": "Copper Powder Grinding (Raw)",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -6008,7 +6008,7 @@
   },
   {
     "id": "r_grinder_mk2_04",
-    "name": "Makes Sand",
+    "name": "Sand Grinding",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -6030,7 +6030,7 @@
   },
   {
     "id": "r_grinder_mk2_05",
-    "name": "Makes Crushed Bauxite",
+    "name": "Bauxite Crushing",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -6052,7 +6052,7 @@
   },
   {
     "id": "r_grinder_mk2_06",
-    "name": "Makes Alumina Dust",
+    "name": "Alumina Dust Grinding",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -6074,7 +6074,7 @@
   },
   {
     "id": "r_grinder_mk2_07",
-    "name": "Makes Gravel",
+    "name": "Gravel Grinding (Soil)",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -6096,7 +6096,7 @@
   },
   {
     "id": "r_grinder_mk2_08",
-    "name": "Makes Gravel",
+    "name": "Gravel Grinding (Rock)",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -6118,7 +6118,7 @@
   },
   {
     "id": "r_grinder_mk2_09",
-    "name": "Makes Raw Iron",
+    "name": "Raw Iron from Shallow Earth",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -6144,7 +6144,7 @@
   },
   {
     "id": "r_grinder_mk2_10",
-    "name": "Makes Rock",
+    "name": "Rock from Shallow Earth",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -6166,7 +6166,7 @@
   },
   {
     "id": "r_grinder_mk2_11",
-    "name": "Makes Shallow Earth Fragment",
+    "name": "Shallow Earth from Medium Earth",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -6192,7 +6192,7 @@
   },
   {
     "id": "r_grinder_mk2_12",
-    "name": "Makes Treated Rock",
+    "name": "Treated Rock Processing",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -6214,7 +6214,7 @@
   },
   {
     "id": "r_grinder_mk2_13",
-    "name": "Makes Rich Soil",
+    "name": "Rich Soil Processing",
     "machine_id": "m_grinder_mk2",
     "cycle_time": 16,
     "power_use": 1250000,
@@ -6236,7 +6236,7 @@
   },
   {
     "id": "r_industrial_roller_01",
-    "name": "Makes Copper Wire",
+    "name": "Copper Wire Rolling",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
     "power_use": 750,
@@ -6258,7 +6258,7 @@
   },
   {
     "id": "r_industrial_roller_02",
-    "name": "Makes Iron Coil",
+    "name": "Iron Coil Rolling",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
     "power_use": 1125,
@@ -6280,7 +6280,7 @@
   },
   {
     "id": "r_industrial_roller_03",
-    "name": "Makes Steel Rod",
+    "name": "Steel Rod Rolling",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
     "power_use": 9375,
@@ -6302,7 +6302,7 @@
   },
   {
     "id": "r_industrial_roller_04",
-    "name": "Makes Gear",
+    "name": "Gear Rolling",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
     "power_use": 9375,
@@ -6324,7 +6324,7 @@
   },
   {
     "id": "r_industrial_roller_05",
-    "name": "Makes Nails",
+    "name": "Nail Rolling",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
     "power_use": 1125,
@@ -6346,7 +6346,7 @@
   },
   {
     "id": "r_industrial_roller_06",
-    "name": "Makes Ferroaluminium Magnet",
+    "name": "FeAl Magnet Rolling",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
     "power_use": 1125,
@@ -6368,7 +6368,7 @@
   },
   {
     "id": "r_industrial_roller_07",
-    "name": "Makes Gold Wire",
+    "name": "Gold Wire Rolling",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
     "power_use": 11250,
@@ -6390,7 +6390,7 @@
   },
   {
     "id": "r_industrial_roller_08",
-    "name": "Makes Zirconium Rod",
+    "name": "Zirconium Rod Rolling",
     "machine_id": "m_industrial_roller",
     "cycle_time": 6,
     "power_use": 100000,
@@ -6412,7 +6412,7 @@
   },
   {
     "id": "r_industrial_sawmill_01",
-    "name": "Makes Cut Oak Log",
+    "name": "Cut Oak Log Cutting",
     "machine_id": "m_industrial_sawmill",
     "cycle_time": 10,
     "power_use": 0,
@@ -6438,7 +6438,7 @@
   },
   {
     "id": "r_industrial_sawmill_02",
-    "name": "Makes Chunk Plank",
+    "name": "Chunk Plank Cutting",
     "machine_id": "m_industrial_sawmill",
     "cycle_time": 10,
     "power_use": 0,
@@ -6464,7 +6464,7 @@
   },
   {
     "id": "r_industrial_sawmill_03",
-    "name": "Makes Planks",
+    "name": "Plank Production",
     "machine_id": "m_industrial_sawmill",
     "cycle_time": 10,
     "power_use": 0,
@@ -6490,7 +6490,7 @@
   },
   {
     "id": "r_industrial_sawmill_04",
-    "name": "Makes Iron Plate",
+    "name": "Iron Plate Production",
     "machine_id": "m_industrial_sawmill",
     "cycle_time": 10,
     "power_use": 0,
@@ -6516,7 +6516,7 @@
   },
   {
     "id": "r_lathe_01",
-    "name": "Makes Copper Drill Head",
+    "name": "Copper Drill Head Turning",
     "machine_id": "m_lathe",
     "cycle_time": 60,
     "power_use": 500000,
@@ -6538,7 +6538,7 @@
   },
   {
     "id": "r_lathe_02",
-    "name": "Makes Iron Drill Head",
+    "name": "Iron Drill Head Turning",
     "machine_id": "m_lathe",
     "cycle_time": 160,
     "power_use": 500000,
@@ -6560,7 +6560,7 @@
   },
   {
     "id": "r_lathe_03",
-    "name": "Makes Steel Drill Head",
+    "name": "Steel Drill Head Turning",
     "machine_id": "m_lathe",
     "cycle_time": 200,
     "power_use": 500000,
@@ -6582,7 +6582,7 @@
   },
   {
     "id": "r_lathe_04",
-    "name": "Makes Tungsten Carbide Drill Head",
+    "name": "Tungsten Carbide Turning",
     "machine_id": "m_lathe",
     "cycle_time": 240,
     "power_use": 500000,
@@ -6604,7 +6604,7 @@
   },
   {
     "id": "r_lathe_05",
-    "name": "Makes Steel Rod",
+    "name": "Steel Rod Turning",
     "machine_id": "m_lathe",
     "cycle_time": 30,
     "power_use": 100000,
@@ -6626,7 +6626,7 @@
   },
   {
     "id": "r_press_01",
-    "name": "Makes Copper Plate",
+    "name": "Copper Plate Pressing",
     "machine_id": "m_press",
     "cycle_time": 4,
     "power_use": 1000,
@@ -6648,7 +6648,7 @@
   },
   {
     "id": "r_press_02",
-    "name": "Makes Iron Plate",
+    "name": "Iron Plate Pressing",
     "machine_id": "m_press",
     "cycle_time": 4,
     "power_use": 2000,
@@ -6670,7 +6670,7 @@
   },
   {
     "id": "r_press_03",
-    "name": "Makes Steel Plate",
+    "name": "Steel Plate Pressing",
     "machine_id": "m_press",
     "cycle_time": 4,
     "power_use": 12500,
@@ -6692,7 +6692,7 @@
   },
   {
     "id": "r_press_04",
-    "name": "Makes Plank^2",
+    "name": "Plank Doubling",
     "machine_id": "m_press",
     "cycle_time": 4,
     "power_use": 6250,
@@ -6714,7 +6714,7 @@
   },
   {
     "id": "r_press_05",
-    "name": "Makes Iron Plate^2",
+    "name": "Iron Plate Doubling",
     "machine_id": "m_press",
     "cycle_time": 4,
     "power_use": 6250,
@@ -6736,7 +6736,7 @@
   },
   {
     "id": "r_press_mk2_01",
-    "name": "Makes Iron Plate",
+    "name": "Iron Plate Pressing",
     "machine_id": "m_press_mk2",
     "cycle_time": 8,
     "power_use": 50000,
@@ -6758,7 +6758,7 @@
   },
   {
     "id": "r_press_mk2_02",
-    "name": "Makes Steel Plate",
+    "name": "Steel Plate Pressing",
     "machine_id": "m_press_mk2",
     "cycle_time": 8,
     "power_use": 75000,
@@ -6780,7 +6780,7 @@
   },
   {
     "id": "r_press_mk2_03",
-    "name": "Makes Copper Plate",
+    "name": "Copper Plate Pressing",
     "machine_id": "m_press_mk2",
     "cycle_time": 4,
     "power_use": 25000,
@@ -6802,7 +6802,7 @@
   },
   {
     "id": "r_press_mk2_04",
-    "name": "Makes Tungsten Carbide Plate",
+    "name": "Tungsten Carbide Pressing",
     "machine_id": "m_press_mk2",
     "cycle_time": 4,
     "power_use": 250000,
@@ -6824,7 +6824,7 @@
   },
   {
     "id": "r_press_mk2_05",
-    "name": "Makes Gear",
+    "name": "Gear Pressing",
     "machine_id": "m_press_mk2",
     "cycle_time": 4,
     "power_use": 75000,
@@ -6846,7 +6846,7 @@
   },
   {
     "id": "r_press_mk2_06",
-    "name": "Makes Iron Plate^2",
+    "name": "Iron Plate Doubling",
     "machine_id": "m_press_mk2",
     "cycle_time": 4,
     "power_use": 40000,
@@ -6868,7 +6868,7 @@
   },
   {
     "id": "r_raw_mill_01",
-    "name": "Makes Rawmix, Aggregate",
+    "name": "Rawmix/Aggregate Milling",
     "machine_id": "m_raw_mill",
     "cycle_time": 20,
     "power_use": 2500,
@@ -6905,7 +6905,7 @@
   },
   {
     "id": "r_raw_mill_02",
-    "name": "Makes Rawmix",
+    "name": "Rawmix Milling",
     "machine_id": "m_raw_mill",
     "cycle_time": 20,
     "power_use": 2500,
@@ -6932,7 +6932,7 @@
   },
   {
     "id": "r_raw_mill_03",
-    "name": "Makes Aggregate",
+    "name": "Aggregate Milling",
     "machine_id": "m_raw_mill",
     "cycle_time": 20,
     "power_use": 2500,
@@ -6955,7 +6955,7 @@
   },
   {
     "id": "r_roller_01",
-    "name": "Makes Copper Wire",
+    "name": "Copper Wire Rolling",
     "machine_id": "m_roller",
     "cycle_time": 8,
     "power_use": 500,
@@ -6977,7 +6977,7 @@
   },
   {
     "id": "r_roller_02",
-    "name": "Makes Iron Coil",
+    "name": "Iron Coil Rolling",
     "machine_id": "m_roller",
     "cycle_time": 8,
     "power_use": 750,
@@ -6999,7 +6999,7 @@
   },
   {
     "id": "r_roller_03",
-    "name": "Makes Steel Rod",
+    "name": "Steel Rod Rolling",
     "machine_id": "m_roller",
     "cycle_time": 8,
     "power_use": 6250,
@@ -7021,7 +7021,7 @@
   },
   {
     "id": "r_roller_04",
-    "name": "Makes Gear",
+    "name": "Gear Rolling",
     "machine_id": "m_roller",
     "cycle_time": 8,
     "power_use": 6250,
@@ -7043,7 +7043,7 @@
   },
   {
     "id": "r_roller_05",
-    "name": "Makes Nails",
+    "name": "Nail Rolling",
     "machine_id": "m_roller",
     "cycle_time": 8,
     "power_use": 750,
@@ -7065,7 +7065,7 @@
   },
   {
     "id": "r_roller_06",
-    "name": "Makes Gold Wire",
+    "name": "Gold Wire Rolling",
     "machine_id": "m_roller",
     "cycle_time": 8,
     "power_use": 7500,
@@ -7087,7 +7087,7 @@
   },
   {
     "id": "r_roller_mk2_01",
-    "name": "Makes Copper Wire",
+    "name": "Copper Wire Rolling",
     "machine_id": "m_roller_mk2",
     "cycle_time": 8,
     "power_use": 25000,
@@ -7109,7 +7109,7 @@
   },
   {
     "id": "r_roller_mk2_02",
-    "name": "Makes Iron Coil",
+    "name": "Iron Coil Rolling",
     "machine_id": "m_roller_mk2",
     "cycle_time": 8,
     "power_use": 50000,
@@ -7131,7 +7131,7 @@
   },
   {
     "id": "r_roller_mk2_03",
-    "name": "Makes Steel Coil",
+    "name": "Steel Coil Rolling",
     "machine_id": "m_roller_mk2",
     "cycle_time": 8,
     "power_use": 75000,
@@ -7153,7 +7153,7 @@
   },
   {
     "id": "r_roller_mk2_04",
-    "name": "Makes Gold Wire",
+    "name": "Gold Wire Rolling",
     "machine_id": "m_roller_mk2",
     "cycle_time": 8,
     "power_use": 25000,
@@ -7175,7 +7175,7 @@
   },
   {
     "id": "r_sawmill_01",
-    "name": "Makes Cut Oak Log",
+    "name": "Cut Oak Log Cutting",
     "machine_id": "m_sawmill",
     "cycle_time": 20,
     "power_use": 3000,
@@ -7197,7 +7197,7 @@
   },
   {
     "id": "r_sawmill_02",
-    "name": "Makes Chunk Plank",
+    "name": "Chunk Plank Cutting",
     "machine_id": "m_sawmill",
     "cycle_time": 20,
     "power_use": 3000,
@@ -7219,7 +7219,7 @@
   },
   {
     "id": "r_sawmill_03",
-    "name": "Makes Planks",
+    "name": "Plank Production",
     "machine_id": "m_sawmill",
     "cycle_time": 20,
     "power_use": 3000,
@@ -7241,7 +7241,7 @@
   },
   {
     "id": "r_sawmill_04",
-    "name": "Makes Iron Plate",
+    "name": "Iron Plate Production",
     "machine_id": "m_sawmill",
     "cycle_time": 20,
     "power_use": 3000,
@@ -7263,7 +7263,7 @@
   },
   {
     "id": "r_trommel_01",
-    "name": "Makes Rich Soil, Bauxite Residue, Gravel, Sand",
+    "name": "Soil Sorting",
     "machine_id": "m_trommel",
     "cycle_time": 28,
     "power_use": 17900,
@@ -7304,7 +7304,7 @@
   },
   {
     "id": "r_trommel_02",
-    "name": "Makes Shallow Earth Fragment, Raw Iron, Table Salt, Rock",
+    "name": "Earth Fragment Sorting",
     "machine_id": "m_trommel",
     "cycle_time": 28,
     "power_use": 17900,
@@ -7345,7 +7345,7 @@
   },
   {
     "id": "r_trommel_03",
-    "name": "Makes 18 Karat Gold, Bauxite Residue",
+    "name": "Gold Sorting",
     "machine_id": "m_trommel",
     "cycle_time": 28,
     "power_use": 17900,
@@ -7376,7 +7376,7 @@
   },
   {
     "id": "r_trommel_04",
-    "name": "Makes Coal, Powdered Tungsten",
+    "name": "Coal/Tungsten Sorting",
     "machine_id": "m_trommel",
     "cycle_time": 28,
     "power_use": 17900,
@@ -7407,7 +7407,7 @@
   },
   {
     "id": "r_trommel_05",
-    "name": "Makes 10 Karat Gold, Rich Soil, Raw Lead, Bauxite Residue",
+    "name": "Gold/Lead Sorting",
     "machine_id": "m_trommel",
     "cycle_time": 28,
     "power_use": 17900,
@@ -7448,7 +7448,7 @@
   },
   {
     "id": "r_diesel_refinery_01",
-    "name": "Makes Poor Quality Diesel, Residue",
+    "name": "Crude Diesel to Poor Diesel",
     "machine_id": "m_diesel_refinery",
     "cycle_time": 1,
     "power_use": 1000,
@@ -7475,7 +7475,7 @@
   },
   {
     "id": "r_diesel_refinery_02",
-    "name": "Makes Diesel, Residue",
+    "name": "Poor Diesel to Diesel",
     "machine_id": "m_diesel_refinery",
     "cycle_time": 1,
     "power_use": 1000,
@@ -7502,7 +7502,7 @@
   },
   {
     "id": "r_diesel_refinery_03",
-    "name": "Makes Refined Diesel, Residue",
+    "name": "Diesel to Refined Diesel",
     "machine_id": "m_diesel_refinery",
     "cycle_time": 1,
     "power_use": 1000,
@@ -7529,7 +7529,7 @@
   },
   {
     "id": "r_diesel_refinery_04",
-    "name": "Makes Gasoline, Residue",
+    "name": "Refined Diesel to Gasoline",
     "machine_id": "m_diesel_refinery",
     "cycle_time": 1,
     "power_use": 1000,
@@ -7556,7 +7556,7 @@
   },
   {
     "id": "r_gas_refinery_01",
-    "name": "Makes Refined Gas, Residue",
+    "name": "Water-Free Gas Refining",
     "machine_id": "m_gas_refinery",
     "cycle_time": 1,
     "power_use": 60000,
@@ -7583,7 +7583,7 @@
   },
   {
     "id": "r_gold_acid_refinery_01",
-    "name": "Makes Residue, 10 Karat Gold",
+    "name": "10K Gold from Rich Soil",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
     "power_use": 100000,
@@ -7618,7 +7618,7 @@
   },
   {
     "id": "r_gold_acid_refinery_02",
-    "name": "Makes Residue, 18 Karat Gold",
+    "name": "18K Gold from 12K Gold",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
     "power_use": 100000,
@@ -7653,7 +7653,7 @@
   },
   {
     "id": "r_gold_acid_refinery_03",
-    "name": "Makes Residue, 18 Karat Gold",
+    "name": "18K Gold from Rich Soil",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
     "power_use": 100000,
@@ -7688,7 +7688,7 @@
   },
   {
     "id": "r_gold_acid_refinery_04",
-    "name": "Makes Residue, Bauxite Residue",
+    "name": "Bauxite Residue from Shallow Earth",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
     "power_use": 100000,
@@ -7723,7 +7723,7 @@
   },
   {
     "id": "r_gold_acid_refinery_05",
-    "name": "Makes Residue, Raw Zinc",
+    "name": "Raw Zinc from Medium Earth",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
     "power_use": 100000,
@@ -7758,7 +7758,7 @@
   },
   {
     "id": "r_gold_acid_refinery_06",
-    "name": "Makes Residue, Coal",
+    "name": "Coal from Medium Earth",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
     "power_use": 100000,
@@ -7793,7 +7793,7 @@
   },
   {
     "id": "r_gold_acid_refinery_07",
-    "name": "Makes Lithium Brine, Rich Soil",
+    "name": "Lithium Brine/Rich Soil from Medium Earth",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
     "power_use": 100000,
@@ -7828,7 +7828,7 @@
   },
   {
     "id": "r_gold_acid_refinery_08",
-    "name": "Makes Residue, Coal",
+    "name": "Coal from Deep Earth w/ HCl",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
     "power_use": 100000,
@@ -7863,7 +7863,7 @@
   },
   {
     "id": "r_gold_acid_refinery_09",
-    "name": "Makes Residue, Coal",
+    "name": "Coal from Deep Earth w/ Sulfuric",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
     "power_use": 100000,
@@ -7898,7 +7898,7 @@
   },
   {
     "id": "r_gold_acid_refinery_10",
-    "name": "Makes Residue, Coal",
+    "name": "Coal from Deep Earth w/ Acetic",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
     "power_use": 100000,
@@ -7933,7 +7933,7 @@
   },
   {
     "id": "r_gold_acid_refinery_11",
-    "name": "Makes Residue, 8 Karat Gold",
+    "name": "8K Gold from Treated Rock",
     "machine_id": "m_gold_acid_refinery",
     "cycle_time": 5,
     "power_use": 100000,
@@ -7968,7 +7968,7 @@
   },
   {
     "id": "r_industrial_diesel_refinery_01",
-    "name": "Makes Poor Quality Diesel, Residue",
+    "name": "Crude Diesel to Poor Diesel",
     "machine_id": "m_industrial_diesel_refinery",
     "cycle_time": 1,
     "power_use": 750000,
@@ -7999,7 +7999,7 @@
   },
   {
     "id": "r_industrial_diesel_refinery_02",
-    "name": "Makes Diesel, Residue",
+    "name": "Poor Diesel to Diesel",
     "machine_id": "m_industrial_diesel_refinery",
     "cycle_time": 1,
     "power_use": 750000,
@@ -8030,7 +8030,7 @@
   },
   {
     "id": "r_industrial_diesel_refinery_03",
-    "name": "Makes Refined Diesel, Residue",
+    "name": "Diesel to Refined Diesel",
     "machine_id": "m_industrial_diesel_refinery",
     "cycle_time": 1,
     "power_use": 750000,
@@ -8061,7 +8061,7 @@
   },
   {
     "id": "r_industrial_diesel_refinery_04",
-    "name": "Makes Gasoline, Residue",
+    "name": "Refined Diesel to Gasoline",
     "machine_id": "m_industrial_diesel_refinery",
     "cycle_time": 1,
     "power_use": 750000,
@@ -8092,7 +8092,7 @@
   },
   {
     "id": "r_plastic_refinery_01",
-    "name": "Makes Ethanol",
+    "name": "Ethanol Production",
     "machine_id": "m_plastic_refinery",
     "cycle_time": 4,
     "power_use": 60000,
@@ -8118,7 +8118,7 @@
   },
   {
     "id": "r_plastic_refinery_02",
-    "name": "Makes PTA",
+    "name": "PTA Production",
     "machine_id": "m_plastic_refinery",
     "cycle_time": 4,
     "power_use": 60000,
@@ -8144,7 +8144,7 @@
   },
   {
     "id": "r_advanced_oil_separator_01",
-    "name": "Makes Residue, Coke Fuel, Light Oil, Hydrogen Sulfide",
+    "name": "Crude Oil Separation",
     "machine_id": "m_advanced_oil_separator",
     "cycle_time": 10,
     "power_use": 2500000,
@@ -8185,7 +8185,7 @@
   },
   {
     "id": "r_advanced_oil_separator_02",
-    "name": "Makes Residue, Coke Fuel",
+    "name": "Heavy Oil Separation",
     "machine_id": "m_advanced_oil_separator",
     "cycle_time": 10,
     "power_use": 2500000,
@@ -8216,7 +8216,7 @@
   },
   {
     "id": "r_advanced_oil_separator_03",
-    "name": "Makes Residue, Heavy Oil",
+    "name": "Fracking Oil Separation",
     "machine_id": "m_advanced_oil_separator",
     "cycle_time": 10,
     "power_use": 2500000,
@@ -8247,7 +8247,7 @@
   },
   {
     "id": "r_advanced_oil_separator_04",
-    "name": "Makes Residue, Hydrogen Sulfide, Heavy Oil",
+    "name": "Light Oil Separation",
     "machine_id": "m_advanced_oil_separator",
     "cycle_time": 10,
     "power_use": 2500000,
@@ -8283,7 +8283,7 @@
   },
   {
     "id": "r_crude_oil_separator_01",
-    "name": "Makes Crude Diesel, Gasoline, Residue",
+    "name": "Hot Crude Oil Separation",
     "machine_id": "m_crude_oil_separator",
     "cycle_time": 1,
     "power_use": 2200,
@@ -8315,7 +8315,7 @@
   },
   {
     "id": "r_gas_centrifuge_01",
-    "name": "Makes Depleted UF6 Waste, Slightly Enriched UF6 Gas, Unenriched UF6 Gas",
+    "name": "Unenriched to Slightly Enriched",
     "machine_id": "m_gas_centrifuge",
     "cycle_time": 1,
     "power_use": 1000000,
@@ -8347,7 +8347,7 @@
   },
   {
     "id": "r_gas_centrifuge_02",
-    "name": "Makes Depleted UF6 Waste, Enriched UF6 Gas, Slightly Enriched UF6 Gas",
+    "name": "Slightly Enriched to Enriched",
     "machine_id": "m_gas_centrifuge",
     "cycle_time": 1,
     "power_use": 1000000,
@@ -8379,7 +8379,7 @@
   },
   {
     "id": "r_industrial_oil_separator_01",
-    "name": "Makes Residue, Machine Oil, Light Oil",
+    "name": "Heavy Oil Separation",
     "machine_id": "m_industrial_oil_separator",
     "cycle_time": 5,
     "power_use": 100000,
@@ -8415,7 +8415,7 @@
   },
   {
     "id": "r_industrial_oil_separator_02",
-    "name": "Makes Residue, Diesel, Crude Oil",
+    "name": "Light Oil Separation",
     "machine_id": "m_industrial_oil_separator",
     "cycle_time": 5,
     "power_use": 100000,
@@ -8451,7 +8451,7 @@
   },
   {
     "id": "r_industrial_oil_separator_03",
-    "name": "Makes Residue, Crude Oil",
+    "name": "Fracking Oil Separation",
     "machine_id": "m_industrial_oil_separator",
     "cycle_time": 5,
     "power_use": 100000,
@@ -8482,7 +8482,7 @@
   },
   {
     "id": "r_ore_enrichment_facility_01",
-    "name": "Makes Mixed Uranium Oxides, Sand, Residue",
+    "name": "Uranium Oxide Processing w/ HCl",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 10,
     "power_use": 500000,
@@ -8522,7 +8522,7 @@
   },
   {
     "id": "r_ore_enrichment_facility_02",
-    "name": "Makes Mixed Uranium Oxides, Sand, Residue",
+    "name": "Uranium Oxide Processing w/ Sulfuric",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 10,
     "power_use": 500000,
@@ -8562,7 +8562,7 @@
   },
   {
     "id": "r_ore_enrichment_facility_03",
-    "name": "Makes Mixed Fissile Nitrates, Fission Byproducts, Residue",
+    "name": "Spent Fuel Processing w/ HCl",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 10,
     "power_use": 500000,
@@ -8602,7 +8602,7 @@
   },
   {
     "id": "r_ore_enrichment_facility_04",
-    "name": "Makes Mixed Fissile Nitrates, Fission Byproducts, Residue",
+    "name": "Spent Fuel Processing w/ Sulfuric",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 10,
     "power_use": 500000,
@@ -8642,7 +8642,7 @@
   },
   {
     "id": "r_ore_enrichment_facility_05",
-    "name": "Makes Lithium Carbonate, Residue",
+    "name": "Lithium Carbonate Processing",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 4,
     "power_use": 500000,
@@ -8681,7 +8681,7 @@
   },
   {
     "id": "r_ore_enrichment_facility_06",
-    "name": "Makes Powdered Tungsten Carbide, Residue",
+    "name": "Tungsten Carbide Processing",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 4,
     "power_use": 1000000,
@@ -8708,7 +8708,7 @@
     "outputs": [
       {
         "product_id": "p_powdered_tungsten_carbide",
-        "quantity": 7,
+        "quantity": 6,
         "temperature": 18
       },
       {
@@ -8720,7 +8720,7 @@
   },
   {
     "id": "r_ore_enrichment_facility_07",
-    "name": "Makes 24 Karat Gold, Bauxite Residue, Residue",
+    "name": "24K Gold Processing",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 2,
     "power_use": 2000000,
@@ -8756,7 +8756,7 @@
   },
   {
     "id": "r_ore_enrichment_facility_08",
-    "name": "Makes Treated Raw Iron, Residue",
+    "name": "Raw Iron Treatment",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 15,
     "power_use": 800000,
@@ -8787,7 +8787,7 @@
   },
   {
     "id": "r_ore_enrichment_facility_09",
-    "name": "Makes Treated Raw Copper, Residue",
+    "name": "Raw Copper Treatment",
     "machine_id": "m_ore_enrichment_facility",
     "cycle_time": 15,
     "power_use": 800000,
@@ -8818,7 +8818,7 @@
   },
   {
     "id": "r_exhaust_stack_01",
-    "name": "Consumes Exhaust, Filter",
+    "name": "Exhaust Filtration",
     "machine_id": "m_exhaust_stack",
     "cycle_time": 5,
     "power_use": 0,
@@ -8838,7 +8838,7 @@
   },
   {
     "id": "r_exhaust_stack_02",
-    "name": "Consumes Exhaust",
+    "name": "Exhaust Venting",
     "machine_id": "m_exhaust_stack",
     "cycle_time": 5,
     "power_use": 0,
@@ -8854,7 +8854,7 @@
   },
   {
     "id": "r_scrubber_01",
-    "name": "Makes Residue",
+    "name": "Water Scrubbing",
     "machine_id": "m_scrubber",
     "cycle_time": 4,
     "power_use": 15000,
@@ -8876,7 +8876,7 @@
   },
   {
     "id": "r_scrubber_02",
-    "name": "Makes Residue",
+    "name": "Filtered Water Scrubbing",
     "machine_id": "m_scrubber",
     "cycle_time": 4,
     "power_use": 15000,
@@ -8898,7 +8898,7 @@
   },
   {
     "id": "r_scrubber_03",
-    "name": "Makes Residue",
+    "name": "Distilled Water Scrubbing",
     "machine_id": "m_scrubber",
     "cycle_time": 4,
     "power_use": 15000,
@@ -8920,7 +8920,7 @@
   },
   {
     "id": "r_scrubber_04",
-    "name": "Makes Residue",
+    "name": "Residue Scrubbing",
     "machine_id": "m_scrubber",
     "cycle_time": 4,
     "power_use": 15000,
@@ -8942,7 +8942,7 @@
   },
   {
     "id": "r_coal_generator_01",
-    "name": "Makes Steam",
+    "name": "Coal Steam Generation",
     "machine_id": "m_coal_generator",
     "cycle_time": 1,
     "power_use": -7000,
@@ -8969,7 +8969,7 @@
   },
   {
     "id": "r_compact_coal_power_plant_01",
-    "name": "Consumes Coal",
+    "name": "Coal Power Generation",
     "machine_id": "m_compact_coal_power_plant",
     "cycle_time": 3.33,
     "power_use": -13500,
@@ -8985,7 +8985,7 @@
   },
   {
     "id": "r_energy_wheel_01",
-    "name": "Produces Power",
+    "name": "Wheel Power Generation",
     "machine_id": "m_energy_wheel",
     "cycle_time": 1,
     "power_use": -30000,
@@ -8996,7 +8996,7 @@
   },
   {
     "id": "r_hand_crank_01",
-    "name": "Produces Power",
+    "name": "Crank Power Generation",
     "machine_id": "m_hand_crank",
     "cycle_time": 1,
     "power_use": -1500,
@@ -9007,7 +9007,7 @@
   },
   {
     "id": "r_solar_panel_01",
-    "name": "Produces Power",
+    "name": "Solar Power Generation",
     "machine_id": "m_solar_panel",
     "cycle_time": 1,
     "power_use": -200,
@@ -9018,7 +9018,7 @@
   },
   {
     "id": "r_solar_panel2_01",
-    "name": "Produces Power",
+    "name": "Solar Power Generation",
     "machine_id": "m_solar_panel2",
     "cycle_time": 1,
     "power_use": -575,
@@ -9029,7 +9029,7 @@
   },
   {
     "id": "r_solar_panel3_01",
-    "name": "Produces Power",
+    "name": "Solar Power Generation",
     "machine_id": "m_solar_panel3",
     "cycle_time": 1,
     "power_use": -3400,
@@ -9040,7 +9040,7 @@
   },
   {
     "id": "r_solar_farm1_01",
-    "name": "Produces Power",
+    "name": "Solar Power Generation",
     "machine_id": "m_solar_farm1",
     "cycle_time": 1,
     "power_use": -80000,
@@ -9051,7 +9051,7 @@
   },
   {
     "id": "r_4_panel_solar_01",
-    "name": "Produces Power",
+    "name": "Solar Power Generation",
     "machine_id": "m_4_panel_solar",
     "cycle_time": 1,
     "power_use": -68965.51,
@@ -9062,7 +9062,7 @@
   },
   {
     "id": "r_rtg_01",
-    "name": "Produces Power",
+    "name": "RTG Power Generation",
     "machine_id": "m_rtg",
     "cycle_time": 1,
     "power_use": -1,
@@ -9073,7 +9073,7 @@
   },
   {
     "id": "r_diesel_generator_01",
-    "name": "Consumes Crude Diesel",
+    "name": "Crude Diesel Power",
     "machine_id": "m_diesel_generator",
     "cycle_time": 5,
     "power_use": -55200,
@@ -9089,7 +9089,7 @@
   },
   {
     "id": "r_diesel_generator_02",
-    "name": "Consumes Poor Quality Diesel",
+    "name": "Poor Diesel Power",
     "machine_id": "m_diesel_generator",
     "cycle_time": 6,
     "power_use": -66000,
@@ -9105,7 +9105,7 @@
   },
   {
     "id": "r_diesel_generator_03",
-    "name": "Consumes Diesel",
+    "name": "Diesel Power",
     "machine_id": "m_diesel_generator",
     "cycle_time": 7.67,
     "power_use": -78000,
@@ -9121,7 +9121,7 @@
   },
   {
     "id": "r_diesel_generator_04",
-    "name": "Consumes Refined Diesel",
+    "name": "Refined Diesel Power",
     "machine_id": "m_diesel_generator",
     "cycle_time": 10.33,
     "power_use": -90000,
@@ -9137,7 +9137,7 @@
   },
   {
     "id": "r_firebox_01",
-    "name": "Heats Water",
+    "name": "Water Heating (Coal)",
     "machine_id": "m_firebox",
     "cycle_time": 1,
     "power_use": 0,
@@ -9163,7 +9163,7 @@
   },
   {
     "id": "r_firebox_02",
-    "name": "Heats Filtered Water",
+    "name": "Filtered Water Heating (Coal)",
     "machine_id": "m_firebox",
     "cycle_time": 1,
     "power_use": 0,
@@ -9189,7 +9189,7 @@
   },
   {
     "id": "r_firebox_03",
-    "name": "Heats Distilled Water",
+    "name": "Distilled Water Heating (Coal)",
     "machine_id": "m_firebox",
     "cycle_time": 1,
     "power_use": 0,
@@ -9215,7 +9215,7 @@
   },
   {
     "id": "r_gas_burner_01",
-    "name": "Heats Water",
+    "name": "Water Heating (Gas)",
     "machine_id": "m_gas_burner",
     "cycle_time": 1,
     "power_use": 0,
@@ -9241,7 +9241,7 @@
   },
   {
     "id": "r_gas_burner_02",
-    "name": "Heats Water",
+    "name": "Water Heating (Hydrogen)",
     "machine_id": "m_gas_burner",
     "cycle_time": 1,
     "power_use": 0,
@@ -9267,7 +9267,7 @@
   },
   {
     "id": "r_gas_burner_03",
-    "name": "Heats Filtered Water",
+    "name": "Filtered Water Heating (Gas)",
     "machine_id": "m_gas_burner",
     "cycle_time": 1,
     "power_use": 0,
@@ -9293,7 +9293,7 @@
   },
   {
     "id": "r_gas_burner_04",
-    "name": "Heats Filtered Water",
+    "name": "Filtered Water Heating (Hydrogen)",
     "machine_id": "m_gas_burner",
     "cycle_time": 1,
     "power_use": 0,
@@ -9319,7 +9319,7 @@
   },
   {
     "id": "r_gas_burner_05",
-    "name": "Heats Distilled Water",
+    "name": "Distilled Water Heating (Gas)",
     "machine_id": "m_gas_burner",
     "cycle_time": 1,
     "power_use": 0,
@@ -9345,7 +9345,7 @@
   },
   {
     "id": "r_gas_burner_06",
-    "name": "Heats Distilled Water",
+    "name": "Distilled Water Heating (Hydrogen)",
     "machine_id": "m_gas_burner",
     "cycle_time": 1,
     "power_use": 0,
@@ -9371,7 +9371,7 @@
   },
   {
     "id": "r_gasoline_generator_01",
-    "name": "Consumes Gasoline",
+    "name": "Gasoline Power",
     "machine_id": "m_gasoline_generator",
     "cycle_time": 2,
     "power_use": -12000,
@@ -9387,7 +9387,7 @@
   },
   {
     "id": "r_gasoline_generator_02",
-    "name": "Consumes GasolineE10",
+    "name": "GasolineE10 Power",
     "machine_id": "m_gasoline_generator",
     "cycle_time": 10,
     "power_use": -24000,
@@ -9403,7 +9403,7 @@
   },
   {
     "id": "r_gasoline_generator_03",
-    "name": "Consumes Leaded Gasoline",
+    "name": "Leaded Gasoline Power",
     "machine_id": "m_gasoline_generator",
     "cycle_time": 5,
     "power_use": -100000,
@@ -9419,7 +9419,7 @@
   },
   {
     "id": "r_large_diesel_engine_01",
-    "name": "Consumes Crude Diesel, Machine Oil",
+    "name": "Crude Diesel Engine (Water)",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
     "power_use": -5000000,
@@ -9443,7 +9443,7 @@
   },
   {
     "id": "r_large_diesel_engine_02",
-    "name": "Consumes Poor Quality Diesel, Machine Oil",
+    "name": "Poor Diesel Engine (Water)",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
     "power_use": -5000000,
@@ -9467,7 +9467,7 @@
   },
   {
     "id": "r_large_diesel_engine_03",
-    "name": "Consumes Diesel, Machine Oil",
+    "name": "Diesel Engine (Water)",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
     "power_use": -5000000,
@@ -9491,7 +9491,7 @@
   },
   {
     "id": "r_large_diesel_engine_04",
-    "name": "Consumes Refined Diesel, Machine Oil",
+    "name": "Refined Diesel Engine (Water)",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
     "power_use": -5000000,
@@ -9515,7 +9515,7 @@
   },
   {
     "id": "r_large_diesel_engine_05",
-    "name": "Consumes Crude Diesel, Machine Oil, Filtered Water",
+    "name": "Crude Diesel Engine (Filtered Water)",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
     "power_use": -6000000,
@@ -9539,7 +9539,7 @@
   },
   {
     "id": "r_large_diesel_engine_06",
-    "name": "Consumes Poor Quality Diesel, Machine Oil, Filtered Water",
+    "name": "Poor Diesel Engine (Filtered Water)",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
     "power_use": -6000000,
@@ -9563,7 +9563,7 @@
   },
   {
     "id": "r_large_diesel_engine_07",
-    "name": "Consumes Diesel, Machine Oil, Filtered Water",
+    "name": "Diesel Engine (Filtered Water)",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
     "power_use": -6000000,
@@ -9587,7 +9587,7 @@
   },
   {
     "id": "r_large_diesel_engine_08",
-    "name": "Consumes Refined Diesel, Machine Oil, Filtered Water",
+    "name": "Refined Diesel Engine (Filtered Water)",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
     "power_use": -6000000,
@@ -9611,7 +9611,7 @@
   },
   {
     "id": "r_large_diesel_engine_09",
-    "name": "Consumes Crude Diesel, Machine Oil, Distilled Water",
+    "name": "Crude Diesel Engine (Distilled Water)",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
     "power_use": -6000000,
@@ -9635,7 +9635,7 @@
   },
   {
     "id": "r_large_diesel_engine_10",
-    "name": "Consumes Poor Quality Diesel, Machine Oil, Distilled Water",
+    "name": "Poor Diesel Engine (Distilled Water)",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
     "power_use": -6000000,
@@ -9659,7 +9659,7 @@
   },
   {
     "id": "r_large_diesel_engine_11",
-    "name": "Consumes Diesel, Machine Oil, Distilled Water",
+    "name": "Diesel Engine (Distilled Water)",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
     "power_use": -6000000,
@@ -9683,7 +9683,7 @@
   },
   {
     "id": "r_large_diesel_engine_12",
-    "name": "Consumes Refined Diesel, Machine Oil, Distilled Water",
+    "name": "Refined Diesel Engine (Distilled Water)",
     "machine_id": "m_large_diesel_engine",
     "cycle_time": 10,
     "power_use": -6000000,
@@ -9718,7 +9718,7 @@
   },
   {
     "id": "r_american_oil_rig_01",
-    "name": "Extracts Crude Oil",
+    "name": "Crude Oil Extraction",
     "machine_id": "m_american_oil_rig",
     "cycle_time": 1,
     "power_use": 50000,
@@ -9735,7 +9735,7 @@
   },
   {
     "id": "r_og_oil_rig_01",
-    "name": "Extracts Crude Oil",
+    "name": "Crude Oil Extraction",
     "machine_id": "m_og_oil_rig",
     "cycle_time": 1,
     "power_use": 3000,
@@ -9752,7 +9752,7 @@
   },
   {
     "id": "r_hot_water_pump_01",
-    "name": "Extracts Water",
+    "name": "Water Extraction",
     "machine_id": "m_hot_water_pump",
     "cycle_time": 1,
     "power_use": 6000,
@@ -9769,7 +9769,7 @@
   },
   {
     "id": "r_sand_excavator_01",
-    "name": "Extracts Sand",
+    "name": "Sand Extraction",
     "machine_id": "m_sand_excavator",
     "cycle_time": 2,
     "power_use": 300000,
@@ -9786,7 +9786,7 @@
   },
   {
     "id": "r_soil_excavator_01",
-    "name": "Extracts Soil",
+    "name": "Soil Extraction",
     "machine_id": "m_soil_excavator",
     "cycle_time": 1,
     "power_use": 300000,
@@ -9808,7 +9808,7 @@
   },
   {
     "id": "r_gold_drill_01",
-    "name": "Extracts 10 Karat Gold",
+    "name": "10 Karat Gold Extraction",
     "machine_id": "m_gold_drill",
     "cycle_time": 1,
     "power_use": 900000,
@@ -9825,7 +9825,7 @@
   },
   {
     "id": "r_uranium_drill_01",
-    "name": "Extracts Uranium",
+    "name": "Uranium Extraction",
     "machine_id": "m_uranium_drill",
     "cycle_time": 180,
     "power_use": 1200000000,
@@ -9842,7 +9842,7 @@
   },
   {
     "id": "r_fancy_coal_drill_01",
-    "name": "Extracts Coal",
+    "name": "Coal Extraction",
     "machine_id": "m_fancy_coal_drill",
     "cycle_time": 4,
     "power_use": 120,
@@ -9859,7 +9859,7 @@
   },
   {
     "id": "r_cat_assembler_01",
-    "name": "Makes Cat",
+    "name": "Cat Assembly",
     "machine_id": "m_cat_assembler",
     "cycle_time": 92,
     "power_use": 0,
@@ -9889,7 +9889,7 @@
   },
   {
     "id": "r_advanced_electric_furnace_01",
-    "name": "Makes Liquid Iron",
+    "name": "Iron Ingot Smelting",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 10,
     "power_use": 12000,
@@ -9911,7 +9911,7 @@
   },
   {
     "id": "r_advanced_electric_furnace_02",
-    "name": "Makes Liquid Copper",
+    "name": "Copper Mix Smelting",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 3,
     "power_use": 40000,
@@ -9933,7 +9933,7 @@
   },
   {
     "id": "r_advanced_electric_furnace_03",
-    "name": "Makes Liquid Copper",
+    "name": "Raw Copper Smelting",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 3,
     "power_use": 40000,
@@ -9955,7 +9955,7 @@
   },
   {
     "id": "r_advanced_electric_furnace_04",
-    "name": "Makes Liquid Iron",
+    "name": "Iron Mix Smelting",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 5,
     "power_use": 24000,
@@ -9977,7 +9977,7 @@
   },
   {
     "id": "r_advanced_electric_furnace_05",
-    "name": "Makes Liquid Iron",
+    "name": "Raw Iron Smelting",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 5,
     "power_use": 24000,
@@ -9999,7 +9999,7 @@
   },
   {
     "id": "r_advanced_electric_furnace_06",
-    "name": "Makes Liquid Sulfur",
+    "name": "Sulfur Smelting",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 5,
     "power_use": 24000,
@@ -10021,7 +10021,7 @@
   },
   {
     "id": "r_advanced_electric_furnace_07",
-    "name": "Makes Liquid Copper",
+    "name": "Copper Ingot Smelting",
     "machine_id": "m_advanced_electric_furnace",
     "cycle_time": 6,
     "power_use": 20000,
@@ -10043,7 +10043,7 @@
   },
   {
     "id": "r_industrial_press_01",
-    "name": "Makes Copper Plate",
+    "name": "Copper Plate Pressing",
     "machine_id": "m_industrial_press",
     "cycle_time": 3,
     "power_use": 1340,
@@ -10065,7 +10065,7 @@
   },
   {
     "id": "r_industrial_press_02",
-    "name": "Makes Plank^2",
+    "name": "Plank Doubling",
     "machine_id": "m_industrial_press",
     "cycle_time": 3.5,
     "power_use": 1140,
@@ -10087,7 +10087,7 @@
   },
   {
     "id": "r_industrial_press_03",
-    "name": "Makes Steel Plate",
+    "name": "Steel Plate Pressing",
     "machine_id": "m_industrial_press",
     "cycle_time": 4,
     "power_use": 12500,
@@ -10109,7 +10109,7 @@
   },
   {
     "id": "r_industrial_press_04",
-    "name": "Makes Iron Plate",
+    "name": "Iron Plate Pressing",
     "machine_id": "m_industrial_press",
     "cycle_time": 4,
     "power_use": 1000,
@@ -10131,7 +10131,7 @@
   },
   {
     "id": "r_industrial_press_05",
-    "name": "Makes Iron Plate^2",
+    "name": "Iron Plate Doubling",
     "machine_id": "m_industrial_press",
     "cycle_time": 4,
     "power_use": 75,
@@ -10153,7 +10153,7 @@
   },
   {
     "id": "r_advanced_diesel_refinery_01",
-    "name": "Makes Residue, Poor Quality Diesel",
+    "name": "Crude Diesel to Poor Diesel",
     "machine_id": "m_advanced_diesel_refinery",
     "cycle_time": 1,
     "power_use": 1000000,
@@ -10184,7 +10184,7 @@
   },
   {
     "id": "r_advanced_diesel_refinery_02",
-    "name": "Makes Residue, Refined Diesel",
+    "name": "Diesel to Refined Diesel",
     "machine_id": "m_advanced_diesel_refinery",
     "cycle_time": 1,
     "power_use": 1000000,
@@ -10215,7 +10215,7 @@
   },
   {
     "id": "r_advanced_diesel_refinery_03",
-    "name": "Makes Residue, Diesel",
+    "name": "Poor Diesel to Diesel",
     "machine_id": "m_advanced_diesel_refinery",
     "cycle_time": 1,
     "power_use": 1000000,
@@ -10246,7 +10246,7 @@
   },
   {
     "id": "r_advanced_diesel_refinery_04",
-    "name": "Makes Residue, Gasoline",
+    "name": "Refined Diesel to Gasoline",
     "machine_id": "m_advanced_diesel_refinery",
     "cycle_time": 1,
     "power_use": 1000000,
@@ -10277,7 +10277,7 @@
   },
   {
     "id": "r_residue_refinery_01",
-    "name": "Makes Crude Diesel, Heavy Oil, Crude Oil",
+    "name": "Residue to Fuel Oils",
     "machine_id": "m_residue_refinery",
     "cycle_time": 60,
     "power_use": 3000000,
