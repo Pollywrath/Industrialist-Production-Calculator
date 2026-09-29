@@ -196,7 +196,8 @@ export const FIRST_PRODUCTION_CHAIN_STEPS: TutorialStep[] = [
   {
     id: 'connect-steel-ingot-to-steel-plate',
     title: 'Connect Steel To Plate',
-    description: 'Connect the Blast Furnace Steel Ingot output to the Press Steel Plate input. Again, you can move boxes if its not working',
+    description:
+      'Connect the Blast Furnace Steel Ingot output to the Press Steel Plate input. Again, you can move boxes if its not working',
     highlight: { kind: 'handle', alias: 'steelIngot', side: 'output', index: 0 },
     secondaryHighlight: { kind: 'handle', alias: 'steelPlate', side: 'input', index: 0 },
     action: {

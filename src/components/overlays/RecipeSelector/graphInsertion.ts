@@ -89,9 +89,7 @@ export function computeRecipeInsertion({
   let autoEdge: Edge | null = null;
   let calculatedMachineCount = 1;
   const clickedHandleVerticalOffset =
-    preselectedHandleIndex !== null
-      ? preselectedHandleIndex * (RECT_HEIGHT + RECT_GAP)
-      : 0;
+    preselectedHandleIndex !== null ? preselectedHandleIndex * (RECT_HEIGHT + RECT_GAP) : 0;
 
   if (preselectedNodeId) {
     const existingNode = nodes.find((n) => n.id === preselectedNodeId);

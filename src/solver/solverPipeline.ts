@@ -22,6 +22,7 @@ export interface SolverPipelineResult {
   resolvedProducts: Record<string, string>;
   nodeRecipes: Record<string, Recipe>;
   iterationsRun?: number;
+  temperatureConverged?: boolean;
 }
 
 const SETTINGS_NUMERIC_TOLERANCE = 1e-6;
@@ -53,17 +54,18 @@ function normalizeEdgeFlows(edgeFlows: Record<string, number>): Record<string, n
 
 function areOverridesEquivalent(
   prev: SettingsOverrides | undefined,
-  next: SettingsOverrides,
+  next: SettingsOverrides | undefined,
 ): boolean {
-  if (!prev) return false;
-  const prevNodeIds = Object.keys(prev);
-  const nextNodeIds = Object.keys(next);
+  const previousOverrides = prev ?? {};
+  const nextOverrides = next ?? {};
+  const prevNodeIds = Object.keys(previousOverrides);
+  const nextNodeIds = Object.keys(nextOverrides);
   if (prevNodeIds.length !== nextNodeIds.length) return false;
 
   for (let i = 0; i < nextNodeIds.length; i++) {
     const nodeId = nextNodeIds[i];
-    const prevNodeOverrides = prev[nodeId];
-    const nextNodeOverrides = next[nodeId];
+    const prevNodeOverrides = previousOverrides[nodeId];
+    const nextNodeOverrides = nextOverrides[nodeId];
     if (!prevNodeOverrides || !nextNodeOverrides) return false;
 
     const prevKeys = Object.keys(prevNodeOverrides);
@@ -218,6 +220,7 @@ function solveTemperatureCoupledPass(
     inputTemps,
     settingsOverrides: nextSettingsOverrides,
     iterationsRun,
+    converged: temperatureConverged,
   } = propagateTemperatures(nodes, edges, edgeFlows, globalSettings);
 
   return {
@@ -228,6 +231,7 @@ function solveTemperatureCoupledPass(
     resolvedProducts: {},
     nodeRecipes: {},
     iterationsRun,
+    temperatureConverged,
     settingsOverrides: nextSettingsOverrides,
   };
 }
@@ -248,8 +252,10 @@ export function solveFlowPipeline(
     resolvedProducts: {},
     nodeRecipes: {},
     iterationsRun: 0,
+    temperatureConverged: true,
   };
   let needsFinalResync = false;
+  let temperatureCouplingConverged = false;
 
   for (let pass = 0; pass < MAX_TEMPERATURE_COUPLED_PASSES; pass++) {
     const passResult = solveTemperatureCoupledPass(
@@ -264,15 +270,15 @@ export function solveFlowPipeline(
     finalResult = resultSnapshot;
     needsFinalResync = false;
 
-    if (!hasMeaningfulOverrides(nodesById, settingsOverrides)) {
+    const nextOverrides = hasMeaningfulOverrides(nodesById, settingsOverrides)
+      ? settingsOverrides
+      : undefined;
+    if (areOverridesEquivalent(activeOverrides, nextOverrides)) {
+      temperatureCouplingConverged = true;
       break;
     }
 
-    if (areOverridesEquivalent(activeOverrides, settingsOverrides)) {
-      break;
-    }
-
-    activeOverrides = settingsOverrides;
+    activeOverrides = nextOverrides;
     needsFinalResync = pass === MAX_TEMPERATURE_COUPLED_PASSES - 1;
   }
 
@@ -292,8 +298,16 @@ export function solveFlowPipeline(
       resolvedProducts: passResult.resolvedProducts,
       nodeRecipes: passResult.nodeRecipes,
       iterationsRun: passResult.iterationsRun,
+      temperatureConverged: passResult.temperatureConverged,
     };
+    const nextOverrides = hasMeaningfulOverrides(nodesById, passResult.settingsOverrides)
+      ? passResult.settingsOverrides
+      : undefined;
+    temperatureCouplingConverged = areOverridesEquivalent(activeOverrides, nextOverrides);
   }
+
+  finalResult.temperatureConverged =
+    (finalResult.temperatureConverged ?? true) && temperatureCouplingConverged;
 
   finalResult.resolvedProducts = computeResolvedProducts(nodesById, edges, globalSettings);
 

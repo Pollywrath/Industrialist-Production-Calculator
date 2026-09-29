@@ -72,6 +72,7 @@ interface AutocompleteCandidate {
   key: string;
   node: RecipeNodeType;
   recipe: Recipe;
+  autocompleteBaseSettings?: Record<string, unknown>;
   inputTemperatures?: Record<number, number>;
 }
 
@@ -79,6 +80,7 @@ interface AutocompleteModel {
   candidates: AutocompleteCandidate[];
   edges: Edge[];
   descriptorCatalog: RecipeDescriptorCatalog;
+  initialTemperatureConverged: boolean;
   protectedOutputHandles: Set<string>;
   fallbackKeys: Set<string>;
   preservedEdgeEndpointKeys: Set<string>;
@@ -475,7 +477,28 @@ function refreshSelectedCandidateRecipes(
   model: AutocompleteModel,
   globalSettings: GlobalSettings,
   connectionFlows: Record<string, number>,
-): boolean {
+): { changed: boolean; temperatureConverged: boolean } {
+  let changed = false;
+
+  for (const candidate of model.candidates) {
+    if (candidate.kind !== 'generated') continue;
+    const specialRecipe = getSpecialRecipe(candidate.node.data.recipeId);
+    if (!specialRecipe?.sizeAutocompleteSettings) continue;
+
+    const currentSettings = candidate.node.data.settings ?? {};
+    const baseSettings = candidate.autocompleteBaseSettings ?? currentSettings;
+    const nextSettings = specialRecipe.sizeAutocompleteSettings(baseSettings, {
+      globalSettings: globalSettings as unknown as Record<string, unknown>,
+      machineCount: candidate.node.data.machineCount ?? 0,
+    });
+    if (stableSettingsKey(currentSettings) === stableSettingsKey(nextSettings)) continue;
+    candidate.node = {
+      ...candidate.node,
+      data: { ...candidate.node.data, settings: nextSettings },
+    };
+    changed = true;
+  }
+
   const selectedCandidates = model.candidates.filter((candidate) =>
     isCandidateSolverActive(
       candidate,
@@ -484,25 +507,10 @@ function refreshSelectedCandidateRecipes(
       connectionFlows,
     ),
   );
-  if (selectedCandidates.length === 0) return false;
-
-  let changed = false;
-  for (const candidate of selectedCandidates) {
-    if (candidate.kind !== 'generated') continue;
-    const specialRecipe = getSpecialRecipe(candidate.node.data.recipeId);
-    if (!specialRecipe?.sizeAutocompleteSettings) continue;
-
-    const settings = candidate.node.data.settings ?? {};
-    const nextSettings = specialRecipe.sizeAutocompleteSettings(settings, {
-      globalSettings: globalSettings as unknown as Record<string, unknown>,
-      machineCount: candidate.node.data.machineCount ?? 0,
-    });
-    if (stableSettingsKey(settings) === stableSettingsKey(nextSettings)) continue;
-    candidate.node = {
-      ...candidate.node,
-      data: { ...candidate.node.data, settings: nextSettings },
-    };
-    changed = true;
+  if (selectedCandidates.length === 0) {
+    changed = pruneUnproducibleGeneratedCandidates(model) || changed;
+    changed = rebuildCandidateEdges(model, globalSettings) || changed;
+    return { changed, temperatureConverged: true };
   }
 
   const selectedIds = new Set(selectedCandidates.map((candidate) => candidate.node.id));
@@ -529,7 +537,7 @@ function refreshSelectedCandidateRecipes(
   }
   changed = pruneUnproducibleGeneratedCandidates(model) || changed;
   changed = rebuildCandidateEdges(model, globalSettings) || changed;
-  return changed;
+  return { changed, temperatureConverged: snapshot.temperatureConverged ?? true };
 }
 
 function buildCandidateModelSnapshot(
@@ -803,9 +811,6 @@ function buildInitialModel(
 
   const addConcreteDescriptor = (descriptor: RecipeDescriptor): void => {
     if (candidateKeys.has(descriptor.key)) return;
-    // An existing node with the same resolved recipe already provides this
-    // production option. Reuse it so autocomplete scales the user's node
-    // instead of creating a duplicate generated route.
     if (
       candidates.some(
         (candidate) =>
@@ -821,6 +826,7 @@ function buildInitialModel(
       key: descriptor.key,
       node,
       recipe: descriptor.recipe,
+      autocompleteBaseSettings: { ...descriptor.settings },
     });
     candidateKeys.add(descriptor.key);
     recordProducedTemperatures(descriptor.recipe);
@@ -871,6 +877,7 @@ function buildInitialModel(
     candidates,
     edges: [],
     descriptorCatalog,
+    initialTemperatureConverged: currentSnapshot.temperatureConverged ?? true,
     protectedOutputHandles,
     fallbackKeys: new Set(),
     preservedEdgeEndpointKeys: new Set(existingEdges.map(edgeEndpointKey)),
@@ -1046,9 +1053,6 @@ function pruneUnproducibleGeneratedCandidates(model: AutocompleteModel): boolean
     const removableIds = new Set<string>();
     for (const target of model.candidates) {
       if (target.kind !== 'generated') continue;
-      // Keep solver-selected fractional candidates until materialization has
-      // verified their complete graph. Removing one here can remove the only
-      // producer for a tiny but real input flow.
       if (
         !isMachineCountNumericallyZero(target.node.data.machineCount) ||
         hasIndependentSolverRate(target)
@@ -1342,6 +1346,9 @@ function materializePlan(
     recipeEdges,
     globalSettings as unknown as Record<string, unknown>,
   );
+  if (!verification.temperatureConverged) {
+    return { error: 'Temperature and recipe settings did not settle during graph verification.' };
+  }
 
   const materializedEndpointKeys = new Set(
     recipeEdges.map(
@@ -1443,6 +1450,12 @@ async function runAutocomplete(
     globalSettings,
     options.configuration,
   );
+  if (!model.initialTemperatureConverged) {
+    return {
+      feasible: false,
+      error: 'Temperature and recipe settings did not settle in the existing graph.',
+    };
+  }
   if (model.candidates.length === 0) {
     return { feasible: false, error: 'No available recipes can participate in autocomplete.' };
   }
@@ -1514,12 +1527,19 @@ async function runAutocomplete(
       model.edges,
       result.connectionFlows,
     );
-    const recipesChanged = refreshSelectedCandidateRecipes(
+    const refreshResult = refreshSelectedCandidateRecipes(
       model,
       globalSettings,
       result.connectionFlows,
     );
-    if (!recipesChanged) {
+    if (!refreshResult.temperatureConverged) {
+      return {
+        feasible: false,
+        error: 'Temperature and recipe settings did not settle within the propagation limits.',
+        telemetry: finalTelemetry,
+      };
+    }
+    if (!refreshResult.changed) {
       finalMachineCounts = result.machineCounts;
       finalConnectionFlows = result.connectionFlows;
       break;

@@ -385,6 +385,12 @@ export function LPSolverOverlay() {
 
         setChanges(nodeChanges);
         setProposedMachineCounts(machineCountsToApply);
+        const effectiveMachineCounts = Object.fromEntries(
+          nodes.map((node) => [
+            node.id,
+            machineCountsToApply[node.id] ?? node.data.machineCount ?? 0,
+          ]),
+        );
         setObjectiveSummary({
           current: summarizeObjectives(
             optimizerPayload.nodes,
@@ -394,9 +400,9 @@ export function LPSolverOverlay() {
           ),
           proposed: summarizeObjectives(
             optimizerPayload.nodes,
-            res.machineCounts,
+            effectiveMachineCounts,
             optimizerPayload.connections,
-            res.connectionFlows,
+            nodeChanges.length > 0 ? res.connectionFlows : currentConnectionFlows,
           ),
         });
 

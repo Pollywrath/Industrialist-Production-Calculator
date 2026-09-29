@@ -549,9 +549,6 @@ function handleWorkerMessage(event: MessageEvent<RatioOptimizerWorkerMessage>): 
     if (message.requestId !== undefined && cancelledSolveRequestIds.has(message.requestId)) {
       return;
     }
-    // Warmup progress is intentionally unscoped. Do not let a replacement
-    // Worker's warmup appear as progress for the next solve while that solve
-    // is waiting for warmup to finish.
     if (activeSolveProgress && message.requestId === activeSolveRequestId) {
       activeSolveProgress(message.progress);
     }
@@ -635,9 +632,6 @@ function ensureWorkerWarmup(worker: Worker): Promise<void> {
     return warmupPromise;
   }
 
-  // A replacement Worker may be created while an older warmup promise is still
-  // pending. Reject the old promise so no solve can remain attached to a dead
-  // Worker indefinitely.
   const previousReject = rejectWarmup;
   resolveWarmup = null;
   rejectWarmup = null;
@@ -695,12 +689,8 @@ export function cancelRatioOptimizer(): void {
     worker.onmessage = null;
     worker.onerror = null;
     worker.terminate();
-    // The handlers are detached before termination, so no stale event from this
-    // worker can be observed by the next worker. Avoid retaining cancelled IDs.
     cancelledSolveRequestIds.delete(requestId);
 
-    // Keep cancellation isolated from the next request. The replacement is
-    // created and warmed now, rather than lazily when the next solve starts.
     const replacementWorker = createWorker();
     activeWorker = replacementWorker;
     void ensureWorkerWarmup(replacementWorker).catch((error: unknown) => {

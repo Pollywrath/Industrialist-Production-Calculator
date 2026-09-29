@@ -5,6 +5,20 @@
     "patches": [
       {
         "hash": "pending",
+        "version": "v0.8.7",
+        "patch": 7,
+        "date": "2026-09-30",
+        "subject": "fix: improve machine precision, autocomplete convergence, and optimizer summaries",
+        "items": [
+          "Corrected whole-machine rounding near integer boundaries and normalized machine counts in the native ratio optimizer so values slightly above an integer are not treated as the lower machine count.",
+          "Added machine-count property coverage and documented the numerical tolerance contract for rounded objectives.",
+          "Fixed autocomplete special-recipe sizing to recalculate settings from the original generated settings on each solve pass, preventing sizing changes from compounding across passes.",
+          "Improved temperature propagation convergence checks so recipe setting and port changes are included, and report failure when temperatures or coupled recipe settings do not settle within their limits.",
+          "Fixed ratio optimizer result summaries to show the machine counts and connection flows that applying the proposed changes will actually use, keeping totals unchanged when no changes are required."
+        ]
+      },
+      {
+        "hash": "pending",
         "version": "v0.8.6",
         "patch": 6,
         "date": "2026-09-24",
@@ -21,10 +35,7 @@
         "patch": 5,
         "date": "2026-09-17",
         "subject": "fix: correct Tree Farm computations",
-        "items": [
-          "Fixed Tree Farm computations.",
-          "Update Electric Water Heater power use."
-        ]
+        "items": ["Fixed Tree Farm computations.", "Update Electric Water Heater power use."]
       },
       {
         "hash": "pending",

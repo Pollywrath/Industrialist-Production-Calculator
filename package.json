@@ -1,21 +1,12 @@
 {
   "name": "industrialist-calculator",
   "private": true,
-  "version": "0.8.6",
+  "version": "0.8.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint src",
-    "test:flow-precision": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/flow-precision-test.mjs",
-    "test:precision": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/precision-contract-test.mjs",
-    "test:machine-count-properties": "node --experimental-strip-types tools/machine-count-property-test.mjs",
-    "test:ratio-worker-precision": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/ratio-worker-precision-test.mjs",
-    "test:autocomplete-precision": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/autocomplete-precision-test.mjs",
-    "test:solver-pipeline-precision": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/solver-pipeline-precision-test.mjs",
-    "test:systemic-balancer-precision": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/systemic-balancer-precision-test.mjs",
-    "test:precision:all": "npm run test:precision && npm run test:machine-count-properties && npm run test:flow-precision && npm run test:ratio-worker-precision && npm run test:autocomplete-precision && npm run test:solver-pipeline-precision && npm run test:systemic-balancer-precision && node tools/scip-wasm/smoke-test.mjs public/scip tools/scip-wasm/smoke-tests",
-    "test:temperature-diagnostics": "node --experimental-strip-types --experimental-loader ./tools/typescript-extension-loader.mjs tools/temperature-diagnostics-test.mjs",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "format:check": "prettier --check \"src/**/*.{js,jsx,ts,tsx,css,json}\"",
     "preview": "vite preview"

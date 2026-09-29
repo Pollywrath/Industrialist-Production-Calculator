@@ -96,7 +96,7 @@ export function SortableSelectorTable<T extends { id: string }, K extends string
                   `${styles['cell-item']} ${isFirst ? '' : styles['text-center']} ${styles[col.widthClass]}`.trim();
                 return (
                   <div key={col.field} className={cellClass}>
-                        <col.Cell item={item} />
+                    <col.Cell item={item} />
                   </div>
                 );
               })}

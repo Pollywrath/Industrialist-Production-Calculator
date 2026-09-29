@@ -12,6 +12,16 @@ dist
 dist-ssr
 *.local
 tools/*
+# Local precision and solver diagnostics; retain on disk without committing.
+tools/autocomplete-precision-test.mjs
+tools/flow-precision-test.mjs
+tools/machine-count-property-test.mjs
+tools/precision-contract-test.mjs
+tools/ratio-worker-precision-test.mjs
+tools/solver-pipeline-precision-test.mjs
+tools/systemic-balancer-precision-test.mjs
+tools/temperature-diagnostics-test.mjs
+tools/typescript-extension-loader.mjs
 !tools/scip-wasm/
 tools/scip-wasm/*
 !tools/scip-wasm/Dockerfile

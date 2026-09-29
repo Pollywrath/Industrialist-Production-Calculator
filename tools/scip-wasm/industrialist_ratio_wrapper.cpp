@@ -46,9 +46,8 @@ constexpr double kScipFeasibilityTolerance = 1e-8;
 constexpr double kMachineIntegerRelativeTolerance =
   std::numeric_limits<double>::epsilon() * 8.0;
 constexpr double kZeroRateConnectionEpsilon = 1e-12;
-constexpr double kBinaryResultMagic = 444926465.0; // "IRLP" as an exact small integer marker.
+constexpr double kBinaryResultMagic = 444926465.0;
 constexpr double kBinaryResultVersion = 3.0;
-// v3 adds structured failure metadata and the rounded-machine repair count.
 constexpr int kBinaryResultHeaderDoubles = 38;
 constexpr double kBinaryPayloadMagic = 444926466.0;
 constexpr double kBinaryPayloadVersion = 6.0;
@@ -2490,8 +2489,6 @@ bool buildRoundedMilpModel(
     RowSpec linkingRow;
     linkingRow.name = "whole_link_" + std::to_string(nodeIndex);
     linkingRow.lhs = -std::numeric_limits<double>::infinity();
-    // Do not bake the old 1e-7 application tolerance into the machine ceiling.
-    // SCIP still applies its configured feasibility tolerance when solving.
     linkingRow.rhs = 0.0;
     linkingRow.terms.reserve(2);
     addRowTerm(
@@ -2645,13 +2642,6 @@ bool normalizeRoundedMachineVariables(
     error = "Rounded machine normalization requires a complete MILP solution.";
     return false;
   }
-
-  // The rounded integer variables are part of the solved MILP and are the
-  // authoritative whole-machine accounting. Do not recompute them from the
-  // continuous machine variables after the objective-lock rows have been
-  // applied: changing them here can invalidate an otherwise feasible locked
-  // tier. The linking rows remain responsible for relating the two variable
-  // representations, while validation checks the returned integer values.
   repairCount = 0;
 
   solution.objectiveValue = recomputeObjectiveValue(
@@ -2723,9 +2713,6 @@ bool solveAllStagesWithRoundedMilp(
   tightenRoundedModelFromIncumbent(milpModel, startValues, incumbentObjective);
 
   SolveOptions options = getRoundedMilpSolveOptions(profile);
-  // Every lexicographic MILP stage depends on the exact bound locked by the
-  // preceding stage, so the stages remain sequential. Each stage gets a fresh
-  // SCIP instance and uses the ordinary single-threaded solve API.
   ModelSpec stagedMilpModel = std::move(milpModel);
   std::vector<double> stagedStartValues = std::move(startValues);
   const ObjectiveMode tierModes[] = {ObjectiveMode::Tier1, ObjectiveMode::Tier2, ObjectiveMode::Tier3};

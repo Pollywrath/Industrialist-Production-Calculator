@@ -136,11 +136,9 @@ function calculateGrowthModifier(pollution: number): number {
 function calculateGrowthTime(pollution: number, treeId = DEFAULT_TREE_ID): number {
   const growthModifier = calculateGrowthModifier(pollution);
 
-  const P = 4500 * (
-    treeId === CANDY_CANE_TREE_ID ? 0.8 : 1
-  );
+  const P = 4500 * (treeId === CANDY_CANE_TREE_ID ? 0.8 : 1);
 
-  return 2 * (1000 / 30) * ((P / growthModifier) / 900 + 0.5);
+  return 2 * (1000 / 30) * (P / growthModifier / 900 + 0.5);
 }
 
 const growthTime = calculateGrowthTime(-50, DEFAULT_TREE_ID);
@@ -159,12 +157,10 @@ function calculateHarvestersNeeded(
   const growthModifier = calculateGrowthModifier(pollution);
   const P = 4500 * (treeId === CANDY_CANE_TREE_ID ? 0.8 : 1);
 
-  const growthHarvester =
-    2 * (1000 / 30) * Math.ceil((P / growthModifier) / 1000);
+  const growthHarvester = 2 * (1000 / 30) * Math.ceil(P / growthModifier / 1000);
 
   return Math.ceil((numTrees * 11) / growthHarvester);
 }
-
 
 function calculateLogsPerSecond(numTrees: number, growthTime: number, logsPerTree: number): number {
   return (numTrees * logsPerTree) / growthTime;
@@ -197,8 +193,7 @@ function sizeAutocompleteSettings(
   const treeId = getTreeId(settings, context.globalSettings);
   const logsPerTree = getLogsPerTree(settings, context.globalSettings, controllerId, treeId);
   const currentOutputRate =
-  calculateActualHarvestRate(treeCount, harvesterCount, pollution, treeId) *
-  logsPerTree;
+    calculateActualHarvestRate(treeCount, harvesterCount, pollution, treeId) * logsPerTree;
   const requiredHarvestRate = (currentOutputRate * context.machineCount) / logsPerTree;
   const growthTime = calculateGrowthTime(pollution, treeId);
   const nextTreeCount = clampCount(

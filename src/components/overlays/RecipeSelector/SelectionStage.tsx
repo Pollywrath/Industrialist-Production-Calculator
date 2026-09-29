@@ -33,7 +33,7 @@ const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multipl
     field: 'name',
     label: 'Name',
     widthClass: 'col-50',
-    Cell: ({item}) => (
+    Cell: ({ item }) => (
       <div className={styles['cell-flex-container']}>
         {item.type === 'Fluid' ? (
           <Droplet size={14} className={styles['fluid-icon']} />
@@ -52,8 +52,16 @@ const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multipl
     field: 'sell_price',
     label: 'Sell Price',
     widthClass: 'col-25',
-    Cell: ({item}) => (
-      <span className={item.sell_price < 0 ? styles['sell-price-negative'] : (item.profit ? styles['sell-price-profit'] : '')}>
+    Cell: ({ item }) => (
+      <span
+        className={
+          item.sell_price < 0
+            ? styles['sell-price-negative']
+            : item.profit
+              ? styles['sell-price-profit']
+              : ''
+        }
+      >
         {formatCurrency(item.sell_price)}
       </span>
     ),
@@ -62,7 +70,7 @@ const PRODUCT_COLUMNS: ColumnConfig<Product, 'name' | 'sell_price' | 'rp_multipl
     field: 'rp_multiplier',
     label: 'RP Multiplier',
     widthClass: 'col-25',
-    Cell: ({item}) => (
+    Cell: ({ item }) => (
       <span className={item.research ? styles['rp-mult-research'] : ''}>
         {formatRpMultiplier(item.rp_multiplier)}
       </span>
@@ -75,7 +83,7 @@ const MACHINE_COLUMNS: ColumnConfig<Machine, 'name' | 'cost'>[] = [
     field: 'name',
     label: 'Name',
     widthClass: 'col-70',
-    Cell: ({item}) => {
+    Cell: ({ item }) => {
       const SubIcon = getTaxonomyIcon(item.category, item.subcategory);
       const tierClass = styles[`tier-${item.tier}`] || '';
       return (
@@ -91,7 +99,7 @@ const MACHINE_COLUMNS: ColumnConfig<Machine, 'name' | 'cost'>[] = [
     field: 'cost',
     label: 'Machine Cost',
     widthClass: 'col-30',
-    Cell: ({item}) => formatCurrency(item.cost),
+    Cell: ({ item }) => formatCurrency(item.cost),
   },
 ];
 

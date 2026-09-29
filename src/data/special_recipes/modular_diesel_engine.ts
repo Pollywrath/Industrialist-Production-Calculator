@@ -59,9 +59,7 @@ const getTorqueMapSum = (n: number): number => {
 
   if (count > 90) {
     const linearEnd = Math.min(count, 125);
-    sum +=
-      2 * (sumIntegers(linearEnd) - sumIntegers(90)) -
-      100 * (linearEnd - 90);
+    sum += 2 * (sumIntegers(linearEnd) - sumIntegers(90)) - 100 * (linearEnd - 90);
   }
 
   if (count > 125) {
@@ -73,9 +71,7 @@ const getTorqueMapSum = (n: number): number => {
     const penaltyEnd = Math.min(count, 249);
     const penaltyStart = 71;
     const penaltyCount = penaltyEnd - 170;
-    sum +=
-      penaltyCount * 200 -
-      (sumSquares(penaltyEnd - 100) - sumSquares(penaltyStart - 1)) / 100;
+    sum += penaltyCount * 200 - (sumSquares(penaltyEnd - 100) - sumSquares(penaltyStart - 1)) / 100;
   }
 
   if (count > 249) {
@@ -173,8 +169,7 @@ function getMdeMetrics(settings: Record<string, unknown>): MdeMetrics {
   const loadRatio = (torque + 1) / (baseTorque + 1);
   const sinFactor = getSinFactor(cylinders);
   const fuelDefinition = getFuelDefinition(settings.fuel_type);
-  const fuelUsage =
-    (cylinders * loadRatio * sinFactor * loadFactor * 13.5) / fuelDefinition.rate;
+  const fuelUsage = (cylinders * loadRatio * sinFactor * loadFactor * 13.5) / fuelDefinition.rate;
   const airTotal = cylinders * (sinFactor * loadRatio * 30 * loadFactor + flywheels * 0.2);
 
   return {
@@ -246,10 +241,7 @@ function getMdeMinimums(
         (metrics.cylinders + exhausts + airInputs + fuelInputs + sidewaysCrankshafts - 2) / 2,
       ) + sidewaysCrankshafts;
     const nextCrankshafts = Math.max(1, attachmentMinimum);
-    const nextExhausts = Math.max(
-      configuredExhausts,
-      getExhaustMinimum(metrics, nextCrankshafts),
-    );
+    const nextExhausts = Math.max(configuredExhausts, getExhaustMinimum(metrics, nextCrankshafts));
     if (nextCrankshafts === crankshafts && nextExhausts === exhausts) break;
     crankshafts = nextCrankshafts;
     exhausts = nextExhausts;
@@ -445,9 +437,7 @@ export const modular_diesel_engine_01: SpecialRecipe = {
       power_use: -roundTo(power, 6),
       power_type: 'MV',
       pollution: roundTo(0.648 * exhaustsSetting, 6),
-      inputs: [
-        { product_id: fuelDefinition.product_id, quantity: roundTo(metrics.fuelUsage, 6) },
-      ],
+      inputs: [{ product_id: fuelDefinition.product_id, quantity: roundTo(metrics.fuelUsage, 6) }],
       outputs: [],
     };
 

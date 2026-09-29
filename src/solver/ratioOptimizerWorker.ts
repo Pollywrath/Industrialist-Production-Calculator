@@ -1549,12 +1549,7 @@ function buildResponseFromNativeBinaryResult(
     stageTelemetry: binaryResult.stageTelemetry,
   };
 
-  return buildResponseFromRawValues(
-    rawValues,
-    resultConnections,
-    resultNodes,
-    telemetry,
-  );
+  return buildResponseFromRawValues(rawValues, resultConnections, resultNodes, telemetry);
 }
 
 function getNativeFailureMessage(binaryResult: NativeBinaryResult): string {

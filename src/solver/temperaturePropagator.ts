@@ -10,7 +10,10 @@ export interface TemperaturePropagationResult {
   inputTemps: Record<string, Record<number, number>>;
   settingsOverrides: Record<string, Record<string, unknown>>;
   iterationsRun: number;
+  converged: boolean;
 }
+
+const TEMPERATURE_CONVERGENCE_TOLERANCE = 1e-6;
 
 export function propagateTemperatures(
   nodes: ReactFlowNode[],
@@ -128,11 +131,17 @@ export function propagateTemperatures(
     incomingEdges[edge.target][targetParsed.index].push(edge);
   }
 
-  const prevEdgeTemps: Record<string, number> = {};
   let iterationsRun = 0;
+  let converged = false;
 
   for (let iter = 0; iter < 80; iter++) {
     iterationsRun = iter + 1;
+    const previousOutputTemps = Object.fromEntries(
+      Object.entries(nodeOutputTemps).map(([nodeId, temperatures]) => [nodeId, [...temperatures]]),
+    );
+    const previousInputTemps = Object.fromEntries(
+      Object.entries(inputTemps).map(([nodeId, temperatures]) => [nodeId, { ...temperatures }]),
+    );
 
     for (const edge of edges) {
       if (!edge.sourceHandle) continue;
@@ -151,25 +160,6 @@ export function propagateTemperatures(
       }
     }
 
-    if (iter > 0) {
-      let maxDiff = 0;
-      for (const edge of edges) {
-        const prev = prevEdgeTemps[edge.id] ?? 18;
-        const curr = edgeTemps[edge.id];
-        const diff = Math.abs(curr - prev);
-        if (diff > maxDiff) {
-          maxDiff = diff;
-        }
-      }
-      if (maxDiff < 0.01) {
-        break;
-      }
-    }
-
-    for (const edge of edges) {
-      prevEdgeTemps[edge.id] = edgeTemps[edge.id];
-    }
-
     for (const node of nodes) {
       const nodeId = node.id;
       const recipe = resolveActiveRecipe(
@@ -182,6 +172,7 @@ export function propagateTemperatures(
       if (!recipe) continue;
 
       const sr = getSpecialRecipe(node.data.recipeId);
+      inputTemps[nodeId] = {};
 
       for (let i = 0; i < recipe.inputs.length; i++) {
         const handleId = buildHandleId(nodeId, 'input', i);
@@ -239,6 +230,51 @@ export function propagateTemperatures(
         nodeOutputTemps[nodeId] = recipe.outputs.map((out) => out.temperature ?? 18);
       }
     }
+
+    let maxOutputTemperatureDelta = 0;
+    for (const node of nodes) {
+      const previous = previousOutputTemps[node.id] ?? [];
+      const current = nodeOutputTemps[node.id] ?? [];
+      if (previous.length !== current.length) {
+        maxOutputTemperatureDelta = Number.POSITIVE_INFINITY;
+        break;
+      }
+      for (let index = 0; index < current.length; index += 1) {
+        const delta = Math.abs(current[index] - previous[index]);
+        if (!Number.isFinite(delta)) {
+          maxOutputTemperatureDelta = Number.POSITIVE_INFINITY;
+          break;
+        }
+        maxOutputTemperatureDelta = Math.max(maxOutputTemperatureDelta, delta);
+      }
+      if (!Number.isFinite(maxOutputTemperatureDelta)) break;
+
+      const previousInputs = previousInputTemps[node.id] ?? {};
+      const currentInputs = inputTemps[node.id] ?? {};
+      const previousInputIndexes = Object.keys(previousInputs);
+      const currentInputIndexes = Object.keys(currentInputs);
+      if (previousInputIndexes.length !== currentInputIndexes.length) {
+        maxOutputTemperatureDelta = Number.POSITIVE_INFINITY;
+        break;
+      }
+      for (const index of currentInputIndexes) {
+        if (!(index in previousInputs)) {
+          maxOutputTemperatureDelta = Number.POSITIVE_INFINITY;
+          break;
+        }
+        const delta = Math.abs(currentInputs[Number(index)] - previousInputs[Number(index)]);
+        if (!Number.isFinite(delta)) {
+          maxOutputTemperatureDelta = Number.POSITIVE_INFINITY;
+          break;
+        }
+        maxOutputTemperatureDelta = Math.max(maxOutputTemperatureDelta, delta);
+      }
+      if (!Number.isFinite(maxOutputTemperatureDelta)) break;
+    }
+    if (maxOutputTemperatureDelta <= TEMPERATURE_CONVERGENCE_TOLERANCE) {
+      converged = true;
+      break;
+    }
   }
 
   const finalSettingsOverrides = buildConnectedTemperatureOverrides();
@@ -282,5 +318,6 @@ export function propagateTemperatures(
     inputTemps,
     settingsOverrides: finalSettingsOverrides,
     iterationsRun,
+    converged,
   };
 }

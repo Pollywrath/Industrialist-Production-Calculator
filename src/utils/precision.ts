@@ -35,7 +35,6 @@ export function hasMeaningfulMachineCountDifference(left: number, right: number)
   return Math.abs(left - right) > getMachineCountComparisonTolerance(left, right);
 }
 
-/** Preserve finite positive solver rates above the numerical-zero threshold. */
 export function normalizeSolverRate(value: number): number {
   if (!Number.isFinite(value) || value <= RATE_NUMERICAL_ZERO) return 0;
   return Number(value.toPrecision(15));
@@ -74,8 +73,6 @@ export function isMachineCountNearInteger(value: number): boolean {
 export function ceilMachineCount(value: number): number {
   if (!Number.isFinite(value) || value <= RATE_NUMERICAL_ZERO) return 0;
   const nearestInteger = Math.round(value);
-  // The integrality tolerance is for values near a real positive integer.
-  // It must not erase a small but valid positive count by snapping it to zero.
   if (nearestInteger > 0 && Math.abs(value - nearestInteger) <= getMachineIntegerTolerance(value)) {
     return nearestInteger;
   }
