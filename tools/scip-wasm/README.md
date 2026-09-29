@@ -54,8 +54,10 @@ count requires whole-machine counts, Stages 1 and 2 stay in SoPlex, Stage 3 firs
 solves an LP relaxation, and one direct SCIP model proves the rounded Stage 3
 MILP and final tie-break.
 
-Machine ceilings use only an 8-ULP floating-point tolerance in
-`src/utils/precision.ts`; for example, `2.00000009` costs three machines.
+Machine ceilings use a relative floating-point tolerance of
+`8 * Number.EPSILON * abs(count)` in `src/utils/precision.ts`; its ULP width
+varies with the binary exponent. Counts outside that near-integer band use the
+mathematical ceiling; for example, `2.00000009` costs three machines.
 "Exact rounded" means exact integer optimization under this floating-point
 contract, not rational-arithmetic certification. Native ceiling rows do not
 add the old `1e-7` application tolerance; SCIP still applies its configured
