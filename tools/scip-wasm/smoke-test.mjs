@@ -266,7 +266,11 @@ function makeNativePayload({
 function makeSingleNodePayload({
   currentMachineCount = 2,
   machineCost = 0,
+  machineSpace = 0,
+  modelCount = 0,
   machineCostWeight = 0,
+  machineSpaceWeight = 0,
+  modelCountWeight = 0,
   hasInfiniteMachineCost = false,
   minimumMachineCount,
   maximumMachineCount = null,
@@ -280,10 +284,16 @@ function makeSingleNodePayload({
         maximumMachineCount,
         isTarget: true,
         machineCost,
+        machineSpace,
+        modelCount,
         hasInfiniteMachineCost,
       },
     ],
-    metrics: machineCostWeight > 0 ? { machineCost: { weight: machineCostWeight } } : {},
+    metrics: {
+      ...(machineCostWeight > 0 ? { machineCost: { weight: machineCostWeight } } : {}),
+      ...(machineSpaceWeight > 0 ? { machineSpace: { weight: machineSpaceWeight } } : {}),
+      ...(modelCountWeight > 0 ? { modelCount: { weight: modelCountWeight } } : {}),
+    },
     useWholeMachineCounts,
   });
 }
@@ -615,6 +625,35 @@ if (incumbentPolishJob.result[25] !== 24 || incumbentPolishJob.result[27] <= 0) 
 }
 
 console.log('Smoke: remaining native ratio cases.');
+
+for (const [metricName, metricOptions] of [
+  ['machineCost', { machineCost: 10, machineCostWeight: 1 }],
+  ['machineSpace', { machineSpace: 10, machineSpaceWeight: 1 }],
+  ['modelCount', { modelCount: 10, modelCountWeight: 1 }],
+]) {
+  for (const [machineCount, expectedWholeCount] of [
+    [0.00000009, 1],
+    [2.00000009, 3],
+  ]) {
+    const metricJob = await runNativeJob(
+      makeSingleNodePayload({ currentMachineCount: machineCount, ...metricOptions }),
+    );
+    const weightedStageOffset = Array.from(
+      { length: metricJob.result[15] },
+      (_, index) => NATIVE_RESULT_HEADER_DOUBLES + index * 3,
+    ).find((offset) => metricJob.result[offset] === 3);
+    if (
+      metricJob.nativeError ||
+      metricJob.result[3] !== 1 ||
+      weightedStageOffset === undefined ||
+      Math.abs(metricJob.result[weightedStageOffset + 1] - expectedWholeCount * 10) > 1e-6
+    ) {
+      throw new Error(
+        `${metricName} priced ${machineCount} machines incorrectly: expected ${expectedWholeCount * 10}, got ${weightedStageOffset === undefined ? 'no stage value' : metricJob.result[weightedStageOffset + 1]}, status=${metricJob.result[3]}, error=${metricJob.nativeError}.`,
+      );
+    }
+  }
+}
 
 for (const targetMachineCount of [1e-6, 1e-7, 1e-8]) {
   const tinyJob = await runNativeJob(makeTinyContinuousProducerPayload(targetMachineCount));

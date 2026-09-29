@@ -1,6 +1,5 @@
 export function cleanMachineCount(val: number): number {
-  if (!Number.isFinite(val) || val === 0) return val;
-  return Number(val.toPrecision(15));
+  return val;
 }
 
 export function cleanFlow(val: number): number {

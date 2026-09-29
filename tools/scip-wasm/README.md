@@ -200,7 +200,8 @@ build does not emit a separate `scip.worker.js` file.
 
 It then runs shell LP/MILP tests plus ABI 4 regression tests against those exact
 emitted files. Coverage includes mixed target scales, tiny physical shortage,
-large-objective stage locks, exact and near-integer machine ceilings, a
+large-objective stage locks, exact and near-integer machine ceilings, tiny
+positive rounded counts, machine cost/space/model-count objectives, a
 flow-forced ceiling just above an integer, rounded profile selection and support
 polishing, targetless power output, required and avoidable infinite-cost
 machines, autocomplete's finite-machine preference, stage ordering, and repeated
