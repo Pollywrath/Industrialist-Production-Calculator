@@ -955,7 +955,7 @@ double ceilMachineCount(double value) {
   if (!std::isfinite(value) || value <= 0.0) return 0.0;
   const double nearestInteger = std::round(value);
   const double tolerance =
-    kIntegralityTolerance + std::abs(value) * kMachineIntegerRelativeTolerance;
+    std::abs(value) * kMachineIntegerRelativeTolerance;
   return std::abs(value - nearestInteger) <= tolerance
     ? nearestInteger
     : std::ceil(value);
@@ -1824,7 +1824,26 @@ class SoplexStagedLpEngine final : public StagedLpEngine {
           return false;
         }
         std::ostringstream out;
-        out << "SoPlex stage did not finish optimal; status code " << status << ".";
+        out << "SoPlex stage did not finish optimal; status code " << status
+            << " (current " << static_cast<int>(solver_.status()) << ")"
+            << ", objective " << static_cast<int>(objective)
+            << ", variables " << activeModel_.vars.size()
+            << ", rows " << activeModel_.rows.size()
+            << ", iterations " << solver_.numIterations() << ".";
+        const size_t varsToDescribe = std::min<size_t>(activeModel_.vars.size(), 8);
+        for (size_t i = 0; i < varsToDescribe; ++i) {
+          const VariableSpec& var = activeModel_.vars[i];
+          out << " var[" << i << "]=" << var.name
+              << "[" << var.lb << "," << var.ub << "]"
+              << " obj=" << getObjectiveCoeff(var, objective) << ";";
+        }
+        const size_t rowsToDescribe = std::min<size_t>(activeModel_.rows.size(), 8);
+        for (size_t i = 0; i < rowsToDescribe; ++i) {
+          const RowSpec& row = activeModel_.rows[i];
+          out << " row[" << i << "]=" << row.name
+              << "[" << row.lhs << "," << row.rhs << "]"
+              << " terms=" << row.terms.size() << ";";
+        }
         error = out.str();
         return false;
       }
@@ -2471,7 +2490,9 @@ bool buildRoundedMilpModel(
     RowSpec linkingRow;
     linkingRow.name = "whole_link_" + std::to_string(nodeIndex);
     linkingRow.lhs = -std::numeric_limits<double>::infinity();
-    linkingRow.rhs = kIntegralityTolerance - kScipFeasibilityTolerance;
+    // Do not bake the old 1e-7 application tolerance into the machine ceiling.
+    // SCIP still applies its configured feasibility tolerance when solving.
+    linkingRow.rhs = 0.0;
     linkingRow.terms.reserve(2);
     addRowTerm(
       linkingRow,
@@ -2483,8 +2504,7 @@ bool buildRoundedMilpModel(
 
     RowSpec ceilingBandRow;
     ceilingBandRow.name = "whole_band_" + std::to_string(nodeIndex);
-    ceilingBandRow.lhs =
-      -1.0 + kIntegralityTolerance + kScipFeasibilityTolerance;
+    ceilingBandRow.lhs = -1.0;
     ceilingBandRow.rhs = std::numeric_limits<double>::infinity();
     ceilingBandRow.terms.reserve(2);
     addRowTerm(

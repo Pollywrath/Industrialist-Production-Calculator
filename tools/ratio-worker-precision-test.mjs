@@ -112,34 +112,21 @@ const cleanedMachine = buildResponseFromRawValues(
   [],
   makeNodes(),
 );
-assert.equal(cleanedMachine.machineCounts?.source, 0);
+assert.equal(cleanedMachine.machineCounts?.source, 1e-7);
 
-const continuousMachine = buildResponseFromRawValues(
-  { m_source: 1e-7, m_consumer: 1 },
-  [],
-  makeNodes(),
-  undefined,
-  'continuous',
-);
-assert.equal(continuousMachine.machineCounts?.source, 1e-7);
-
-const smallerContinuousMachine = buildResponseFromRawValues(
+const smallerMachine = buildResponseFromRawValues(
   { m_source: 1e-8, m_consumer: 1 },
   [],
   makeNodes(),
-  undefined,
-  'continuous',
 );
-assert.equal(smallerContinuousMachine.machineCounts?.source, 1e-8);
+assert.equal(smallerMachine.machineCounts?.source, 1e-8);
 
-const zeroContinuousMachine = buildResponseFromRawValues(
+const zeroMachine = buildResponseFromRawValues(
   { m_source: 1e-12, m_consumer: 1 },
   [],
   makeNodes(),
-  undefined,
-  'continuous',
 );
-assert.equal(zeroContinuousMachine.machineCounts?.source, 0);
+assert.equal(zeroMachine.machineCounts?.source, 0);
 
 const continuousFlow = buildResponseFromRawValues(
   { m_source: 1e-7, m_consumer: 1, f_supply: 1e-7 },

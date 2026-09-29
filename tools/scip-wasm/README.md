@@ -54,13 +54,13 @@ count requires whole-machine counts, Stages 1 and 2 stay in SoPlex, Stage 3 firs
 solves an LP relaxation, and one direct SCIP model proves the rounded Stage 3
 MILP and final tie-break.
 
-Machine ceilings use the shared tolerance in `src/utils/precision.ts`: values
-within `max(1e-7, 8 ULP)` of an integer snap to that integer. "Exact rounded"
-means exact integer optimization under this documented floating-point contract,
-not rational-arithmetic certification. The native ceiling rows reserve SCIP's
-configured feasibility tolerance inside this boundary, and result validation
-independently checks every returned whole-machine value against the shared
-rounding function.
+Machine ceilings use only an 8-ULP floating-point tolerance in
+`src/utils/precision.ts`; for example, `2.00000009` costs three machines.
+"Exact rounded" means exact integer optimization under this floating-point
+contract, not rational-arithmetic certification. Native ceiling rows do not
+add the old `1e-7` application tolerance; SCIP still applies its configured
+numerical feasibility tolerance. Result validation independently checks every
+returned whole-machine value against the shared rounding function.
 
 Autocomplete asks the native solver to exclude avoidable infinite-cost machines
 before applying the user's first objective tier. If no finite-machine solution

@@ -733,7 +733,7 @@ if (
 
 const nearIntegerJob = await runNativeJob(
   makeSingleNodePayload({
-    currentMachineCount: 2.00000005,
+    currentMachineCount: 2.00000009,
     machineCost: 10,
     machineCostWeight: 1,
   }),
@@ -749,9 +749,9 @@ const nearIntegerStageOffset = Array.from(
 ).find((offset) => nearIntegerJob.result[offset] === 3);
 if (
   nearIntegerStageOffset === undefined ||
-  Math.abs(nearIntegerJob.result[nearIntegerStageOffset + 1] - 20) > 1e-6
+  Math.abs(nearIntegerJob.result[nearIntegerStageOffset + 1] - 30) > 1e-6
 ) {
-  throw new Error('Near-integer native job did not price 2.00000005 as 2 whole machines.');
+  throw new Error('Near-integer native job did not price 2.00000009 as 3 whole machines.');
 }
 
 const aboveIntegerToleranceJob = await runNativeJob(
@@ -778,7 +778,7 @@ if (
 }
 
 const machineBoundaryCases = [
-  { value: 30.00000005, expected: 30 },
+  { value: 30.00000005, expected: 31 },
   { value: 30.000000135, expected: 31 },
 ];
 for (const { value, expected } of machineBoundaryCases) {
@@ -805,27 +805,27 @@ for (const { value, expected } of machineBoundaryCases) {
   }
 }
 
-const aboveZeroToleranceJob = await runNativeJob(
+const tinyPositiveRoundedJob = await runNativeJob(
   makeSingleNodePayload({
-    currentMachineCount: 0.000000105,
+    currentMachineCount: 0.00000009,
     machineCost: 10,
     machineCostWeight: 1,
   }),
 );
-if (aboveZeroToleranceJob.nativeError || aboveZeroToleranceJob.result[3] !== 1) {
+if (tinyPositiveRoundedJob.nativeError || tinyPositiveRoundedJob.result[3] !== 1) {
   throw new Error(
-    `Above-zero-tolerance native job failed with status ${aboveZeroToleranceJob.result[3]}: ${aboveZeroToleranceJob.nativeError}`,
+    `Tiny positive rounded-machine job failed with status ${tinyPositiveRoundedJob.result[3]}: ${tinyPositiveRoundedJob.nativeError}`,
   );
 }
-const aboveZeroToleranceStageOffset = Array.from(
-  { length: aboveZeroToleranceJob.result[15] },
+const tinyPositiveRoundedStageOffset = Array.from(
+  { length: tinyPositiveRoundedJob.result[15] },
   (_, index) => NATIVE_RESULT_HEADER_DOUBLES + index * 3,
-).find((offset) => aboveZeroToleranceJob.result[offset] === 3);
+).find((offset) => tinyPositiveRoundedJob.result[offset] === 3);
 if (
-  aboveZeroToleranceStageOffset === undefined ||
-  Math.abs(aboveZeroToleranceJob.result[aboveZeroToleranceStageOffset + 1] - 10) > 1e-6
+  tinyPositiveRoundedStageOffset === undefined ||
+  Math.abs(tinyPositiveRoundedJob.result[tinyPositiveRoundedStageOffset + 1] - 10) > 1e-6
 ) {
-  throw new Error('Above-zero-tolerance native job did not price 0.000000105 as 1 whole machine.');
+  throw new Error('Native objective did not price 0.00000009 as 1 whole machine.');
 }
 
 const connectedAboveIntegerProducerJob = await runNativeJob(

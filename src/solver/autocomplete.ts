@@ -1271,7 +1271,7 @@ function materializePlan(
       ...candidate.node,
       data: {
         ...candidate.node.data,
-        machineCount: materializedCount,
+        machineCount: constrainMachineCount(candidate.node.data, materializedCount),
         inputOrder: candidate.recipe.inputs.map((_, index) => index),
         outputOrder: candidate.recipe.outputs.map((_, index) => index),
         settings,
@@ -1280,7 +1280,7 @@ function materializePlan(
     newRecipeNodes.push(node);
     selectedCandidateIds.add(candidate.node.id);
     materializedIdByCandidateId.set(candidate.node.id, node.id);
-    appliedMachineCounts[node.id] = materializedCount;
+    appliedMachineCounts[node.id] = node.data.machineCount;
   }
 
   const positionedNewNodes = positionGeneratedNodes(

@@ -1,5 +1,6 @@
 export function cleanMachineCount(val: number): number {
-  return Number(val.toFixed(12));
+  if (!Number.isFinite(val) || val === 0) return val;
+  return Number(val.toPrecision(15));
 }
 
 export function cleanFlow(val: number): number {
@@ -12,7 +13,7 @@ export const RATE_ABSOLUTE_TOLERANCE = 1e-12;
 export const RATE_RELATIVE_TOLERANCE = 1e-9;
 export const FLOW_STATUS_ABSOLUTE_TOLERANCE = 1e-6;
 export const FLOW_STATUS_RELATIVE_TOLERANCE = 1e-12;
-export const MACHINE_INTEGER_ABSOLUTE_TOLERANCE = 1e-7;
+export const MACHINE_INTEGER_ABSOLUTE_TOLERANCE = 0;
 export const MACHINE_INTEGER_RELATIVE_TOLERANCE = Number.EPSILON * 8;
 export const MACHINE_COUNT_RESULT_ABSOLUTE_TOLERANCE = 1e-10;
 export const MACHINE_COUNT_RESULT_RELATIVE_TOLERANCE = Number.EPSILON * 8;

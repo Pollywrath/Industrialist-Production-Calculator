@@ -32,14 +32,12 @@ import {
   OPTIMIZATION_METRIC_IDS,
   OPTIMIZATION_NORMALIZERS,
   sanitizeOptimizationConfiguration,
-  type MachineCountBasis,
   type OptimizationConfiguration,
 } from './optimizationConfig';
 import {
   EPSILON,
   FLOW_STATUS_ABSOLUTE_TOLERANCE,
   FLOW_STATUS_RELATIVE_TOLERANCE,
-  MACHINE_INTEGER_ABSOLUTE_TOLERANCE,
   RATE_NUMERICAL_ZERO,
   getRateTolerance,
   getMachineIntegerTolerance,
@@ -1428,7 +1426,6 @@ export function buildResponseFromRawValues(
   connections: RatioOptimizerConnection[],
   nodes: RatioOptimizerNode[],
   telemetry?: RatioSolverTelemetry,
-  machineCountBasis: MachineCountBasis = 'whole',
 ): RatioOptimizerResponse {
   const machineCounts: Record<string, number> = {};
   for (const node of nodes) {
@@ -1442,11 +1439,7 @@ export function buildResponseFromRawValues(
     ) {
       count = targetMachineLowerBound;
     }
-    if (
-      machineCountBasis === 'whole'
-        ? count <= MACHINE_INTEGER_ABSOLUTE_TOLERANCE
-        : isMachineCountNumericallyZero(count)
-    ) {
+    if (isMachineCountNumericallyZero(count)) {
       count = 0;
     }
     machineCounts[node.id] = count;
@@ -1521,7 +1514,6 @@ function buildResponseFromNativeBinaryResult(
   resultConnections: RatioOptimizerConnection[],
   resultNodes: RatioOptimizerNode[],
   fallbackTelemetry: RatioSolverTelemetry,
-  machineCountBasis: MachineCountBasis,
 ): RatioOptimizerResponse {
   const rawValues: Record<string, number> = {};
 
@@ -1562,7 +1554,6 @@ function buildResponseFromNativeBinaryResult(
     resultConnections,
     resultNodes,
     telemetry,
-    machineCountBasis,
   );
 }
 
@@ -1588,8 +1579,6 @@ async function solveRatioStagesNative(
   resultConnections = connections,
   requestId?: number,
 ): Promise<RatioOptimizerResponse> {
-  const machineCountBasis =
-    configuration?.machineCountBasis ?? DEFAULT_OPTIMIZATION_CONFIGURATION.machineCountBasis;
   if (!runtime.nativeRatioSolver) {
     throw new Error('The native ratio optimizer is unavailable.');
   }
@@ -1668,7 +1657,6 @@ async function solveRatioStagesNative(
     resultConnections,
     resultNodes,
     fallbackTelemetry,
-    machineCountBasis,
   );
   response.nativeFailure = binaryResult.nativeFailure;
   response.telemetry = {
