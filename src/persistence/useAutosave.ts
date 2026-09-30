@@ -2,20 +2,21 @@ import { useEffect } from 'react';
 import { useFlowStore } from '../stores/useFlowStore';
 import { useUIStore } from '../stores/useUIStore';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
-import { getAutosave, saveAutosave, getDataOverrides } from './idb';
-import { serializeCanvas, deserializeCanvas } from './transformer';
+import { getAutosave } from './idb';
+import { deserializeCanvas } from './transformer';
+import { getAutosaveTabId } from './autosaveIdentity';
+import { saveCurrentAutosave } from './autosaveWriter';
 
 let startupAutosavePromise: ReturnType<typeof getAutosave> | null = null;
 
 function getStartupAutosave(): ReturnType<typeof getAutosave> {
-  startupAutosavePromise ??= getAutosave();
+  startupAutosavePromise ??= getAutosave(getAutosaveTabId());
   return startupAutosavePromise;
 }
 
 export function useAutosave(): void {
   useEffect(() => {
     let isMounted = true;
-
     getStartupAutosave()
       .then(async (record) => {
         if (!isMounted) return;
@@ -72,20 +73,13 @@ export function useAutosave(): void {
       dirtyVersion++;
     });
 
-    const intervalId = setInterval(() => {
-      if (document.hidden) return;
+    const saveIfDirty = () => {
       if (dirtyVersion === lastSavedVersion) return;
       if (isSaving) return;
 
       isSaving = true;
       const capturedVersion = dirtyVersion;
-      const { nodes, edges } = useFlowStore.getState();
-
-      getDataOverrides()
-        .then((overrides) => {
-          const data = serializeCanvas(nodes, edges, overrides);
-          return saveAutosave(data);
-        })
+      saveCurrentAutosave(getAutosaveTabId())
         .then(() => {
           if (dirtyVersion === capturedVersion) {
             lastSavedVersion = capturedVersion;
@@ -97,21 +91,24 @@ export function useAutosave(): void {
         .finally(() => {
           isSaving = false;
         });
+    };
+
+    const intervalId = setInterval(() => {
+      if (!document.hidden) saveIfDirty();
     }, 5000);
 
     const handleBeforeUnload = () => {
-      const { nodes, edges } = useFlowStore.getState();
-      getDataOverrides()
-        .then((overrides) => {
-          const data = serializeCanvas(nodes, edges, overrides);
-          return saveAutosave(data);
-        })
-        .catch((err) => {
-          console.warn('Failed to commit autosave beforeunload:', err);
-        });
+      void saveCurrentAutosave(getAutosaveTabId()).catch((err) => {
+        console.warn('Failed to commit autosave beforeunload:', err);
+      });
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) saveIfDirty();
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       isMounted = false;
@@ -119,6 +116,7 @@ export function useAutosave(): void {
       unsub();
       unsubGlobalSettings();
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 }

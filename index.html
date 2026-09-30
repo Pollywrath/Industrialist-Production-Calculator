@@ -1,140 +1,146 @@
 <!doctype html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <link rel="icon" type="image/webp" href="/induslogo.webp" />
-  <link rel="preload" as="image" type="image/webp" href="/induslogo.webp" fetchpriority="high" />
-  <link rel="canonical" href="https://industrialist-calculator.pages.dev/" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description"
-    content="A fan-made flowchart calculator for Industrialist. Plan production chains, balance recipes, solve ratios, and export factory canvases." />
-  <meta name="application-name" content="Industrialist Calculator" />
-  <meta name="apple-mobile-web-app-title" content="Industrialist Calculator" />
-  <meta name="robots" content="index, follow" />
-  <meta name="theme-color" content="#0a0a0a" />
-  <meta property="og:type" content="website" />
-  <meta property="og:site_name" content="Industrialist Calculator" />
-  <meta property="og:locale" content="en_US" />
-  <meta property="og:url" content="https://industrialist-calculator.pages.dev/" />
-  <meta property="og:title" content="Industrialist Calculator" />
-  <meta property="og:description"
-    content="Plan production chains, balance recipes, solve ratios, and export factory canvases." />
-  <meta property="og:image" content="https://industrialist-calculator.pages.dev/induslogo.webp" />
-  <meta property="og:image:type" content="image/webp" />
-  <meta property="og:image:width" content="120" />
-  <meta property="og:image:height" content="120" />
-  <meta property="og:image:alt" content="Industrialist Calculator logo" />
-  <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Industrialist Calculator" />
-  <meta name="twitter:description"
-    content="Plan production chains, balance recipes, solve ratios, and export factory canvases." />
-  <meta name="twitter:image" content="https://industrialist-calculator.pages.dev/induslogo.webp" />
-  <meta name="twitter:image:alt" content="Industrialist Calculator logo" />
-  <title>Industrialist Calculator</title>
-  <style>
-    :root {
-      --theme-color-canvas-bg: #0a0a0a;
-      --theme-color-bg-secondary: #1a1a1a;
-      --theme-color-border-light: #333333;
-      --theme-color-text-primary: #f5d56a;
-      --theme-color-text-secondary: #999999;
-      --theme-color-success: #22c55e;
-    }
-
-    @keyframes startup-loading-spin {
-      0% {
-        transform: rotate(0deg);
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/webp" href="/induslogo.webp" />
+    <link rel="preload" as="image" type="image/webp" href="/induslogo.webp" fetchpriority="high" />
+    <link rel="canonical" href="https://industrialist-calculator.pages.dev/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="A fan-made flowchart calculator for Industrialist. Plan production chains, balance recipes, solve ratios, and export factory canvases."
+    />
+    <meta name="application-name" content="Industrialist Calculator" />
+    <meta name="apple-mobile-web-app-title" content="Industrialist Calculator" />
+    <meta name="robots" content="index, follow" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Industrialist Calculator" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content="https://industrialist-calculator.pages.dev/" />
+    <meta property="og:title" content="Industrialist Calculator" />
+    <meta
+      property="og:description"
+      content="Plan production chains, balance recipes, solve ratios, and export factory canvases."
+    />
+    <meta property="og:image" content="https://industrialist-calculator.pages.dev/induslogo.webp" />
+    <meta property="og:image:type" content="image/webp" />
+    <meta property="og:image:width" content="120" />
+    <meta property="og:image:height" content="120" />
+    <meta property="og:image:alt" content="Industrialist Calculator logo" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Industrialist Calculator" />
+    <meta
+      name="twitter:description"
+      content="Plan production chains, balance recipes, solve ratios, and export factory canvases."
+    />
+    <meta
+      name="twitter:image"
+      content="https://industrialist-calculator.pages.dev/induslogo.webp"
+    />
+    <meta name="twitter:image:alt" content="Industrialist Calculator logo" />
+    <title>Industrialist Calculator</title>
+    <style>
+      :root {
+        --theme-color-canvas-bg: #0a0a0a;
+        --theme-color-bg-secondary: #1a1a1a;
+        --theme-color-border-light: #333333;
+        --theme-color-text-primary: #f5d56a;
+        --theme-color-text-secondary: #999999;
+        --theme-color-success: #22c55e;
       }
 
-      100% {
-        transform: rotate(360deg);
-      }
-    }
-
-    .startup-spinner {
-      width: 24px;
-      height: 24px;
-      animation: startup-loading-spin 1.2s linear infinite;
-      display: inline-block;
-      margin-right: 12px;
-      vertical-align: middle;
-      flex-shrink: 0;
-    }
-
-    .startup-root {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      width: 100vw;
-      height: 100dvh;
-      background: var(--theme-color-canvas-bg);
-      color: var(--theme-color-text-secondary);
-      font-family: monospace;
-      font-size: 11px;
-      letter-spacing: 0.1em;
-    }
-
-    .startup-modal {
-      display: flex;
-      align-items: center;
-      box-sizing: border-box;
-      padding: 14px 20px;
-      background: var(--theme-color-bg-secondary);
-      border: 1px solid var(--theme-color-border-light);
-    }
-
-    .startup-title {
-      margin-bottom: 2px;
-      font-weight: bold;
-      color: var(--theme-color-text-primary);
-      white-space: nowrap;
-      line-height: 1.2;
-    }
-
-    .startup-subtitle {
-      color: var(--theme-color-success);
-      white-space: nowrap;
-      line-height: 1.2;
-    }
-  </style>
-  <script>
-    (() => {
-      const key = 'industrialist_theme_overrides_v1';
-      try {
-        const raw = localStorage.getItem(key);
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object') return;
-
-        const rootStyle = document.documentElement.style;
-        for (const [name, value] of Object.entries(parsed)) {
-          if (!name.startsWith('--theme-')) continue;
-          if (typeof value !== 'string') continue;
-          const trimmed = value.trim();
-          if (!trimmed) continue;
-          rootStyle.setProperty(name, trimmed);
+      @keyframes startup-loading-spin {
+        0% {
+          transform: rotate(0deg);
         }
-      } catch {
-      }
-    })();
-  </script>
-</head>
 
-<body style="margin: 0; padding: 0; overflow: hidden; background: var(--theme-color-canvas-bg);">
-  <div id="root">
-    <div class="startup-root">
-      <div class="startup-modal">
-        <img src="/induslogo.webp" class="startup-spinner" alt="L" />
-        <div>
-          <div class="startup-title">INDUSTRIALIST SYSTEM</div>
-          <div class="startup-subtitle">Loading application data...</div>
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .startup-spinner {
+        width: 24px;
+        height: 24px;
+        animation: startup-loading-spin 1.2s linear infinite;
+        display: inline-block;
+        margin-right: 12px;
+        vertical-align: middle;
+        flex-shrink: 0;
+      }
+
+      .startup-root {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100vw;
+        height: 100dvh;
+        background: var(--theme-color-canvas-bg);
+        color: var(--theme-color-text-secondary);
+        font-family: monospace;
+        font-size: 11px;
+        letter-spacing: 0.1em;
+      }
+
+      .startup-modal {
+        display: flex;
+        align-items: center;
+        box-sizing: border-box;
+        padding: 14px 20px;
+        background: var(--theme-color-bg-secondary);
+        border: 1px solid var(--theme-color-border-light);
+      }
+
+      .startup-title {
+        margin-bottom: 2px;
+        font-weight: bold;
+        color: var(--theme-color-text-primary);
+        white-space: nowrap;
+        line-height: 1.2;
+      }
+
+      .startup-subtitle {
+        color: var(--theme-color-success);
+        white-space: nowrap;
+        line-height: 1.2;
+      }
+    </style>
+    <script>
+      (() => {
+        const key = 'industrialist_theme_overrides_v1';
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== 'object') return;
+
+          const rootStyle = document.documentElement.style;
+          for (const [name, value] of Object.entries(parsed)) {
+            if (!name.startsWith('--theme-')) continue;
+            if (typeof value !== 'string') continue;
+            const trimmed = value.trim();
+            if (!trimmed) continue;
+            rootStyle.setProperty(name, trimmed);
+          }
+        } catch {}
+      })();
+    </script>
+  </head>
+
+  <body style="margin: 0; padding: 0; overflow: hidden; background: var(--theme-color-canvas-bg)">
+    <div id="root">
+      <div class="startup-root">
+        <div class="startup-modal">
+          <img src="/induslogo.webp" class="startup-spinner" alt="L" />
+          <div>
+            <div class="startup-title">Industrialist Calculator</div>
+            <div class="startup-subtitle">Loading application data...</div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-  <script type="module" src="/src/main.tsx"></script>
-</body>
-
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

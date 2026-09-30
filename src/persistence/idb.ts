@@ -154,25 +154,26 @@ export async function renameSave(id: string, newName: string): Promise<boolean> 
   }
 }
 
-export async function getAutosave(): Promise<AutosaveRecord | null> {
+export async function getAutosave(id = 'latest'): Promise<AutosaveRecord | null> {
   try {
     const db = await getDB();
     if (!db) return null;
-    const record = await db.get('autosave', 'latest');
-    return record ?? null;
+    const record = await db.get('autosave', id);
+    if (record || id === 'latest') return record ?? null;
+    return (await db.get('autosave', 'latest')) ?? null;
   } catch (err) {
     console.warn('Failed to get autosave from IndexedDB:', err);
     return null;
   }
 }
 
-export async function saveAutosave(data: SaveData): Promise<void> {
+export async function saveAutosave(data: SaveData, id = 'latest'): Promise<void> {
   const db = await getDB();
   if (!db) {
     throw new Error('IndexedDB not available');
   }
   await db.put('autosave', {
-    id: 'latest',
+    id,
     timestamp: Date.now(),
     data,
   });

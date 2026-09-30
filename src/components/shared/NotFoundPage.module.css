@@ -1,0 +1,67 @@
+.page {
+  box-sizing: border-box;
+  display: grid;
+  min-height: 100dvh;
+  padding: 24px;
+  place-items: center;
+  background: var(--theme-color-canvas-bg);
+  font-family: monospace;
+}
+
+.card {
+  box-sizing: border-box;
+  width: min(100%, 440px);
+  padding: 28px;
+  border: 1px solid var(--theme-color-border-primary);
+  background: var(--theme-color-bg-secondary);
+  text-align: center;
+}
+
+.code {
+  margin-bottom: 8px;
+  color: var(--theme-color-text-primary);
+  font-size: clamp(42px, 12vw, 64px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+.card h1 {
+  margin: 0 0 10px;
+  color: var(--theme-color-text-primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.card p {
+  margin: 0 0 22px;
+  color: var(--theme-color-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.homeLink {
+  display: inline-block;
+  padding: 10px 14px;
+  border: 1px solid var(--theme-color-border-primary);
+  background: var(--theme-color-primary);
+  color: var(--theme-color-primary-dark);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.homeLink:hover {
+  background: var(--theme-color-primary-hover);
+}
+
+.homeLink:focus-visible {
+  outline: 2px solid var(--theme-color-text-primary);
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 24px 18px;
+  }
+}

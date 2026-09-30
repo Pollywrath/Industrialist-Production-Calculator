@@ -657,13 +657,17 @@ export function DataComparatorTab() {
         [bucket]: snapshotFromResult(result),
       }));
     } catch (error) {
+      const hasCachedRows = snapshots[bucket]?.rows !== undefined;
+      const errorMessage = !hasCachedRows
+        ? 'The wiki request failed and no cached data is available for this bucket. Check your connection and retry.'
+        : getErrorMessage(error);
       setSnapshots((prev) => ({
         ...prev,
         [bucket]: {
           bucket,
           status: 'error',
           rows: prev[bucket]?.rows,
-          error: getErrorMessage(error),
+          error: errorMessage,
           warning: prev[bucket]?.warning,
           fetchedAt: prev[bucket]?.fetchedAt,
           checkedAt: prev[bucket]?.checkedAt,

@@ -5,6 +5,20 @@
     "patches": [
       {
         "hash": "pending",
+        "version": "v0.8.8",
+        "patch": 8,
+        "date": "2026-09-30",
+        "subject": "feat: add offline support and a 404 page",
+        "items": [
+          "Added an installable PWA that caches the app shell and built assets for offline use, with runtime caching for product icons and SCIP files after successful fetches.",
+          "Save and coordinate open-tab graphs before applying service-worker updates; keep the current session open and show a retry message if a save fails.",
+          "Isolated autosaves by browser tab and save pending changes when a tab is hidden, reducing the chance of tabs overwriting each other or losing recent work.",
+          "Added a theme-aware 404 page for unknown app paths, simplified loading messages, and kept the third-party license file accessible through the service worker.",
+          "Show a clear offline message in the data comparator when a wiki data bucket has never been fetched."
+        ]
+      },
+      {
+        "hash": "pending",
         "version": "v0.8.7",
         "patch": 7,
         "date": "2026-09-30",

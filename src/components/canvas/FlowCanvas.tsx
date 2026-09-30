@@ -230,7 +230,33 @@ export function FlowCanvas() {
   }, []);
 
   useEffect(() => {
-    initRatioOptimizerWorker();
+    let isMounted = true;
+    const tryWarmRatioOptimizer = () => {
+      if (!isMounted || !navigator.onLine) return;
+      if (
+        import.meta.env.PROD &&
+        'serviceWorker' in navigator &&
+        !navigator.serviceWorker.controller
+      ) {
+        return;
+      }
+
+      initRatioOptimizerWorker();
+    };
+
+    window.addEventListener('online', tryWarmRatioOptimizer);
+    if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', tryWarmRatioOptimizer);
+    }
+    tryWarmRatioOptimizer();
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('online', tryWarmRatioOptimizer);
+      if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('controllerchange', tryWarmRatioOptimizer);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -270,10 +296,7 @@ export function FlowCanvas() {
   if (!isAutosaveLoaded) {
     return (
       <div className={styles['canvas-container']}>
-        <LoadingScreen
-          title="INDUSTRIALIST CALCULATOR"
-          subtitle="Restoring previous session layout..."
-        />
+        <LoadingScreen title="Loading calculator" subtitle="Restoring your last session..." />
       </div>
     );
   }
@@ -299,11 +322,7 @@ export function FlowCanvas() {
         (RecipeSelector ? (
           React.createElement(RecipeSelector)
         ) : (
-          <Suspense
-            fallback={
-              <LoadingScreen title="RECIPE SELECTOR" subtitle="Loading recipe database..." />
-            }
-          >
+          <Suspense fallback={<LoadingScreen title="Recipes" subtitle="Loading recipes..." />}>
             <LazyRecipeSelector />
           </Suspense>
         ))}
@@ -311,9 +330,7 @@ export function FlowCanvas() {
         (SavesOverlay ? (
           React.createElement(SavesOverlay)
         ) : (
-          <Suspense
-            fallback={<LoadingScreen title="SAVE MANAGER" subtitle="Loading storage database..." />}
-          >
+          <Suspense fallback={<LoadingScreen title="Saves" subtitle="Loading saved layouts..." />}>
             <LazySavesOverlay />
           </Suspense>
         ))}
@@ -321,9 +338,7 @@ export function FlowCanvas() {
         (DataOverlay ? (
           React.createElement(DataOverlay)
         ) : (
-          <Suspense
-            fallback={<LoadingScreen title="DATA MANAGER" subtitle="Loading data editor..." />}
-          >
+          <Suspense fallback={<LoadingScreen title="Data editor" subtitle="Loading data..." />}>
             <LazyDataOverlay />
           </Suspense>
         ))}
@@ -332,7 +347,7 @@ export function FlowCanvas() {
           React.createElement(ThemeOverlay)
         ) : (
           <Suspense
-            fallback={<LoadingScreen title="THEME EDITOR" subtitle="Loading theme variables..." />}
+            fallback={<LoadingScreen title="Themes" subtitle="Loading theme settings..." />}
           >
             <LazyThemeOverlay />
           </Suspense>
@@ -342,9 +357,7 @@ export function FlowCanvas() {
           React.createElement(MachineOverlay)
         ) : (
           <Suspense
-            fallback={
-              <LoadingScreen title="MACHINE OVERLAY" subtitle="Loading research graph..." />
-            }
+            fallback={<LoadingScreen title="Machines" subtitle="Loading machine data..." />}
           >
             <LazyMachineOverlay />
           </Suspense>
@@ -353,7 +366,7 @@ export function FlowCanvas() {
         (HelpOverlay ? (
           React.createElement(HelpOverlay)
         ) : (
-          <Suspense fallback={<LoadingScreen title="HELP" subtitle="Loading help topics..." />}>
+          <Suspense fallback={<LoadingScreen title="Help" subtitle="Loading help..." />}>
             <LazyHelpOverlay />
           </Suspense>
         ))}

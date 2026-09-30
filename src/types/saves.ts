@@ -63,7 +63,7 @@ export interface SaveRecord {
 }
 
 export interface AutosaveRecord {
-  id: 'latest';
+  id: string;
   timestamp: number;
   data: SaveData;
 }
