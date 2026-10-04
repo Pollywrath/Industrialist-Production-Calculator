@@ -100,38 +100,44 @@ interface DataState {
   restoreDefaults: (category?: 'products' | 'machines' | 'recipes' | 'researches') => Promise<void>;
 }
 
+function slugifyIdPart(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+}
+
+function findUniqueId<T extends { id: string }>(
+  firstCandidate: string,
+  existing: readonly T[],
+  pending: Record<string, unknown>,
+  nextCandidate: (attempt: number) => string,
+): string {
+  let candidate = firstCandidate;
+  let attempt = 1;
+
+  while (existing.some((item) => item.id === candidate) || candidate in pending) {
+    candidate = nextCandidate(attempt);
+    attempt++;
+  }
+
+  return candidate;
+}
+
 export function generateUniqueProductId(
   name: string,
   existingProducts: Product[],
   pendingProducts: Record<string, Partial<Product> & { _tombstone?: boolean; _isNew?: boolean }>,
 ): string {
-  let baseSlug = name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-
-  if (!baseSlug) {
-    baseSlug = 'product';
-  }
-
+  const baseSlug = slugifyIdPart(name) || 'product';
   const baseId = baseSlug.startsWith('p_') ? baseSlug : `p_${baseSlug}`;
-
-  let id = baseId;
-  let counter = 1;
-
-  const isDuplicate = (checkId: string) => {
-    const inActive = existingProducts.some((p) => p.id === checkId);
-    const inPending = checkId in pendingProducts;
-    return inActive || inPending;
-  };
-
-  while (isDuplicate(id)) {
-    id = `${baseId}_${counter}`;
-    counter++;
-  }
-
-  return id;
+  return findUniqueId(
+    baseId,
+    existingProducts,
+    pendingProducts,
+    (attempt) => `${baseId}_${attempt}`,
+  );
 }
 
 export function generateUniqueMachineId(
@@ -139,33 +145,14 @@ export function generateUniqueMachineId(
   existingMachines: Machine[],
   pendingMachines: Record<string, Partial<Machine> & { _tombstone?: boolean; _isNew?: boolean }>,
 ): string {
-  let baseSlug = name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-
-  if (!baseSlug) {
-    baseSlug = 'machine';
-  }
-
+  const baseSlug = slugifyIdPart(name) || 'machine';
   const baseId = baseSlug.startsWith('m_') ? baseSlug : `m_${baseSlug}`;
-
-  let id = baseId;
-  let counter = 1;
-
-  const isDuplicate = (checkId: string) => {
-    const inActive = existingMachines.some((m) => m.id === checkId);
-    const inPending = checkId in pendingMachines;
-    return inActive || inPending;
-  };
-
-  while (isDuplicate(id)) {
-    id = `${baseId}_${counter}`;
-    counter++;
-  }
-
-  return id;
+  return findUniqueId(
+    baseId,
+    existingMachines,
+    pendingMachines,
+    (attempt) => `${baseId}_${attempt}`,
+  );
 }
 
 export function generateUniqueResearchId(
@@ -174,38 +161,17 @@ export function generateUniqueResearchId(
   existingResearches: Research[],
   pendingResearches: Record<string, Partial<Research> & { _tombstone?: boolean; _isNew?: boolean }>,
 ): string {
-  const catSlug = (category || '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-
-  const nameSlug = name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-
+  const catSlug = slugifyIdPart(category || '');
+  const nameSlug = slugifyIdPart(name);
   const combined = catSlug ? `${catSlug}_${nameSlug}` : nameSlug;
   const baseSlug = combined || 'research';
-
   const baseId = baseSlug.startsWith('s_') ? baseSlug : `s_${baseSlug}`;
-
-  let id = baseId;
-  let counter = 1;
-
-  const isDuplicate = (checkId: string) => {
-    const inActive = existingResearches.some((r) => r.id === checkId);
-    const inPending = checkId in pendingResearches;
-    return inActive || inPending;
-  };
-
-  while (isDuplicate(id)) {
-    id = `${baseId}_${counter}`;
-    counter++;
-  }
-
-  return id;
+  return findUniqueId(
+    baseId,
+    existingResearches,
+    pendingResearches,
+    (attempt) => `${baseId}_${attempt}`,
+  );
 }
 
 export function generateUniqueRecipeId(
@@ -220,22 +186,11 @@ export function generateUniqueRecipeId(
     baseId = 'r_' + baseId;
   }
 
-  let id = `${baseId}_01`;
-  let counter = 1;
-
-  const isDuplicate = (checkId: string) => {
-    const inActive = existingRecipes.some((r) => r.id === checkId);
-    const inPending = checkId in pendingRecipes;
-    return inActive || inPending;
-  };
-
-  while (isDuplicate(id)) {
-    counter++;
-    const suffix = counter < 10 ? `0${counter}` : `${counter}`;
-    id = `${baseId}_${suffix}`;
-  }
-
-  return id;
+  return findUniqueId(`${baseId}_01`, existingRecipes, pendingRecipes, (attempt) => {
+    const recipeNumber = attempt + 1;
+    const suffix = recipeNumber < 10 ? `0${recipeNumber}` : `${recipeNumber}`;
+    return `${baseId}_${suffix}`;
+  });
 }
 
 export const useDataStore = create<DataState>((set, get) => ({

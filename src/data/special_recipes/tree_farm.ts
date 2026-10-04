@@ -16,6 +16,10 @@ const MIN_TREE_COUNT = 1;
 const MAX_TREE_COUNT = 776;
 const MIN_HARVESTER_COUNT = 1;
 const MAX_HARVESTER_COUNT = 30;
+const MIN_SPRINKLER_COUNT = 1;
+const MAX_SPRINKLER_COUNT = 100;
+const MIN_OUTPUT_COUNT = 1;
+const MAX_OUTPUT_COUNT = 20;
 
 const CONTROLLER_OPTIONS = [
   { label: 'Tree Farm Controller', value: DEFAULT_CONTROLLER_ID },
@@ -184,17 +188,14 @@ function sizeAutocompleteSettings(
   settings: Record<string, unknown>,
   context: SpecialRecipeAutocompleteSizingContext,
 ): Record<string, unknown> {
-  if (!Number.isFinite(context.machineCount) || context.machineCount <= 0) return settings;
+  const requiredOutputRate = context.requiredOutputRates[0];
+  if (!Number.isFinite(requiredOutputRate) || requiredOutputRate <= 0) return settings;
 
-  const treeCount = (settings.tree_count as number) ?? 600;
-  const harvesterCount = (settings.harvester_count as number) ?? 20;
   const pollution = (context.globalSettings?.global_pollution as number) ?? 10;
   const controllerId = getControllerId(settings, context.globalSettings);
   const treeId = getTreeId(settings, context.globalSettings);
   const logsPerTree = getLogsPerTree(settings, context.globalSettings, controllerId, treeId);
-  const currentOutputRate =
-    calculateActualHarvestRate(treeCount, harvesterCount, pollution, treeId) * logsPerTree;
-  const requiredHarvestRate = (currentOutputRate * context.machineCount) / logsPerTree;
+  const requiredHarvestRate = requiredOutputRate / logsPerTree;
   const growthTime = calculateGrowthTime(pollution, treeId);
   const nextTreeCount = clampCount(
     requiredHarvestRate * growthTime,
@@ -206,12 +207,27 @@ function sizeAutocompleteSettings(
     MIN_HARVESTER_COUNT,
     MAX_HARVESTER_COUNT,
   );
+  const nextSprinklerCount = clampCount(
+    nextTreeCount / 25,
+    MIN_SPRINKLER_COUNT,
+    MAX_SPRINKLER_COUNT,
+  );
+  const nextOutputCount = clampCount(nextTreeCount / 75, MIN_OUTPUT_COUNT, MAX_OUTPUT_COUNT);
 
-  if (nextTreeCount === treeCount && nextHarvesterCount === harvesterCount) return settings;
+  if (
+    nextTreeCount === settings.tree_count &&
+    nextHarvesterCount === settings.harvester_count &&
+    nextSprinklerCount === settings.sprinkler_count &&
+    nextOutputCount === settings.outputs_count
+  ) {
+    return settings;
+  }
   return {
     ...settings,
     tree_count: nextTreeCount,
     harvester_count: nextHarvesterCount,
+    sprinkler_count: nextSprinklerCount,
+    outputs_count: nextOutputCount,
   };
 }
 
@@ -282,22 +298,33 @@ export const tree_farm_01: SpecialRecipe = {
       type: 'number',
       label: 'Sprinkler Count',
       default: 24,
-      min: 1,
-      max: 100,
+      min: MIN_SPRINKLER_COUNT,
+      max: MAX_SPRINKLER_COUNT,
       step: 1,
       dynamicLabel: (settings) => {
+        const treeCount = (settings.tree_count as number) ?? 600;
         const sprinklerCount = (settings.sprinkler_count as number) ?? 24;
+        const estimatedSprinklerCount = clampCount(
+          treeCount / 25,
+          MIN_SPRINKLER_COUNT,
+          MAX_SPRINKLER_COUNT,
+        );
         const waterTanks = Math.ceil(sprinklerCount / 3);
-        return `Sprinkler Count - Water tanks needed: ${waterTanks}`;
+        return `Sprinkler Count - Est count: ${estimatedSprinklerCount}, Water tanks needed: ${waterTanks}`;
       },
     },
     outputs_count: {
       type: 'number',
       label: 'Output Count',
       default: 8,
-      min: 1,
-      max: 20,
+      min: MIN_OUTPUT_COUNT,
+      max: MAX_OUTPUT_COUNT,
       step: 1,
+      dynamicLabel: (settings) => {
+        const treeCount = (settings.tree_count as number) ?? 600;
+        const estimatedOutputCount = clampCount(treeCount / 75, MIN_OUTPUT_COUNT, MAX_OUTPUT_COUNT);
+        return `Output Count - Est count: ${estimatedOutputCount}`;
+      },
     },
   },
   sizeAutocompleteSettings,

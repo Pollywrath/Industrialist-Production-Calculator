@@ -39,6 +39,8 @@ import {
   FLOW_STATUS_ABSOLUTE_TOLERANCE,
   FLOW_STATUS_RELATIVE_TOLERANCE,
   RATE_NUMERICAL_ZERO,
+  getMeaningfulRateDelta,
+  getScaledTolerance,
   getRateTolerance,
   getMachineIntegerTolerance,
   isMachineCountNumericallyZero,
@@ -161,9 +163,9 @@ const NATIVE_BINARY_RESULT_HEADER_DOUBLES = 38;
 const NATIVE_BINARY_RESULT_PREVIOUS_HEADER_DOUBLES = 28;
 const NATIVE_BINARY_RESULT_LEGACY_HEADER_DOUBLES = 20;
 const NATIVE_PAYLOAD_F64_MAGIC = 444926466;
-const NATIVE_PAYLOAD_F64_VERSION = 6;
-const NATIVE_PAYLOAD_F64_HEADER_DOUBLES = 41;
-const NATIVE_PAYLOAD_F64_NODE_DOUBLES = 15;
+const NATIVE_PAYLOAD_F64_VERSION = 7;
+const NATIVE_PAYLOAD_F64_HEADER_DOUBLES = 31;
+const NATIVE_PAYLOAD_F64_NODE_DOUBLES = 14;
 const NATIVE_PAYLOAD_F64_INPUT_DOUBLES = 6;
 const NATIVE_PAYLOAD_F64_OUTPUT_DOUBLES = 2;
 const NATIVE_PAYLOAD_F64_CONNECTION_DOUBLES = 4;
@@ -197,9 +199,11 @@ function getStageBoundRhs(value: number, bound: RatioObjectiveBoundKey): number 
   if (normalizedValue <= EPSILON) return 0;
   return (
     normalizedValue +
-    Math.max(
+    getScaledTolerance(
+      normalizedValue,
+      0,
       FLOW_STATUS_ABSOLUTE_TOLERANCE,
-      Math.abs(normalizedValue) * FLOW_STATUS_RELATIVE_TOLERANCE,
+      FLOW_STATUS_RELATIVE_TOLERANCE,
     )
   );
 }
@@ -226,7 +230,6 @@ function getObjectiveExpression(
 function getNoTargetComponentNodeIds(
   nodes: RatioOptimizerNode[],
   connections: RatioOptimizerConnection[],
-  preservePowerOutputComponents = false,
 ): Set<string> {
   const adjacency = new Map<string, string[]>();
   for (const node of nodes) {
@@ -248,7 +251,6 @@ function getNoTargetComponentNodeIds(
     const componentNodeIds: string[] = [];
     const stack = [node.id];
     let hasTarget = false;
-    let hasPowerOutput = false;
     visited.add(node.id);
 
     while (stack.length > 0) {
@@ -256,7 +258,6 @@ function getNoTargetComponentNodeIds(
       componentNodeIds.push(nodeId);
       const componentNode = nodeById.get(nodeId);
       hasTarget ||= !!componentNode?.isTarget;
-      hasPowerOutput ||= (componentNode?.powerOutput ?? 0) > 0;
 
       for (const nextNodeId of adjacency.get(nodeId) ?? []) {
         if (visited.has(nextNodeId)) continue;
@@ -265,7 +266,7 @@ function getNoTargetComponentNodeIds(
       }
     }
 
-    if (!hasTarget && !(preservePowerOutputComponents && hasPowerOutput)) {
+    if (!hasTarget) {
       for (const nodeId of componentNodeIds) {
         noTargetComponentNodeIds.add(nodeId);
       }
@@ -329,7 +330,6 @@ function hasFlowDependentDemand(input: RatioOptimizerNode['inputs'][number]): bo
 function presolveRatioOptimizerModel(
   nodes: RatioOptimizerNode[],
   connections: RatioOptimizerConnection[],
-  preservePowerOutputComponents: boolean,
 ): RatioPresolvedModel {
   const nodesById = new Map(nodes.map((node) => [node.id, node]));
   const semanticallyActiveConnections: RatioOptimizerConnection[] = [];
@@ -357,7 +357,6 @@ function presolveRatioOptimizerModel(
   const noTargetComponentNodeIds = getNoTargetComponentNodeIds(
     nodes,
     semanticallyActiveConnections,
-    preservePowerOutputComponents,
   );
   const keptNodeIds = new Set<string>();
   const presolvedNodes: RatioOptimizerNode[] = [];
@@ -802,7 +801,7 @@ async function getOrCreateRuntime(
   runtimePromise = (async () => {
     progress?.({
       phase: 'loading',
-      message: `Loading SCIP bundle '${bundlePath}'.`,
+      message: 'Loading the optimization engine…',
       solver: 'unknown',
       elapsedMs: 0,
     });
@@ -813,7 +812,7 @@ async function getOrCreateRuntime(
     const stdoutLines: string[] = [];
     progress?.({
       phase: 'loading',
-      message: 'Instantiating single-threaded SCIP WASM runtime.',
+      message: 'Starting the optimizer…',
       solver: 'unknown',
       elapsedMs: performance.now() - initStart,
     });
@@ -837,7 +836,7 @@ async function getOrCreateRuntime(
     const initMs = performance.now() - initStart;
     progress?.({
       phase: 'ready',
-      message: 'Native SCIP ratio runtime is ready.',
+      message: 'Optimizer ready.',
       solver: 'native',
       elapsedMs: initMs,
     });
@@ -950,15 +949,15 @@ export function buildMPS(
       tightenUpperBound(mVar, 0);
     }
 
+    const producedPollution = Math.max(0, node.pollution ?? 0);
     const legacyMachineWeight = Math.max(
       1e-6,
-      1e-3 + 1e-8 * (node.powerUse ?? 0) + 1e-5 * (node.pollution ?? 0),
+      1e-3 + 1e-8 * (node.powerUse ?? 0) + 1e-5 * producedPollution,
     );
     const weightedMachineCoeff =
       valueScale *
       ((objectiveWeights.powerUse * (node.powerUse ?? 0)) / RATIO_OBJECTIVE_NORMALIZERS.powerUse +
-        (objectiveWeights.pollution * (node.pollution ?? 0)) /
-          RATIO_OBJECTIVE_NORMALIZERS.pollution);
+        (objectiveWeights.pollution * producedPollution) / RATIO_OBJECTIVE_NORMALIZERS.pollution);
     addExpressionCoeff(legacyObjCoeffs, mVar, legacyMachineWeight);
     addExpressionCoeff(objectiveExpressions.weighted, mVar, weightedMachineCoeff);
     addExpressionCoeff(objectiveExpressions.machineCount, mVar, 1);
@@ -989,13 +988,15 @@ export function buildMPS(
     for (const node of nodes) {
       for (let inputIndex = 0; inputIndex < node.inputs.length; inputIndex += 1) {
         const pollutionPerFlow = node.inputs[inputIndex].pollutionPerFlow;
-        if (!Number.isFinite(pollutionPerFlow) || pollutionPerFlow === 0) continue;
+        if (!Number.isFinite(pollutionPerFlow) || pollutionPerFlow <= 0) continue;
         for (const connection of connections) {
           if (connection.targetNodeId !== node.id || connection.targetInputIndex !== inputIndex) {
             continue;
           }
           const flowVar = edgeFlowVars.get(connection.id);
-          if (flowVar) addExpressionCoeff(expression, flowVar, pollutionPerFlow * coefficientScale);
+          if (flowVar) {
+            addExpressionCoeff(expression, flowVar, pollutionPerFlow * coefficientScale);
+          }
         }
       }
     }
@@ -1109,20 +1110,7 @@ export function buildMPS(
   const addObjectiveDerivedVariableBounds = (
     expression: Map<string, number>,
     optimum: number | undefined,
-  ) => {
-    if (optimum === undefined || expression.size === 0) return;
-    if (!Number.isFinite(optimum)) return;
-    const rhs = getStageBoundRhs(optimum, 'weighted');
-    expression.forEach((coeff, varName) => {
-      if (coeff <= 0) return;
-      tightenUpperBound(varName, rhs / coeff);
-    });
-  };
-
-  const addFlowObjectiveDerivedVariableBounds = (
-    expression: Map<string, number>,
-    optimum: number | undefined,
-    bound: 'shortage' | 'sinkExcess',
+    bound: RatioObjectiveBoundKey,
   ) => {
     if (optimum === undefined || expression.size === 0 || !Number.isFinite(optimum)) return;
     const rhs = getStageBoundRhs(optimum, bound);
@@ -1132,17 +1120,21 @@ export function buildMPS(
     });
   };
 
-  addFlowObjectiveDerivedVariableBounds(
+  addObjectiveDerivedVariableBounds(
     objectiveExpressions.shortage,
     options.bounds?.shortage,
     'shortage',
   );
-  addFlowObjectiveDerivedVariableBounds(
+  addObjectiveDerivedVariableBounds(
     objectiveExpressions.sinkExcess,
     options.bounds?.sinkExcess,
     'sinkExcess',
   );
-  addObjectiveDerivedVariableBounds(objectiveExpressions.weighted, options.bounds?.weighted);
+  addObjectiveDerivedVariableBounds(
+    objectiveExpressions.weighted,
+    options.bounds?.weighted,
+    'weighted',
+  );
 
   const objCoeffs = getObjectiveExpression(objectiveMode, objectiveExpressions, legacyObjCoeffs);
 
@@ -1300,16 +1292,15 @@ export function buildNativeRatioPayloadArray(
   );
   out[8] = nativeBool(excludeAvoidableInfiniteCostMachines);
   out[9] = nativeBool(resolvedConfiguration.machineCountBasis === 'whole');
-  out[40] = flowDependencyCount;
+  out[30] = flowDependencyCount;
   for (let metricIndex = 0; metricIndex < OPTIMIZATION_METRIC_IDS.length; metricIndex += 1) {
     const id = OPTIMIZATION_METRIC_IDS[metricIndex];
     const setting = resolvedConfiguration.metrics[id];
-    const offset = 10 + metricIndex * 5;
+    const offset = 10 + metricIndex * 4;
     out[offset] = nativeBool(setting.enabled);
     out[offset + 1] = setting.weight / OPTIMIZATION_NORMALIZERS[id];
     out[offset + 2] = setting.tier;
     out[offset + 3] = -1;
-    out[offset + 4] = setting.outputGoal ?? -1;
   }
 
   let nextInputIndex = 0;
@@ -1322,17 +1313,16 @@ export function buildNativeRatioPayloadArray(
     out[nodeOffset + 1] = safeNativeNumber(node.minimumMachineCount);
     out[nodeOffset + 2] = node.maximumMachineCount ?? -1;
     out[nodeOffset + 3] = safeNativeNumber(node.powerUse);
-    out[nodeOffset + 4] = safeNativeNumber(node.powerOutput);
-    out[nodeOffset + 5] = safeNativeNumber(node.pollution);
-    out[nodeOffset + 6] = safeNativeNumber(node.machineCost);
-    out[nodeOffset + 7] = safeNativeNumber(node.machineSpace);
-    out[nodeOffset + 8] = safeNativeNumber(node.modelCount);
-    out[nodeOffset + 9] = nextInputIndex;
-    out[nodeOffset + 10] = node.inputs.length;
-    out[nodeOffset + 11] = nextOutputIndex;
-    out[nodeOffset + 12] = node.outputs.length;
-    out[nodeOffset + 13] = nativeBool(node.hasInfiniteMachineCost);
-    out[nodeOffset + 14] = nativeBool(node.isTarget);
+    out[nodeOffset + 4] = Math.max(0, safeNativeNumber(node.pollution));
+    out[nodeOffset + 5] = safeNativeNumber(node.machineCost);
+    out[nodeOffset + 6] = safeNativeNumber(node.machineSpace);
+    out[nodeOffset + 7] = safeNativeNumber(node.modelCount);
+    out[nodeOffset + 8] = nextInputIndex;
+    out[nodeOffset + 9] = node.inputs.length;
+    out[nodeOffset + 10] = nextOutputIndex;
+    out[nodeOffset + 11] = node.outputs.length;
+    out[nodeOffset + 12] = nativeBool(node.hasInfiniteMachineCost);
+    out[nodeOffset + 13] = nativeBool(node.isTarget);
 
     for (const input of node.inputs) {
       const inputOffset = inputSectionOffset + nextInputIndex * NATIVE_PAYLOAD_F64_INPUT_DOUBLES;
@@ -1341,7 +1331,7 @@ export function buildNativeRatioPayloadArray(
       out[inputOffset + 2] = nativeBool(input.independentOfMachineCount);
       out[inputOffset + 3] = nextFlowDependencyIndex;
       out[inputOffset + 4] = input.flowDependencies.length;
-      out[inputOffset + 5] = safeNativeNumber(input.pollutionPerFlow);
+      out[inputOffset + 5] = Math.max(0, safeNativeNumber(input.pollutionPerFlow));
       for (const dependency of input.flowDependencies) {
         const dependencyOffset =
           flowDependencySectionOffset +
@@ -1414,11 +1404,11 @@ function getSuppliedInputRate(
 
 function isMeaningfulDeficit(value: number, requiredRate: number, suppliedRate: number): boolean {
   const deficit = normalizeSolverRate(value);
-  return deficit > getRateTolerance(requiredRate, suppliedRate);
+  return getMeaningfulRateDelta(deficit, requiredRate, suppliedRate) > 0;
 }
 
 function compareRateDelta(delta: number, left: number, right: number): number {
-  return Math.abs(delta) > getRateTolerance(left, right) ? delta : 0;
+  return getMeaningfulRateDelta(delta, left, right);
 }
 
 export function buildResponseFromRawValues(
@@ -1677,10 +1667,7 @@ export async function solveRatioStages(
   const resolvedConfiguration = configuration
     ? sanitizeOptimizationConfiguration(configuration)
     : undefined;
-  const powerOutput = resolvedConfiguration?.metrics.powerOutput;
-  const preservePowerOutputComponents =
-    powerOutput?.enabled === true && powerOutput.weight > 0 && powerOutput.outputGoal !== null;
-  const presolved = presolveRatioOptimizerModel(nodes, connections, preservePowerOutputComponents);
+  const presolved = presolveRatioOptimizerModel(nodes, connections);
   if (didPresolveChangeModel(presolved.stats)) {
     progress?.({
       phase: 'building',
@@ -1738,7 +1725,6 @@ function getWarmupNodes(): RatioOptimizerNode[] {
       maximumMachineCount: null,
       isTarget: true,
       powerUse: 0,
-      powerOutput: 0,
       pollution: 0,
       machineCost: 0,
       machineCostIndependentOfMachineCount: 0,

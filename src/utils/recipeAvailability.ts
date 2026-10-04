@@ -40,16 +40,22 @@ export function isRecipeAvailableForAutomation(
   );
 }
 
-export function getAvailableRecipes(settings: GlobalSettings): Recipe[] {
+function filterAvailableRecipes(
+  settings: GlobalSettings,
+  isAvailable: (
+    recipe: Recipe,
+    settings: GlobalSettings,
+    unlockedResearchIds: Set<string>,
+  ) => boolean,
+): Recipe[] {
   const unlockedResearchIds = new Set(settings.unlockedResearchIds);
-  return getAllRecipes().filter((recipe) =>
-    isRecipeAvailable(recipe, settings, unlockedResearchIds),
-  );
+  return getAllRecipes().filter((recipe) => isAvailable(recipe, settings, unlockedResearchIds));
+}
+
+export function getAvailableRecipes(settings: GlobalSettings): Recipe[] {
+  return filterAvailableRecipes(settings, isRecipeAvailable);
 }
 
 export function getAvailableAutomationRecipes(settings: GlobalSettings): Recipe[] {
-  const unlockedResearchIds = new Set(settings.unlockedResearchIds);
-  return getAllRecipes().filter((recipe) =>
-    isRecipeAvailableForAutomation(recipe, settings, unlockedResearchIds),
-  );
+  return filterAvailableRecipes(settings, isRecipeAvailableForAutomation);
 }

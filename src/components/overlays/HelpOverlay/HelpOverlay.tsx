@@ -75,8 +75,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
   {
     id: 'starter-gearbox-canvas',
     tabId: 'start',
-    title: 'First Production Chain',
-    summary: 'A first canvas walkthrough using Gearbox as the example product.',
+    title: 'Build your first chain',
+    summary: 'Add a Gearbox recipe, connect its ingredients, and check the result.',
     Icon: Target,
     tutorialId: FIRST_PRODUCTION_CHAIN_TUTORIAL_ID,
     keywords: [
@@ -90,29 +90,28 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
     ],
     sections: [
       {
-        title: 'What It Covers',
+        title: 'In this walkthrough',
         items: [
-          'Use Add Recipe to open the Recipe Selector and start from a product search.',
-          'Use Gearbox as the example target to show product selection, connected inputs, and upstream producers.',
-          'Use the Target tool or Shift-click so Compute has a target node to optimize around.',
-          'Use Layout, Compute, Production Stats, More Stats, and Save Manager after the chain exists.',
+          'Start with Gearbox and add recipes for the ingredients it needs.',
+          'Click an input row to find a producer for that product; the selector is filtered for you.',
+          'Mark Gearbox as a target before opening Compute.',
+          'When the chain is connected, check its rates, solve for machine counts, and save the layout.',
         ],
       },
       {
         title: 'Canvas Flow',
         items: [
-          'Click Add Recipe, use Search by Product, search for Gearbox, then choose a recipe card.',
-          'Click the Gearbox node inputs to add producers filtered to the clicked product and side.',
-          'Connect visible output handles to matching input handles, then use Layout to organize the graph.',
-          'Click Compute after at least one node is marked as a target, then review the proposed machine count changes.',
+          'Open Add Recipe, choose Search by Product, and search for Gearbox.',
+          'Choose a Gearbox recipe, then click an input row to find a recipe that makes that ingredient.',
+          'Connect producer outputs to the matching inputs. Use Layout if the graph gets crowded.',
+          'Mark Gearbox as a target, run Compute, and review the suggested machine counts before applying them.',
         ],
       },
       {
         title: 'Steam Branch',
         items: [
-          'If an upstream recipe uses Steam, add a Boiler and connect Water into the Boiler input.',
-          'Connect the Boiler Steam output to the Steam input on the consuming node.',
-          'Open Node Editor on special recipe nodes when their Settings tab is visible and a temperature or coolant setting needs review.',
+          'If a recipe needs Steam, add a Boiler and connect its water and steam paths.',
+          'Some special recipes need a coolant loop or a temperature setting. Open the node editor to see the controls available for that recipe.',
         ],
       },
     ],
@@ -120,8 +119,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
   {
     id: 'reading-recipe-node',
     tabId: 'start',
-    title: 'Reading A Recipe Node',
-    summary: 'What the rows, badges, handles, and node menu represent on the canvas.',
+    title: 'Read a recipe node',
+    summary: 'Find recipe rates, connections, machine counts, and node controls.',
     Icon: Network,
     keywords: [
       'recipe node',
@@ -136,21 +135,21 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
     ],
     sections: [
       {
-        title: 'Scale/Sinks',
+        title: 'Rows and rates',
         items: [
-          'Input rows are on the left side of a recipe node and output rows are on the right side.',
-          'Rows show product names, rates in the selected rate mode, and temperature labels when the recipe exposes temperature data.',
-          'The node header can show target status, machine information, machine count, cycle time, power, and pollution details.',
-          'Some special recipes draw product-link indicators between related rows, such as linked coolant or steam paths.',
+          'Inputs are on the left; outputs are on the right. Each row shows its product and rate.',
+          'Rates follow the unit selected in the controls tray. Temperature appears on rows that use it.',
+          'The node header shows its machine count and may show target, power, or pollution details.',
+          'Linked-row markers connect related ports, such as the input and output of a coolant loop.',
         ],
       },
       {
         title: 'Interactions',
         items: [
-          'Click an input or output row to open Recipe Selector filtered around that product and side.',
-          'Drag from an output handle to a matching input handle to create a connection.',
-          'Double-click a connected handle to run the balancer for that connected product system.',
-          'Use the node menu button to open Node Editor unless Delete mode is active.',
+          'Click a row to add or search for a recipe that uses or makes that product.',
+          'Drag from an output port to a compatible input port to connect recipes.',
+          'Double-click a connected port to balance its machine count against the connected product flow.',
+          'Open the node menu to edit its count, handle order, or special recipe settings.',
         ],
       },
     ],
@@ -159,24 +158,24 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
     id: 'saves',
     tabId: 'start',
     title: 'Saves',
-    summary: 'How Save Manager handles local saves, imports, exports, and PNG export.',
+    summary: 'Save a layout in this browser or export it for another device.',
     Icon: Save,
     keywords: ['save manager', 'saves', 'save', 'load', 'merge', 'json', 'png', 'export', 'import'],
     sections: [
       {
         title: 'Save Manager',
         items: [
-          'Open Save Manager from the overlay tray to name and save the current canvas.',
-          'Existing save cards can load, merge, overwrite, rename, delete, or export a saved graph.',
-          'Import JSON adds a saved graph from a file, while export JSON writes a save file for sharing or backup.',
-          'EXPORT PNG captures the current canvas view as an image.',
+          'Open Save Manager to name and save the current layout.',
+          'From a saved layout, you can load it, merge it into the canvas, rename it, delete it, or export it.',
+          'Import or export a JSON file to move a layout between browsers or keep a backup.',
+          'Export PNG saves an image of the canvas view.',
         ],
       },
       {
         title: 'Local Storage',
         items: [
-          'Saves are stored in the browser data for this app, not in a cloud account.',
-          'Use exported JSON files if you want a backup outside the browser.',
+          'Save Manager data stays in this browser; it is not synced to an account.',
+          'Export a JSON file if you need a separate backup.',
         ],
       },
     ],
@@ -185,7 +184,7 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
     id: 'dashboard',
     tabId: 'start',
     title: 'Dashboard',
-    summary: 'What Production Stats, More Stats, deficiencies, and byproducts show.',
+    summary: 'Read the totals and find products that are short or left over.',
     Icon: LayoutDashboard,
     keywords: [
       'dashboard',
@@ -204,17 +203,17 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Production Stats',
         items: [
-          'Production Stats shows Power Use, Power Output, Minimum Model Count, Machine Cost, Profit, and Net Pollution.',
-          'The Rate control changes whether quantities are displayed per second, per minute, per hour, or as raw cycle quantities.',
-          'Global Pollution in More Stats feeds the same global settings store used by recipes that depend on that value.',
+          'Production Stats includes power use and output, machine cost and model count, profit, and Net Pollution.',
+          'Change Rate in the controls tray to view quantities per second, minute, hour, or recipe cycle.',
+          'Net Pollution includes pollution reductions. The optimizer’s Produced Pollution metric does not subtract them.',
         ],
       },
       {
         title: 'Diagnostics',
         items: [
-          'Deficiencies (Shortages) lists connected products where demand is greater than solved supply.',
-          'Excess Byproducts lists products where solved output is greater than connected demand.',
-          'Expand a diagnostic group to see node rows, then click a row to center the related node or its collapsed group.',
+          'Deficiencies lists connected inputs that need more product than the graph supplies.',
+          'Excess Byproducts lists output that has no connected demand.',
+          'Expand a product to see the affected nodes. Click a row to center the canvas on that node.',
         ],
       },
     ],
@@ -222,9 +221,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
   {
     id: 'controls-tray',
     tabId: 'controls',
-    title: 'Controls Tray',
-    summary:
-      'The main action strip for adding nodes, modes, layout, compute, overlays, and rate display.',
+    title: 'Controls tray',
+    summary: 'Add recipes, change tools, arrange the graph, and open overlays.',
     Icon: MousePointerSquareDashed,
     keywords: [
       'controls tray',
@@ -244,18 +242,62 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Tools',
         items: [
-          'Add Recipe opens Recipe Selector; while Multi-select has groupable nodes selected, it becomes Add Group.',
-          'Delete, Multi-select, and Target are mode tools that change what clicking nodes or handles does.',
-          'Layout runs the auto layout pass on the current graph and respects the selected edge path style.',
-          'Compute opens the optimizer flow when at least one recipe node is marked as a target.',
+          'Add Recipe opens the recipe selector. When the selected nodes can be grouped, the button changes to Add Group.',
+          'Delete, Multi-select, and Target change what a click on the canvas does.',
+          'Layout arranges the current graph using the selected edge style.',
+          'Compute opens the optimizer. Mark at least one recipe node as a target first.',
         ],
       },
       {
         title: 'Actions',
         items: [
-          'Machines opens the research and machine unlock overlay.',
-          'Rate cycles between /sec, /min, /hr, and Raw display modes.',
-          'Clear, Undo, and Redo act on the current canvas history.',
+          'Machines opens research, difficulty, and machine availability settings.',
+          'Rate switches between per-second, per-minute, per-hour, and raw recipe-cycle values.',
+          'Clear removes the current graph. Undo and Redo move through its edit history.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'compute-optimizer',
+    tabId: 'start',
+    title: 'Compute and optimization',
+    summary: 'Choose what the optimizer should change and how it should rank solutions.',
+    Icon: Gauge,
+    keywords: [
+      'compute',
+      'optimizer',
+      'ratio optimizer',
+      'autocomplete',
+      'machine count',
+      'priority',
+      'importance',
+      'whole machines',
+      'produced pollution',
+    ],
+    sections: [
+      {
+        title: 'Choose a mode',
+        items: [
+          'Adjust ratios keeps the recipes already on the canvas and suggests new machine counts.',
+          'Complete Production is experimental. It searches for upstream recipes to supply existing targets.',
+          'Each mode remembers its own metric settings. Reset restores the defaults for both modes.',
+        ],
+      },
+      {
+        title: 'Set priorities',
+        items: [
+          'The solver first reduces connected-input shortages, then excess sent to sinks.',
+          'After that, it compares the metrics you enable. Lower priority numbers are considered first; Importance weights metrics at the same priority.',
+          'Count full machines rounds up machine counts for cost, space, and model count. Leaving it off is faster but can understate those totals.',
+          'Adjust machine counts starts with Power Use and Produced Pollution. Complete production starts with Machine Space and Machine Model Count, using fractional machines.',
+        ],
+      },
+      {
+        title: 'Review the result',
+        items: [
+          'Compute shows the proposed counts and metric totals before you apply the result.',
+          'The optimizer’s Produced Pollution counts emissions without reductions. The dashboard continues to show Net Pollution.',
         ],
       },
     ],
@@ -263,8 +305,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
   {
     id: 'canvas-navigation',
     tabId: 'controls',
-    title: 'Canvas Navigation',
-    summary: 'Canvas movement, temporary tool keys, node dragging, and edge editing.',
+    title: 'Canvas navigation',
+    summary: 'Pan and zoom the graph, use shortcut keys, and edit connections.',
     Icon: Network,
     keywords: [
       'canvas',
@@ -284,26 +326,26 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Moving Around',
         items: [
-          'Pan and zoom the React Flow canvas, then drag nodes into position.',
-          'When multiple recipe nodes are selected, dragging one selected node moves the selected batch.',
-          'Collapsed groups can be moved as grouped canvas objects.',
+          'Drag the canvas to pan; use the mouse wheel or trackpad to zoom.',
+          'Drag a selected node to move it. If several recipe nodes are selected, they move together.',
+          'A collapsed group moves with its member nodes.',
         ],
       },
       {
         title: 'Temporary Modes',
         items: [
-          'Hold Alt for temporary Delete mode.',
-          'Hold Ctrl or Command for temporary Multi-select mode.',
-          'Hold Shift for temporary Target mode.',
-          'Use Ctrl or Command with Z for undo, and Ctrl or Command with Y or Shift+Z for redo.',
+          'Hold Alt to use Delete temporarily.',
+          'Hold Ctrl (Windows/Linux) or Command (Mac) to use Multi-select temporarily.',
+          'Hold Shift to use Target temporarily.',
+          'Undo with Ctrl/Command+Z. Redo with Ctrl/Command+Y or Ctrl/Command+Shift+Z.',
         ],
       },
       {
         title: 'Edges',
         items: [
-          'Click an edge to select it.',
-          'Double-click selected straight or bezier edges to add control points, or selected orthogonal edges to add bend pairs.',
-          'Orthogonal edges expose segment handles while selected and while the pointer is near an editable segment.',
+          'Click an edge to select it and show its edit points.',
+          'Double-click a straight or curved edge to add a bend; orthogonal edges add two bends.',
+          'Drag a visible segment handle to adjust an orthogonal route.',
         ],
       },
     ],
@@ -311,8 +353,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
   {
     id: 'node-editor',
     tabId: 'controls',
-    title: 'Node Editor',
-    summary: 'Editing machine count, handle order, and special recipe settings.',
+    title: 'Node editor',
+    summary: 'Change a node’s machine count, port order, and recipe settings.',
     Icon: Settings,
     keywords: [
       'node editor',
@@ -328,18 +370,18 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Count And Handles',
         items: [
-          'Open Node Editor from the node menu button.',
-          'Count & Handles lets you edit machine count and adjust input or output handle order.',
-          'Reset Handles restores the recipe handle order for that node.',
-          'Apply saves the node edits; Apply to Chain scales connected nodes based on the machine count ratio.',
+          'Open the editor from the node menu button.',
+          'Count & Handles lets you change the machine count and reorder inputs or outputs.',
+          'Reset Handles restores the recipe’s original port order.',
+          'Apply saves this node. Apply to Chain scales connected nodes by the same count ratio.',
         ],
       },
       {
         title: 'Settings',
         items: [
-          'The Settings tab appears only for recipes backed by a special recipe definition.',
-          'Temperature-aware settings can reflect connected input temperatures from the current solved graph state.',
-          'Changing settings can change the active recipe rows, labels, or quantities for that node.',
+          'Settings appears for recipes with extra controls, such as fuel or temperature.',
+          'For temperature-sensitive recipes, connected flow can override the temperature entered here.',
+          'A setting can change the recipe’s ports or rates. Check its connections after editing.',
         ],
       },
     ],
@@ -348,7 +390,7 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
     id: 'groups',
     tabId: 'controls',
     title: 'Groups',
-    summary: 'Creating groups, editing labels, collapsing, and using proxy handles.',
+    summary: 'Keep related recipes together and simplify a busy canvas.',
     Icon: Group,
     tutorialId: GROUPS_TUTORIAL_ID,
     keywords: [
@@ -365,18 +407,18 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Create A Group',
         items: [
-          'Turn on Multi-select, then click the recipe nodes that should belong together.',
-          'When the selection can be grouped, Add Recipe changes to Add Group.',
-          'Click Add Group to wrap the selected nodes into a group node.',
+          'Turn on Multi-select and select the recipe nodes you want to group.',
+          'Add Recipe changes to Add Group when the selection can be grouped.',
+          'Choose Add Group to create the group.',
         ],
       },
       {
         title: 'Use A Group',
         items: [
-          'Drag the group to move the group and its member nodes together.',
-          'Open Group Node Editor to edit Group Label.',
-          'Collapse a group to show its compact view; use EXPAND to restore the full view.',
-          'Collapsed groups expose proxy input and output handles for connections that cross the group boundary.',
+          'Drag the group to move it and its recipes together.',
+          'Open Group Node Editor to change the label or group settings.',
+          'Collapse the group to save space; expand it to see its recipes again.',
+          'A collapsed group keeps boundary connections available through its proxy handles.',
         ],
       },
     ],
@@ -384,9 +426,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
   {
     id: 'machines-overlay',
     tabId: 'controls',
-    title: 'Machines Overlay',
-    summary:
-      'Research category tabs, difficulty settings, unlock chains, and machine availability.',
+    title: 'Machines and research',
+    summary: 'Set difficulty, manage research unlocks, and control recipe availability.',
     Icon: PackageSearch,
     keywords: [
       'machines',
@@ -405,17 +446,17 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Filters And Settings',
         items: [
-          'Use Production, Energy, and Utility to switch between research graph categories.',
-          'Difficulty changes the active game difficulty used by machine and recipe availability.',
-          'Ore Nodes and Variant & Limited Machines toggle whether those machines appear in selectors.',
+          'Choose Production, Energy, or Utility to browse that part of the research tree.',
+          'Difficulty affects which machines and recipes are available.',
+          'Use Ore Nodes and Variant & Limited Machines to show or hide those machines in recipe search.',
         ],
       },
       {
         title: 'Research Graph',
         items: [
-          'Click a research node to inspect its category, RP cost, prerequisites, and unlocked machines.',
-          'Unlock Chain unlocks the selected research and its prerequisite path.',
-          'Lock Chain locks the selected research chain again.',
+          'Select a research node to see its cost, prerequisites, and machine unlocks.',
+          'Unlock Chain unlocks that research and its prerequisites.',
+          'Lock Chain locks the selected research and its dependents.',
         ],
       },
     ],
@@ -424,7 +465,7 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
     id: 'themes',
     tabId: 'controls',
     title: 'Themes',
-    summary: 'Presets, advanced theme variables, and edge line/path styling.',
+    summary: 'Choose a color preset or adjust the canvas and connection styles.',
     Icon: Palette,
     keywords: [
       'theme',
@@ -443,17 +484,17 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Theme Tabs',
         items: [
-          'Presets contains the available dark and light theme presets.',
-          'Advanced Editing exposes grouped theme variables for custom color editing.',
-          'Edge Editing controls edge line style and path style.',
+          'Choose a dark or light preset to change the overall look.',
+          'Advanced Editing lets you adjust individual theme colors.',
+          'Edge Editing controls connection lines and routing.',
         ],
       },
       {
         title: 'Edges',
         items: [
-          'Line Style can be Solid, Dashed, or Dotted.',
-          'Path Style can be Straight Line, Bezier Curve, or Orthogonal.',
-          'Reset All clears custom edge style overrides.',
+          'Choose solid, dashed, or dotted lines.',
+          'Choose straight, curved, or right-angle routes.',
+          'Reset All restores the default edge styles.',
         ],
       },
     ],
@@ -461,8 +502,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
   {
     id: 'data-overlay',
     tabId: 'controls',
-    title: 'Data Overlay',
-    summary: 'Editing app data and comparing it against wiki buckets.',
+    title: 'Data Manager',
+    summary: 'Edit the app’s recipe data or compare it with the wiki data.',
     Icon: Database,
     tutorialId: DATA_OVERLAY_TUTORIAL_ID,
     keywords: [
@@ -483,26 +524,26 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Editing',
         items: [
-          'Open Data Manager and stay on Editing to change app data.',
-          'Use Products, Machines, Recipes, or Researches to choose the kind of record to edit.',
-          'Search the list, select a record, or add a new record from the list panel.',
-          'Edited records show Pending until you use Save Changes; Discard drops unsaved edits.',
+          'Choose Editing to change data used by the app.',
+          'Select Products, Machines, Recipes, or Researches, then search for a record.',
+          'Select a record to edit it, or add a new one from the list.',
+          'Save Changes applies pending edits. Discard removes edits that are not saved.',
         ],
       },
       {
         title: 'Reset And Save',
         items: [
-          'Restore Baseline Defaults resets the selected record form back to its baseline data.',
-          'Restore Defaults starts the global restore flow for app data.',
-          'Save Changes commits pending data edits so selectors and calculations use the updated data.',
+          'Restore Baseline Defaults resets the selected record to its built-in values.',
+          'Restore Defaults returns the app data to its built-in values.',
+          'Save Changes makes the edited data available to recipe search and calculations.',
         ],
       },
       {
         title: 'Comparing',
         items: [
-          'Switch to Comparing to check Products, Machines, Recipes, or Research against wiki data buckets.',
-          'Use Fetch in the toolbar when the tab says No Wiki Data Fetched.',
-          'Comparison results mark records that are changed, only in the app, or only in the wiki data.',
+          'Choose Comparing to check app data against the available wiki data.',
+          'If no wiki data is loaded, choose Fetch in the toolbar.',
+          'The results show records that differ or appear on only one side.',
         ],
       },
     ],
@@ -510,8 +551,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
   {
     id: 'compute-refuses',
     tabId: 'troubleshooting',
-    title: 'Compute Refuses To Run',
-    summary: 'Why the optimizer may stop before solving and what to check first.',
+    title: 'Compute will not start',
+    summary: 'Check the target and solver status before trying again.',
     Icon: AlertTriangle,
     keywords: [
       'compute',
@@ -526,19 +567,19 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
     ],
     sections: [
       {
-        title: 'Target Required',
+        title: 'Add a target',
         items: [
-          'Compute shows No Target Nodes Selected when no recipe node is marked as a target.',
-          'Use the Target tool, or hold Shift, then click at least one recipe node.',
-          'Targets anchor the ratio optimization so the solver knows what output the graph should preserve.',
+          'Compute needs at least one target recipe node.',
+          'Choose Target in the controls tray, or hold Shift, then click a recipe node.',
+          'The optimizer keeps the target count as a lower bound while it adjusts the rest of the graph.',
         ],
       },
       {
-        title: 'Solver State',
+        title: 'Check the run',
         items: [
-          'Solver Busy appears when an optimization run is already in progress.',
-          'After a successful run, review the proposed machine count changes before using Apply or Discard.',
-          'If the optimizer reports failure diagnostics, inspect the listed root causes and connected shortages.',
+          'If a run is already active, wait for it to finish or cancel it before starting another.',
+          'Review the proposed machine counts before choosing Apply or Discard.',
+          'If a run fails, read the diagnostic message and check connected shortages first.',
         ],
       },
     ],
@@ -546,8 +587,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
   {
     id: 'missing-recipe',
     tabId: 'troubleshooting',
-    title: 'Missing Recipe',
-    summary: 'Checks for recipes or machines that do not appear in Recipe Selector.',
+    title: 'A recipe is missing',
+    summary: 'Find out why a recipe or machine is not in the selector.',
     Icon: Search,
     keywords: [
       'missing recipe',
@@ -566,18 +607,17 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Selector Checks',
         items: [
-          'Switch between Search by Product and Search by Machine depending on what you know.',
-          'Clear product type, tier, category, subcategory, or recipe stage filters that may hide the result.',
-          'Clicking a node row opens Recipe Selector already filtered around that row, product, and side.',
+          'Search by Product if you know an input or output; use Search by Machine if you know the machine.',
+          'Check the product, tier, category, subcategory, and recipe-stage filters.',
+          'Click an input or output row on the canvas to open the selector for that product.',
         ],
       },
       {
         title: 'Availability Checks',
         items: [
-          'Open Machines and verify the needed research is unlocked for the current difficulty.',
-          'Check Ore Nodes if the missing item depends on ore node machines.',
-          'Check Variant & Limited Machines if the missing machine is a variant or limited machine.',
-          'If the entry was edited in Data Manager, confirm the pending data edits were saved.',
+          'In Machines, check the selected difficulty and whether the required research is unlocked.',
+          'Check the Ore Nodes and Variant & Limited Machines filters.',
+          'If you changed the entry in Data Manager, save the change before searching again.',
         ],
       },
     ],
@@ -585,8 +625,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
   {
     id: 'shortages-deficiencies',
     tabId: 'troubleshooting',
-    title: 'Shortages And Deficiencies',
-    summary: 'How to read shortage diagnostics and find the nodes involved.',
+    title: 'Shortages and excess',
+    summary: 'Use dashboard diagnostics to find where a chain needs attention.',
     Icon: Gauge,
     keywords: [
       'shortages',
@@ -603,18 +643,18 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Dashboard Diagnostics',
         items: [
-          'Open More Stats and check Deficiencies (Shortages) for products with more solved demand than supply.',
-          'Check Excess Byproducts for products where solved output is greater than connected demand.',
-          'Expand a diagnostic group to see the affected node rows.',
-          'Click a diagnostic row to center the node, or the collapsed group that contains it.',
+          'Open More Stats. Deficiencies lists connected inputs that need more product than they receive.',
+          'Excess Byproducts lists output that is not being used by connected recipes.',
+          'Expand a product to see which nodes use or produce it.',
+          'Click a row to center the canvas on the related node.',
         ],
       },
       {
         title: 'Common Fixes',
         items: [
-          'Add another producer from the deficient input row or increase an upstream machine count.',
-          'Check that the edge connects the correct output product to the correct input product.',
-          'Use Compute again after changing counts or connections so the dashboard reflects the latest solved graph.',
+          'Add a producer from the deficient input, or increase the count of an upstream machine.',
+          'Check that the connection joins the intended output and input.',
+          'After changing the graph, wait for it to recalculate before checking the dashboard again.',
         ],
       },
     ],
@@ -622,8 +662,8 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
   {
     id: 'zero-steam-distilled-water',
     tabId: 'troubleshooting',
-    title: 'Zero Steam Or Distilled Water',
-    summary: 'Checks for Boiler, Heat Exchanger, and Steam Condenser outputs that solve to zero.',
+    title: 'Steam or distilled water is zero',
+    summary: 'Check the connections and temperatures used by boilers and condensers.',
     Icon: Zap,
     keywords: [
       'boiler',
@@ -640,19 +680,19 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Boiler And Heat Exchanger',
         items: [
-          'Confirm Water is connected to the water input and Steam is connected from the steam output.',
-          'If coolant is enabled, keep the linked coolant input and output connected to the same coolant product path.',
-          'Open Node Editor and review Settings such as water temperature, coolant temperature, and coolant enablement when present.',
-          'A zero Steam result can be valid when the current temperature and connection state do not satisfy the special recipe conditions.',
+          'Check that water reaches the Boiler or Heat Exchanger and that its steam output is connected.',
+          'If the recipe uses coolant, connect the linked coolant input and output to the same path.',
+          'Open the node editor and review water and coolant temperatures and settings.',
+          'Steam can be zero if the connected temperatures do not meet the recipe’s conditions.',
         ],
       },
       {
         title: 'Steam Condenser',
         items: [
-          'Confirm Steam reaches the condenser input and the distilled water output is connected where it is needed.',
-          'Review condenser Settings such as steam temperature, coolant temperature, and steam flow when visible.',
-          'Run Compute or wait for the canvas solve after changing connected temperatures or flow rates.',
-          'A zero distilled water result can be valid when the solved steam flow or condensation conditions are not met.',
+          'Check that steam reaches the condenser and its water output is connected to a consumer.',
+          'Review the condenser’s steam temperature, coolant temperature, and flow settings.',
+          'Let the graph recalculate after changing a connection or temperature.',
+          'No distilled water is produced when the steam flow or condensation conditions are insufficient.',
         ],
       },
     ],
@@ -697,9 +737,9 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
         listStyle: 'none',
         items: [
           <span key="project-desc">
-            Industrialist Calculator is an interactive, flowchart-based calculator and factory
-            solver for the Roblox game <strong>Industrialist</strong>. It is designed to help
-            players design layouts, calculate production rates, and optimize factory setups.
+            Industrialist Calculator is a production planner for the Roblox game{' '}
+            <strong>Industrialist</strong>. Build a recipe graph to check flows, find shortages, and
+            plan machine counts.
           </span>,
         ],
       },
@@ -877,7 +917,7 @@ function HelpOverlayModal() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search help..."
+              placeholder="Search help topics…"
               className={styles['search-input']}
             />
             {searchQuery && (
@@ -904,7 +944,7 @@ function HelpOverlayModal() {
         <div className={styles['help-content']}>
           <div className={styles['article-list']} aria-label="Help topics">
             {visibleArticles.length === 0 ? (
-              <div className={styles['empty-state']}>No help topics have been added yet.</div>
+              <div className={styles['empty-state']}>No topics match that search.</div>
             ) : (
               visibleArticles.map((article) => {
                 const Icon = article.Icon;
@@ -950,7 +990,7 @@ function HelpOverlayModal() {
                         className={styles['tutorial-start-btn']}
                         onClick={() => startTutorial(selectedArticle.tutorialId!)}
                       >
-                        Start Tutorial
+                        Start tutorial
                       </button>
                     )}
                   </div>
@@ -985,7 +1025,7 @@ function HelpOverlayModal() {
                 </div>
               </>
             ) : (
-              <div className={styles['empty-state']}>Select a help topic.</div>
+              <div className={styles['empty-state']}>Choose a topic to read more.</div>
             )}
           </div>
         </div>

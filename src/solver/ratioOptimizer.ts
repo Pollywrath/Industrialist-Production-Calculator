@@ -53,7 +53,6 @@ export interface RatioOptimizerNode {
   maximumMachineCount: number | null;
   isTarget: boolean;
   powerUse: number;
-  powerOutput: number;
   pollution: number;
   machineCost: number;
   machineCostIndependentOfMachineCount: number;
@@ -417,7 +416,7 @@ export function buildRatioOptimizerPayload(
         isSink: !!inp.variable,
         independentOfMachineCount: !!inp.independentOfMachineCount,
         flowDependencies: inp.flowDependencies ?? [],
-        pollutionPerFlow: inp.pollutionPerFlow ?? 0,
+        pollutionPerFlow: Math.max(0, inp.pollutionPerFlow ?? 0),
       };
     });
 
@@ -465,7 +464,6 @@ export function buildRatioOptimizerPayload(
       maximumMachineCount: machineCountBounds.upperBound,
       isTarget: !!node.data.isTarget,
       powerUse: optimizationMetrics.powerUsePerMachine,
-      powerOutput: optimizationMetrics.powerOutputPerMachine,
       pollution: optimizationMetrics.pollutionPerMachine,
       machineCost: optimizationMetrics.machineCostPerWholeMachine,
       machineCostIndependentOfMachineCount:

@@ -42,22 +42,23 @@ export type HistoryEntry<NodeType extends Node = Node, EdgeType extends Edge = E
   | GraphHistoryEntry<NodeType, EdgeType>
   | PositionHistoryEntry;
 
-export function createNodeMap<NodeType extends Node>(nodes: NodeType[]): Map<string, NodeType> {
-  const map = new Map<string, NodeType>();
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    map.set(node.id, node);
+function createMapById<EntityType extends { id: string }>(
+  entities: readonly EntityType[],
+): Map<string, EntityType> {
+  const map = new Map<string, EntityType>();
+  for (let i = 0; i < entities.length; i++) {
+    const entity = entities[i];
+    map.set(entity.id, entity);
   }
   return map;
 }
 
+export function createNodeMap<NodeType extends Node>(nodes: NodeType[]): Map<string, NodeType> {
+  return createMapById(nodes);
+}
+
 export function createEdgeMap<EdgeType extends Edge>(edges: EdgeType[]): Map<string, EdgeType> {
-  const map = new Map<string, EdgeType>();
-  for (let i = 0; i < edges.length; i++) {
-    const edge = edges[i];
-    map.set(edge.id, edge);
-  }
-  return map;
+  return createMapById(edges);
 }
 
 export function toPositionSnapshot(position: { x: number; y: number }): PositionSnapshot {
@@ -151,52 +152,28 @@ export function buildGraphHistoryEntry<NodeType extends Node, EdgeType extends E
   };
 }
 
-function orderNodesById<NodeType extends Node>(
-  map: Map<string, NodeType>,
+function orderById<EntityType extends { id: string }>(
+  map: Map<string, EntityType>,
   orderedIds: string[],
-): NodeType[] {
-  const nodes: NodeType[] = [];
+): EntityType[] {
+  const entities: EntityType[] = [];
   const seen = new Set<string>();
 
   for (let i = 0; i < orderedIds.length; i++) {
     const id = orderedIds[i];
-    const node = map.get(id);
-    if (!node) continue;
+    const entity = map.get(id);
+    if (!entity) continue;
     seen.add(id);
-    nodes.push(node);
+    entities.push(entity);
   }
 
-  for (const [id, node] of map.entries()) {
+  for (const [id, entity] of map.entries()) {
     if (!seen.has(id)) {
-      nodes.push(node);
+      entities.push(entity);
     }
   }
 
-  return nodes;
-}
-
-function orderEdgesById<EdgeType extends Edge>(
-  map: Map<string, EdgeType>,
-  orderedIds: string[],
-): EdgeType[] {
-  const edges: EdgeType[] = [];
-  const seen = new Set<string>();
-
-  for (let i = 0; i < orderedIds.length; i++) {
-    const id = orderedIds[i];
-    const edge = map.get(id);
-    if (!edge) continue;
-    seen.add(id);
-    edges.push(edge);
-  }
-
-  for (const [id, edge] of map.entries()) {
-    if (!seen.has(id)) {
-      edges.push(edge);
-    }
-  }
-
-  return edges;
+  return entities;
 }
 
 export function applyGraphHistoryEntry<NodeType extends Node, EdgeType extends Edge>(
@@ -266,8 +243,8 @@ export function applyGraphHistoryEntry<NodeType extends Node, EdgeType extends E
   const edgeOrder = direction === 'undo' ? entry.edgeOrderBefore : entry.edgeOrderAfter;
 
   return {
-    nodes: orderNodesById(nextNodesById, nodeOrder),
-    edges: orderEdgesById(nextEdgesById, edgeOrder),
+    nodes: orderById(nextNodesById, nodeOrder),
+    edges: orderById(nextEdgesById, edgeOrder),
   };
 }
 

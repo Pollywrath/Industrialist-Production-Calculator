@@ -44,12 +44,11 @@ export type SettingDefinition =
 
 export interface SpecialRecipeAutocompleteContext {
   globalSettings?: Record<string, unknown>;
-  powerOutputGoal: number | null;
 }
 
 export interface SpecialRecipeAutocompleteSizingContext {
   globalSettings?: Record<string, unknown>;
-  machineCount: number;
+  requiredOutputRates: number[];
 }
 
 export interface AutocompleteTemperatureRange {

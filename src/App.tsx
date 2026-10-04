@@ -38,7 +38,7 @@ export function App() {
       {isNotFound ? (
         <NotFoundPage />
       ) : !isDatabaseLoaded ? (
-        <LoadingScreen title="Loading calculator" subtitle="Loading data..." />
+        <LoadingScreen title="Starting Industrialist Calculator" subtitle="Loading recipe data…" />
       ) : (
         <ReactFlowProvider>
           <FlowCanvas />

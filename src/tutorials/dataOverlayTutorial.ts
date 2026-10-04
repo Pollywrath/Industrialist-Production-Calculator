@@ -18,7 +18,7 @@ export const DATA_OVERLAY_TUTORIAL_STEPS: TutorialStep[] = [
     id: 'intro',
     title: 'Data Manager',
     description:
-      'Data Manager lets you edit products, machines, recipes, and research data, then compare app data against external wiki buckets.',
+      'Use Data Manager to edit products, machines, recipes, and research requirements. Its Compare tab shows how your local data differs from the wiki data.',
     highlight: { kind: 'overlay', id: 'data' },
     action: { type: 'continue' },
   },
@@ -33,7 +33,7 @@ export const DATA_OVERLAY_TUTORIAL_STEPS: TutorialStep[] = [
     id: 'parts',
     title: 'Editing And Comparing',
     description:
-      'Editing changes the app database. Comparing checks local records against fetched wiki data so you can spot differences.',
+      'Edits change the data used by the app. Compare shows local records beside wiki data and highlights differences.',
     highlight: { kind: 'data', selector: '[data-tutorial-data-main-tab="editing"]' },
     secondaryHighlight: { kind: 'data', selector: '[data-tutorial-data-main-tab="comparing"]' },
     action: { type: 'continue' },
@@ -48,7 +48,8 @@ export const DATA_OVERLAY_TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'go-products',
     title: 'Products',
-    description: 'Go to Products. Canvas nodes will update when product data changes.',
+    description:
+      'Open Products. We will change Coal, then check how the change appears on the canvas.',
     highlight: { kind: 'data', selector: '[data-tutorial-data-edit-tab="products"]' },
     action: { type: 'data-edit-tab', tab: 'products' },
   },
@@ -142,7 +143,7 @@ export const DATA_OVERLAY_TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'reopen-data-restore',
     title: 'Restore Coal',
-    description: 'Open Data Manager again so we can restore Coal back to baseline defaults.',
+    description: 'Open Data Manager to restore Coal to its original values.',
     highlight: { kind: 'overlay', id: 'data' },
     action: { type: 'overlay', id: 'data' },
   },
@@ -484,7 +485,7 @@ export const DATA_OVERLAY_TUTORIAL_STEPS: TutorialStep[] = [
     id: 'done',
     title: 'Data Tutorial Complete',
     description:
-      'The tutorial data is saved as normal custom data. To remove it later, open Data Manager and restore defaults in Products, Recipes, and Machines.',
+      'These tutorial entries are saved with your custom data. To remove them, open Data Manager and restore the added products, recipe, and machine to their defaults.',
     highlight: { kind: 'overlay', id: 'data' },
     action: { type: 'continue' },
   },

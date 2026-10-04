@@ -3,6 +3,7 @@ import { resolveActiveRecipe } from '../data/lookup';
 import { getRateMultiplier } from '../utils/recipeComputation';
 import { parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
+import { sumConnectedEdgeFlows } from './flowAggregation';
 
 export function buildSolverGraph(
   nodes: ReactFlowNode[],
@@ -24,11 +25,7 @@ export function buildSolverGraph(
         const connectedEdges = edgeLookup.get(handleId) ?? [];
 
         if (resolvedEdgeFlows) {
-          let resolvedTotalFlow = 0;
-          for (const edge of connectedEdges) {
-            resolvedTotalFlow += resolvedEdgeFlows[edge.id] ?? 0;
-          }
-          return resolvedTotalFlow;
+          return sumConnectedEdgeFlows(connectedEdges, resolvedEdgeFlows, false);
         }
 
         let totalFlow = 0;

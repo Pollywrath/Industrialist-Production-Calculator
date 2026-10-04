@@ -5,7 +5,6 @@ import { estimatePowerModelCount, getRecipePowerTotals } from './recipePower';
 
 export interface RecipeOptimizationMetrics {
   powerUsePerMachine: number;
-  powerOutputPerMachine: number;
   pollutionPerMachine: number;
   machineCostPerWholeMachine: number;
   machineCostIndependentOfMachineCount: number;
@@ -98,10 +97,7 @@ export function getRecipeOptimizationMetrics(
     powerUsePerMachine: powerIsConstant
       ? 0
       : toNonnegativeFinite(getRecipePowerTotals(recipe, 1).use),
-    powerOutputPerMachine: powerIsConstant
-      ? 0
-      : toNonnegativeFinite(getRecipePowerTotals(recipe, 1).output),
-    pollutionPerMachine: pollutionIsConstant ? 0 : toFinite(recipe.pollution ?? 0),
+    pollutionPerMachine: pollutionIsConstant ? 0 : Math.max(0, toFinite(recipe.pollution ?? 0)),
     machineCostPerWholeMachine: hasInfiniteMachineCost ? 0 : toNonnegativeFinite(machineCost),
     machineCostIndependentOfMachineCount: toNonnegativeFinite(machineCostIndependent),
     hasInfiniteMachineCost,

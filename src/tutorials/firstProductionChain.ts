@@ -182,7 +182,7 @@ export const FIRST_PRODUCTION_CHAIN_STEPS: TutorialStep[] = [
   {
     id: 'steel-ingot-input',
     title: 'Add Steel Ingot',
-    description: 'Click Steel Rod’s Steel Ingot input.  You can move the boxes if its overlapped',
+    description: 'Click the Steel Ingot input on Steel Rod. Move the nodes if they overlap.',
     highlight: { kind: 'rect', alias: 'steelRod', side: 'input', index: 0 },
     action: { type: 'node-rect', alias: 'steelRod', side: 'input', index: 0 },
   },
@@ -197,7 +197,7 @@ export const FIRST_PRODUCTION_CHAIN_STEPS: TutorialStep[] = [
     id: 'connect-steel-ingot-to-steel-plate',
     title: 'Connect Steel To Plate',
     description:
-      'Connect the Blast Furnace Steel Ingot output to the Press Steel Plate input. Again, you can move boxes if its not working',
+      'Connect the Blast Furnace Steel Ingot output to the Press Steel Plate input. Move the nodes if they overlap.',
     highlight: { kind: 'handle', alias: 'steelIngot', side: 'output', index: 0 },
     secondaryHighlight: { kind: 'handle', alias: 'steelPlate', side: 'input', index: 0 },
     action: {
@@ -732,7 +732,8 @@ export const FIRST_PRODUCTION_CHAIN_STEPS: TutorialStep[] = [
   {
     id: 'chain-complete',
     title: 'Chain Complete',
-    description: 'The chain is complete, but excesses may remain.',
+    description:
+      'Every recipe is connected. Some products may still be in excess; we will use the Dashboard to trace one next.',
     highlight: { kind: 'node', alias: 'gearbox' },
     action: { type: 'continue' },
     disableActiveInteraction: true,

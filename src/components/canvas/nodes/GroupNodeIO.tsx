@@ -20,13 +20,13 @@ import {
   calculateMachineCountFromRate,
   getRateMultiplier,
 } from '../../../utils/recipeComputation';
-import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId, parseHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
 import { constrainMachineCount } from '../../../utils/machineCountConstraint';
 import { getRecipeEntryHandleType, productTypeToHandleDataType } from '../../../utils/handleTypes';
 import styles from './RecipeNode.module.css';
 import { useShallow } from 'zustand/react/shallow';
+import { PortSummaryRect } from './PortSummaryRect';
 import {
   NODE_WIDTH,
   SIDE_PADDING,
@@ -48,45 +48,6 @@ interface ProxyFlowInfo {
   rate: number;
   isFlipped: boolean;
   handleDataType: HandleDataType | '';
-}
-
-interface GroupNodeIORectProps {
-  refVal: HandleRef;
-  nodeId: string;
-  width: number;
-  label: string;
-  totalQty: number;
-  onClick: (ref: HandleRef) => void;
-}
-
-function GroupNodeIORect({
-  refVal,
-  nodeId,
-  width,
-  label,
-  totalQty,
-  onClick,
-}: GroupNodeIORectProps) {
-  return (
-    <div className={styles['recipe-node-io__rect-wrapper']}>
-      <div
-        className={`${styles['recipe-node-io__rect']} ${styles[`recipe-node-io__rect--${refVal.side}`]}`}
-        style={{ '--rect-width': `${width}px` } as React.CSSProperties}
-        data-tutorial-rect-node-id={nodeId}
-        data-tutorial-rect-side={refVal.side}
-        data-tutorial-rect-index={refVal.index}
-        onClick={(e) => {
-          if (getEffectiveToggleId(useUIStore.getState()) === 'delete_mode') return;
-          e.stopPropagation();
-          onClick(refVal);
-        }}
-      >
-        <span className={styles['recipe-node-io__rect-text']}>
-          {formatQuantity(totalQty)}x {label}
-        </span>
-      </div>
-    </div>
-  );
 }
 
 interface GroupNodeIOHandleProps {
@@ -542,7 +503,7 @@ export function GroupNodeIO({
             {leftHandles.map((refVal, i) => {
               const info = leftProxyInfos[i];
               return (
-                <GroupNodeIORect
+                <PortSummaryRect
                   key={`left-${refVal.index}`}
                   refVal={refVal}
                   nodeId={nodeId}
@@ -565,7 +526,7 @@ export function GroupNodeIO({
             {rightHandles.map((refVal, i) => {
               const info = rightProxyInfos[i];
               return (
-                <GroupNodeIORect
+                <PortSummaryRect
                   key={`right-${refVal.index}`}
                   refVal={refVal}
                   nodeId={nodeId}

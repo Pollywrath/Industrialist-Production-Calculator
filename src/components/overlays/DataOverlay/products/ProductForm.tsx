@@ -3,9 +3,8 @@ import { Box } from 'lucide-react';
 import { getProduct, hasProductOverride } from '../../../../data/lookup';
 import { useDataStore, overlayPendingEdit } from '../../../../stores/useDataStore';
 import {
-  completeTutorialAction,
+  handleTutorialDataFieldChange,
   isTutorialActive,
-  useTutorialStore,
 } from '../../../../stores/useTutorialStore';
 import { GenericDataFormShell } from '../shared/GenericDataFormShell';
 import { ValidatedNumberInput } from '../../../shared/ValidatedNumberInput';
@@ -54,12 +53,7 @@ export function ProductForm({ selectedProductId, onSelectProduct }: ProductFormP
   };
 
   const handleTutorialFieldChange = (field: string, value: string | number | boolean) => {
-    if (isTutorialActive()) {
-      const action = useTutorialStore.getState().getCurrentStep()?.action;
-      if (action?.type !== 'data-field' || action.field !== field) return false;
-      return completeTutorialAction({ type: 'data-field', field, value });
-    }
-    return true;
+    return handleTutorialDataFieldChange(field, value);
   };
 
   const handleDelete = () => {

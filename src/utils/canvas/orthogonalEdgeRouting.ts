@@ -2,7 +2,7 @@ import { SNAP_GRID } from '../../constants/layoutConstants';
 import type { EdgeControlPoint } from '../../types/edges';
 import {
   arePointsAtSamePosition,
-  distanceSquaredPointToSegment,
+  findNearestSegmentIndex,
   projectPointOntoSegment,
   toFinitePoints,
 } from './edgeGeometry';
@@ -286,24 +286,7 @@ export function findNearestOrthogonalSegmentIndex(
   pathPoints: EdgeControlPoint[],
   candidate: EdgeControlPoint,
 ): number {
-  if (pathPoints.length < 2) return 0;
-
-  let bestSegmentIndex = 0;
-  let bestDistanceSquared = Number.POSITIVE_INFINITY;
-
-  for (let i = 0; i < pathPoints.length - 1; i++) {
-    const distanceSquared = distanceSquaredPointToSegment(
-      candidate,
-      pathPoints[i],
-      pathPoints[i + 1],
-    );
-    if (distanceSquared < bestDistanceSquared) {
-      bestDistanceSquared = distanceSquared;
-      bestSegmentIndex = i;
-    }
-  }
-
-  return bestSegmentIndex;
+  return findNearestSegmentIndex(pathPoints, candidate);
 }
 
 export function insertOrthogonalTurnPair(

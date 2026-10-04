@@ -5,6 +5,7 @@ import { getProductName } from '../../../data/lookup';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { createGraphResolutionContext } from '../../../utils/graphResolutionContext';
 import { isRecipeNode } from '../../../types/nodes';
+import { getRateSuffix } from '../../../utils/rateFormatting';
 import styles from './NodeEditor.module.css';
 import { useNodeEditorStore } from './NodeEditorContext';
 
@@ -18,20 +19,6 @@ interface HandleRowProps {
   multiplier: number;
   rateMode: RateMode;
 }
-
-const getRateSuffix = (rateMode: RateMode) => {
-  switch (rateMode) {
-    case 'second':
-      return '/s';
-    case 'minute':
-      return '/m';
-    case 'hour':
-      return '/h';
-    case 'raw':
-    default:
-      return '';
-  }
-};
 
 export function HandleRow({
   nodeId,

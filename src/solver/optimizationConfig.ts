@@ -3,7 +3,6 @@ export type MachineCountBasis = 'whole' | 'continuous';
 
 export type OptimizationMetricId =
   | 'powerUse'
-  | 'powerOutput'
   | 'pollution'
   | 'machineCost'
   | 'machineSpace'
@@ -13,15 +12,17 @@ export interface OptimizationMetricConfig {
   enabled: boolean;
   weight: number;
   tier: number;
-  outputGoal: number | null;
 }
 
-export interface OptimizationConfiguration {
-  version: 3;
-  mode: OptimizationMode;
+export interface OptimizationModeConfiguration {
   machineCountBasis: MachineCountBasis;
   metrics: Record<OptimizationMetricId, OptimizationMetricConfig>;
   metricOrder: OptimizationMetricId[];
+}
+
+export interface OptimizationConfiguration extends OptimizationModeConfiguration {
+  version: 4;
+  mode: OptimizationMode;
 }
 
 export interface OptimizationMetricDefinition {
@@ -51,7 +52,6 @@ export interface OptimizationConfigurationValidation {
 
 export const OPTIMIZATION_NORMALIZERS: Record<OptimizationMetricId, number> = {
   powerUse: 1_000_000,
-  powerOutput: 1_000_000,
   pollution: 1,
   machineCost: 1_000_000,
   machineSpace: 100,
@@ -70,18 +70,10 @@ export const OPTIMIZATION_METRIC_DEFINITIONS: Record<
     rounded: false,
     currentRatioSupport: true,
   },
-  powerOutput: {
-    id: 'powerOutput',
-    label: 'Power Output',
-    description: 'Output power up to your goal.',
-    direction: 'maximize',
-    rounded: false,
-    currentRatioSupport: true,
-  },
   pollution: {
     id: 'pollution',
-    label: 'Pollution',
-    description: 'Reduce net pollution.',
+    label: 'Produced Pollution',
+    description: 'Reduce pollution produced by recipes and flows.',
     direction: 'minimize',
     rounded: false,
     currentRatioSupport: true,
@@ -116,34 +108,43 @@ export const OPTIMIZATION_METRIC_IDS = Object.keys(
   OPTIMIZATION_METRIC_DEFINITIONS,
 ) as OptimizationMetricId[];
 
-function metric(
-  enabled: boolean,
-  weight: number,
-  overrides: Partial<OptimizationMetricConfig> = {},
-): OptimizationMetricConfig {
+function metric(enabled: boolean, weight: number): OptimizationMetricConfig {
+  return { enabled, weight, tier: 1 };
+}
+
+function createModeConfiguration(mode: OptimizationMode): OptimizationModeConfiguration {
   return {
-    enabled,
-    weight,
-    tier: 1,
-    outputGoal: null,
-    ...overrides,
+    machineCountBasis: mode === 'autocomplete' ? 'continuous' : 'whole',
+    metrics: {
+      powerUse: metric(mode === 'ratios', 1),
+      pollution: metric(mode === 'ratios', 1),
+      machineCost: metric(false, 1),
+      machineSpace: metric(mode === 'autocomplete', 1),
+      modelCount: metric(mode === 'autocomplete', 1),
+    },
+    metricOrder: [...OPTIMIZATION_METRIC_IDS],
   };
 }
 
-export const DEFAULT_OPTIMIZATION_CONFIGURATION: OptimizationConfiguration = {
-  version: 3,
-  mode: 'ratios',
-  machineCountBasis: 'whole',
-  metrics: {
-    powerUse: metric(true, 1),
-    powerOutput: metric(false, 0.1),
-    pollution: metric(true, 1),
-    machineCost: metric(false, 1),
-    machineSpace: metric(false, 1),
-    modelCount: metric(false, 1),
-  },
-  metricOrder: [...OPTIMIZATION_METRIC_IDS],
+export const DEFAULT_OPTIMIZATION_MODE_CONFIGURATIONS: Record<
+  OptimizationMode,
+  OptimizationModeConfiguration
+> = {
+  ratios: createModeConfiguration('ratios'),
+  autocomplete: createModeConfiguration('autocomplete'),
 };
+
+export function getDefaultOptimizationConfiguration(
+  mode: OptimizationMode,
+): OptimizationConfiguration {
+  return {
+    version: 4,
+    mode,
+    ...structuredClone(DEFAULT_OPTIMIZATION_MODE_CONFIGURATIONS[mode]),
+  };
+}
+
+export const DEFAULT_OPTIMIZATION_CONFIGURATION = getDefaultOptimizationConfiguration('ratios');
 
 function nonnegativeFinite(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : fallback;
@@ -164,18 +165,12 @@ function sanitizeImportance(value: unknown, fallback: number): number {
   return closest;
 }
 
-function nullableNonnegativeFinite(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value) ? Math.max(0, value) : null;
-}
-
 function sanitizeMetric(
   raw: unknown,
   fallback: OptimizationMetricConfig,
 ): OptimizationMetricConfig {
   if (!raw || typeof raw !== 'object') return { ...fallback };
-  const candidate = raw as Partial<Record<keyof OptimizationMetricConfig, unknown>> & {
-    productionGoal?: unknown;
-  };
+  const candidate = raw as Partial<Record<keyof OptimizationMetricConfig, unknown>>;
   return {
     enabled: typeof candidate.enabled === 'boolean' ? candidate.enabled : fallback.enabled,
     weight: sanitizeImportance(candidate.weight, fallback.weight),
@@ -183,45 +178,29 @@ function sanitizeMetric(
       MAX_OPTIMIZATION_TIERS,
       Math.max(1, Math.round(nonnegativeFinite(candidate.tier, fallback.tier))),
     ),
-    outputGoal: nullableNonnegativeFinite(candidate.outputGoal ?? candidate.productionGoal),
   };
 }
 
-export function sanitizeOptimizationConfiguration(raw: unknown): OptimizationConfiguration {
-  if (!raw || typeof raw !== 'object') {
-    return structuredClone(DEFAULT_OPTIMIZATION_CONFIGURATION);
-  }
-
+function sanitizeModeConfiguration(
+  raw: unknown,
+  mode: OptimizationMode,
+): OptimizationModeConfiguration {
+  const fallback = DEFAULT_OPTIMIZATION_MODE_CONFIGURATIONS[mode];
+  if (!raw || typeof raw !== 'object') return structuredClone(fallback);
   const candidate = raw as {
-    mode?: unknown;
     machineCountBasis?: unknown;
-    metrics?: Partial<
-      Record<OptimizationMetricId | 'powerConsumption' | 'powerProduction', unknown>
-    >;
+    metrics?: Record<string, unknown>;
     metricOrder?: unknown;
   };
-  const rawMetrics = candidate.metrics;
-  const migratedMetrics = rawMetrics
-    ? {
-        ...rawMetrics,
-        powerUse: rawMetrics.powerUse ?? rawMetrics.powerConsumption,
-        powerOutput: rawMetrics.powerOutput ?? rawMetrics.powerProduction,
-      }
-    : undefined;
+  const rawMetrics = candidate.metrics ?? {};
   const metrics = {} as Record<OptimizationMetricId, OptimizationMetricConfig>;
   for (const id of OPTIMIZATION_METRIC_IDS) {
-    metrics[id] = sanitizeMetric(
-      migratedMetrics?.[id],
-      DEFAULT_OPTIMIZATION_CONFIGURATION.metrics[id],
-    );
+    const legacyId = id === 'powerUse' ? 'powerConsumption' : id;
+    metrics[id] = sanitizeMetric(rawMetrics[id] ?? rawMetrics[legacyId], fallback.metrics[id]);
   }
 
   const rawOrder = Array.isArray(candidate.metricOrder)
-    ? candidate.metricOrder.map((id) => {
-        if (id === 'powerConsumption') return 'powerUse';
-        if (id === 'powerProduction') return 'powerOutput';
-        return id;
-      })
+    ? candidate.metricOrder.map((id) => (id === 'powerConsumption' ? 'powerUse' : id))
     : [];
   const validOrder = rawOrder.filter(
     (id, index): id is OptimizationMetricId =>
@@ -234,11 +213,24 @@ export function sanitizeOptimizationConfiguration(raw: unknown): OptimizationCon
   }
 
   return {
-    version: 3,
-    mode: candidate.mode === 'autocomplete' ? 'autocomplete' : 'ratios',
-    machineCountBasis: candidate.machineCountBasis === 'continuous' ? 'continuous' : 'whole',
+    machineCountBasis:
+      candidate.machineCountBasis === 'continuous'
+        ? 'continuous'
+        : candidate.machineCountBasis === 'whole'
+          ? 'whole'
+          : fallback.machineCountBasis,
     metrics,
     metricOrder: validOrder,
+  };
+}
+
+export function sanitizeOptimizationConfiguration(raw: unknown): OptimizationConfiguration {
+  const candidate = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
+  const mode: OptimizationMode = candidate.mode === 'autocomplete' ? 'autocomplete' : 'ratios';
+  return {
+    version: 4,
+    mode,
+    ...sanitizeModeConfiguration(candidate, mode),
   };
 }
 
@@ -266,10 +258,6 @@ export function validateOptimizationConfiguration(
     }
   }
 
-  const powerOutput = configuration.metrics.powerOutput;
-  if (powerOutput.enabled && powerOutput.outputGoal === null) {
-    errors.push('Power Output needs a finite output goal before it can be rewarded safely.');
-  }
   const needsRoundedModel = enabled.some(
     (id) => OPTIMIZATION_METRIC_DEFINITIONS[id].rounded && configuration.metrics[id].weight > 0,
   );

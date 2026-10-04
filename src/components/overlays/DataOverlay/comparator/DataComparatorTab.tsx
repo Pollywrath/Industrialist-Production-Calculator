@@ -38,6 +38,7 @@ import styles from '../DataOverlay.module.css';
 import { VirtualList } from '../../../shared/VirtualList';
 import type { Machine, Product, Recipe } from '../../../../types/data';
 import { sortItems } from '../../../../utils/sorting';
+import { toggleSetValue } from '../../../../utils/setToggle';
 
 interface ComparatorVirtualRow {
   key: string;
@@ -683,15 +684,7 @@ export function DataComparatorTab() {
   };
 
   const toggleExpanded = (key: string) => {
-    setExpandedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
+    setExpandedKeys((previous) => toggleSetValue(previous, key));
   };
 
   const renderProductsTab = () => {

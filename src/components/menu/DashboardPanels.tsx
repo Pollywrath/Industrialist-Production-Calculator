@@ -25,6 +25,7 @@ import {
   formatMachineCount,
   formatMachineSpace,
 } from '../../utils/unitFormatting';
+import { toggleSetValue } from '../../utils/setToggle';
 import { VirtualList } from '../shared/VirtualList';
 import { ValidatedNumberInput } from '../shared/ValidatedNumberInput';
 import {
@@ -115,15 +116,7 @@ export function DashboardPanels() {
   const [expandedProducts, setExpandedProducts] = useState<Set<string>>(() => new Set());
 
   const toggleProductExpanded = (key: string) => {
-    setExpandedProducts((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
+    setExpandedProducts((previous) => toggleSetValue(previous, key));
   };
 
   const handleDiagnosticHeaderClick = (

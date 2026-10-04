@@ -111,15 +111,8 @@ const NATIVE_MAGIC = 444926465;
 const NATIVE_RESULT_VERSION = 3;
 const NATIVE_RESULT_HEADER_DOUBLES = 38;
 const NATIVE_PAYLOAD_MAGIC = 444926466;
-const NATIVE_PAYLOAD_VERSION = 6;
-const METRIC_IDS = [
-  'powerUse',
-  'powerOutput',
-  'pollution',
-  'machineCost',
-  'machineSpace',
-  'modelCount',
-];
+const NATIVE_PAYLOAD_VERSION = 7;
+const METRIC_IDS = ['powerUse', 'pollution', 'machineCost', 'machineSpace', 'modelCount'];
 
 function readNativeResult(resultPtr) {
   if (!resultPtr) {
@@ -156,8 +149,8 @@ function makeNativePayload({
   const flatOutputs = nodes.flatMap((node) => node.outputs ?? []);
   const flatDependencies = flatInputs.flatMap((input) => input.flowDependencies ?? []);
   const totalDoubles =
-    41 +
-    nodes.length * 15 +
+    31 +
+    nodes.length * 14 +
     flatInputs.length * 6 +
     flatOutputs.length * 2 +
     connections.length * 4 +
@@ -176,18 +169,16 @@ function makeNativePayload({
     excludeAvoidableInfiniteCostMachines ? 1 : 0,
     useWholeMachineCounts ? 1 : 0,
   ]);
-  payload[40] = flatDependencies.length;
+  payload[30] = flatDependencies.length;
   for (let metricIndex = 0; metricIndex < METRIC_IDS.length; metricIndex += 1) {
     const metric = metrics[METRIC_IDS[metricIndex]];
     payload.set(
-      metric
-        ? [1, metric.weight ?? 1, metric.tier ?? 1, metric.limit ?? -1, metric.outputGoal ?? -1]
-        : [0, 0, 1, -1, -1],
-      10 + metricIndex * 5,
+      metric ? [1, metric.weight ?? 1, metric.tier ?? 1, metric.limit ?? -1] : [0, 0, 1, -1],
+      10 + metricIndex * 4,
     );
   }
 
-  const inputOffset = 41 + nodes.length * 15;
+  const inputOffset = 31 + nodes.length * 14;
   const outputOffset = inputOffset + flatInputs.length * 6;
   const connectionOffset = outputOffset + flatOutputs.length * 2;
   const dependencyOffset = connectionOffset + connections.length * 4;
@@ -204,7 +195,6 @@ function makeNativePayload({
         minimum,
         node.maximumMachineCount ?? -1,
         node.powerUse ?? 0,
-        node.powerOutput ?? 0,
         node.pollution ?? 0,
         node.machineCost ?? 0,
         node.machineSpace ?? 0,
@@ -216,7 +206,7 @@ function makeNativePayload({
         node.hasInfiniteMachineCost ? 1 : 0,
         node.isTarget ? 1 : 0,
       ],
-      41 + nodeIndex * 15,
+      31 + nodeIndex * 14,
     );
     for (const input of node.inputs ?? []) {
       const dependencies = input.flowDependencies ?? [];
@@ -313,6 +303,31 @@ function makeConnectedAboveIntegerProducerPayload() {
   });
 }
 
+function makeProducedPollutionPayload() {
+  return makeNativePayload({
+    nodes: [
+      { machineSpace: 100, pollution: -100, outputs: [{ quantity: 1 }] },
+      { machineSpace: 1, outputs: [{ quantity: 1 }] },
+      { pollution: 5, outputs: [{ quantity: 1 }] },
+      {
+        currentMachineCount: 1,
+        isTarget: true,
+        inputs: [{ quantity: 1 }, { quantity: 1 }],
+      },
+    ],
+    connections: [
+      { sourceNode: 0, sourceOutputIndex: 0, targetNode: 3, targetInputIndex: 0 },
+      { sourceNode: 1, sourceOutputIndex: 0, targetNode: 3, targetInputIndex: 0 },
+      { sourceNode: 2, sourceOutputIndex: 0, targetNode: 3, targetInputIndex: 1 },
+    ],
+    metrics: {
+      pollution: { weight: 1, tier: 1 },
+      machineSpace: { weight: 1, tier: 2 },
+    },
+    useWholeMachineCounts: false,
+  });
+}
+
 function makeTinyContinuousProducerPayload(targetMachineCount) {
   return makeNativePayload({
     nodes: [
@@ -379,13 +394,6 @@ function makeInfiniteCostChoicePayload({
   });
 }
 
-function makeTargetlessPowerOutputPayload() {
-  return makeNativePayload({
-    nodes: [{ powerOutput: 100 }],
-    metrics: { powerOutput: { weight: 1, outputGoal: 250 } },
-  });
-}
-
 function makeMixedScaleTargetsPayload() {
   return makeNativePayload({
     nodes: [
@@ -395,12 +403,12 @@ function makeMixedScaleTargetsPayload() {
   });
 }
 
-function makeScaledStagePriorityPayload({ targetMachineCount = 0.01, outputGoal = 1 } = {}) {
+function makeScaledStagePriorityPayload({ targetMachineCount = 0.01 } = {}) {
   return makeNativePayload({
     nodes: [
       { currentMachineCount: 1e12, isTarget: true },
       {
-        powerOutput: 1,
+        powerUse: 1,
         inputs: [{ quantity: 2 }],
         outputs: [{ quantity: 1, hasSinkConnection: true }],
       },
@@ -411,7 +419,7 @@ function makeScaledStagePriorityPayload({ targetMachineCount = 0.01, outputGoal 
       { sourceNode: 3, sourceOutputIndex: 0, targetNode: 1, targetInputIndex: 0 },
       { sourceNode: 1, sourceOutputIndex: 0, targetNode: 2, targetInputIndex: 0 },
     ],
-    metrics: { powerOutput: { weight: 1, outputGoal } },
+    metrics: { powerUse: { weight: 1 } },
   });
 }
 
@@ -891,10 +899,24 @@ if (
   throw new Error('Connected producer just above 2 machines was not priced as 3 whole machines.');
 }
 
-const targetlessPowerOutputJob = await runNativeJob(makeTargetlessPowerOutputPayload());
-if (targetlessPowerOutputJob.nativeError || targetlessPowerOutputJob.result[3] !== 1) {
+const producedPollutionJob = await runNativeJob(makeProducedPollutionPayload());
+if (producedPollutionJob.nativeError || producedPollutionJob.result[3] !== 1) {
   throw new Error(
-    `Targetless production job failed with status ${targetlessPowerOutputJob.result[3]}: ${targetlessPowerOutputJob.nativeError}`,
+    `Produced pollution job failed with status ${producedPollutionJob.result[3]}: ${producedPollutionJob.nativeError}`,
+  );
+}
+const producedPollutionOffsets = getNativeResultSectionOffsets(producedPollutionJob.result);
+const producedPollutionMachineCounts = producedPollutionJob.result.slice(
+  producedPollutionOffsets.machineOffset,
+  producedPollutionOffsets.machineOffset + 4,
+);
+if (
+  producedPollutionMachineCounts[0] > 1e-6 ||
+  producedPollutionMachineCounts[1] < 1 - 1e-6 ||
+  producedPollutionMachineCounts[2] < 1 - 1e-6
+) {
+  throw new Error(
+    `Negative recipe pollution offset positive emissions instead of choosing the lower-space neutral recipe: ${producedPollutionMachineCounts.join(', ')}.`,
   );
 }
 
@@ -951,7 +973,7 @@ if (scaledPrioritySourceCount > 1e-5 || scaledPriorityDeficit > 0.01001) {
 }
 
 const largePriorityJob = await runNativeJob(
-  makeScaledStagePriorityPayload({ targetMachineCount: 1e9, outputGoal: 1e6 }),
+  makeScaledStagePriorityPayload({ targetMachineCount: 1e9 }),
 );
 if (largePriorityJob.nativeError || largePriorityJob.result[3] !== 1) {
   throw new Error(
@@ -968,14 +990,6 @@ if (largePrioritySourceCount > 0.01 || largePriorityDeficit > 1e9 + 0.01) {
     `A later objective consumed relative shortage-lock slack: source=${largePrioritySourceCount}, shortage=${largePriorityDeficit}.`,
   );
 }
-const targetlessMachineOffset =
-  NATIVE_RESULT_HEADER_DOUBLES + targetlessPowerOutputJob.result[15] * 3;
-if (Math.abs(targetlessPowerOutputJob.result[targetlessMachineOffset] - 2.5) > 1e-5) {
-  throw new Error(
-    `Targetless production component was removed or under-produced: ${targetlessPowerOutputJob.result[targetlessMachineOffset]}.`,
-  );
-}
-
 const requiredInfiniteJob = await runNativeJob(
   makeSingleNodePayload({
     currentMachineCount: 1,

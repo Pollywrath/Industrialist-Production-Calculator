@@ -8,10 +8,9 @@ import type {
 import {
   getRateDeficit,
   getRateExcess,
+  getMeaningfulRateDelta,
   getRateTolerance,
   normalizeSolverRate,
-  RATE_ABSOLUTE_TOLERANCE,
-  RATE_RELATIVE_TOLERANCE,
   RATE_NUMERICAL_ZERO,
 } from '../utils/precision';
 import {
@@ -394,16 +393,12 @@ function runFlowPass(
 }
 
 function isMeaningfulRateDifference(a: number, b: number): boolean {
-  return Math.abs(a - b) > getRateTolerance(a, b);
+  return getMeaningfulRateDelta(a - b, a, b) !== 0;
 }
 
 function snapSolverRate(reference: number, value: number): number {
   const normalizedValue = normalizeSolverRate(value);
-  return Math.abs(reference - normalizedValue) <=
-    Math.max(
-      RATE_ABSOLUTE_TOLERANCE,
-      Math.max(Math.abs(reference), Math.abs(normalizedValue)) * RATE_RELATIVE_TOLERANCE,
-    )
+  return Math.abs(reference - normalizedValue) <= getRateTolerance(reference, normalizedValue)
     ? reference
     : normalizedValue;
 }

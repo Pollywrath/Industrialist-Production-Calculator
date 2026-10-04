@@ -158,7 +158,7 @@ export function RecipeNode({ id, data, height }: NodeProps<RecipeNodeType>) {
           })
         ) : (
           <Suspense
-            fallback={<LoadingScreen title="Recipe settings" subtitle="Loading settings..." />}
+            fallback={<LoadingScreen title="Recipe settings" subtitle="Loading settings…" />}
           >
             <LazyNodeEditor
               recipe={recipe}

@@ -33,7 +33,11 @@ import {
   insertOrthogonalTurnPair,
   type OrthogonalRouteAnchors,
 } from '../../utils/canvas/orthogonalEdgeRouting';
-import { distanceSquaredPointToSegment, getPointArray } from '../../utils/canvas/edgeGeometry';
+import {
+  distanceSquaredPointToSegment,
+  findNearestSegmentIndex,
+  getPointArray,
+} from '../../utils/canvas/edgeGeometry';
 import { SNAP_GRID, GRID_DOT_SIZE } from '../../constants/layoutConstants';
 import { isGroupNode, isRecipeNode } from '../../types/nodes';
 import type { CanvasNode, RecipeNodeType } from '../../types/nodes';
@@ -183,30 +187,6 @@ function findNearestCatmullSegmentIndex(
         bestSegmentIndex = i;
       }
       previous = current;
-    }
-  }
-
-  return bestSegmentIndex;
-}
-
-function findNearestPolylineSegmentIndex(
-  pathPoints: EdgeControlPoint[],
-  candidate: EdgeControlPoint,
-): number {
-  if (pathPoints.length < 2) return 0;
-
-  let bestSegmentIndex = 0;
-  let bestDistanceSquared = Number.POSITIVE_INFINITY;
-
-  for (let i = 0; i < pathPoints.length - 1; i++) {
-    const distanceSquared = distanceSquaredPointToSegment(
-      candidate,
-      pathPoints[i],
-      pathPoints[i + 1],
-    );
-    if (distanceSquared < bestDistanceSquared) {
-      bestDistanceSquared = distanceSquared;
-      bestSegmentIndex = i;
     }
   }
 
@@ -681,7 +661,7 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
       const pathPoints: EdgeControlPoint[] = [sourcePoint, ...existingPoints, targetPoint];
       const nearestSegmentIndex =
         edgePathStyle === 'straight'
-          ? findNearestPolylineSegmentIndex(pathPoints, nextPoint)
+          ? findNearestSegmentIndex(pathPoints, nextPoint)
           : findNearestCatmullSegmentIndex(pathPoints, nextPoint);
       const insertIndex = Math.max(0, Math.min(existingPoints.length, nearestSegmentIndex));
       nextControlPoints = existingPoints.slice();

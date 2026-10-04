@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
+import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import {
   canPerformTutorialAction,
   completeTutorialAction,
@@ -53,7 +54,6 @@ interface NodeChange {
 
 interface ObjectiveSummary {
   powerUse: number;
-  powerOutput: number;
   pollution: number;
   machineCost: number;
   machineSpace: number;
@@ -73,7 +73,6 @@ function summarizeObjectives(
 ): ObjectiveSummary {
   const summary: ObjectiveSummary = {
     powerUse: 0,
-    powerOutput: 0,
     pollution: 0,
     machineCost: 0,
     machineSpace: 0,
@@ -84,11 +83,10 @@ function summarizeObjectives(
     const machineCount = machineCounts[node.id] ?? node.currentMachineCount;
     const wholeMachineCount = ceilMachineCount(machineCount);
     summary.powerUse += node.powerUse * machineCount;
-    summary.powerOutput += node.powerOutput * machineCount;
-    summary.pollution += node.pollution * machineCount;
+    summary.pollution += Math.max(0, node.pollution) * machineCount;
     for (let inputIndex = 0; inputIndex < node.inputs.length; inputIndex += 1) {
       const pollutionPerFlow = node.inputs[inputIndex].pollutionPerFlow;
-      if (!Number.isFinite(pollutionPerFlow) || pollutionPerFlow === 0) continue;
+      if (!Number.isFinite(pollutionPerFlow) || pollutionPerFlow <= 0) continue;
       for (const connection of connections) {
         if (connection.targetNodeId !== node.id || connection.targetInputIndex !== inputIndex) {
           continue;
@@ -122,6 +120,7 @@ export function LPSolverOverlay() {
   const [shuffledTips, setShuffledTips] = useState<string[]>([]);
   const [tipIndex, setTipIndex] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
+  const [autocompleteDebugReport, setAutocompleteDebugReport] = useState<string | null>(null);
   const [failureDiagnostics, setFailureDiagnostics] = useState<RatioFailureDiagnostics | null>(
     null,
   );
@@ -149,6 +148,7 @@ export function LPSolverOverlay() {
       setElapsedMs(0);
       setTipIndex(0);
       setErrorMsg('');
+      setAutocompleteDebugReport(null);
       setFailureDiagnostics(null);
       setSolverProgress(null);
       setChanges([]);
@@ -196,6 +196,7 @@ export function LPSolverOverlay() {
     setElapsedMs(0);
     setSolverProgress(null);
     setErrorMsg('');
+    setAutocompleteDebugReport(null);
     setFailureDiagnostics(null);
     setAutocompletePlan(null);
     setResultMode(configuration.mode);
@@ -233,6 +234,43 @@ export function LPSolverOverlay() {
           setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
           if (res.telemetry) {
             console.info('[Autocomplete Overlay] Solver telemetry:', res.telemetry);
+          }
+          if (!res.feasible || res.debugTrace) {
+            setAutocompleteDebugReport(
+              JSON.stringify(
+                {
+                  generatedAt: new Date().toISOString(),
+                  error: res.error,
+                  optimizationConfiguration: configuration,
+                  globalSettings: useGlobalSettingsStore.getState().settings,
+                  inputGraph: {
+                    nodes: canvasNodes.filter(isRecipeNode).map((node) => ({
+                      id: node.id,
+                      recipeId: node.data.recipeId,
+                      machineCount: node.data.machineCount,
+                      isTarget: node.data.isTarget,
+                      settings: node.data.settings,
+                    })),
+                    edges: recipeEdges.map((edge) => ({
+                      id: edge.id,
+                      source: edge.source,
+                      sourceHandle: edge.sourceHandle,
+                      target: edge.target,
+                      targetHandle: edge.targetHandle,
+                    })),
+                  },
+                  solverTelemetry: res.telemetry,
+                  failureDiagnostics: res.diagnostics,
+                  coupledRecipePasses: res.debugTrace,
+                  coupledStateCycle: res.debugCycle,
+                  cycleRecoveryAttempts: res.cycleRecoveryAttempts,
+                },
+                null,
+                2,
+              ),
+            );
+          } else {
+            setAutocompleteDebugReport(null);
           }
           if (!res.feasible || !res.plan) {
             setErrorMsg(res.error || 'Autocomplete could not build a feasible production graph.');
@@ -308,7 +346,37 @@ export function LPSolverOverlay() {
           if (runTokenRef.current !== runToken) return;
           setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
           console.error('[Autocomplete Overlay] Execution rejected:', err);
-          setErrorMsg(err instanceof Error ? err.message : String(err));
+          const error = err instanceof Error ? err.message : String(err);
+          setErrorMsg(error);
+          setAutocompleteDebugReport(
+            JSON.stringify(
+              {
+                generatedAt: new Date().toISOString(),
+                error,
+                optimizationConfiguration: configuration,
+                globalSettings: useGlobalSettingsStore.getState().settings,
+                inputGraph: {
+                  nodes: canvasNodes.filter(isRecipeNode).map((node) => ({
+                    id: node.id,
+                    recipeId: node.data.recipeId,
+                    machineCount: node.data.machineCount,
+                    isTarget: node.data.isTarget,
+                    settings: node.data.settings,
+                  })),
+                  edges: recipeEdges.map((edge) => ({
+                    id: edge.id,
+                    source: edge.source,
+                    sourceHandle: edge.sourceHandle,
+                    target: edge.target,
+                    targetHandle: edge.targetHandle,
+                  })),
+                },
+                exception: err instanceof Error ? err.stack : undefined,
+              },
+              null,
+              2,
+            ),
+          );
           setFailureDiagnostics(null);
           setSolverState('failed');
         })
@@ -354,6 +422,7 @@ export function LPSolverOverlay() {
           setErrorMsg(
             res.error || 'The model is infeasible with current target and connection constraints.',
           );
+          setAutocompleteDebugReport(null);
           setFailureDiagnostics(res.diagnostics ?? null);
           setSolverState('failed');
           return;
@@ -414,6 +483,7 @@ export function LPSolverOverlay() {
         setElapsedMs(Math.floor(performance.now() - startTimeRef.current));
         console.error('[Ratio Optimizer Overlay] Execution rejected:', err);
         setErrorMsg(err instanceof Error ? err.message : String(err));
+        setAutocompleteDebugReport(null);
         setFailureDiagnostics(null);
         setSolverState('failed');
       })
@@ -453,6 +523,22 @@ export function LPSolverOverlay() {
     setIsLPSolverOpen(false);
   };
 
+  const handleDownloadAutocompleteDebugReport = () => {
+    if (!autocompleteDebugReport) return;
+
+    const blob = new Blob([autocompleteDebugReport], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    link.href = url;
+    link.download = `autocomplete-debug-${timestamp}.txt`;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 0);
+  };
+
   const handleApply = () => {
     if (isTutorialActive() && !canPerformTutorialAction({ type: 'solver-apply' })) return;
     const flowStore = useFlowStore.getState();
@@ -488,6 +574,7 @@ export function LPSolverOverlay() {
     setElapsedMs(0);
     setTipIndex(0);
     setErrorMsg('');
+    setAutocompleteDebugReport(null);
     setFailureDiagnostics(null);
     setSolverProgress(null);
     setChanges([]);
@@ -670,6 +757,14 @@ export function LPSolverOverlay() {
             </div>
             <div className={styles['elapsed-summary']}>Elapsed: {formatStopwatch(elapsedMs)}</div>
             <div className={styles['modal-footer']}>
+              {resultMode === 'autocomplete' && autocompleteDebugReport && (
+                <button
+                  className={styles['action-btn-neutral']}
+                  onClick={handleDownloadAutocompleteDebugReport}
+                >
+                  Download debug trace (.txt)
+                </button>
+              )}
               <button className={styles['action-btn-neutral']} onClick={handleCancel}>
                 Close
               </button>
@@ -740,14 +835,7 @@ export function LPSolverOverlay() {
                     </span>
                   </div>
                   <div className={styles['metric-row']}>
-                    <span>Power Output:</span>
-                    <span>
-                      {formatPower(objectiveSummary.current.powerOutput)} &rarr;{' '}
-                      {formatPower(objectiveSummary.proposed.powerOutput)}
-                    </span>
-                  </div>
-                  <div className={styles['metric-row']}>
-                    <span>Net Pollution:</span>
+                    <span>Produced Pollution:</span>
                     <span>
                       {formatPollution(objectiveSummary.current.pollution)} &rarr;{' '}
                       {formatPollution(objectiveSummary.proposed.pollution)}

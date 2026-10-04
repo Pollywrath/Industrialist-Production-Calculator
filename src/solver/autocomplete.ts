@@ -8,7 +8,7 @@ import { buildHandleId, nextEdgeId, nextNodeId, parseHandleId } from '../utils/i
 import { resolveOptimizationSettings } from '../utils/optimizationMetrics';
 import {
   areNearlyEqual,
-  getRateTolerance,
+  areRatesEquivalent,
   isMachineCountNumericallyZero,
   isPositiveSolverFlow,
   normalizeSolverRate,
@@ -41,6 +41,7 @@ const RECIPE_TEMPERATURE_EPSILON = 0.01;
 const AUTOCOMPLETE_OUTPUT_NOISE_RELATIVE_TOLERANCE = 1e-7;
 const MAX_COUPLED_SOLVES = 12;
 const MAX_FALLBACK_EXPANSIONS = 2;
+const MAX_AUTOCOMPLETE_CYCLE_BRANCH_SOLVES = 32;
 const FALLBACK_RECIPE_IDS = {
   Item: 'r_item_spawner_01',
   Fluid: 'r_fluid_spawner_01',
@@ -72,7 +73,9 @@ interface AutocompleteCandidate {
   key: string;
   node: RecipeNodeType;
   recipe: Recipe;
+  minimumMachineCount?: number;
   autocompleteBaseSettings?: Record<string, unknown>;
+  autocompleteSizingResolved?: boolean;
   inputTemperatures?: Record<number, number>;
 }
 
@@ -87,6 +90,67 @@ interface AutocompleteModel {
   warnings: string[];
 }
 
+interface AutocompleteCycleSolution {
+  pass: number;
+  model: AutocompleteModel;
+  resolvedSettingsByCandidate: Record<string, Record<string, unknown>>;
+  activeIncomingEndpoints: Record<string, string[]>;
+  machineCounts: Record<string, number>;
+  connectionFlows: Record<string, number>;
+  telemetry?: RatioSolverTelemetry;
+}
+
+interface AutocompleteCycleBranch {
+  solution: AutocompleteCycleSolution;
+  inputRoutes: Record<string, string[]>;
+}
+
+interface AutocompleteVerificationDeficit {
+  nodeId: string;
+  inputIndex: number;
+  productId: string;
+  requiredRate: number;
+  suppliedRate: number;
+  deficit: number;
+}
+
+interface AutocompletePlanFailure {
+  error: string;
+  deficientInputs?: AutocompleteVerificationDeficit[];
+}
+
+interface AutocompleteCycleRecoveryResult {
+  recovered?: {
+    solution: {
+      pass: number;
+      attempt: number;
+      telemetry?: RatioSolverTelemetry;
+    };
+    plan: AutocompletePlan;
+  };
+  attempts: AutocompleteCycleRecoveryAttempt[];
+  cancelled: boolean;
+}
+
+export interface AutocompleteCycleRecoveryAttempt {
+  pass: number;
+  attempt: number;
+  constrainedInputCount: number;
+  fixedRecipeSettings: Record<string, Record<string, unknown>>;
+  fixedInputRoutes: Record<string, string[]>;
+  solverStatus?: string;
+  objectiveStages?: Array<{ name: string; objectiveValue: number }>;
+  error: string;
+  deficientInputs?: AutocompleteVerificationDeficit[];
+  verified?: boolean;
+  selected?: boolean;
+}
+
+interface VerifiedAutocompleteCycleSolution<TSolution, TValue> {
+  solution: TSolution;
+  value: TValue;
+}
+
 export interface AutocompletePlan {
   nodes: CanvasNode[];
   edges: Edge[];
@@ -98,11 +162,78 @@ export interface AutocompletePlan {
   warnings: string[];
 }
 
+export interface AutocompletePassDebugInfo {
+  pass: number;
+  modelStateFingerprint?: string;
+  ordinarySampleLimit: number;
+  solverStatus?: string;
+  objectiveStages: Array<{ name: string; objectiveValue: number }>;
+  candidateCount: number;
+  selectedCandidateCount: number;
+  activeEdgeCount: number;
+  machineCountChangeCount: number;
+  machineCountChanges: Array<{
+    nodeId: string;
+    recipeId: string;
+    specialRecipe: boolean;
+    previous: number;
+    next: number;
+  }>;
+  connectionFlowComparison: 'baseline' | 'compared';
+  connectionFlowChangeCount: number;
+  connectionFlowChanges: Array<{
+    edgeId: string;
+    sourceRecipeId?: string;
+    sourceProductId?: string;
+    targetRecipeId?: string;
+    targetProductId?: string;
+    previous: number;
+    next: number;
+    delta: number;
+  }>;
+  sizeSettingChangeCount: number;
+  sizeSettingChanges: Array<{
+    nodeId: string;
+    recipeId: string;
+    requiredOutputRates: number[];
+    previous: Record<string, unknown>;
+    next: Record<string, unknown>;
+  }>;
+  resolvedRecipeChangeCount: number;
+  resolvedRecipeChanges: Array<{
+    nodeId: string;
+    recipeId: string;
+    specialRecipe: boolean;
+    fields: string[];
+  }>;
+  removedCandidateCount: number;
+  removedCandidateIds: string[];
+  addedEdgeEndpointCount: number;
+  addedEdgeEndpoints: string[];
+  removedEdgeEndpointCount: number;
+  removedEdgeEndpoints: string[];
+  temperatureConverged: boolean;
+  temperaturePropagationIterations?: number;
+  changed: boolean;
+}
+
+export interface AutocompleteCoupledStateCycle {
+  firstSeenPass: number;
+  repeatedPass: number;
+  period: number;
+  stateFingerprint: string;
+  candidateCount: number;
+  edgeCount: number;
+}
+
 export interface AutocompleteResult {
   feasible: boolean;
   error?: string;
   diagnostics?: RatioFailureDiagnostics;
   telemetry?: RatioSolverTelemetry;
+  debugTrace?: AutocompletePassDebugInfo[];
+  debugCycle?: AutocompleteCoupledStateCycle;
+  cycleRecoveryAttempts?: AutocompleteCycleRecoveryAttempt[];
   plan?: AutocompletePlan;
 }
 
@@ -117,12 +248,199 @@ export interface AutocompleteOptions {
 
 let activeAutocompleteRun = 0;
 
+export function selectBestVerifiedAutocompleteCycleSolution<
+  TSolution extends { pass: number; attempt?: number; telemetry?: RatioSolverTelemetry },
+  TValue,
+>(
+  solutions: TSolution[],
+  verify: (solution: TSolution) => TValue | undefined,
+): VerifiedAutocompleteCycleSolution<TSolution, TValue> | undefined {
+  const rankedSolutions = [...solutions].sort(compareCycleSolutionRank);
+
+  for (const solution of rankedSolutions) {
+    const value = verify(solution);
+    if (value !== undefined) return { solution, value };
+  }
+
+  return undefined;
+}
+
+function compareCycleSolutionRank(
+  left: { pass: number; attempt?: number; telemetry?: RatioSolverTelemetry },
+  right: { pass: number; attempt?: number; telemetry?: RatioSolverTelemetry },
+): number {
+  const leftStages = left.telemetry?.stageTelemetry ?? [];
+  const rightStages = right.telemetry?.stageTelemetry ?? [];
+  const sharedStageCount = Math.min(leftStages.length, rightStages.length);
+
+  for (let index = 0; index < sharedStageCount; index += 1) {
+    const leftStage = leftStages[index];
+    const rightStage = rightStages[index];
+    if (!areNearlyEqual(leftStage.objectiveValue, rightStage.objectiveValue)) {
+      return leftStage.objectiveValue - rightStage.objectiveValue;
+    }
+  }
+
+  if (leftStages.length !== rightStages.length) return rightStages.length - leftStages.length;
+  return left.pass - right.pass || (left.attempt ?? 0) - (right.attempt ?? 0);
+}
+
+function snapshotAutocompleteModel(model: AutocompleteModel): AutocompleteModel {
+  return {
+    ...model,
+    candidates: model.candidates.map((candidate) => ({
+      ...candidate,
+      node: {
+        ...candidate.node,
+        position: { ...candidate.node.position },
+        data: {
+          ...candidate.node.data,
+          settings: candidate.node.data.settings
+            ? structuredClone(candidate.node.data.settings)
+            : undefined,
+          inputOrder: candidate.node.data.inputOrder
+            ? [...candidate.node.data.inputOrder]
+            : undefined,
+          outputOrder: candidate.node.data.outputOrder
+            ? [...candidate.node.data.outputOrder]
+            : undefined,
+        },
+      },
+      recipe: {
+        ...candidate.recipe,
+        inputs: candidate.recipe.inputs.map((input) => ({ ...input })),
+        outputs: candidate.recipe.outputs.map((output) => ({ ...output })),
+      },
+      autocompleteBaseSettings: candidate.autocompleteBaseSettings
+        ? structuredClone(candidate.autocompleteBaseSettings)
+        : undefined,
+      inputTemperatures: candidate.inputTemperatures
+        ? { ...candidate.inputTemperatures }
+        : undefined,
+    })),
+    edges: model.edges.map((edge) => ({ ...edge })),
+    protectedOutputHandles: new Set(model.protectedOutputHandles),
+    fallbackKeys: new Set(model.fallbackKeys),
+    preservedEdgeEndpointKeys: new Set(model.preservedEdgeEndpointKeys),
+    warnings: [...model.warnings],
+  };
+}
+
 function stableSettingsKey(settings: Record<string, unknown>): string {
   return JSON.stringify(
     Object.entries(settings)
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([key, value]) => [key, value]),
   );
+}
+
+function getCoupledModelSignature(model: AutocompleteModel): string {
+  const candidates = [...model.candidates]
+    .sort((left, right) => left.node.id.localeCompare(right.node.id))
+    .map((candidate) => ({
+      id: candidate.node.id,
+      recipeId: candidate.node.data.recipeId,
+      settings: stableSettingsKey(candidate.node.data.settings ?? {}),
+      recipe: candidate.recipe,
+    }));
+  const edges = model.edges.map(edgeEndpointKey).sort();
+  return JSON.stringify({ candidates, edges });
+}
+
+function getActiveIncomingEndpoints(
+  model: AutocompleteModel,
+  connectionFlows: Record<string, number>,
+): Record<string, string[]> {
+  const endpointsByInput: Record<string, Set<string>> = {};
+  for (const edge of model.edges) {
+    if (!edge.targetHandle || !isAutocompleteEdgeActive(connectionFlows[edge.id])) continue;
+    (endpointsByInput[edge.targetHandle] ??= new Set()).add(edgeEndpointKey(edge));
+  }
+  return Object.fromEntries(
+    Object.entries(endpointsByInput).map(([inputHandle, endpoints]) => [
+      inputHandle,
+      [...endpoints].sort(),
+    ]),
+  );
+}
+
+function getCycleChangingInputHandles(solutions: AutocompleteCycleSolution[]): string[] {
+  const allInputHandles = new Set(
+    solutions.flatMap((solution) => Object.keys(solution.activeIncomingEndpoints)),
+  );
+  return [...allInputHandles]
+    .filter((inputHandle) => {
+      const routeSets = new Set(
+        solutions.map((solution) =>
+          JSON.stringify(solution.activeIncomingEndpoints[inputHandle] ?? []),
+        ),
+      );
+      return routeSets.size > 1;
+    })
+    .sort();
+}
+
+function getCycleBranchKey(branch: AutocompleteCycleBranch): string {
+  return `${branch.solution.pass}:${JSON.stringify(
+    Object.entries(branch.inputRoutes).sort(([left], [right]) => left.localeCompare(right)),
+  )}`;
+}
+
+function buildCycleBranchModel(
+  branch: AutocompleteCycleBranch,
+  cycleSolutions: AutocompleteCycleSolution[],
+): AutocompleteModel {
+  const model = snapshotAutocompleteModel(branch.solution.model);
+  for (const candidate of model.candidates) {
+    const frozenSettings = branch.solution.resolvedSettingsByCandidate[candidate.node.id];
+    if (frozenSettings) {
+      candidate.node = {
+        ...candidate.node,
+        data: { ...candidate.node.data, settings: structuredClone(frozenSettings) },
+      };
+    }
+  }
+
+  applyCycleBranchRouteConstraints(model, branch.inputRoutes, cycleSolutions);
+  return model;
+}
+
+function applyCycleBranchRouteConstraints(
+  model: AutocompleteModel,
+  inputRoutes: Record<string, string[]>,
+  cycleSolutions: AutocompleteCycleSolution[],
+): void {
+  const requestedEndpoints = new Set(Object.values(inputRoutes).flat());
+  const edgesByEndpoint = new Map(model.edges.map((edge) => [edgeEndpointKey(edge), edge]));
+  for (const solution of cycleSolutions) {
+    for (const edge of solution.model.edges) {
+      const endpoint = edgeEndpointKey(edge);
+      if (requestedEndpoints.has(endpoint) && !edgesByEndpoint.has(endpoint)) {
+        edgesByEndpoint.set(endpoint, { ...edge });
+      }
+    }
+  }
+
+  const candidateIds = new Set(model.candidates.map((candidate) => candidate.node.id));
+  model.edges = [...edgesByEndpoint.values()].filter((edge) => {
+    if (!candidateIds.has(edge.source) || !candidateIds.has(edge.target)) return false;
+    const inputHandle = edge.targetHandle;
+    const selectedEndpoints = inputHandle ? inputRoutes[inputHandle] : undefined;
+    if (!selectedEndpoints) return true;
+    const endpoint = edgeEndpointKey(edge);
+    return (
+      model.preservedEdgeEndpointKeys.has(endpoint) || selectedEndpoints.includes(endpoint)
+    );
+  });
+}
+
+function getCoupledStateFingerprint(signature: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < signature.length; index += 1) {
+    hash ^= signature.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
 function candidateKey(recipeId: string, settings: Record<string, unknown>): string {
@@ -146,8 +464,7 @@ function isTemperatureInRange(
 }
 
 function areRecipeRatesEquivalent(previous: number, next: number): boolean {
-  if (!Number.isFinite(previous) || !Number.isFinite(next)) return previous === next;
-  return Math.abs(previous - next) <= getRateTolerance(previous, next);
+  return areRatesEquivalent(previous, next);
 }
 
 function hasActiveCandidateFlow(
@@ -335,11 +652,6 @@ function getInputTemperatureRange(
   );
 }
 
-function isPowerOutputOptimizationActive(configuration: OptimizationConfiguration): boolean {
-  const powerOutput = configuration.metrics.powerOutput;
-  return powerOutput.enabled && powerOutput.weight > 0 && powerOutput.outputGoal !== null;
-}
-
 function createRecipeNode(
   recipe: Recipe,
   settings: Record<string, unknown>,
@@ -365,12 +677,10 @@ function getSelectSettingsVariants(
   specialRecipe: SpecialRecipe,
   defaults: Record<string, unknown>,
   globalSettings: GlobalSettings,
-  powerOutputGoal: number | null,
   lockedSettingKeys: Set<string> = new Set(),
 ): Record<string, unknown>[] {
   const context = {
     globalSettings: globalSettings as unknown as Record<string, unknown>,
-    powerOutputGoal,
   };
   let variants: Record<string, unknown>[];
   if (specialRecipe.getAutocompleteSettings) {
@@ -473,25 +783,203 @@ function areResolvedRecipesEquivalent(previous: Recipe, next: Recipe): boolean {
   );
 }
 
+function getResolvedRecipeChangeFields(previous: Recipe, next: Recipe): string[] {
+  const fields: string[] = [];
+  if (previous.machine_id !== next.machine_id) fields.push('machine_id');
+  if (previous.power_type !== next.power_type) fields.push('power_type');
+  if (previous.isSellTrash !== next.isSellTrash) fields.push('isSellTrash');
+  if (previous.powerIndependentOfMachineCount !== next.powerIndependentOfMachineCount) {
+    fields.push('powerIndependentOfMachineCount');
+  }
+  if (previous.pollutionIndependentOfMachineCount !== next.pollutionIndependentOfMachineCount) {
+    fields.push('pollutionIndependentOfMachineCount');
+  }
+  if (!areNearlyEqual(previous.cycle_time, next.cycle_time)) fields.push('cycle_time');
+  if (!areNearlyEqual(previous.power_use, next.power_use)) fields.push('power_use');
+  if (!areNearlyEqual(previous.pollution, next.pollution)) fields.push('pollution');
+
+  const comparePorts = (side: 'inputs' | 'outputs') => {
+    const previousPorts = previous[side];
+    const nextPorts = next[side];
+    if (previousPorts.length !== nextPorts.length) {
+      fields.push(`${side}.length`);
+      return;
+    }
+    for (let index = 0; index < previousPorts.length; index += 1) {
+      const left = previousPorts[index];
+      const right = nextPorts[index];
+      const portLabel = `${side}[${index}]`;
+      if (left.product_id !== right.product_id) fields.push(`${portLabel}.product_id`);
+      if (left.handle_type !== right.handle_type) fields.push(`${portLabel}.handle_type`);
+      if (left.product_link_id !== right.product_link_id) {
+        fields.push(`${portLabel}.product_link_id`);
+      }
+      if (left.variable !== right.variable) fields.push(`${portLabel}.variable`);
+      if (left.independentOfMachineCount !== right.independentOfMachineCount) {
+        fields.push(`${portLabel}.independentOfMachineCount`);
+      }
+      if (!areRecipeRatesEquivalent(left.quantity, right.quantity)) {
+        fields.push(`${portLabel}.quantity`);
+      }
+      const leftTemperature = 'temperature' in left ? left.temperature : undefined;
+      const rightTemperature = 'temperature' in right ? right.temperature : undefined;
+      if (
+        leftTemperature !== rightTemperature &&
+        (leftTemperature === undefined ||
+          rightTemperature === undefined ||
+          !areNearlyEqual(leftTemperature, rightTemperature, RECIPE_TEMPERATURE_EPSILON, 0))
+      ) {
+        fields.push(`${portLabel}.temperature`);
+      }
+    }
+  };
+  comparePorts('inputs');
+  comparePorts('outputs');
+  if (!arePowerEffectsEquivalent(previous.powerEffects, next.powerEffects)) {
+    fields.push('powerEffects');
+  }
+  if (!arePowerEffectsEquivalent(previous.powerAccountingEffects, next.powerAccountingEffects)) {
+    fields.push('powerAccountingEffects');
+  }
+  return fields;
+}
+
+const MAX_AUTOCOMPLETE_DEBUG_SAMPLES = 20;
+
+function getDebugSamples<T extends { specialRecipe: boolean }>(items: T[]): T[] {
+  return [
+    ...items.filter((item) => item.specialRecipe),
+    ...items.filter((item) => !item.specialRecipe).slice(0, MAX_AUTOCOMPLETE_DEBUG_SAMPLES),
+  ];
+}
+
+function getSetDifference(
+  left: Set<string>,
+  right: Set<string>,
+): {
+  count: number;
+  sample: string[];
+} {
+  const difference = [...left].filter((value) => !right.has(value));
+  return {
+    count: difference.length,
+    sample: difference.slice(0, MAX_AUTOCOMPLETE_DEBUG_SAMPLES),
+  };
+}
+
+function getConnectionFlowChanges(
+  previousFlows: Record<string, number> | undefined,
+  currentFlows: Record<string, number>,
+  previousEdges: Edge[] | undefined,
+  currentEdges: Edge[],
+  candidates: AutocompleteCandidate[],
+): { count: number; sample: AutocompletePassDebugInfo['connectionFlowChanges'] } {
+  if (!previousFlows || !previousEdges) return { count: 0, sample: [] };
+
+  const previousEdgesById = new Map(previousEdges.map((edge) => [edge.id, edge]));
+  const currentEdgesById = new Map(currentEdges.map((edge) => [edge.id, edge]));
+  const candidatesById = new Map(candidates.map((candidate) => [candidate.node.id, candidate]));
+  const edgeIds = new Set([
+    ...Object.keys(previousFlows),
+    ...Object.keys(currentFlows),
+    ...previousEdgesById.keys(),
+    ...currentEdgesById.keys(),
+  ]);
+  const changes: AutocompletePassDebugInfo['connectionFlowChanges'] = [];
+
+  for (const edgeId of edgeIds) {
+    const previous = previousFlows[edgeId] ?? 0;
+    const next = currentFlows[edgeId] ?? 0;
+    if (previous === next) continue;
+
+    const edge = currentEdgesById.get(edgeId) ?? previousEdgesById.get(edgeId);
+    if (!edge) continue;
+    const source = candidatesById.get(edge.source);
+    const target = candidatesById.get(edge.target);
+    const sourceIndex = edge.sourceHandle ? parseHandleId(edge.sourceHandle)?.index : undefined;
+    const targetIndex = edge.targetHandle ? parseHandleId(edge.targetHandle)?.index : undefined;
+    changes.push({
+      edgeId,
+      sourceRecipeId: source?.node.data.recipeId,
+      sourceProductId:
+        sourceIndex === undefined ? undefined : source?.recipe.outputs[sourceIndex]?.product_id,
+      targetRecipeId: target?.node.data.recipeId,
+      targetProductId:
+        targetIndex === undefined ? undefined : target?.recipe.inputs[targetIndex]?.product_id,
+      previous,
+      next,
+      delta: next - previous,
+    });
+  }
+
+  changes.sort((left, right) => Math.abs(right.delta) - Math.abs(left.delta));
+  return { count: changes.length, sample: changes.slice(0, MAX_AUTOCOMPLETE_DEBUG_SAMPLES) };
+}
+
+function getCandidateRequiredOutputRates(
+  candidates: AutocompleteCandidate[],
+  edges: Edge[],
+  connectionFlows: Record<string, number>,
+): Map<string, number[]> {
+  const ratesByCandidate = new Map(
+    candidates.map((candidate) => [candidate.node.id, candidate.recipe.outputs.map(() => 0)]),
+  );
+
+  for (const edge of edges) {
+    const outputHandle = edge.sourceHandle ? parseHandleId(edge.sourceHandle) : null;
+    if (outputHandle?.side !== 'output') continue;
+    const outputRates = ratesByCandidate.get(edge.source);
+    if (!outputRates || outputHandle.index < 0 || outputHandle.index >= outputRates.length)
+      continue;
+    const flow = connectionFlows[edge.id] ?? 0;
+    if (!Number.isFinite(flow) || !isPositiveSolverFlow(flow)) continue;
+    outputRates[outputHandle.index] += flow;
+  }
+
+  return ratesByCandidate;
+}
+
 function refreshSelectedCandidateRecipes(
   model: AutocompleteModel,
   globalSettings: GlobalSettings,
   connectionFlows: Record<string, number>,
-): { changed: boolean; temperatureConverged: boolean } {
+  pass: number,
+): { changed: boolean; debugInfo: AutocompletePassDebugInfo } {
   let changed = false;
+  const sizeSettingChanges: AutocompletePassDebugInfo['sizeSettingChanges'] = [];
+  const candidatesBeforeRefresh = new Set(model.candidates.map((candidate) => candidate.node.id));
+  const edgeEndpointsBeforeRefresh = new Set(model.edges.map(edgeEndpointKey));
+  const requiredOutputRatesByCandidate = getCandidateRequiredOutputRates(
+    model.candidates,
+    model.edges,
+    connectionFlows,
+  );
 
   for (const candidate of model.candidates) {
-    if (candidate.kind !== 'generated') continue;
+    if (candidate.kind !== 'generated' || candidate.autocompleteSizingResolved) continue;
     const specialRecipe = getSpecialRecipe(candidate.node.data.recipeId);
     if (!specialRecipe?.sizeAutocompleteSettings) continue;
+
+    const requiredOutputRates = requiredOutputRatesByCandidate.get(candidate.node.id) ?? [];
+    if (!requiredOutputRates.some((rate) => Number.isFinite(rate) && isPositiveSolverFlow(rate))) {
+      continue;
+    }
 
     const currentSettings = candidate.node.data.settings ?? {};
     const baseSettings = candidate.autocompleteBaseSettings ?? currentSettings;
     const nextSettings = specialRecipe.sizeAutocompleteSettings(baseSettings, {
       globalSettings: globalSettings as unknown as Record<string, unknown>,
-      machineCount: candidate.node.data.machineCount ?? 0,
+      requiredOutputRates,
     });
+    candidate.autocompleteSizingResolved = true;
     if (stableSettingsKey(currentSettings) === stableSettingsKey(nextSettings)) continue;
+    sizeSettingChanges.push({
+      nodeId: candidate.node.id,
+      recipeId: candidate.node.data.recipeId,
+      requiredOutputRates,
+      previous: currentSettings,
+      next: nextSettings,
+    });
     candidate.node = {
       ...candidate.node,
       data: { ...candidate.node.data, settings: nextSettings },
@@ -508,9 +996,43 @@ function refreshSelectedCandidateRecipes(
     ),
   );
   if (selectedCandidates.length === 0) {
-    changed = pruneUnproducibleGeneratedCandidates(model) || changed;
-    changed = rebuildCandidateEdges(model, globalSettings) || changed;
-    return { changed, temperatureConverged: true };
+    const prunedCandidates = pruneUnproducibleGeneratedCandidates(model);
+    changed = prunedCandidates || changed;
+    const edgesChanged = rebuildCandidateEdges(model, globalSettings);
+    changed = edgesChanged || changed;
+    const edgeEndpointsAfterRefresh = new Set(model.edges.map(edgeEndpointKey));
+    const candidatesAfterRefresh = new Set(model.candidates.map((candidate) => candidate.node.id));
+    const removedCandidates = getSetDifference(candidatesBeforeRefresh, candidatesAfterRefresh);
+    const addedEdges = getSetDifference(edgeEndpointsAfterRefresh, edgeEndpointsBeforeRefresh);
+    const removedEdges = getSetDifference(edgeEndpointsBeforeRefresh, edgeEndpointsAfterRefresh);
+    return {
+      changed,
+      debugInfo: {
+        pass,
+        ordinarySampleLimit: MAX_AUTOCOMPLETE_DEBUG_SAMPLES,
+        objectiveStages: [],
+        candidateCount: model.candidates.length,
+        selectedCandidateCount: 0,
+        activeEdgeCount: 0,
+        machineCountChangeCount: 0,
+        machineCountChanges: [],
+        connectionFlowComparison: 'baseline',
+        connectionFlowChangeCount: 0,
+        connectionFlowChanges: [],
+        sizeSettingChangeCount: sizeSettingChanges.length,
+        sizeSettingChanges,
+        resolvedRecipeChangeCount: 0,
+        resolvedRecipeChanges: [],
+        removedCandidateCount: removedCandidates.count,
+        removedCandidateIds: removedCandidates.sample,
+        addedEdgeEndpointCount: addedEdges.count,
+        addedEdgeEndpoints: addedEdges.sample,
+        removedEdgeEndpointCount: removedEdges.count,
+        removedEdgeEndpoints: removedEdges.sample,
+        temperatureConverged: true,
+        changed,
+      },
+    };
   }
 
   const selectedIds = new Set(selectedCandidates.map((candidate) => candidate.node.id));
@@ -526,18 +1048,60 @@ function refreshSelectedCandidateRecipes(
     globalSettings as unknown as Record<string, unknown>,
   );
 
+  const resolvedRecipeChanges: AutocompletePassDebugInfo['resolvedRecipeChanges'] = [];
   for (const candidate of selectedCandidates) {
     const recipe = snapshot.nodeRecipes[candidate.node.id];
     if (!recipe) continue;
     if (!areResolvedRecipesEquivalent(candidate.recipe, recipe)) {
       changed = true;
+      resolvedRecipeChanges.push({
+        nodeId: candidate.node.id,
+        recipeId: candidate.node.data.recipeId,
+        specialRecipe: !!getSpecialRecipe(candidate.node.data.recipeId),
+        fields: getResolvedRecipeChangeFields(candidate.recipe, recipe),
+      });
     }
     candidate.recipe = recipe;
     candidate.inputTemperatures = snapshot.inputTemps[candidate.node.id];
   }
-  changed = pruneUnproducibleGeneratedCandidates(model) || changed;
-  changed = rebuildCandidateEdges(model, globalSettings) || changed;
-  return { changed, temperatureConverged: snapshot.temperatureConverged ?? true };
+  const prunedCandidates = pruneUnproducibleGeneratedCandidates(model);
+  changed = prunedCandidates || changed;
+  const edgesChanged = rebuildCandidateEdges(model, globalSettings);
+  changed = edgesChanged || changed;
+  const edgeEndpointsAfterRefresh = new Set(model.edges.map(edgeEndpointKey));
+  const candidatesAfterRefresh = new Set(model.candidates.map((candidate) => candidate.node.id));
+  const removedCandidates = getSetDifference(candidatesBeforeRefresh, candidatesAfterRefresh);
+  const addedEdges = getSetDifference(edgeEndpointsAfterRefresh, edgeEndpointsBeforeRefresh);
+  const removedEdges = getSetDifference(edgeEndpointsBeforeRefresh, edgeEndpointsAfterRefresh);
+  return {
+    changed,
+    debugInfo: {
+      pass,
+      ordinarySampleLimit: MAX_AUTOCOMPLETE_DEBUG_SAMPLES,
+      objectiveStages: [],
+      candidateCount: model.candidates.length,
+      selectedCandidateCount: selectedCandidates.length,
+      activeEdgeCount: activeEdges.length,
+      machineCountChangeCount: 0,
+      machineCountChanges: [],
+      connectionFlowComparison: 'baseline',
+      connectionFlowChangeCount: 0,
+      connectionFlowChanges: [],
+      sizeSettingChangeCount: sizeSettingChanges.length,
+      sizeSettingChanges,
+      resolvedRecipeChangeCount: resolvedRecipeChanges.length,
+      resolvedRecipeChanges: getDebugSamples(resolvedRecipeChanges),
+      removedCandidateCount: removedCandidates.count,
+      removedCandidateIds: removedCandidates.sample,
+      addedEdgeEndpointCount: addedEdges.count,
+      addedEdgeEndpoints: addedEdges.sample,
+      removedEdgeEndpointCount: removedEdges.count,
+      removedEdgeEndpoints: removedEdges.sample,
+      temperatureConverged: snapshot.temperatureConverged ?? true,
+      temperaturePropagationIterations: snapshot.iterationsRun,
+      changed,
+    },
+  };
 }
 
 function buildCandidateModelSnapshot(
@@ -559,11 +1123,7 @@ function buildCandidateModelSnapshot(
   return { nodeRecipes, resolvedProducts };
 }
 
-function buildRecipeDescriptorCatalog(
-  globalSettings: GlobalSettings,
-  configuration: OptimizationConfiguration,
-): RecipeDescriptorCatalog {
-  const powerOutputGoal = configuration.metrics.powerOutput.outputGoal;
+function buildRecipeDescriptorCatalog(globalSettings: GlobalSettings): RecipeDescriptorCatalog {
   const sources = getAvailableAutomationRecipes(globalSettings)
     .filter((recipe) => recipe.id !== 'r_item_spawner_01' && recipe.id !== 'r_fluid_spawner_01')
     .map((baseRecipe) => ({
@@ -604,7 +1164,6 @@ function buildRecipeDescriptorCatalog(
           source.specialRecipe,
           seedSettings,
           globalSettings,
-          powerOutputGoal,
           lockedSettingKeys,
         )
       : [{}];
@@ -742,14 +1301,13 @@ function buildInitialModel(
   existingNodes: RecipeNodeType[],
   existingEdges: Edge[],
   globalSettings: GlobalSettings,
-  configuration: OptimizationConfiguration,
 ): AutocompleteModel {
   const currentSnapshot = solveFlowPipeline(
     existingNodes,
     existingEdges,
     globalSettings as unknown as Record<string, unknown>,
   );
-  const descriptorCatalog = buildRecipeDescriptorCatalog(globalSettings, configuration);
+  const descriptorCatalog = buildRecipeDescriptorCatalog(globalSettings);
 
   const candidates: AutocompleteCandidate[] = [];
   const candidateKeys = new Set<string>();
@@ -767,6 +1325,10 @@ function buildInitialModel(
       key,
       node: existingNode,
       recipe,
+      minimumMachineCount: Math.max(
+        0,
+        Number.isFinite(existingNode.data.machineCount) ? existingNode.data.machineCount : 0,
+      ),
       inputTemperatures: currentSnapshot.inputTemps[existingNode.id],
     });
     candidateKeys.add(key);
@@ -782,7 +1344,6 @@ function buildInitialModel(
     }
   }
 
-  const needsPowerCandidates = isPowerOutputOptimizationActive(configuration);
   const producedTemperatures = new Map<string, number[]>();
   const recordProducedTemperatures = (recipe: Recipe): void => {
     for (const output of recipe.outputs) {
@@ -800,9 +1361,9 @@ function buildInitialModel(
     for (const [productId, sources] of descriptorCatalog.sourcesByOutput) {
       if (getProduct(productId)?.type !== 'Fluid') continue;
       for (const source of sources) {
-        if (!needsPowerCandidates && hasRecipePowerOutput(source.baseRecipe)) continue;
+        if (hasRecipePowerOutput(source.baseRecipe)) continue;
         for (const descriptor of descriptorCatalog.getDescriptors(source, productId)) {
-          if (!needsPowerCandidates && hasRecipePowerOutput(descriptor.recipe)) continue;
+          if (hasRecipePowerOutput(descriptor.recipe)) continue;
           recordProducedTemperatures(descriptor.recipe);
         }
       }
@@ -836,7 +1397,7 @@ function buildInitialModel(
   };
 
   const addDescriptor = (descriptor: RecipeDescriptor): void => {
-    if (!needsPowerCandidates && hasRecipePowerOutput(descriptor.recipe)) return;
+    if (hasRecipePowerOutput(descriptor.recipe)) return;
     if (candidateKeys.has(descriptor.key)) return;
     if (hasUnboundRequiredInput(descriptor.recipe)) {
       indexFluidSourceTemperatures();
@@ -850,15 +1411,6 @@ function buildInitialModel(
     }
     addConcreteDescriptor(descriptor);
   };
-
-  if (needsPowerCandidates) {
-    for (const source of descriptorCatalog.sources) {
-      if (!hasRecipePowerOutput(source.baseRecipe)) continue;
-      for (const descriptor of descriptorCatalog.getDescriptors(source)) {
-        if (hasRecipePowerOutput(descriptor.recipe)) addDescriptor(descriptor);
-      }
-    }
-  }
 
   const visitedProducts = new Set<string>();
   while (requiredProducts.length > 0) {
@@ -1191,8 +1743,14 @@ function updateCandidateCounts(
 ): void {
   for (const candidate of candidates) {
     const solvedCount = Math.max(0, machineCounts[candidate.node.id] ?? 0);
-    const machineCount = isCandidateSolverActive(candidate, edges, solvedCount, connectionFlows)
-      ? solvedCount
+    const countWithRequiredFloor = Math.max(candidate.minimumMachineCount ?? 0, solvedCount);
+    const machineCount = isCandidateSolverActive(
+      candidate,
+      edges,
+      countWithRequiredFloor,
+      connectionFlows,
+    )
+      ? countWithRequiredFloor
       : 0;
     candidate.node = {
       ...candidate.node,
@@ -1236,7 +1794,7 @@ function materializePlan(
   globalSettings: GlobalSettings,
   excludedGeneratedIds: Set<string> = new Set(),
   excludedGeneratedEdgeIds: Set<string> = new Set(),
-): AutocompletePlan | { error: string } {
+): AutocompletePlan | AutocompletePlanFailure {
   const selectedCandidateIds = new Set<string>();
   const newRecipeNodes: RecipeNodeType[] = [];
   const materializedIdByCandidateId = new Map<string, string>();
@@ -1255,8 +1813,11 @@ function materializePlan(
       : 0;
     if (candidate.kind === 'existing') {
       materializedIdByCandidateId.set(candidate.node.id, candidate.node.id);
-      appliedMachineCounts[candidate.node.id] = solvedCount;
-      if (isCandidateSolverActive(candidate, model.edges, solvedCount, connectionFlows)) {
+      const countWithRequiredFloor = Math.max(candidate.minimumMachineCount ?? 0, solvedCount);
+      appliedMachineCounts[candidate.node.id] = countWithRequiredFloor;
+      if (
+        isCandidateSolverActive(candidate, model.edges, countWithRequiredFloor, connectionFlows)
+      ) {
         selectedCandidateIds.add(candidate.node.id);
       }
       continue;
@@ -1381,24 +1942,39 @@ function materializePlan(
     }
   }
 
+  const deficientInputs: AutocompleteVerificationDeficit[] = [];
   for (const node of recipeNodes) {
     if (!selectedCandidateIds.has(node.id)) continue;
     const result = verification.results.get(node.id);
-    if (result?.inputFlows.some((input) => input.hasDeficiency)) {
-      return {
-        error: `The generated graph did not reproduce the solver flow for ${verification.nodeRecipes[node.id]?.name ?? node.data.recipeId}.`,
-      };
+    const resolvedRecipe = verification.nodeRecipes[node.id];
+    for (const [inputIndex, inputFlow] of result?.inputFlows.entries() ?? []) {
+      if (!inputFlow.hasDeficiency) continue;
+      deficientInputs.push({
+        nodeId: node.id,
+        inputIndex,
+        productId: resolvedRecipe?.inputs[inputIndex]?.product_id ?? 'unknown',
+        requiredRate: inputFlow.rate,
+        suppliedRate: inputFlow.connected,
+        deficit: inputFlow.deficit,
+      });
     }
-    const recipe = verification.nodeRecipes[node.id];
     if (
-      recipe?.outputs.some(
+      resolvedRecipe?.outputs.some(
         (output, index) => output.product_link_id && result?.outputFlows[index]?.hasExcess,
       )
     ) {
       return {
-        error: `The generated graph could not circulate the linked output for ${recipe.name}.`,
+        error: `The generated graph could not circulate the linked output for ${resolvedRecipe.name}.`,
       };
     }
+  }
+  if (deficientInputs.length > 0) {
+    const firstDeficit = deficientInputs[0];
+    const node = recipeNodes.find((candidate) => candidate.id === firstDeficit.nodeId);
+    return {
+      error: `The generated graph did not reproduce the solver flow for ${verification.nodeRecipes[firstDeficit.nodeId]?.name ?? node?.data.recipeId ?? firstDeficit.nodeId}.`,
+      deficientInputs,
+    };
   }
 
   const objectivePayload = buildRatioOptimizerPayload(recipeNodes, recipeEdges, {
@@ -1422,6 +1998,280 @@ function materializePlan(
   };
 }
 
+function getResolvedSettingsByCandidate(
+  model: AutocompleteModel,
+): Record<string, Record<string, unknown>> {
+  return Object.fromEntries(
+    model.candidates.map((candidate) => [
+      candidate.node.id,
+      structuredClone(getCandidateResolvedSettings(candidate)),
+    ]),
+  );
+}
+
+function getCycleBranchRoutes(
+  solution: AutocompleteCycleSolution,
+  changingInputHandles: string[],
+): Record<string, string[]> {
+  return Object.fromEntries(
+    changingInputHandles.map((inputHandle) => [
+      inputHandle,
+      [...(solution.activeIncomingEndpoints[inputHandle] ?? [])],
+    ]),
+  );
+}
+
+function getCycleBranchDeficitHandles(
+  deficientInputs: AutocompleteVerificationDeficit[] | undefined,
+): string[] {
+  return [...new Set(
+    (deficientInputs ?? []).map((input) => buildHandleId(input.nodeId, 'input', input.inputIndex)),
+  )];
+}
+
+async function recoverAutocompleteCycle(
+  cycleSolutions: AutocompleteCycleSolution[],
+  canvasNodes: CanvasNode[],
+  canvasEdges: Edge[],
+  globalSettings: GlobalSettings,
+  options: AutocompleteOptions,
+  runId: number,
+): Promise<AutocompleteCycleRecoveryResult> {
+  const changingInputHandles = getCycleChangingInputHandles(cycleSolutions);
+  const rankedCycleSolutions = [...cycleSolutions].sort(compareCycleSolutionRank);
+  const branches: AutocompleteCycleBranch[] = rankedCycleSolutions.map((solution) => ({
+    solution,
+    inputRoutes: getCycleBranchRoutes(solution, changingInputHandles),
+  }));
+  const queuedKeys = new Set(branches.map(getCycleBranchKey));
+  const attempts: AutocompleteCycleRecoveryAttempt[] = [];
+  const verified: Array<{
+    pass: number;
+    attempt: number;
+    telemetry?: RatioSolverTelemetry;
+    plan: AutocompletePlan;
+  }> = [];
+
+  const enqueueAlternates = (
+    branch: AutocompleteCycleBranch,
+    deficitHandles: string[],
+  ) => {
+    for (const inputHandle of deficitHandles) {
+      if (!changingInputHandles.includes(inputHandle)) continue;
+      const currentRoute = JSON.stringify(branch.inputRoutes[inputHandle] ?? []);
+      const alternateRoutes = new Map<string, string[]>();
+      for (const solution of cycleSolutions) {
+        const route = solution.activeIncomingEndpoints[inputHandle] ?? [];
+        const routeKey = JSON.stringify(route);
+        if (routeKey !== currentRoute) alternateRoutes.set(routeKey, [...route]);
+      }
+      for (const alternateRoute of alternateRoutes.values()) {
+        const nextBranch: AutocompleteCycleBranch = {
+          solution: branch.solution,
+          inputRoutes: {
+            ...branch.inputRoutes,
+            [inputHandle]: alternateRoute,
+          },
+        };
+        const key = getCycleBranchKey(nextBranch);
+        if (queuedKeys.has(key) || branches.length >= MAX_AUTOCOMPLETE_CYCLE_BRANCH_SOLVES) {
+          continue;
+        }
+        queuedKeys.add(key);
+        branches.push(nextBranch);
+      }
+    }
+  };
+
+  for (
+    let branchIndex = 0;
+    branchIndex < branches.length && attempts.length < MAX_AUTOCOMPLETE_CYCLE_BRANCH_SOLVES;
+    branchIndex += 1
+  ) {
+    if (runId !== activeAutocompleteRun) return { attempts, cancelled: true };
+    const branch = branches[branchIndex];
+    const branchModel = buildCycleBranchModel(branch, cycleSolutions);
+    let branchSettled = false;
+    const seenBranchStates = new Set<string>();
+    while (attempts.length < MAX_AUTOCOMPLETE_CYCLE_BRANCH_SOLVES) {
+      if (runId !== activeAutocompleteRun) return { attempts, cancelled: true };
+      const branchState = getCoupledModelSignature(branchModel);
+      if (seenBranchStates.has(branchState)) {
+        const lastAttempt = attempts[attempts.length - 1];
+        if (lastAttempt?.pass === branch.solution.pass) {
+          lastAttempt.error = 'Recipe settings repeated within the branch before verification settled.';
+        }
+        break;
+      }
+      seenBranchStates.add(branchState);
+      const attempt = attempts.length + 1;
+      options.onProgress?.({
+        phase: 'finalizing',
+        message: `Re-solving autocomplete cycle route ${attempt}/${MAX_AUTOCOMPLETE_CYCLE_BRANCH_SOLVES}.`,
+        solver: 'native',
+      });
+
+      const session = solveRatios(
+        branchModel.candidates.map((candidate) =>
+          candidate.kind === 'existing'
+            ? {
+                ...candidate.node,
+                data: {
+                  ...candidate.node.data,
+                  isTarget: true,
+                  machineCount: candidate.minimumMachineCount ?? 0,
+                },
+              }
+            : candidate.node,
+        ),
+        branchModel.edges,
+        {
+          optimizationConfiguration: options.configuration,
+          onProgress: options.onProgress,
+          modelSnapshot: buildCandidateModelSnapshot(branchModel.candidates),
+          minimizeLinkedOutputExcess: true,
+          excludeAvoidableInfiniteCostMachines: true,
+        },
+      );
+      const result = await session.promise;
+      if (runId !== activeAutocompleteRun) return { attempts, cancelled: true };
+
+      const objectiveStages = result.telemetry?.stageTelemetry?.map(({ name, objectiveValue }) => ({
+        name,
+        objectiveValue,
+      }));
+      const failureBase = {
+        pass: branch.solution.pass,
+        attempt,
+        constrainedInputCount: Object.keys(branch.inputRoutes).length,
+        fixedRecipeSettings: getResolvedSettingsByCandidate(branchModel),
+        fixedInputRoutes: Object.fromEntries(
+          Object.entries(branch.inputRoutes).map(([inputHandle, endpoints]) => [
+            inputHandle,
+            [...endpoints],
+          ]),
+        ),
+        solverStatus: result.telemetry?.nativeStatus,
+        ...(objectiveStages ? { objectiveStages } : {}),
+      };
+
+      if (!result.feasible || !result.machineCounts || !result.connectionFlows) {
+        const error = result.error ?? 'The cycle branch did not produce a solver result.';
+        const deficientInputs = (result.diagnostics?.deficientInputs ?? []).map((input) => ({
+          nodeId: input.nodeId,
+          inputIndex: input.inputIndex,
+          productId: input.productId,
+          requiredRate: input.requiredRate,
+          suppliedRate: input.suppliedRate,
+          deficit: input.deficiency,
+        }));
+        attempts.push({
+          ...failureBase,
+          error,
+          ...(deficientInputs.length > 0 ? { deficientInputs } : {}),
+        });
+        enqueueAlternates(branch, getCycleBranchDeficitHandles(deficientInputs));
+        break;
+      }
+
+      updateCandidateCounts(
+        branchModel.candidates,
+        result.machineCounts,
+        branchModel.edges,
+        result.connectionFlows,
+      );
+      const refresh = refreshSelectedCandidateRecipes(
+        branchModel,
+        globalSettings,
+        result.connectionFlows,
+        attempt,
+      );
+      applyCycleBranchRouteConstraints(branchModel, branch.inputRoutes, cycleSolutions);
+      if (!refresh.debugInfo.temperatureConverged) {
+        attempts.push({
+          ...failureBase,
+          error: 'Cycle branch recipe temperatures did not settle after a fresh solve.',
+        });
+        break;
+      }
+      if (refresh.changed) {
+        attempts.push({
+          ...failureBase,
+          error: 'Recipe settings or routes changed after flow propagation; solving the branch again.',
+        });
+        continue;
+      }
+
+      const outputNoiseIds = getGeneratedOutputNoiseIds(
+        branchModel,
+        result.machineCounts,
+        result.connectionFlows,
+      );
+      const outputNoiseEdgeIds = getGeneratedOutputNoiseEdgeIds(
+        branchModel,
+        result.connectionFlows,
+      );
+      let plan = materializePlan(
+        canvasNodes,
+        canvasEdges,
+        branchModel,
+        result.machineCounts,
+        result.connectionFlows,
+        globalSettings,
+        outputNoiseIds,
+        outputNoiseEdgeIds,
+      );
+      if ('error' in plan && outputNoiseIds.size > 0) {
+        plan = materializePlan(
+          canvasNodes,
+          canvasEdges,
+          branchModel,
+          result.machineCounts,
+          result.connectionFlows,
+          globalSettings,
+        );
+      }
+
+      if ('error' in plan) {
+        attempts.push({
+          ...failureBase,
+          error: plan.error,
+          ...(plan.deficientInputs ? { deficientInputs: plan.deficientInputs } : {}),
+        });
+        enqueueAlternates(branch, getCycleBranchDeficitHandles(plan.deficientInputs));
+        break;
+      }
+
+      attempts.push({
+        ...failureBase,
+        error: 'Generated graph verification passed.',
+        verified: true,
+      });
+      verified.push({
+        pass: branch.solution.pass,
+        attempt,
+        telemetry: result.telemetry,
+        plan,
+      });
+      branchSettled = true;
+      break;
+    }
+
+    if (!branchSettled && attempts.length >= MAX_AUTOCOMPLETE_CYCLE_BRANCH_SOLVES) break;
+  }
+
+  const best = selectBestVerifiedAutocompleteCycleSolution(verified, (solution) => solution.plan);
+  if (best) {
+    const selectedAttempt = attempts.find((attempt) => attempt.attempt === best.solution.attempt);
+    if (selectedAttempt) selectedAttempt.selected = true;
+  }
+  return {
+    ...(best ? { recovered: { solution: best.solution, plan: best.value } } : {}),
+    attempts,
+    cancelled: false,
+  };
+}
+
 async function runAutocomplete(
   canvasNodes: CanvasNode[],
   canvasEdges: Edge[],
@@ -1433,23 +2283,15 @@ async function runAutocomplete(
   const existingEdges = canvasEdges.filter(
     (edge) => existingNodeIds.has(edge.source) && existingNodeIds.has(edge.target),
   );
-  if (
-    !existingNodes.some((node) => node.data.isTarget) &&
-    !isPowerOutputOptimizationActive(options.configuration)
-  ) {
+  if (!existingNodes.some((node) => node.data.isTarget)) {
     return {
       feasible: false,
-      error: 'Autocomplete needs at least one target node or a Power Output goal.',
+      error: 'Autocomplete needs at least one target node.',
     };
   }
 
   const globalSettings = useGlobalSettingsStore.getState().settings;
-  const model = buildInitialModel(
-    existingNodes,
-    existingEdges,
-    globalSettings,
-    options.configuration,
-  );
+  const model = buildInitialModel(existingNodes, existingEdges, globalSettings);
   if (!model.initialTemperatureConverged) {
     return {
       feasible: false,
@@ -1464,11 +2306,72 @@ async function runAutocomplete(
   let finalConnectionFlows: Record<string, number> | undefined;
   let finalTelemetry: RatioSolverTelemetry | undefined;
   let fallbackExpansions = 0;
+  const coupledPassDebugTrace: AutocompletePassDebugInfo[] = [];
+  const seenCoupledStates = new Map<string, { pass: number; historyIndex: number }>();
+  const coupledSolveHistory: AutocompleteCycleSolution[] = [];
+  let previousCoupledPassFlows: Record<string, number> | undefined;
+  let previousCoupledPassEdges: Edge[] | undefined;
 
   for (let coupledPass = 0; coupledPass < MAX_COUPLED_SOLVES; coupledPass += 1) {
     if (runId !== activeAutocompleteRun) {
       return { feasible: false, error: 'Computation cancelled.' };
     }
+
+    const coupledModelSignature = getCoupledModelSignature(model);
+    const firstSeenState = seenCoupledStates.get(coupledModelSignature);
+    if (firstSeenState !== undefined) {
+      const repeatedPass = coupledPass + 1;
+      const debugCycle: AutocompleteCoupledStateCycle = {
+        firstSeenPass: firstSeenState.pass,
+        repeatedPass,
+        period: repeatedPass - firstSeenState.pass,
+        stateFingerprint: getCoupledStateFingerprint(coupledModelSignature),
+        candidateCount: model.candidates.length,
+        edgeCount: model.edges.length,
+      };
+      const cycleSolutions = coupledSolveHistory.slice(firstSeenState.historyIndex);
+      options.onProgress?.({
+        phase: 'finalizing',
+        message: `Re-solving stable routes from the repeated recipe-state cycle (${cycleSolutions.length}).`,
+        solver: 'native',
+      });
+      const recovery = await recoverAutocompleteCycle(
+        cycleSolutions,
+        canvasNodes,
+        canvasEdges,
+        globalSettings,
+        options,
+        runId,
+      );
+
+      if (recovery.cancelled || runId !== activeAutocompleteRun) {
+        return { feasible: false, error: 'Computation cancelled.' };
+      }
+      if (recovery.recovered) {
+        return {
+          feasible: true,
+          telemetry: recovery.recovered.solution.telemetry,
+          debugTrace: coupledPassDebugTrace,
+          debugCycle,
+          cycleRecoveryAttempts: recovery.attempts,
+          plan: recovery.recovered.plan,
+        };
+      }
+
+      return {
+        feasible: false,
+        error: `Generated recipe settings repeated the same model state from pass ${firstSeenState.pass} at pass ${repeatedPass}, and none of ${recovery.attempts.length} re-solved route branches passed generated-graph verification.`,
+        telemetry: finalTelemetry,
+        debugTrace: coupledPassDebugTrace,
+        debugCycle,
+        cycleRecoveryAttempts: recovery.attempts,
+      };
+    }
+    seenCoupledStates.set(coupledModelSignature, {
+      pass: coupledPass + 1,
+      historyIndex: coupledSolveHistory.length,
+    });
+    const coupledPassModel = snapshotAutocompleteModel(model);
 
     options.onProgress?.({
       phase: 'building',
@@ -1479,8 +2382,20 @@ async function runAutocomplete(
       solver: 'native',
     });
 
+    const coupledPassEdges = [...model.edges];
     const session = solveRatios(
-      model.candidates.map((candidate) => candidate.node),
+      model.candidates.map((candidate) =>
+        candidate.kind === 'existing'
+          ? {
+              ...candidate.node,
+              data: {
+                ...candidate.node.data,
+                isTarget: true,
+                machineCount: candidate.minimumMachineCount ?? 0,
+              },
+            }
+          : candidate.node,
+      ),
       model.edges,
       {
         optimizationConfiguration: options.configuration,
@@ -1521,22 +2436,78 @@ async function runAutocomplete(
     }
 
     finalTelemetry = result.telemetry;
+    coupledSolveHistory.push({
+      pass: coupledPass + 1,
+      model: coupledPassModel,
+      resolvedSettingsByCandidate: getResolvedSettingsByCandidate(coupledPassModel),
+      activeIncomingEndpoints: getActiveIncomingEndpoints(coupledPassModel, result.connectionFlows),
+      machineCounts: { ...result.machineCounts },
+      connectionFlows: { ...result.connectionFlows },
+      telemetry: result.telemetry,
+    });
+    const connectionFlowChanges = getConnectionFlowChanges(
+      previousCoupledPassFlows,
+      result.connectionFlows,
+      previousCoupledPassEdges,
+      coupledPassEdges,
+      model.candidates,
+    );
+    const previousCandidateCounts = new Map(
+      model.candidates.map((candidate) => [
+        candidate.node.id,
+        candidate.node.data.machineCount ?? 0,
+      ]),
+    );
     updateCandidateCounts(
       model.candidates,
       result.machineCounts,
       model.edges,
       result.connectionFlows,
     );
+    const allMachineCountChanges = model.candidates.flatMap((candidate) => {
+      const previous = previousCandidateCounts.get(candidate.node.id) ?? 0;
+      const next = candidate.node.data.machineCount ?? 0;
+      if (previous === next) return [];
+      return [
+        {
+          nodeId: candidate.node.id,
+          recipeId: candidate.node.data.recipeId,
+          specialRecipe: !!getSpecialRecipe(candidate.node.data.recipeId),
+          previous,
+          next,
+        },
+      ];
+    });
     const refreshResult = refreshSelectedCandidateRecipes(
       model,
       globalSettings,
       result.connectionFlows,
+      coupledPass + 1,
     );
-    if (!refreshResult.temperatureConverged) {
+    refreshResult.debugInfo.modelStateFingerprint =
+      getCoupledStateFingerprint(coupledModelSignature);
+    refreshResult.debugInfo.machineCountChangeCount = allMachineCountChanges.length;
+    refreshResult.debugInfo.machineCountChanges = getDebugSamples(allMachineCountChanges);
+    refreshResult.debugInfo.solverStatus = result.telemetry?.nativeStatus;
+    refreshResult.debugInfo.connectionFlowComparison = previousCoupledPassFlows
+      ? 'compared'
+      : 'baseline';
+    refreshResult.debugInfo.connectionFlowChangeCount = connectionFlowChanges.count;
+    refreshResult.debugInfo.connectionFlowChanges = connectionFlowChanges.sample;
+    refreshResult.debugInfo.objectiveStages =
+      result.telemetry?.stageTelemetry?.map(({ name, objectiveValue }) => ({
+        name,
+        objectiveValue,
+      })) ?? [];
+    coupledPassDebugTrace.push(refreshResult.debugInfo);
+    previousCoupledPassFlows = result.connectionFlows;
+    previousCoupledPassEdges = coupledPassEdges;
+    if (!refreshResult.debugInfo.temperatureConverged) {
       return {
         feasible: false,
         error: 'Temperature and recipe settings did not settle within the propagation limits.',
         telemetry: finalTelemetry,
+        debugTrace: coupledPassDebugTrace,
       };
     }
     if (!refreshResult.changed) {
@@ -1549,6 +2520,7 @@ async function runAutocomplete(
         feasible: false,
         error: `Generated recipes did not settle after ${MAX_COUPLED_SOLVES} solve passes.`,
         telemetry: finalTelemetry,
+        debugTrace: coupledPassDebugTrace,
       };
     }
   }

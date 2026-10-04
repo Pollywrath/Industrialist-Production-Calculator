@@ -45,12 +45,25 @@ export function getRateTolerance(required: number, supplied = 0): number {
   return Math.max(RATE_ABSOLUTE_TOLERANCE, scale * RATE_RELATIVE_TOLERANCE);
 }
 
+export function areRatesEquivalent(a: number, b: number): boolean {
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return a === b;
+  return Math.abs(a - b) <= getRateTolerance(a, b);
+}
+
+export function getMeaningfulRateDelta(delta: number, left: number, right: number): number {
+  return Math.abs(delta) > getRateTolerance(left, right) ? delta : 0;
+}
+
+function getPositiveDifference(minuend: number, subtrahend: number): number {
+  return Math.max(0, normalizeSolverRate(minuend) - normalizeSolverRate(subtrahend));
+}
+
 export function getRateDeficit(required: number, supplied: number): number {
-  return Math.max(0, normalizeSolverRate(required) - normalizeSolverRate(supplied));
+  return getPositiveDifference(required, supplied);
 }
 
 export function getRateExcess(produced: number, routed: number): number {
-  return Math.max(0, normalizeSolverRate(produced) - normalizeSolverRate(routed));
+  return getPositiveDifference(produced, routed);
 }
 
 export function hasMeaningfulExcess(produced: number, routed: number): boolean {

@@ -74,3 +74,27 @@ export function distanceSquaredPointToSegment(
     projectPointOntoSegment(point, segmentStart, segmentEnd),
   );
 }
+
+export function findNearestSegmentIndex(
+  pathPoints: readonly EdgeControlPoint[],
+  candidate: EdgeControlPoint,
+): number {
+  if (pathPoints.length < 2) return 0;
+
+  let bestSegmentIndex = 0;
+  let bestDistanceSquared = Number.POSITIVE_INFINITY;
+
+  for (let i = 0; i < pathPoints.length - 1; i++) {
+    const distanceSquared = distanceSquaredPointToSegment(
+      candidate,
+      pathPoints[i],
+      pathPoints[i + 1],
+    );
+    if (distanceSquared < bestDistanceSquared) {
+      bestDistanceSquared = distanceSquared;
+      bestSegmentIndex = i;
+    }
+  }
+
+  return bestSegmentIndex;
+}

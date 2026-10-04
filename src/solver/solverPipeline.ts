@@ -8,7 +8,11 @@ import { propagateTemperatures } from './temperaturePropagator';
 import { computeResolvedProducts } from '../utils/productResolver';
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 import { buildHandleId } from '../utils/idGenerator';
-import { getRateTolerance, normalizeSolverRate } from '../utils/precision';
+import {
+  areRatesEquivalent as areRateValuesEquivalent,
+  normalizeSolverRate,
+} from '../utils/precision';
+import { sumConnectedEdgeFlows } from './flowAggregation';
 
 const MAX_TEMPERATURE_COUPLED_PASSES = 8;
 
@@ -41,7 +45,7 @@ function areRatesEquivalent(a: number, b: number): boolean {
   if (!Number.isFinite(a) || !Number.isFinite(b)) return a === b;
   const normalizedA = normalizeSolverRate(a);
   const normalizedB = normalizeSolverRate(b);
-  return Math.abs(normalizedA - normalizedB) <= getRateTolerance(normalizedA, normalizedB);
+  return areRateValuesEquivalent(normalizedA, normalizedB);
 }
 
 function normalizeEdgeFlows(edgeFlows: Record<string, number>): Record<string, number> {
@@ -332,11 +336,7 @@ export function solveFlowPipeline(
       getFlowRate: (side: 'input' | 'output', index: number): number => {
         const handleId = buildHandleId(nodeId, side, index);
         const connectedEdges = resolutionContext.edgeLookup.get(handleId) ?? [];
-        let totalFlow = 0;
-        for (const edge of connectedEdges) {
-          totalFlow = normalizeSolverRate(totalFlow + (finalResult.edgeFlows[edge.id] ?? 0));
-        }
-        return totalFlow;
+        return sumConnectedEdgeFlows(connectedEdges, finalResult.edgeFlows, true);
       },
     };
 

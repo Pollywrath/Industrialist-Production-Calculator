@@ -4,6 +4,7 @@ import { getSpecialRecipe } from '../data/registry';
 import { parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { createGraphResolutionContext } from '../utils/graphResolutionContext';
 import { isPositiveSolverFlow, normalizeSolverRate } from '../utils/precision';
+import { sumConnectedEdgeFlows } from './flowAggregation';
 
 export interface TemperaturePropagationResult {
   edgeTemps: Record<string, number>;
@@ -29,13 +30,7 @@ export function propagateTemperatures(
       getFlowRate: (side: 'input' | 'output', index: number) => {
         const handleId = buildHandleId(nodeId, side, index);
         const connectedEdges = resolutionContext.edgeLookup.get(handleId) ?? [];
-        let totalFlow = 0;
-
-        for (const edge of connectedEdges) {
-          totalFlow = normalizeSolverRate(totalFlow + (edgeFlows[edge.id] ?? 0));
-        }
-
-        return totalFlow;
+        return sumConnectedEdgeFlows(connectedEdges, edgeFlows, true);
       },
     };
   };

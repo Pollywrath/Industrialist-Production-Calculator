@@ -236,8 +236,7 @@
   line-height: 1.3;
 }
 
-.simple-objective-control,
-.power-output-target {
+.simple-objective-control {
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -246,8 +245,7 @@
   font-weight: 700;
 }
 
-.simple-objective-control select,
-.power-output-target input {
+.simple-objective-control select {
   box-sizing: border-box;
   width: 100%;
   height: 28px;
@@ -262,10 +260,6 @@
 
 .simple-objective-control select:disabled {
   opacity: 0.5;
-}
-
-.power-output-target {
-  grid-column: 2 / -1;
 }
 
 .machine-accounting-option {

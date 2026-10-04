@@ -890,3 +890,14 @@ export function canPerformTutorialAction(event: TutorialActionEvent): boolean {
 export function completeTutorialAction(event: TutorialActionEvent): boolean {
   return useTutorialStore.getState().completeAction(event);
 }
+
+export function handleTutorialDataFieldChange(
+  field: string,
+  value: string | number | boolean,
+): boolean {
+  if (!isTutorialActive()) return true;
+
+  const action = useTutorialStore.getState().getCurrentStep()?.action;
+  if (action?.type !== 'data-field' || action.field !== field) return false;
+  return completeTutorialAction({ type: 'data-field', field, value });
+}

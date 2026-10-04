@@ -38,11 +38,14 @@ namespace {
 constexpr double kStageBoundAbsoluteTolerance = 1e-6;
 constexpr double kRateAbsoluteTolerance = 1e-12;
 constexpr double kRateRelativeTolerance = 1e-9;
+constexpr double kFlowStatusAbsoluteTolerance = 1e-6;
+constexpr double kFlowStatusRelativeTolerance = 1e-12;
 constexpr double kTargetMachineBoundCap = 1e4;
 constexpr double kValidationAbsoluteTolerance = 1e-6;
 constexpr double kValidationRelativeTolerance = 1e-7;
 constexpr double kIntegralityTolerance = 1e-7;
 constexpr double kScipFeasibilityTolerance = 1e-8;
+constexpr double kSoplexFeasibilityTolerance = 1e-9;
 constexpr double kMachineIntegerRelativeTolerance =
   std::numeric_limits<double>::epsilon() * 8.0;
 constexpr double kZeroRateConnectionEpsilon = 1e-12;
@@ -50,14 +53,14 @@ constexpr double kBinaryResultMagic = 444926465.0;
 constexpr double kBinaryResultVersion = 3.0;
 constexpr int kBinaryResultHeaderDoubles = 38;
 constexpr double kBinaryPayloadMagic = 444926466.0;
-constexpr double kBinaryPayloadVersion = 6.0;
-constexpr int kBinaryPayloadHeaderDoubles = 41;
-constexpr int kBinaryPayloadNodeDoubles = 15;
+constexpr double kBinaryPayloadVersion = 7.0;
+constexpr int kBinaryPayloadHeaderDoubles = 31;
+constexpr int kBinaryPayloadNodeDoubles = 14;
 constexpr int kBinaryPayloadInputDoubles = 6;
 constexpr int kBinaryPayloadOutputDoubles = 2;
 constexpr int kBinaryPayloadConnectionDoubles = 4;
 constexpr int kBinaryPayloadFlowDependencyDoubles = 2;
-constexpr int kMetricCount = 6;
+constexpr int kMetricCount = 5;
 constexpr int kMaxObjectiveTiers = 3;
 constexpr int kIncumbentPolishMinimumRoundedVars = 24;
 constexpr int kIncumbentPolishMinimumFixedVars = 8;
@@ -66,11 +69,10 @@ constexpr SCIP_Longint kIncumbentPolishNodeLimit = 500;
 
 enum MetricIndex {
   PowerUse = 0,
-  PowerOutput = 1,
-  Pollution = 2,
-  MachineCost = 3,
-  MachineSpace = 4,
-  ModelCount = 5,
+  Pollution = 1,
+  MachineCost = 2,
+  MachineSpace = 3,
+  ModelCount = 4,
 };
 
 struct MetricConfig {
@@ -78,7 +80,6 @@ struct MetricConfig {
   double coefficient = 0.0;
   int tier = 1;
   double limit = -1.0;
-  double outputGoal = -1.0;
 };
 
 enum class NativeResultStatus {
@@ -118,7 +119,6 @@ struct Node {
   double maximumMachineCount = -1.0;
   bool isTarget = false;
   double powerUse = 0.0;
-  double powerOutput = 0.0;
   double pollution = 0.0;
   double machineCost = 0.0;
   bool hasInfiniteMachineCost = false;
@@ -380,7 +380,7 @@ bool parsePayloadArray(const double* payload, int payloadDoubleCount, NativeInpu
       !readNonnegativeInt(payload[4], "connectionCount", connectionCount, error) ||
       !readNonnegativeInt(payload[5], "inputCount", inputCount, error) ||
       !readNonnegativeInt(payload[6], "outputCount", outputCount, error) ||
-      !readNonnegativeInt(payload[40], "flowDependencyCount", flowDependencyCount, error) ||
+      !readNonnegativeInt(payload[30], "flowDependencyCount", flowDependencyCount, error) ||
       !readNonnegativeInt(payload[8], "objectiveFlags", objectiveFlags, error)) {
     return false;
   }
@@ -396,14 +396,13 @@ bool parsePayloadArray(const double* payload, int payloadDoubleCount, NativeInpu
     return false;
   }
   for (int metricIndex = 0; metricIndex < kMetricCount; ++metricIndex) {
-    const int metricOffset = 10 + metricIndex * 5;
+    const int metricOffset = 10 + metricIndex * 4;
     MetricConfig& metric = input.metrics[static_cast<size_t>(metricIndex)];
     int tier = 0;
     metric.enabled = payload[metricOffset] != 0.0;
     if (!readFiniteDouble(payload[metricOffset + 1], "metric.coefficient", metric.coefficient, error) ||
         !readNonnegativeInt(payload[metricOffset + 2], "metric.tier", tier, error) ||
-        !readFiniteDouble(payload[metricOffset + 3], "metric.limit", metric.limit, error) ||
-        !readFiniteDouble(payload[metricOffset + 4], "metric.outputGoal", metric.outputGoal, error)) {
+        !readFiniteDouble(payload[metricOffset + 3], "metric.limit", metric.limit, error)) {
       return false;
     }
     if (metric.coefficient < 0.0 || tier < 1 || tier > kMaxObjectiveTiers) {
@@ -450,26 +449,26 @@ bool parsePayloadArray(const double* payload, int payloadDoubleCount, NativeInpu
         !readFiniteDouble(payload[base + 1], "node.minimumMachineCount", node.minimumMachineCount, error) ||
         !readFiniteDouble(payload[base + 2], "node.maximumMachineCount", node.maximumMachineCount, error) ||
         !readFiniteDouble(payload[base + 3], "node.powerUse", node.powerUse, error) ||
-        !readFiniteDouble(payload[base + 4], "node.powerOutput", node.powerOutput, error) ||
-        !readFiniteDouble(payload[base + 5], "node.pollution", node.pollution, error) ||
-        !readFiniteDouble(payload[base + 6], "node.machineCost", node.machineCost, error) ||
-        !readFiniteDouble(payload[base + 7], "node.machineSpace", node.machineSpace, error) ||
-        !readFiniteDouble(payload[base + 8], "node.modelCount", node.modelCount, error) ||
-        !readNonnegativeInt(payload[base + 9], "node.inputOffset", inputOffset, error) ||
-        !readNonnegativeInt(payload[base + 10], "node.inputCount", nodeInputCount, error) ||
-        !readNonnegativeInt(payload[base + 11], "node.outputOffset", outputOffset, error) ||
-        !readNonnegativeInt(payload[base + 12], "node.outputCount", nodeOutputCount, error)) {
+        !readFiniteDouble(payload[base + 4], "node.pollution", node.pollution, error) ||
+        !readFiniteDouble(payload[base + 5], "node.machineCost", node.machineCost, error) ||
+        !readFiniteDouble(payload[base + 6], "node.machineSpace", node.machineSpace, error) ||
+        !readFiniteDouble(payload[base + 7], "node.modelCount", node.modelCount, error) ||
+        !readNonnegativeInt(payload[base + 8], "node.inputOffset", inputOffset, error) ||
+        !readNonnegativeInt(payload[base + 9], "node.inputCount", nodeInputCount, error) ||
+        !readNonnegativeInt(payload[base + 10], "node.outputOffset", outputOffset, error) ||
+        !readNonnegativeInt(payload[base + 11], "node.outputCount", nodeOutputCount, error)) {
       return false;
     }
     if (node.currentMachineCount < 0.0 || node.minimumMachineCount < 0.0 ||
         (node.maximumMachineCount >= 0.0 && node.maximumMachineCount < node.minimumMachineCount) ||
-        node.powerUse < 0.0 || node.powerOutput < 0.0 ||
+        node.powerUse < 0.0 ||
         node.machineCost < 0.0 || node.machineSpace < 0.0 || node.modelCount < 0.0) {
       error = "Native binary ratio payload node objective metrics must be nonnegative.";
       return false;
     }
-    node.hasInfiniteMachineCost = payload[base + 13] != 0.0;
-    node.isTarget = payload[base + 14] != 0.0;
+    node.hasInfiniteMachineCost = payload[base + 12] != 0.0;
+    node.isTarget = payload[base + 13] != 0.0;
+    node.pollution = std::max(0.0, node.pollution);
     if (inputOffset > inputCount || nodeInputCount > inputCount - inputOffset ||
         outputOffset > outputCount || nodeOutputCount > outputCount - outputOffset) {
       error = "Native binary ratio payload node port section was out of range.";
@@ -499,6 +498,7 @@ bool parsePayloadArray(const double* payload, int payloadDoubleCount, NativeInpu
           )) {
         return false;
       }
+      port.pollutionPerFlow = std::max(0.0, port.pollutionPerFlow);
       if (dependencyOffset > flowDependencyCount ||
           dependencyCount > flowDependencyCount - dependencyOffset) {
         error = "Native binary ratio payload input dependency section was out of range.";
@@ -583,9 +583,6 @@ struct GraphComponentInfo {
 };
 
 GraphComponentInfo analyzeGraphComponents(const NativeInput& input) {
-  const MetricConfig& powerOutput = input.metrics[PowerOutput];
-  const bool preservePowerOutputComponents =
-    powerOutput.enabled && powerOutput.coefficient > 0.0 && powerOutput.outputGoal >= 0.0;
   std::vector<std::vector<int>> adjacency(input.nodes.size());
   for (const Connection& connection : input.connections) {
     if (connection.sourceNode < 0 ||
@@ -610,7 +607,6 @@ GraphComponentInfo analyzeGraphComponents(const NativeInput& input) {
     if (visited[static_cast<size_t>(start)]) continue;
 
     bool hasTarget = false;
-    bool hasPowerOutput = false;
     double maxTargetMachineCount = 0.0;
     stack.clear();
     component.clear();
@@ -623,8 +619,6 @@ GraphComponentInfo analyzeGraphComponents(const NativeInput& input) {
       component.push_back(nodeIndex);
       const Node& node = input.nodes[static_cast<size_t>(nodeIndex)];
       hasTarget = hasTarget || node.isTarget || node.minimumMachineCount > 0.0;
-      hasPowerOutput = hasPowerOutput ||
-        node.powerOutput > 0.0;
       maxTargetMachineCount = std::max(
         maxTargetMachineCount,
         std::max(0.0, getTargetMachineLowerBound(node))
@@ -637,7 +631,7 @@ GraphComponentInfo analyzeGraphComponents(const NativeInput& input) {
       }
     }
 
-    const bool removeComponent = !hasTarget && !(preservePowerOutputComponents && hasPowerOutput);
+    const bool removeComponent = !hasTarget;
     const double valueScale = std::max(1.0, maxTargetMachineCount / kTargetMachineBoundCap);
     result.maxValueScale = std::max(result.maxValueScale, valueScale);
     for (int nodeIndex : component) {
@@ -647,11 +641,6 @@ GraphComponentInfo analyzeGraphComponents(const NativeInput& input) {
   }
 
   return result;
-}
-
-double getRateTolerance(double required, double supplied) {
-  const double scale = std::max(std::abs(required), std::abs(supplied));
-  return std::max(kRateAbsoluteTolerance, scale * kRateRelativeTolerance);
 }
 
 bool isFlowObjective(ObjectiveMode objective) {
@@ -742,7 +731,7 @@ bool validateNativeInput(const NativeInput& input, std::string& error) {
   for (const MetricConfig& metric : input.metrics) {
     if (!std::isfinite(metric.coefficient) || metric.coefficient < 0.0 ||
         metric.tier < 1 || metric.tier > kMaxObjectiveTiers ||
-        !std::isfinite(metric.limit) || !std::isfinite(metric.outputGoal)) {
+        !std::isfinite(metric.limit)) {
       error = "Native ratio metric configuration was invalid.";
       return false;
     }
@@ -752,7 +741,6 @@ bool validateNativeInput(const NativeInput& input, std::string& error) {
     const double nonnegativeMetrics[] = {
       node.currentMachineCount,
       node.powerUse,
-      node.powerOutput,
       node.machineCost,
       node.machineSpace,
       node.modelCount,
@@ -933,10 +921,16 @@ double getFlowValidationTolerance(
     }
   }
 
-  return std::max(
-    kRateAbsoluteTolerance,
-    getRateTolerance(activity * physicalScale, bound * physicalScale) / physicalScale
+  const double physicalActivity = activity * physicalScale;
+  const double physicalBound = bound * physicalScale;
+  const double statusScale = std::max(
+    1.0,
+    std::max(std::abs(physicalActivity), std::abs(physicalBound))
   );
+  return std::max(
+    kFlowStatusAbsoluteTolerance,
+    statusScale * kFlowStatusRelativeTolerance
+  ) / physicalScale;
 }
 
 double getFlowRowCancellationTolerance(long double absoluteTermMagnitude) {
@@ -1282,27 +1276,6 @@ ModelSpec buildModelSpec(const NativeInput& input) {
     model.machineVarByNode[static_cast<size_t>(nodeIndex)] = addVariable(model, std::move(var));
   }
 
-  const MetricConfig& outputConfig = input.metrics[PowerOutput];
-  if (outputConfig.enabled && outputConfig.outputGoal >= 0.0) {
-    VariableSpec shortfall;
-    shortfall.name = "power_output_shortfall";
-    shortfall.lb = 0.0;
-    shortfall.ub = outputConfig.outputGoal;
-    shortfall.tierCoeff[static_cast<size_t>(outputConfig.tier - 1)] = outputConfig.coefficient;
-    const int shortfallIndex = addVariable(model, std::move(shortfall));
-    RowSpec row;
-    row.name = "power_output_goal";
-    row.lhs = outputConfig.outputGoal;
-    row.rhs = std::numeric_limits<double>::infinity();
-    addRowTerm(row, shortfallIndex, 1.0);
-    for (int nodeIndex = 0; nodeIndex < static_cast<int>(input.nodes.size()); ++nodeIndex) {
-      addRowTerm(row, model.machineVarByNode[static_cast<size_t>(nodeIndex)],
-        input.nodes[static_cast<size_t>(nodeIndex)].powerOutput *
-          componentInfo.valueScales[static_cast<size_t>(nodeIndex)]);
-    }
-    model.rows.push_back(std::move(row));
-  }
-
   const MetricConfig& pollutionConfig = input.metrics[Pollution];
   size_t pollutionBurdenRowIndex = std::numeric_limits<size_t>::max();
   if (pollutionConfig.enabled) {
@@ -1337,7 +1310,6 @@ ModelSpec buildModelSpec(const NativeInput& input) {
       const Node& node = input.nodes[static_cast<size_t>(nodeIndex)];
       double value = 0.0;
       if (metricIndex == PowerUse) value = node.powerUse;
-      if (metricIndex == PowerOutput) value = node.powerOutput;
       if (metricIndex == Pollution) value = node.pollution;
       addRowTerm(
         row,
@@ -1348,7 +1320,6 @@ ModelSpec buildModelSpec(const NativeInput& input) {
     model.deferredLimitRows.push_back(std::move(row));
   };
   addContinuousLimit(PowerUse, "power_use", false);
-  addContinuousLimit(PowerOutput, "power_output", true);
 
   if (input.metrics[MachineCost].limit >= 0.0) {
     RowSpec row;
@@ -1772,7 +1743,7 @@ class SoplexStagedLpEngine final : public StagedLpEngine {
     try {
       solver_.setIntParam(soplex::SoPlex::OBJSENSE, soplex::SoPlex::OBJSENSE_MINIMIZE);
       solver_.setIntParam(soplex::SoPlex::VERBOSITY, soplex::SoPlex::VERBOSITY_ERROR);
-      solver_.setRealParam(soplex::SoPlex::FEASTOL, 1e-9);
+      solver_.setRealParam(soplex::SoPlex::FEASTOL, kSoplexFeasibilityTolerance);
       solver_.setRealParam(soplex::SoPlex::OPTTOL, 1e-9);
 
       for (const VariableSpec& var : activeModel_.vars) {
@@ -1852,6 +1823,19 @@ class SoplexStagedLpEngine final : public StagedLpEngine {
           !solver_.getPrimalReal(stageValues.data(), static_cast<int>(stageValues.size()))) {
         error = "SoPlex reported optimal status but did not expose a primal solution.";
         return false;
+      }
+
+      for (size_t i = 0; i < stageValues.size(); ++i) {
+        const VariableSpec& var = activeModel_.vars[i];
+        double& value = stageValues[i];
+        if (std::isfinite(var.lb) && value < var.lb &&
+            var.lb - value <= kSoplexFeasibilityTolerance) {
+          value = var.lb;
+        }
+        if (std::isfinite(var.ub) && value > var.ub &&
+            value - var.ub <= kSoplexFeasibilityTolerance) {
+          value = var.ub;
+        }
       }
 
       solution.objectiveValue = recomputeObjectiveValue(activeModel_, objective, stageValues);

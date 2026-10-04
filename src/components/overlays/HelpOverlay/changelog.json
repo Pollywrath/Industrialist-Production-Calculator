@@ -1,8 +1,21 @@
 [
   {
     "minor": 8,
-    "minorName": "Native Ratio Optimizer, Configurable Objectives & Power Metrics",
+    "minorName": "Production planning and optimization",
     "patches": [
+      {
+        "hash": "pending",
+        "version": "v0.8.9",
+        "patch": 9,
+        "date": "2026-10-04",
+        "subject": "fix: stabilize autocomplete and optimization behavior",
+        "items": [
+          "Autocomplete no longer compounds special-recipe sizing between passes, and recipes already on the canvas are kept in the plan.",
+          "Ratio Optimizer and Complete Production now remember separate metric settings. Power Output was removed from optimizer metrics; the optimizer now minimizes Produced Pollution while the dashboard keeps Net Pollution.",
+          "Autocomplete errors include a downloadable trace. When recipe settings cycle, it re-solves locked route choices, updates temperatures, and applies a plan only after the generated graph passes verification.",
+          "Native flow checks now use the shared precision tolerances, avoiding failures on negligible numerical residuals."
+        ]
+      },
       {
         "hash": "pending",
         "version": "v0.8.8",
@@ -10,11 +23,11 @@
         "date": "2026-09-30",
         "subject": "feat: add offline support and a 404 page",
         "items": [
-          "Added an installable PWA that caches the app shell and built assets for offline use, with runtime caching for product icons and SCIP files after successful fetches.",
-          "Save and coordinate open-tab graphs before applying service-worker updates; keep the current session open and show a retry message if a save fails.",
-          "Isolated autosaves by browser tab and save pending changes when a tab is hidden, reducing the chance of tabs overwriting each other or losing recent work.",
-          "Added a theme-aware 404 page for unknown app paths, simplified loading messages, and kept the third-party license file accessible through the service worker.",
-          "Show a clear offline message in the data comparator when a wiki data bucket has never been fetched."
+          "The app can be installed and reopens its cached shell offline after it has loaded once. Product icons and solver files are cached after download.",
+          "Before a service-worker update, open tabs save their graphs. A failed save leaves the current session open and offers a retry.",
+          "Autosaves are separated by browser tab and are written when a tab is hidden, helping prevent one tab from overwriting another.",
+          "Unknown app paths now show a 404 page. The service worker also keeps the solver license notice available offline.",
+          "The data comparator explains when wiki data has not been fetched yet."
         ]
       },
       {
@@ -24,11 +37,11 @@
         "date": "2026-09-30",
         "subject": "fix: improve machine precision, autocomplete convergence, and optimizer summaries",
         "items": [
-          "Corrected whole-machine rounding near integer boundaries and normalized machine counts in the native ratio optimizer so values slightly above an integer are not treated as the lower machine count.",
-          "Added machine-count property coverage and documented the numerical tolerance contract for rounded objectives.",
-          "Fixed autocomplete special-recipe sizing to recalculate settings from the original generated settings on each solve pass, preventing sizing changes from compounding across passes.",
-          "Improved temperature propagation convergence checks so recipe setting and port changes are included, and report failure when temperatures or coupled recipe settings do not settle within their limits.",
-          "Fixed ratio optimizer result summaries to show the machine counts and connection flows that applying the proposed changes will actually use, keeping totals unchanged when no changes are required."
+          "Whole-machine rounding now handles values just above an integer consistently in JavaScript and the native solver.",
+          "Documented and checked the rounding tolerance used by machine-count objectives.",
+          "Autocomplete now sizes special recipes from their original settings on each pass, so repeated solves do not compound changes.",
+          "Temperature and recipe-setting changes are included when checking whether autocomplete has settled; it reports an error if they keep changing.",
+          "Optimizer summaries now use the counts and flows that Apply will put on the canvas. Totals stay the same when no changes are needed."
         ]
       },
       {
@@ -58,10 +71,9 @@
         "date": "2026-09-14",
         "subject": "fix: simplify native SCIP execution and stabilize thermal solving",
         "items": [
-          "Rebuilt the SCIP WebAssembly bundle for single-threaded native execution while preserving the browser Worker boundary and staged progress reporting.",
-          "Fixed systemic balancing of temperature-dependent recipes by solving Golden-Section trials against the complete graph and ignoring stale solver snapshots.",
-          "Aligned unconnected boiler and heat-exchanger recipe outputs with recipe-picker previews while preserving graph-resolved temperature behavior after connection.",
-          "Removed the cross-origin-isolation requirement and updated the native smoke tests and build documentation for the serial SCIP bundle."
+          "The optimizer now uses a single-threaded SCIP WebAssembly build in its browser Worker; it no longer needs cross-origin isolation.",
+          "Balancing temperature-sensitive recipes now uses the full connected graph and current solve results.",
+          "Unconnected Boilers and Heat Exchangers now show the same outputs in the selector and on the canvas. Connected recipes still use propagated temperatures."
         ]
       },
       {
@@ -71,10 +83,9 @@
         "date": "2026-09-01",
         "subject": "fix: harden wiki data comparison and proxy errors",
         "items": [
-          "Hardened wiki data normalization and proxy error responses.",
-          "Added deletion and restoration support for special and modular recipes.",
-          "Fixed Modular Diesel Engine power allocation, component minimums, and efficiency calculation performance.",
-          "Fixed native ratio optimizer worker payload compatibility, flow-dependent pollution totals, and item/fluid spawner autocomplete availability."
+          "Improved wiki data comparison when records or proxy responses are incomplete.",
+          "Added restore and delete controls for special and modular recipe data.",
+          "Corrected Modular Diesel Engine power and component calculations, and fixed several optimizer and autocomplete cases."
         ]
       },
       {
@@ -92,14 +103,12 @@
         "date": "2026-08-21",
         "subject": "fix: improve production-chain placement, recipes, solver reliability, and tutorials",
         "items": [
-          "Adjusted canvas node placement to preserve the vertical offset of the clicked recipe rectangle.",
-          "Updated the production-chain tutorial to use gearboxes as an example, and the Dashboard Outputs step now highlights both excess and deficiencies.",
-          "Improved systematic balancing when multiple inputs share the same source, distributing the available flow across those inputs before setting machine counts.",
-          "Updated Research Station 3, Satellite Dish Controller, HV Transformer, and voidable-output recipe behavior, including per-dish power accounting and signed power-output changes.",
-          "Added the experimental production autocomplete mode, which can search for and add missing recipes to complete a production chain.",
-          "Added machine-count constraints so nodes can lock a machine count or cap the maximum count, with the constraint reflected on the canvas and respected by solver results.",
-          "Made Data Comparator entries sort alphabetically using the shared sorting utility.",
-          "Unified solver epsilon and tolerance checks with the shared precision definitions in utils/precision.ts."
+          "Recipe nodes now appear closer to the port where they were added, and the first-chain tutorial uses Gearbox as its example.",
+          "The balancer now shares supply across multiple connected inputs before changing machine counts.",
+          "Updated Research Station 3, Satellite Dish Controller, HV Transformer, and recipes with discardable outputs.",
+          "Added experimental Complete Production, which searches for upstream recipes for existing targets.",
+          "Machine counts can now be locked or capped, and both limits are shown on the canvas and respected by Compute.",
+          "Aligned solver tolerances and improved Data Comparator sorting."
         ]
       },
       {
@@ -109,28 +118,19 @@
         "date": "2026-07-14",
         "subject": "feat: rebuild ratio optimization around native SCIP and configurable objectives",
         "items": [
-          "Replaced the previous ratio optimization path with a native WebAssembly model builder backed by SCIP 10.0.2 and SoPlex 8.0.2, avoiding repeated MPS serialization and parsing during normal solves.",
-          "Reworked ratio optimization into ordered stages that first minimize shortages, then minimize excess sent toward sinks, enforce user limits, optimize configured objective tiers, and finally minimize fractional machine count as a deterministic tie-breaker.",
-          "Added exact mixed-integer handling for machine cost, machine space, and machine model count so these objectives use rounded-up whole-machine counts instead of fractional LP counts.",
-          "Added configurable optimization objectives for power use, power output, net pollution, machine cost, machine space, and machine model count, including importance weights, objective tiers, ordering, output goals, and optional limits.",
-          "Added a redesigned ratio optimizer configuration panel with simpler objective descriptions, solve-time guidance for rounded objectives, consistent scrollbars, and a reserved mode selector for future recipe autocomplete.",
-          "Expanded solver results to show recipe and machine names alongside before-and-after power use, power output, net pollution, machine cost, machine space, and machine model count totals.",
-          "Added native graph presolve, safe target-derived scaling and bounds, reusable staged models, a direct SoPlex path for continuous LP solves, and a reduced SCIP MILP path when rounded objectives are enabled.",
-          "Improved solver reliability for large machine targets through formal coefficient scaling, centralized floating-point tolerances, target-value preservation, post-solve validation, and numerically safe whole-machine ceiling rules.",
-          "Reduced solver transfer and memory overhead with typed-array payloads and compact binary results, explicit native allocation cleanup, persistent worker reuse, cancellation support, page-load warmup, progress reporting, and console telemetry.",
-          "Bundled PaPILO 3.0.0 and oneTBB 2021.13.0 with pthread support, growable WebAssembly memory, and separate reliability profiles for direct LP and rounded MILP solves.",
-          "Added support for machines with infinite purchase cost: dashboards preserve the infinite total, while cost-aware optimization excludes those machines unless their use is unavoidable.",
-          "Renamed Power Consumption to Power Use and Power Production to Power Output throughout dashboards, recipe data, optimizer configuration, TypeScript contracts, worker payloads, and native solver fields, with migration support for existing local overrides and saved optimizer settings.",
-          "Redesigned Production Stats with separate MV and HV power-use and power-output rows, net pollution, profit, machine cost, machine space in squares, and machine model count.",
-          "Added machine-space and model-count calculations for modular machines, Research Station 3 with Research Station 4, and Satellite Dish Controllers, plus canvas-wide research infrastructure totals and optimal satellite-dish counts.",
-          "Added cross-origin isolation headers required by threaded WebAssembly and documented a reproducible Docker build with pinned SCIP, SoPlex, PaPILO, oneTBB, and Emscripten versions, checksums, generated bundle metadata, and native smoke tests."
+          "Replaced the ratio solver with a native SCIP and SoPlex WebAssembly model that runs in a browser Worker.",
+          "Compute now reduces shortages and sink excess before optimizing the metrics you choose. Metrics can be weighted and ordered by priority.",
+          "Added whole-machine accounting for machine cost, space, and model count, alongside faster fractional estimates.",
+          "Added result comparisons for machine counts, power, pollution, cost, space, and model count. Production Stats also gained separate MV/HV power totals, profit, and research infrastructure totals.",
+          "Improved handling of large targets, infinite-cost machines, flow scaling, and returned solver values.",
+          "Moved native solves into a reusable Worker with progress updates, telemetry, and cancellation. Added a pinned Docker build and native smoke tests for the WebAssembly bundle."
         ]
       }
     ]
   },
   {
     "minor": 7,
-    "minorName": "Tutorials, Custom Saves, Solver Tuning & Orthogonal Edge Routing",
+    "minorName": "Tutorials, saves, and solver improvements",
     "patches": [
       {
         "hash": "5a106e9",
@@ -139,9 +139,8 @@
         "date": "2026-06-22",
         "subject": "stuff",
         "items": [
-          "Configured public asset sitemap.xml and robots.txt files for search engine indexing.",
-          "Added SEO metadata headers, og:image thumbnails, and description metadata tag fields to index.html.",
-          "Updated Vite bundle output directories."
+          "Added the site map, search indexing rules, and page preview metadata.",
+          "Updated where Vite writes the production build."
         ]
       },
       {
@@ -151,9 +150,8 @@
         "date": "2026-06-22",
         "subject": "help overlay",
         "items": [
-          "Added the searchable, tab-indexed Help Overlay containing Start, Controls, and Troubleshoot sections.",
-          "Implemented keyword searching and collapsible sections across all help items.",
-          "Wrote background idle handlers to prefetch overlay articles for instant drawer transitions."
+          "Added a searchable Help panel with Start, Controls, and Troubleshoot topics.",
+          "Help topics can be searched by keyword."
         ]
       },
       {
@@ -163,9 +161,8 @@
         "date": "2026-06-25",
         "subject": "ongod, tutorials",
         "items": [
-          "Introduced the interactive, step-by-step Guided Tutorial system with three distinct learning paths.",
-          "Created custom guides for First Production Chain, Groups/Collapsed layouts (including a pre-built Gearbox flow), and the Data Overlay.",
-          "Developed the tutorial overlay highlight elements and configured automatic startup prompts for first-time visitors."
+          "Added guided walkthroughs for a first production chain, groups, and Data Manager.",
+          "Tutorials highlight the relevant controls and offer a prompt the first time you open the app."
         ]
       },
       {
@@ -175,9 +172,8 @@
         "date": "2026-06-25",
         "subject": "tips",
         "items": [
-          "Added a dedicated Tips & Hints tab to the Help panel to compile shortcuts, solver behaviors, and design workflow advice.",
-          "Centralized tips into a single, reusable list and replaced inline tips in the LP Solver panel with this shared source.",
-          "Implemented a Fisher-Yates shuffle routine to randomize tips shown on the solver loading screens."
+          "Added canvas, solver, recipe, and save tips to Help.",
+          "The optimizer loading screen now shows a rotating selection of those tips."
         ]
       },
       {
@@ -187,8 +183,8 @@
         "date": "2026-06-26",
         "subject": "feat: expand historical release notes and optimize help panel loading",
         "items": [
-          "Expanded all historical version summaries in the Help panel with detailed, comprehensive release notes.",
-          "Resolved application package bundle loading and type resolution issues."
+          "Added earlier release notes to the Help panel.",
+          "Fixed a package loading issue that prevented the app from starting."
         ]
       },
       {
@@ -198,12 +194,9 @@
         "date": "2026-06-26",
         "subject": "feat: bundle database overrides in saves, add custom filter, and resolve lint bugs",
         "items": [
-          "Added a 'Show Custom Only' checkbox to filter custom and modified records inside the Data Manager.",
-          "Bundled active custom database overrides directly inside slot saves and JSON exports.",
-          "Added a 'CUSTOM DB' warning badge on saves in the Save Manager list.",
-          "Implemented a three-way load/merge confirm dialog to choose Load Data & Canvas, Load Canvas Only, or Abort.",
-          "Integrated database override validation upon loading custom saves, falling back to canvas-only if invalid.",
-          "Resolved multiple ESLint react-hooks/refs, set-state-in-effect, and typescript-eslint/no-explicit-any compilation errors."
+          "Data Manager can filter to custom or changed records.",
+          "Save files can include custom data overrides. The Save Manager marks these saves and asks whether to load their data along with the canvas.",
+          "If custom data in a save is invalid, you can still load its canvas without those overrides."
         ]
       },
       {
@@ -213,10 +206,8 @@
         "date": "2026-06-28",
         "subject": "feat: optimize sink priority solver weights and machine scaling rules",
         "items": [
-          "Generalized sink node detection in the LP solver to identify nodes with zero outputs (e.g. Exhaust Stack, Burners, Dumps, and Generators) or variable inputs.",
-          "Implemented scoped deficit penalty weights: standard recipe deficits are penalized at 1e12, sink-connected excesses at 1e8, and auxiliary sink inputs (e.g. UWF inputs) at 1e4.",
-          "Added scaling independence settings for special recipes to bypass machine count multipliers on specific ports (e.g. UWF inputs).",
-          "Updated RecipeNodeIO handle coordinates to correctly handle machine count scaling bypass."
+          "Updated sink handling for dumps, burners, generators, and variable-capacity ports.",
+          "Fixed machine-count scaling for recipe ports that are independent of machine count."
         ]
       },
       {
@@ -226,9 +217,8 @@
         "date": "2026-07-01",
         "subject": "feat: standardize depot and single-input burner/dump/incinerator recipe semantics",
         "items": [
-          "Converted all depot special recipes to fixed constant quantities, keeping their dynamic product resolution.",
-          "Converted single-input burners, dumps, and incinerators to constant quantities and removed their machine count independence settings.",
-          "Configured the Item Dump special recipe with dual variable inputs, flow-dependent pollution, and machine-count independence matching the Liquid Dump."
+          "Corrected how depots, burners, dumps, and incinerators report capacity and flow.",
+          "The Item Dump now handles two variable inputs and reports pollution from its actual flow."
         ]
       },
       {
@@ -238,8 +228,8 @@
         "date": "2026-07-05",
         "subject": "feat: allow arbitrary bends on orthogonal edges and overhaul auto layout",
         "items": [
-          "Overhauled the auto layout utility around ELK-based graph layout, grid-snapped placement, fixed port sizing, deterministic handle ordering, and geometry-aware orthogonal edge routing.",
-          "Reorganized codebase by moving edge routing and geometry utilities to a dedicated `src/utils/canvas` directory."
+          "Auto Layout now arranges larger graphs more consistently, including groups and right-angle connections.",
+          "Selected right-angle connections can be reshaped with additional bends."
         ]
       },
       {
@@ -249,16 +239,15 @@
         "date": "2026-07-06",
         "subject": "fix: finalize auto layout pipeline and harden PNG export",
         "items": [
-          "Moved Auto Layout into a dedicated `src/layout` subsystem with separated ELK graph construction, materialization, result application, and port-order refinement modules.",
-          "Improved layout consistency with deterministic ELK settings, fixed-size ports, geometry-aware handle order refinement, and per-edge priorities for flow, feedback, and self-loop edges.",
-          "Hardened PNG canvas export for Firefox by inlining theme variables, resolving SVG edge paint styles before capture, and disabling export-time paint optimizations that could hide text or edges."
+          "Improved Auto Layout for connected recipes, feedback loops, and groups.",
+          "Fixed PNG exports in Firefox, where some canvas text and connections could disappear."
         ]
       }
     ]
   },
   {
     "minor": 6,
-    "minorName": "Recipes Editor & Data Comparator",
+    "minorName": "Data Manager and recipe editor",
     "patches": [
       {
         "hash": "464688d",
@@ -266,10 +255,7 @@
         "patch": 0,
         "date": "2026-06-06",
         "subject": "recipe editor, yeah, special recipe read only for now",
-        "items": [
-          "Added the Recipes Editor tab to the Data Overlay to manage recipe items, inputs, and outputs.",
-          "Configured special recipes as read-only lists and added a 'Restore Baseline Defaults' button for resets."
-        ]
+        "items": ["Added recipe editing, with reset controls for special recipes."]
       },
       {
         "hash": "54ffc5d",
@@ -277,10 +263,7 @@
         "patch": 1,
         "date": "2026-06-07",
         "subject": "comparators",
-        "items": [
-          "Created proxy backend API endpoints to fetch official database tables from the Industrialist wiki.",
-          "Added initial UI structures for the Data Comparator tab inside the Data Overlay."
-        ]
+        "items": ["Added the Wiki comparison tab and the service it uses to fetch game data."]
       },
       {
         "hash": "4bb86d0",
@@ -289,8 +272,7 @@
         "date": "2026-06-07",
         "subject": "cache of buckets",
         "items": [
-          "Implemented local IndexedDB caching for wiki comparator data to enable instantaneous loads.",
-          "Added cache staleness warnings and background freshness checks when offline."
+          "Cached Wiki data in the browser, with a notice when the cache may be out of date."
         ]
       },
       {
@@ -299,11 +281,7 @@
         "patch": 3,
         "date": "2026-06-08",
         "subject": "data comparators",
-        "items": [
-          "Expanded the Data Comparator UI into an interactive side-by-side diff view for products, machines, and recipes.",
-          "Grouped changes by diff status and implemented virtualized lists to handle large comparator datasets.",
-          "Corrected multiple database entries inside `products.json` and `recipes.json` based on comparator findings."
-        ]
+        "items": ["Added side-by-side comparisons for products, machines, and recipes."]
       },
       {
         "hash": "c2a16bc",
@@ -311,10 +289,7 @@
         "patch": 4,
         "date": "2026-06-08",
         "subject": "finished comparator",
-        "items": [
-          "Completed the Data Comparator UI with filter tabs, difference badge counts, and expand/collapse toggle rows.",
-          "Consolidated and cleaned up styles inside the Data Overlay stylesheets."
-        ]
+        "items": ["Added filters and change counts to Wiki comparisons."]
       },
       {
         "hash": "5609288",
@@ -322,9 +297,7 @@
         "patch": 5,
         "date": "2026-06-08",
         "subject": "some reductions",
-        "items": [
-          "Consolidated tab-specific stylesheets inside the Data Overlay into a single shared stylesheet to improve design consistency."
-        ]
+        "items": ["Unified the Data Manager tab styling."]
       },
       {
         "hash": "00245b0",
@@ -333,9 +306,7 @@
         "date": "2026-06-09",
         "subject": "lp solver reductions",
         "items": [
-          "Enhanced the LP Solver failure logging to generate detailed root cause diagnostic reports.",
-          "Outputs human-readable diagnostics such as 'Deficient feedback loop' or 'Connected product mismatch' with flow details.",
-          "Refactored LP Solver files into modular segments (`lpModel`, `lpPayload`, `lpSolution`, `lpTypes`)."
+          "Added detailed solver failure reports, including the affected products and flows."
         ]
       },
       {
@@ -345,9 +316,7 @@
         "date": "2026-06-12",
         "subject": "some fixes, variant recipes also",
         "items": [
-          "Added variant recipe support, enabling machine nodes to switch between recipe configurations (e.g. fuel types) inside the settings panel.",
-          "Configured group node proxy ports to render product labels, flow rates, and connections dynamically from active member nodes.",
-          "Polished the Machine Editor form in the Data Overlay to support additional parameters."
+          "Added recipe variants and group proxy ports. Expanded the Machine Editor fields."
         ]
       },
       {
@@ -356,10 +325,7 @@
         "patch": 8,
         "date": "2026-06-13",
         "subject": "fixes to auto layout",
-        "items": [
-          "Improved Auto Layout stability by isolating group and recipe nodes into separate layers during layout execution.",
-          "Memoized connection resolution contexts and edge lists to optimize rendering speeds."
-        ]
+        "items": ["Improved Auto Layout for groups and larger production graphs."]
       },
       {
         "hash": "c5e0092",
@@ -368,9 +334,7 @@
         "date": "2026-06-14",
         "subject": "nearly done variants",
         "items": [
-          "Completed the variant recipe resolution system and handle type validation checks.",
-          "Configured connections to reject invalid wire configurations (e.g., solid output linked to fluid input).",
-          "Initialized the ratio optimizer solver worker during startup execution."
+          "Added checks for incompatible connections and completed recipe variant support. The optimizer now starts in the background."
         ]
       },
       {
@@ -380,9 +344,7 @@
         "date": "2026-06-20",
         "subject": "temp mins, performance fixes, and a working cpp calc!!!!!!!!",
         "items": [
-          "Established absolute zero (-273.15°C) as the global minimum bound for temperature input fields.",
-          "Completed the Coal Power Plant (CPP) special recipe calculator, resolving burn rates and efficiency configurations.",
-          "Optimized connection validation on larger layouts by implementing validation context caching."
+          "Set the lowest allowed temperature to absolute zero and added Coal Power Plant calculations."
         ]
       },
       {
@@ -392,8 +354,7 @@
         "date": "2026-06-20",
         "subject": "turbine fixes",
         "items": [
-          "Corrected the Modular Turbine special recipe calculations for fuel consumption and power output rates.",
-          "Fixed fuel percentage math inside the Coal Power Plant calculator."
+          "Corrected fuel and power calculations for Modular Turbines and Coal Power Plants."
         ]
       },
       {
@@ -403,16 +364,14 @@
         "date": "2026-06-22",
         "subject": "a few more recipes",
         "items": [
-          "Expanded the machine database to include Hand Pump, Energy Wheel, and Hand Crank items.",
-          "Implemented node and edge power output/use display metrics on the canvas.",
-          "Modified power display tags to handle text wrapping."
+          "Added Hand Pump, Energy Wheel, and Hand Crank data, plus power use and output labels on the canvas."
         ]
       }
     ]
   },
   {
     "minor": 5,
-    "minorName": "Group Nodes, Collapsed States & Nested Layouts",
+    "minorName": "Groups and canvas layout",
     "patches": [
       {
         "hash": "e1fa718",
@@ -420,10 +379,7 @@
         "patch": 0,
         "date": "2026-06-05",
         "subject": "foundation for group nodes",
-        "items": [
-          "Laid down the structural foundation for Group Nodes and integrated them into the canvas, database schema, and solver.",
-          "Configured basic connection checks on proxy container boundaries."
-        ]
+        "items": ["Added the first version of groups to the canvas, data model, and solver."]
       },
       {
         "hash": "88e0401",
@@ -431,11 +387,7 @@
         "patch": 1,
         "date": "2026-06-06",
         "subject": "expanded group nodes, todo collapsed",
-        "items": [
-          "Developed the expanded Group Node wrapper rendering child nodes inside a bounding box.",
-          "Added the Group Editor overlay panel to rename groups and manage child nodes.",
-          "Added the 'Add Group' action to the controls tray and displayed group bounding previews during drag actions."
-        ]
+        "items": ["Added the Group Editor and controls for creating and naming groups."]
       },
       {
         "hash": "6e02a63",
@@ -443,10 +395,7 @@
         "patch": 2,
         "date": "2026-06-06",
         "subject": "collapsed group node",
-        "items": [
-          "Implemented the collapsed mode for Group Nodes, hiding internal layouts behind a single compact proxy block.",
-          "Routed external connections correctly through group proxy ports to internal node ports."
-        ]
+        "items": ["Groups can now collapse into a single block with connected proxy ports."]
       },
       {
         "hash": "65c81a0",
@@ -454,10 +403,7 @@
         "patch": 3,
         "date": "2026-06-06",
         "subject": "fixes to group nodes",
-        "items": [
-          "Fixed group node bugs to ensure nodes insert correctly into existing groups.",
-          "Updated the dashboard panels to support group nodes."
-        ]
+        "items": ["Fixed group placement and added group support to the Dashboard."]
       },
       {
         "hash": "43efef5",
@@ -465,16 +411,13 @@
         "patch": 4,
         "date": "2026-06-06",
         "subject": "muhahaeheaheahe better auto layout respecting group nodes and shi",
-        "items": [
-          "Overhauled the Auto Layout module to treat expanded group nodes as atomic bounding boxes.",
-          "Configured auto layout to position child nodes inside group boundaries and route edges around groups."
-        ]
+        "items": ["Updated Auto Layout to arrange groups and their contents."]
       }
     ]
   },
   {
     "minor": 4,
-    "minorName": "SCIP Optimizer & Special Recipe Refactoring",
+    "minorName": "Ratio optimizer and special recipes",
     "patches": [
       {
         "hash": "5f0544a",
@@ -482,10 +425,7 @@
         "patch": 0,
         "date": "2026-05-28",
         "subject": "some updates to formulas",
-        "items": [
-          "Corrected formula rates and constants for the Air Separation Unit, Alloyer, Geothermal Well, Liquid Dump, Steam Cracking Plant, and Truck Depot.",
-          "Improved unit formatting helper scripts."
-        ]
+        "items": ["Corrected production formulas for several machines and depots."]
       },
       {
         "hash": "ef6522c",
@@ -493,10 +433,7 @@
         "patch": 1,
         "date": "2026-05-29",
         "subject": "layout",
-        "items": [
-          "Implemented the initial Auto Layout tool using the ELK layout engine to organize nodes left-to-right.",
-          "Added support for orthogonal edge path generation when running layouts."
-        ]
+        "items": ["Added Auto Layout to arrange production graphs from left to right."]
       },
       {
         "hash": "e72f190",
@@ -504,10 +441,7 @@
         "patch": 2,
         "date": "2026-05-29",
         "subject": "improvements to auto layout",
-        "items": [
-          "Improved the Auto Layout engine with a two-pass strategy to reduce crossing and organize vertical spacing.",
-          "Configured the layout calculator to adjust node distances according to edge styling preferences."
-        ]
+        "items": ["Improved Auto Layout spacing and reduced crossing connections."]
       },
       {
         "hash": "4155747",
@@ -515,11 +449,7 @@
         "patch": 3,
         "date": "2026-05-29",
         "subject": "lp solverrrrrr",
-        "items": [
-          "Introduced the LP Solver overlay panel, using the SCIP solver running inside a background WebWorker.",
-          "Preloaded the solver WebAssembly binary on startup to ensure zero interface delay on execution.",
-          "Wired solver output state directly to target node machine counts and edge highlight classes."
-        ]
+        "items": ["Added the LP Solver overlay, which calculates machine counts for target nodes."]
       },
       {
         "hash": "586b34e",
@@ -527,10 +457,7 @@
         "patch": 4,
         "date": "2026-05-29",
         "subject": "machine toggles, still have to add tiers and specific machine checkboxes",
-        "items": [
-          "Introduced the lazy-loaded Machine Overlay panel, allowing users to browse the machine research tree and stats.",
-          "Laid down the groundwork for tier selection filters and toggles."
-        ]
+        "items": ["Added a Machine panel for research requirements and machine stats."]
       },
       {
         "hash": "0cea155",
@@ -538,9 +465,7 @@
         "patch": 5,
         "date": "2026-05-30",
         "subject": "MDEs",
-        "items": [
-          "Completed the Modular Diesel Engine special recipe, implementing dynamic formulas for cylinder count, crankshaft load, and fuel consumption rates."
-        ]
+        "items": ["Added calculations for the Modular Diesel Engine."]
       },
       {
         "hash": "75cd050",
@@ -549,9 +474,7 @@
         "date": "2026-05-30",
         "subject": "mambo",
         "items": [
-          "Refactored the internal Boiler special recipe formula module to simplify calculations.",
-          "Integrated research unlocks and global difficulty modifiers into the Machine Overlay filters.",
-          "Added special recipe output previewing inside the Settings Editor panel."
+          "Added research and difficulty filters to the Machine panel, plus special recipe previews in the Node Editor."
         ]
       },
       {
@@ -560,7 +483,7 @@
         "patch": 7,
         "date": "2026-05-30",
         "subject": "recipe car name",
-        "items": ["Fixed recipe card name display issues in the Recipe Selector modal."]
+        "items": ["Fixed recipe names in the Recipe Selector."]
       },
       {
         "hash": "a7c79d2",
@@ -569,8 +492,7 @@
         "date": "2026-05-31",
         "subject": "fixes \"\"",
         "items": [
-          "Resolved bugs across edge rendering, node info boxes, toolbar buttons, and overlay panels.",
-          "Added flowing dash animations to active edges on the canvas to indicate material flow directions."
+          "Fixed several canvas and overlay issues. Active connections now show their flow direction."
         ]
       },
       {
@@ -579,16 +501,13 @@
         "patch": 9,
         "date": "2026-06-05",
         "subject": "multi-select",
-        "items": [
-          "Added multi-select support using Ctrl/Cmd-clicks or the toolbar selector toggle.",
-          "Enabled dragging multiple selected nodes together and added a count badge to the toolbar."
-        ]
+        "items": ["Added multi-select so you can move several nodes together."]
       }
     ]
   },
   {
     "minor": 3,
-    "minorName": "Theme Customization & Custom Bezier/Orthogonal Edges",
+    "minorName": "Themes and connection routing",
     "patches": [
       {
         "hash": "0fb0e70",
@@ -596,10 +515,7 @@
         "patch": 0,
         "date": "2026-05-28",
         "subject": "theme editorrrrr",
-        "items": [
-          "Introduced the Theme Editor panel to allow live customization of canvas backgrounds, borders, and typography.",
-          "Migrated styles to a CSS variable-based token system and defined a default dark mode theme."
-        ]
+        "items": ["Added the Theme Editor and a default dark theme."]
       },
       {
         "hash": "638a6ba",
@@ -607,11 +523,7 @@
         "patch": 1,
         "date": "2026-05-28",
         "subject": "catmul roms on bezier curve edges yeeaaaaaaa",
-        "items": [
-          "Implemented Catmull-Rom Bezier curves for smooth curved canvas edge rendering.",
-          "Enabled adding, dragging, and deleting custom control points directly on edges to adjust routing.",
-          "Saved edge control points and curves in the slot database and added edge options to the Theme Editor."
-        ]
+        "items": ["Added curved connections and editable control points."]
       },
       {
         "hash": "4d971b0",
@@ -619,17 +531,13 @@
         "patch": 2,
         "date": "2026-05-28",
         "subject": "adjustable orthogonal edges ye",
-        "items": [
-          "Enabled segment dragging on orthogonal right-angle connection paths.",
-          "Restricted segment edits to perpendicular bounds to maintain correct orthogonal path geometry.",
-          "Saved custom orthogonal waypoint layouts inside the active workspace slot."
-        ]
+        "items": ["Added draggable bends to right-angle connections."]
       }
     ]
   },
   {
     "minor": 2,
-    "minorName": "Dynamic Formulas & History States",
+    "minorName": "Recipe settings and edit history",
     "patches": [
       {
         "hash": "55675e3",
@@ -638,9 +546,7 @@
         "date": "2026-05-24",
         "subject": "special recipesssssssss",
         "items": [
-          "Introduced the dynamic Special Recipe system, enabling formula-based inputs and outputs for custom machines.",
-          "Added 'Good to Sell (Profit)' and 'Good for Research' checkboxes to the Product Editor.",
-          "Updated the Recipe Selector to display dynamic input/output previews for special recipes."
+          "Added formula-based special recipes and product settings for profit and research."
         ]
       },
       {
@@ -649,11 +555,7 @@
         "patch": 1,
         "date": "2026-05-24",
         "subject": "support for recipe possible inputs and outputs",
-        "items": [
-          "Added support for optional input and output ports that toggle dynamically based on machine settings.",
-          "Configured potential port configurations for the Industrial Firebox and Logic Assembler.",
-          "Enhanced Recipe Selector searches to match products indexed as potential or optional inputs/outputs."
-        ]
+        "items": ["Added optional recipe inputs and outputs for configurable machines."]
       },
       {
         "hash": "ff66b0c",
@@ -661,11 +563,7 @@
         "patch": 2,
         "date": "2026-05-25",
         "subject": "special recipes almost complete, rahhhhhh",
-        "items": [
-          "Added an explanatory text description panel to the Node Editor for special recipe nodes.",
-          "Completed the baseline formulas for the Alloyer, Air Separation Unit, and Coal Liquefaction Plant.",
-          "Refined computed input/output previews shown on recipe lookup cards."
-        ]
+        "items": ["Added descriptions and live previews for special recipes."]
       },
       {
         "hash": "0eabf65",
@@ -673,11 +571,7 @@
         "patch": 3,
         "date": "2026-05-25",
         "subject": "somewhat working heat exchangerssss",
-        "items": [
-          "Implemented steady-state thermodynamic formulas for the Heat Exchanger and Vertical Heat Exchanger.",
-          "Configured nodes to display live thermal outputs derived from coolant and fluid inputs.",
-          "Cleaned up obsolete and duplicate entries inside `recipes.json`."
-        ]
+        "items": ["Added temperature calculations for Heat Exchangers."]
       },
       {
         "hash": "c3b15b7",
@@ -686,9 +580,7 @@
         "date": "2026-05-25",
         "subject": "tree flippin farm",
         "items": [
-          "Developed upstream and downstream dependency highlighting in the Recipe Selector.",
-          "Improved product pre-selection filters to correctly resolve special recipe variants.",
-          "Polished thermodynamic math constants in the Heat Exchanger modules."
+          "Improved recipe search for special recipe variants and added upstream and downstream highlighting."
         ]
       },
       {
@@ -697,10 +589,7 @@
         "patch": 5,
         "date": "2026-05-26",
         "subject": "fxies",
-        "items": [
-          "Overhauled the central data lookup and registry system to solve lookup data sync bugs.",
-          "Fixed layout rendering errors and step navigation in the Recipe Selector cards."
-        ]
+        "items": ["Fixed data lookup and recipe selector issues."]
       },
       {
         "hash": "39e29f6",
@@ -708,9 +597,7 @@
         "patch": 6,
         "date": "2026-05-26",
         "subject": "yes",
-        "items": [
-          "Established the central Flow Solver pipeline loop, orchestrating graph construction, flow allocation, and temperature propagation in a deterministic sequence."
-        ]
+        "items": ["Added the flow calculation pipeline for connected recipes."]
       },
       {
         "hash": "b1ede72",
@@ -718,10 +605,7 @@
         "patch": 7,
         "date": "2026-05-26",
         "subject": "some \"fixes\"",
-        "items": [
-          "Refactored the Flow Solver pipeline modules, dividing responsibilities between modules to guarantee correct computations on complex loops.",
-          "Extended wildcard type checks and potential port filtering inside the Recipe Selector."
-        ]
+        "items": ["Improved flow calculations for loops and wildcard ports."]
       },
       {
         "hash": "37cd7f7",
@@ -730,9 +614,7 @@
         "date": "2026-05-27",
         "subject": "smol change",
         "items": [
-          "Added special recipe structures for the Liquid Burner and Liquid Dump.",
-          "Resolved edge-case errors in the graph building module of the solver.",
-          "Fixed recipe card labels and connection handle layout alignments."
+          "Added Liquid Burner and Liquid Dump calculations, and fixed connection edge cases."
         ]
       },
       {
@@ -741,10 +623,7 @@
         "patch": 9,
         "date": "2026-05-27",
         "subject": "fixes to solvers and utils apparently",
-        "items": [
-          "Reorganized the codebase filesystem layout, moving helpers and utilities into distinct modules.",
-          "Fixed solver graph building bugs and set up prefetch caching structures."
-        ]
+        "items": ["Reorganized app modules and fixed graph construction issues."]
       },
       {
         "hash": "f0a4c6a",
@@ -752,10 +631,7 @@
         "patch": 10,
         "date": "2026-05-27",
         "subject": "icon immutability",
-        "items": [
-          "Configured browser caching policies for product icons to prevent redundant network fetches and speed up modal loading states.",
-          "Appended cache-busting version parameters to asset URLs to ensure prompt loading of new icons."
-        ]
+        "items": ["Cached product icons to reduce repeat downloads."]
       },
       {
         "hash": "85d6552",
@@ -763,16 +639,13 @@
         "patch": 11,
         "date": "2026-05-28",
         "subject": "undo/redooo",
-        "items": [
-          "Built the canvas history manager to support global undo and redo actions.",
-          "Integrated Undo/Redo trigger buttons into the main canvas toolbar and mapped them to standard keyboard shortcuts."
-        ]
+        "items": ["Added undo and redo to the canvas."]
       }
     ]
   },
   {
     "minor": 1,
-    "minorName": "Wildcards, Temperatures & Sinks",
+    "minorName": "Production graph basics",
     "patches": [
       {
         "hash": "023adb7",
@@ -780,11 +653,7 @@
         "patch": 0,
         "date": "2026-05-21",
         "subject": "some stuff, wildcard handles",
-        "items": [
-          "Introduced wildcard connection ports typed as `any_fluid` or `any_item` to accept any compatible product of that category.",
-          "Implemented connection verification logic to resolve wildcard port types and validate product compatibility before linking.",
-          "Refactored the styling and layout of Data Overlay form lists."
-        ]
+        "items": ["Added wildcard ports for connecting compatible fluids or items."]
       },
       {
         "hash": "c179211",
@@ -792,12 +661,7 @@
         "patch": 1,
         "date": "2026-05-22",
         "subject": "some fixes, alloyer yah",
-        "items": [
-          "Added a dedicated temperature display badge to recipe nodes to show live thermal metrics.",
-          "Imported base recipe formulas and configuration details for the Alloyer machine.",
-          "Improved connection verification routines to correctly resolve and allow links to wildcard handles.",
-          "Restructured the layout of the dashboard side stats panel."
-        ]
+        "items": ["Added recipe temperature badges and improved wildcard connections."]
       },
       {
         "hash": "1464763",
@@ -805,11 +669,7 @@
         "patch": 2,
         "date": "2026-05-22",
         "subject": "variable quantity and wildcard handle",
-        "items": [
-          "Implemented variable-quantity sink handles representing dynamic flow limits rather than fixed rates.",
-          "Overhauled Boiler, Alloyer, and Air Separation Unit configurations to integrate variable-quantity handles.",
-          "Enabled canvas snap-to-grid alignment rules."
-        ]
+        "items": ["Added variable-capacity ports and snap-to-grid alignment."]
       },
       {
         "hash": "e6c83d0",
@@ -817,11 +677,7 @@
         "patch": 3,
         "date": "2026-05-23",
         "subject": "fixes again",
-        "items": [
-          "Added a descriptive capacity warning label to variable-quantity handles inside the Node Editor IO panel.",
-          "Fixed state conflicts in the Node Editor and corrected handle selection parameters inside the Recipe Selector.",
-          "Configured HTML preloading rules for the application logo to accelerate initial asset paint."
-        ]
+        "items": ["Added capacity warnings to the Node Editor."]
       },
       {
         "hash": "747f041",
@@ -830,9 +686,7 @@
         "date": "2026-05-24",
         "subject": "boilerrrrrrrrrrrrr",
         "items": [
-          "Implemented the Boiler special recipe formula, dynamically computing steam temperatures based on fuel inputs.",
-          "Exposed temperature target adjustments and fuel selection menus in the Node Editor for Boiler nodes.",
-          "Added research requirement controls to the Data Overlay Research form."
+          "Added Boiler fuel and temperature controls, plus research requirements in Data Manager."
         ]
       },
       {
@@ -841,15 +695,13 @@
         "patch": 5,
         "date": "2026-05-24",
         "subject": "iconssssssssss",
-        "items": [
-          "Integrated `.webp` graphical icons for products across recipe nodes, selection list items, and stats panels."
-        ]
+        "items": ["Added product icons to recipes and stats."]
       }
     ]
   },
   {
     "minor": 0,
-    "minorName": "Initial Canvas & Base Configuration",
+    "minorName": "Initial canvas",
     "patches": [
       {
         "hash": "1e9f093",
@@ -857,7 +709,7 @@
         "patch": 0,
         "date": "2026-05-09",
         "subject": "Initial commit",
-        "items": ["Initialized the project repository and configured the open-source license."]
+        "items": ["Created the repository and added the project license."]
       },
       {
         "hash": "b1678c2",
@@ -866,11 +718,7 @@
         "date": "2026-05-09",
         "subject": "base calc and canvas",
         "items": [
-          "Scaffolded the base calculator canvas with an interactive node-based recipe layout.",
-          "Configured basic input and output handles on recipe nodes for connection routing.",
-          "Imported baseline game database configurations for products, machines, and recipes.",
-          "Integrated the SCIP linear programming solver compiling to WebAssembly inside the browser.",
-          "Configured local storage persistence to auto-save canvas progress."
+          "Built the first canvas with recipe connections, game data, a flow solver, and browser autosave."
         ]
       },
       {
@@ -879,11 +727,7 @@
         "patch": 2,
         "date": "2026-05-09",
         "subject": "some fixes",
-        "items": [
-          "Fixed early canvas drawing offsets and recipe node rendering layout bugs.",
-          "Enhanced the Node Editor UI controls layout and improved the Help controls tray.",
-          "Optimized recipe selector search tabs for filtering by machine and product type."
-        ]
+        "items": ["Fixed early canvas and recipe selector issues."]
       },
       {
         "hash": "730942b",
@@ -891,11 +735,7 @@
         "patch": 3,
         "date": "2026-05-11",
         "subject": "fixes 2",
-        "items": [
-          "Refactored canvas panning, zooming, and node dragging event handlers into clean, isolated layers.",
-          "Restructured node input/output port layout for improved clarity and interaction target bounds.",
-          "Resolved canvas mouse-focus conflicts and updated the controls tray interface."
-        ]
+        "items": ["Improved canvas panning, zooming, and node dragging."]
       },
       {
         "hash": "a91d0e3",
@@ -903,11 +743,7 @@
         "patch": 4,
         "date": "2026-05-13",
         "subject": "feat: implement recipe selector interface and flow solver architecture",
-        "items": [
-          "Implemented the multi-step Recipe Selector browsing overlay with search and category filters.",
-          "Added and preloaded the official application logo (`induslogo.webp`) to optimize loading performance.",
-          "Designed a startup loading spinner and introduced the background scaffolding for the flow solver pipeline."
-        ]
+        "items": ["Added recipe search, the startup screen, and the first flow solver pieces."]
       },
       {
         "hash": "89251ff",
@@ -915,12 +751,7 @@
         "patch": 5,
         "date": "2026-05-15",
         "subject": "saves manager, need to do some cleaning",
-        "items": [
-          "Introduced the Saves Manager, supporting local slot saves, JSON file export, and file imports.",
-          "Developed the graph merge utility to combine saved layout configurations into the active canvas.",
-          "Added PNG image export functionality for downloading canvas snapshots.",
-          "Configured IndexedDB to automatically back up active workspace state on changes."
-        ]
+        "items": ["Added Save Manager, save import and export, and PNG export."]
       },
       {
         "hash": "4f6ecb6",
@@ -928,12 +759,7 @@
         "patch": 6,
         "date": "2026-05-15",
         "subject": "Apply canvas panning fixes",
-        "items": [
-          "Resolved canvas panning conflicts where viewport drags interfered with node selection events.",
-          "Optimized viewport rendering performance using flat CAD boxes during high-speed pan/zoom actions.",
-          "Configured coordinated viewport culling to only render visible elements when node counts exceed 250.",
-          "Improved PNG export layout calculations and bounding box crop accuracy."
-        ]
+        "items": ["Improved canvas navigation and PNG export on large graphs."]
       },
       {
         "hash": "7c1cfe2",
@@ -941,10 +767,7 @@
         "patch": 7,
         "date": "2026-05-16",
         "subject": "indicators for save overlay buttons",
-        "items": [
-          "Added pending loading spinners and action disable states to Save Manager buttons to prevent double operations.",
-          "Implemented visual indicators to highlight unsaved changes in the active canvas slot."
-        ]
+        "items": ["Added save progress indicators and unsaved-change markers."]
       },
       {
         "hash": "4bd1631",
@@ -952,10 +775,7 @@
         "patch": 8,
         "date": "2026-05-17",
         "subject": "panels",
-        "items": [
-          "Introduced the floating dashboard panels to display live graph stats and select node details.",
-          "Integrated node display state reactions to special recipe configurations, such as high-voltage tags."
-        ]
+        "items": ["Added live Dashboard panels for graph stats and selected nodes."]
       },
       {
         "hash": "324ef45",
@@ -963,10 +783,7 @@
         "patch": 9,
         "date": "2026-05-17",
         "subject": "Product and Machine Editor",
-        "items": [
-          "Introduced the lazy-loaded Data Overlay containing the Product and Machine Editor forms.",
-          "Created custom fields to view, add, modify, or restore products and machines to baseline settings."
-        ]
+        "items": ["Added Data Manager for editing products and machines."]
       },
       {
         "hash": "b7e40bc",
@@ -974,12 +791,7 @@
         "patch": 10,
         "date": "2026-05-19",
         "subject": "research editor",
-        "items": [
-          "Added the Research and Technology Prerequisites editor tab to the Data Overlay.",
-          "Implemented visual locked/unlocked indicator badges on canvas recipe nodes.",
-          "Optimized layout performance by forcing recipe nodes into flat, compact styles when zoomed out below 35%.",
-          "Linked node heights dynamically to CSS variables and configured reactive updates for global pollution settings."
-        ]
+        "items": ["Added research editing, unlock indicators, and live pollution settings."]
       }
     ]
   }

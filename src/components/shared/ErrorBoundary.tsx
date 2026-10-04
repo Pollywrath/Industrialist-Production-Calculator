@@ -38,9 +38,9 @@ export class ErrorBoundary extends Component<Props, State> {
   private getErrorMessage(error: Error | null): { subtitle: string; description: string } {
     if (!error) {
       return {
-        subtitle: 'Unhandled Runtime Exception',
+        subtitle: 'The app stopped unexpectedly',
         description:
-          'An unexpected application error occurred. You can reset your local state to restore default operations.',
+          'Try reloading the page first. If the problem continues, you can clear the browser autosave, custom data, and cached wiki results below. Named Save Manager saves are kept.',
       };
     }
 
@@ -57,9 +57,9 @@ export class ErrorBoundary extends Component<Props, State> {
       stack.includes('initializedatabase')
     ) {
       return {
-        subtitle: 'Database Initialization Failure',
+        subtitle: 'Could not open local app data',
         description:
-          'The application was unable to fetch the static recipes database. This is usually caused by an offline internet connection, a temporary CDN block, or a local network firewall restriction.',
+          'The app could not read its local data store. Reload the page and try again. If it keeps failing, clearing local app data below may help.',
       };
     }
 
@@ -72,16 +72,16 @@ export class ErrorBoundary extends Component<Props, State> {
       stack.includes('recipenode')
     ) {
       return {
-        subtitle: 'Flowchart Rendering Crash',
+        subtitle: 'The canvas could not be shown',
         description:
-          'An unhandled exception occurred rendering your active flowchart canvas. This is typically caused by corrupted local flowchart data or incompatible save-game versions.',
+          'The app hit an error while drawing the current graph. Reload the page. If the same layout causes the error again, open a bug report and include the details shown below.',
       };
     }
 
     return {
-      subtitle: 'Unhandled Runtime Exception',
+      subtitle: 'The app stopped unexpectedly',
       description:
-        'An unexpected runtime error occurred. This can usually be resolved by clearing your local storage cache and reloading.',
+        'Try reloading the page first. If the problem continues, you can clear the browser autosave, custom data, and cached wiki results below. Named Save Manager saves are kept.',
     };
   }
 
@@ -92,7 +92,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className={styles['error-boundary-container']}>
           <div className={styles['error-boundary-modal']}>
-            <h2 className={styles['error-boundary-title']}>Industrialist Calculator Crashed</h2>
+            <h2 className={styles['error-boundary-title']}>Industrialist Calculator stopped</h2>
             <div className={styles['error-boundary-subtitle']}>[ {subtitle} ]</div>
             <p className={styles['error-boundary-text']}>{description}</p>
             {this.state.error && (
@@ -101,7 +101,7 @@ export class ErrorBoundary extends Component<Props, State> {
               </pre>
             )}
             <button className={styles['error-boundary-btn']} onClick={this.handleReset}>
-              Clear Cache & Reset Application
+              Clear local app data and restart
             </button>
           </div>
         </div>

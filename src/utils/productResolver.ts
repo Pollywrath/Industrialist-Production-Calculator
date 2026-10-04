@@ -6,6 +6,22 @@ import { parseHandleId, buildHandleId } from './idGenerator';
 
 export type EdgeLookupMap = Map<string, ReactFlowEdge[]>;
 
+type ResolveProductForRecipe = (side: 'input' | 'output', index: number) => string;
+
+function createRecipeResolutionHelpers(
+  nodeId: string,
+  edgeLookup: EdgeLookupMap,
+  resolveProduct: ResolveProductForRecipe,
+) {
+  return {
+    resolveProduct,
+    hasConnection: (side: 'input' | 'output', index: number) => {
+      const handleId = buildHandleId(nodeId, side, index);
+      return (edgeLookup.get(handleId)?.length ?? 0) > 0;
+    },
+  };
+}
+
 let lastEdges: ReactFlowEdge[] | null = null;
 let lastLookup: EdgeLookupMap | null = null;
 
@@ -98,28 +114,22 @@ export function resolveHandleProduct(
     return '';
   };
 
-  const helpers = {
-    resolveProduct: (s: 'input' | 'output', idx: number) => {
-      const requestedHandleId = buildHandleId(nodeId, s, idx);
-      if (requestedHandleId === handleId) {
-        return resolveFromConnectedHandles(s, idx);
-      }
-      return resolveHandleProduct(
-        nodeId,
-        s,
-        idx,
-        nodesMap,
-        edgeLookup,
-        visited,
-        cache,
-        globalSettings,
-      );
-    },
-    hasConnection: (s: 'input' | 'output', idx: number) => {
-      const hId = buildHandleId(nodeId, s, idx);
-      return (edgeLookup.get(hId)?.length ?? 0) > 0;
-    },
-  };
+  const helpers = createRecipeResolutionHelpers(nodeId, edgeLookup, (s, idx) => {
+    const requestedHandleId = buildHandleId(nodeId, s, idx);
+    if (requestedHandleId === handleId) {
+      return resolveFromConnectedHandles(s, idx);
+    }
+    return resolveHandleProduct(
+      nodeId,
+      s,
+      idx,
+      nodesMap,
+      edgeLookup,
+      visited,
+      cache,
+      globalSettings,
+    );
+  });
   const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, nodeId, helpers, {
     suppressStoreTemperatureOverrides: true,
     globalSettings,
@@ -182,23 +192,18 @@ export function resolveHandleType(
 
   const edgeLookup =
     edgesOrLookup instanceof Map ? edgesOrLookup : buildEdgeLookupMap(edgesOrLookup);
-  const helpers = {
-    resolveProduct: (s: 'input' | 'output', idx: number) =>
-      resolveHandleProduct(
-        nodeId,
-        s,
-        idx,
-        nodesMap,
-        edgeLookup,
-        new Set(),
-        productCache,
-        globalSettings,
-      ),
-    hasConnection: (s: 'input' | 'output', idx: number) => {
-      const hId = buildHandleId(nodeId, s, idx);
-      return (edgeLookup.get(hId)?.length ?? 0) > 0;
-    },
-  };
+  const helpers = createRecipeResolutionHelpers(nodeId, edgeLookup, (s, idx) =>
+    resolveHandleProduct(
+      nodeId,
+      s,
+      idx,
+      nodesMap,
+      edgeLookup,
+      new Set(),
+      productCache,
+      globalSettings,
+    ),
+  );
   const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, nodeId, helpers, {
     suppressStoreTemperatureOverrides: true,
     globalSettings,
@@ -232,23 +237,9 @@ export function computeResolvedProducts(
   const cache = new Map<string, string>();
 
   for (const node of nodesMap.values()) {
-    const helpers = {
-      resolveProduct: (s: 'input' | 'output', idx: number) =>
-        resolveHandleProduct(
-          node.id,
-          s,
-          idx,
-          nodesMap,
-          edgeLookup,
-          new Set(),
-          cache,
-          globalSettings,
-        ),
-      hasConnection: (s: 'input' | 'output', idx: number) => {
-        const hId = buildHandleId(node.id, s, idx);
-        return (edgeLookup.get(hId)?.length ?? 0) > 0;
-      },
-    };
+    const helpers = createRecipeResolutionHelpers(node.id, edgeLookup, (s, idx) =>
+      resolveHandleProduct(node.id, s, idx, nodesMap, edgeLookup, new Set(), cache, globalSettings),
+    );
     const recipe = resolveActiveRecipe(node.data.recipeId, node.data.settings, node.id, helpers, {
       suppressStoreTemperatureOverrides: true,
       globalSettings,

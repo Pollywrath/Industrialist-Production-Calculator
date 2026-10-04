@@ -12,6 +12,7 @@ import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { useUIStore } from '../../../stores/useUIStore';
 import { createGraphResolutionContext } from '../../../utils/graphResolutionContext';
 import { parseHandleId } from '../../../utils/idGenerator';
+import { getRateSuffix } from '../../../utils/rateFormatting';
 import { cleanFlow, getRateMultiplier, toPlainString } from '../../../utils/recipeComputation';
 import styles from '../NodeEditor/NodeEditor.module.css';
 
@@ -27,20 +28,6 @@ interface ProxyHandleItem {
   quantity: string;
   isStale: boolean;
 }
-
-const getRateSuffix = (rateMode: RateMode) => {
-  switch (rateMode) {
-    case 'second':
-      return '/s';
-    case 'minute':
-      return '/m';
-    case 'hour':
-      return '/h';
-    case 'raw':
-    default:
-      return '';
-  }
-};
 
 function moveItem(items: string[], index: number, delta: number): string[] {
   const nextIndex = index + delta;

@@ -296,7 +296,7 @@ export function FlowCanvas() {
   if (!isAutosaveLoaded) {
     return (
       <div className={styles['canvas-container']}>
-        <LoadingScreen title="Loading calculator" subtitle="Restoring your last session..." />
+        <LoadingScreen title="Opening your layout" subtitle="Restoring the last session…" />
       </div>
     );
   }
@@ -322,7 +322,7 @@ export function FlowCanvas() {
         (RecipeSelector ? (
           React.createElement(RecipeSelector)
         ) : (
-          <Suspense fallback={<LoadingScreen title="Recipes" subtitle="Loading recipes..." />}>
+          <Suspense fallback={<LoadingScreen title="Recipes" subtitle="Loading recipes…" />}>
             <LazyRecipeSelector />
           </Suspense>
         ))}
@@ -330,7 +330,7 @@ export function FlowCanvas() {
         (SavesOverlay ? (
           React.createElement(SavesOverlay)
         ) : (
-          <Suspense fallback={<LoadingScreen title="Saves" subtitle="Loading saved layouts..." />}>
+          <Suspense fallback={<LoadingScreen title="Saves" subtitle="Loading saved layouts…" />}>
             <LazySavesOverlay />
           </Suspense>
         ))}
@@ -338,7 +338,9 @@ export function FlowCanvas() {
         (DataOverlay ? (
           React.createElement(DataOverlay)
         ) : (
-          <Suspense fallback={<LoadingScreen title="Data editor" subtitle="Loading data..." />}>
+          <Suspense
+            fallback={<LoadingScreen title="Data Manager" subtitle="Opening the editor…" />}
+          >
             <LazyDataOverlay />
           </Suspense>
         ))}
@@ -346,9 +348,7 @@ export function FlowCanvas() {
         (ThemeOverlay ? (
           React.createElement(ThemeOverlay)
         ) : (
-          <Suspense
-            fallback={<LoadingScreen title="Themes" subtitle="Loading theme settings..." />}
-          >
+          <Suspense fallback={<LoadingScreen title="Themes" subtitle="Loading theme settings…" />}>
             <LazyThemeOverlay />
           </Suspense>
         ))}
@@ -356,9 +356,7 @@ export function FlowCanvas() {
         (MachineOverlay ? (
           React.createElement(MachineOverlay)
         ) : (
-          <Suspense
-            fallback={<LoadingScreen title="Machines" subtitle="Loading machine data..." />}
-          >
+          <Suspense fallback={<LoadingScreen title="Machines" subtitle="Loading machine data…" />}>
             <LazyMachineOverlay />
           </Suspense>
         ))}
@@ -366,7 +364,7 @@ export function FlowCanvas() {
         (HelpOverlay ? (
           React.createElement(HelpOverlay)
         ) : (
-          <Suspense fallback={<LoadingScreen title="Help" subtitle="Loading help..." />}>
+          <Suspense fallback={<LoadingScreen title="Help" subtitle="Loading help…" />}>
             <LazyHelpOverlay />
           </Suspense>
         ))}

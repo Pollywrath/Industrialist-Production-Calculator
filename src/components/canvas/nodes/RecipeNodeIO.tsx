@@ -18,7 +18,6 @@ import {
   calculateMachineCountFromRate,
   getNormalizedCycleTime,
 } from '../../../utils/recipeComputation';
-import { formatQuantity } from '../../../utils/unitFormatting';
 import { buildHandleId } from '../../../utils/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
 import { constrainMachineCount } from '../../../utils/machineCountConstraint';
@@ -29,6 +28,7 @@ import {
 } from '../../../utils/handleTypes';
 import styles from './RecipeNode.module.css';
 import { useShallow } from 'zustand/react/shallow';
+import { PortSummaryRect } from './PortSummaryRect';
 
 import {
   RECT_HEIGHT,
@@ -222,24 +222,15 @@ function RecipeNodeIORect({
   const totalQty = isVariable ? actualFlow : qty * scale * multiplier;
 
   return (
-    <div className={styles['recipe-node-io__rect-wrapper']}>
-      <div
-        className={`${styles['recipe-node-io__rect']} ${styles[`recipe-node-io__rect--${refVal.side}`]} nodrag`}
-        style={{ '--rect-width': `${width}px` } as React.CSSProperties}
-        data-tutorial-rect-node-id={nodeId}
-        data-tutorial-rect-side={refVal.side}
-        data-tutorial-rect-index={refVal.index}
-        onClick={(e) => {
-          if (getEffectiveToggleId(useUIStore.getState()) === 'delete_mode') return;
-          e.stopPropagation();
-          onClick(refVal);
-        }}
-      >
-        <span className={styles['recipe-node-io__rect-text']}>
-          {formatQuantity(totalQty)}x {label}
-        </span>
-      </div>
-    </div>
+    <PortSummaryRect
+      refVal={refVal}
+      nodeId={nodeId}
+      width={width}
+      label={label}
+      totalQty={totalQty}
+      onClick={onClick}
+      className="nodrag"
+    />
   );
 }
 

@@ -14,12 +14,6 @@ interface OptimizationConfigurePanelProps {
   onStart: (configuration: OptimizationConfiguration) => void;
 }
 
-function nullableNumber(value: string): number | null {
-  if (value.trim() === '') return null;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? Math.max(0, parsed) : null;
-}
-
 function getSolveImpact(configuration: OptimizationConfiguration): {
   label: string;
   timeRange: string;
@@ -44,31 +38,31 @@ function getSolveImpact(configuration: OptimizationConfiguration): {
   if (configuration.mode === 'autocomplete' && usesWholeMachineObjectives) {
     if (hasRepeatedWholeMachineSearch) {
       return {
-        label: 'Potentially extreme',
-        timeRange: 'Could take hours',
-        method: 'Recipe search with exact full machines',
+        label: 'Can take a long time',
+        timeRange: 'Minutes or longer on large plans',
+        method: 'Recipe search with whole machines',
         priorityLevels,
         description:
-          'App has to search using rounded up machine counts, this is the range of MILP, which takes a while to solve. Difficult plans can take much longer than this range. Recommended to disable counting full machines',
+          'Whole-machine counts require an integer search for each recipe plan. Large graphs and several priority levels can take much longer.',
       };
     }
     return {
-      label: 'Very slow',
-      timeRange: '20 minutes or more',
-      method: 'Recipe search with exact full machines',
+      label: 'Slow',
+      timeRange: 'Several minutes or longer',
+      method: 'Recipe search with whole machines',
       priorityLevels,
       description:
-        'App has to search using rounded up machine counts, this is the range of MILP, which takes a while to solve. May take longer with more complex recipes. Recommended to disable counting full machines',
+        'Whole-machine counts require an integer search for each recipe plan. More complex plans take longer.',
     };
   }
   if (configuration.mode === 'autocomplete') {
     return {
-      label: priorityLevels > 1 ? 'Moderate to slow' : 'Moderate',
-      timeRange: priorityLevels > 1 ? 'Seconds to several minutes' : 'Seconds to a few minutes',
+      label: priorityLevels > 1 ? 'Can take longer' : 'Moderate',
+      timeRange: priorityLevels > 1 ? 'Seconds to minutes' : 'A few seconds to minutes',
       method: 'Recipe search with fractional machines',
       priorityLevels,
       description:
-        'Fractional accounting avoids the expensive whole-machine search, but the app must still compare many possible recipes. More priorities repeat parts of that work.',
+        'Fractional counts avoid the whole-machine search, but autocomplete still compares recipe plans. Each priority level adds more work.',
     };
   }
   if (usesWholeMachineObjectives) {
@@ -76,30 +70,30 @@ function getSolveImpact(configuration: OptimizationConfiguration): {
       return {
         label: 'Slow',
         timeRange: 'A few minutes or longer',
-        method: 'Current recipes with exact full machines',
+        method: 'Current recipes with whole machines',
         priorityLevels,
         description:
-          'Existing recipes are kept, but several whole-machine preferences or priority levels can require repeated searches through integer combinations.',
+          'The recipes stay as they are. Whole-machine counts and several priority levels add more integer searches.',
       };
     }
     return {
       label: 'Moderate',
-      timeRange: 'Seconds to a few minutes',
-      method: 'Current recipes with exact full machines',
+      timeRange: 'A few seconds to minutes',
+      method: 'Current recipes with whole machines',
       priorityLevels,
       description:
-        'Existing recipes are kept, but exact costs, space, or model counts require comparing whole-machine combinations.',
+        'The recipes stay as they are. Exact cost, space, or model counts require comparing whole-machine combinations.',
     };
   }
   return {
     label: priorityLevels > 1 ? 'Quick to moderate' : 'Quick',
-    timeRange: priorityLevels > 1 ? 'A few seconds' : 'Usually under a few seconds',
+    timeRange: priorityLevels > 1 ? 'A few seconds' : 'Usually a few seconds',
     method: 'Current recipes with fractional machines',
     priorityLevels,
     description:
       priorityLevels > 1
-        ? 'The app keeps the current recipes and uses fast fractional calculations, but each priority level adds another optimization pass.'
-        : 'The app keeps the current recipes and uses fast fractional calculations without searching whole-machine combinations.',
+        ? 'The recipes stay as they are. Each priority level adds another optimization pass.'
+        : 'The recipes stay as they are, and fractional counts avoid the whole-machine search.',
   };
 }
 
@@ -113,7 +107,7 @@ export function OptimizationConfigurePanel({ onClose, onStart }: OptimizationCon
   const updateMetric = useOptimizationConfigStore((state) => state.updateMetric);
   const reset = useOptimizationConfigStore((state) => state.reset);
   const configuration: OptimizationConfiguration = {
-    version: 3,
+    version: 4,
     mode,
     machineCountBasis,
     metrics,
@@ -130,12 +124,10 @@ export function OptimizationConfigurePanel({ onClose, onStart }: OptimizationCon
       <div className={styles['modal-header']}>
         <div>
           <span className={styles['modal-title']}>
-            {mode === 'autocomplete'
-              ? 'Complete Production (Experimental)'
-              : 'Optimize Production Ratios'}
+            {mode === 'autocomplete' ? 'Complete production chain' : 'Adjust machine counts'}
           </span>
           <p className={styles['configure-subtitle']}>
-            Choose what matters most. Shortages and connected sink excess are handled first.
+            Choose what to optimize. The solver reduces shortages and sink excess first.
           </p>
         </div>
         <button type="button" className={styles['header-reset-button']} onClick={reset}>
@@ -151,8 +143,8 @@ export function OptimizationConfigurePanel({ onClose, onStart }: OptimizationCon
             data-active={mode === 'ratios'}
             onClick={() => setMode('ratios')}
           >
-            <strong>Adjust ratios</strong>
-            <span>Keep current recipes.</span>
+            <strong>Adjust machine counts</strong>
+            <span>Keep the recipes on the canvas.</span>
           </button>
           <button
             type="button"
@@ -160,8 +152,8 @@ export function OptimizationConfigurePanel({ onClose, onStart }: OptimizationCon
             data-active={mode === 'autocomplete'}
             onClick={() => setMode('autocomplete')}
           >
-            <strong>Autocomplete (Experimental)</strong>
-            <span>Add missing recipes.</span>
+            <strong>Complete production (experimental)</strong>
+            <span>Find upstream recipes for your targets.</span>
           </button>
         </div>
 
@@ -216,21 +208,6 @@ export function OptimizationConfigurePanel({ onClose, onStart }: OptimizationCon
                     )}
                   </select>
                 </label>
-                {id === 'powerOutput' && setting.enabled && (
-                  <label className={styles['power-output-target']}>
-                    <span>Output target</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step="any"
-                      value={setting.outputGoal ?? ''}
-                      placeholder="Required"
-                      onChange={(event) =>
-                        updateMetric(id, { outputGoal: nullableNumber(event.target.value) })
-                      }
-                    />
-                  </label>
-                )}
               </div>
             );
           })}
@@ -247,14 +224,14 @@ export function OptimizationConfigurePanel({ onClose, onStart }: OptimizationCon
                 }
               />
               <span>
-                <strong>Count full machines</strong>
-                <small>Use rounded-up counts for cost, space, and machine models.</small>
+                <strong>Count whole machines</strong>
+                <small>Round up counts for cost, space, and machine model count.</small>
               </span>
             </label>
             {machineCountBasis === 'continuous' && (
               <p>
-                Faster, but fractional machines are charged fractionally. This can underestimate the
-                real cost, space, and model count shown by the dashboard.
+                Fractional counts solve faster, but can understate the whole-machine totals shown on
+                the dashboard.
               </p>
             )}
           </section>
@@ -262,11 +239,11 @@ export function OptimizationConfigurePanel({ onClose, onStart }: OptimizationCon
 
         <section className={styles['solver-impact']} data-backend={validation.backend}>
           <div>
-            <span>Expected solve time</span>
+            <span>Estimated solve time</span>
             <strong>{solveImpact.label}</strong>
           </div>
           <dl className={styles['solver-impact-details']}>
-            <dt>Typical range</dt>
+            <dt>Usual range</dt>
             <dd>{solveImpact.timeRange}</dd>
             <dt>Method</dt>
             <dd>{solveImpact.method}</dd>
@@ -276,9 +253,7 @@ export function OptimizationConfigurePanel({ onClose, onStart }: OptimizationCon
             </dd>
           </dl>
           <p>{solveImpact.description}</p>
-          <small>
-            Rough guide only. Canvas size, recipe choices, and device speed can vary it.
-          </small>
+          <small>This is a rough guide. Graph size and your device affect solve time.</small>
         </section>
 
         {(validation.errors.length > 0 || validation.warnings.length > 0) && (
