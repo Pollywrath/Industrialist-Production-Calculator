@@ -1,6 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { roundTo } from '../../utils/precision';
+import { roundTo } from '../../utils/numeric/precision';
 
 export interface SteadyStateInputs {
   coolantSourceTemp: number;

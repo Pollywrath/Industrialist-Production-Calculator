@@ -214,18 +214,6 @@ export async function saveWikiBucketCache(record: WikiBucketCacheRecord): Promis
   }
 }
 
-export async function clearWikiBucketCache(): Promise<boolean> {
-  try {
-    const db = await getDB();
-    if (!db) return false;
-    await db.clear('wiki_bucket_cache');
-    return true;
-  } catch (err) {
-    console.warn('Failed to clear wiki bucket cache in IndexedDB:', err);
-    return false;
-  }
-}
-
 export async function getDataOverrides(): Promise<{ id: string; data: Record<string, unknown> }[]> {
   try {
     const db = await getDB();
@@ -234,21 +222,6 @@ export async function getDataOverrides(): Promise<{ id: string; data: Record<str
   } catch (err) {
     console.warn('Failed to get data overrides from IndexedDB:', err);
     return [];
-  }
-}
-
-export async function saveDataOverride(
-  id: string,
-  data: Record<string, unknown>,
-): Promise<boolean> {
-  try {
-    const db = await getDB();
-    if (!db) return false;
-    await db.put('data_overrides', { id, data });
-    return true;
-  } catch (err) {
-    console.warn('Failed to save data override in IndexedDB:', err);
-    return false;
   }
 }
 

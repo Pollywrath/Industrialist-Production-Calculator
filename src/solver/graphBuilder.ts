@@ -1,8 +1,8 @@
 import type { ReactFlowNode, ReactFlowEdge, SolverGraph, SolverConnection } from '../types/solver';
 import { resolveActiveRecipe } from '../data/lookup';
-import { getRateMultiplier } from '../utils/recipeComputation';
-import { parseHandleId, buildHandleId } from '../utils/idGenerator';
-import { createGraphResolutionContext } from '../utils/graphResolutionContext';
+import { getRateMultiplier } from '../utils/recipes/recipeComputation';
+import { parseHandleId, buildHandleId } from '../utils/ids/idGenerator';
+import { createGraphResolutionContext } from '../utils/graph/graphResolutionContext';
 import { sumConnectedEdgeFlows } from './flowAggregation';
 
 export function buildSolverGraph(

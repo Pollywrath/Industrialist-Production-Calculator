@@ -1,4 +1,4 @@
-import { toPlainString } from './precision';
+import { toPlainString } from '../numeric/precision';
 
 function formatWithPrefix(
   value: number,

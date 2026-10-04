@@ -1,8 +1,8 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
 import { getMachine } from '../lookup';
-import { formatPower, formatTemperature } from '../../utils/unitFormatting';
-import { roundTo } from '../../utils/precision';
+import { formatPower, formatTemperature } from '../../utils/formatting/unitFormatting';
+import { roundTo } from '../../utils/numeric/precision';
 
 const STEAM_FLOW_CAPACITY = 24000;
 const DEFAULT_SYNC_RPM = 3600;

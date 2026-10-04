@@ -1,6 +1,6 @@
-import { getMachine } from '../data/lookup';
-import { getSpecialRecipe } from '../data/registry';
-import type { Recipe } from '../types/data';
+import { getMachine } from '../../data/lookup';
+import { getSpecialRecipe } from '../../data/registry';
+import type { Recipe } from '../../types/data';
 import { estimatePowerModelCount, getRecipePowerTotals } from './recipePower';
 
 export interface RecipeOptimizationMetrics {

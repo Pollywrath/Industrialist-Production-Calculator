@@ -7,16 +7,16 @@ import {
   MACHINE_TABLE_VIEW_HEIGHT,
 } from '../../../constants/layoutConstants';
 import { getAllMachines, getAllProducts, isMachineUnlocked } from '../../../data/lookup';
-import { sortItems } from '../../../utils/sorting';
+import { sortItems } from '../../../utils/collections/sorting';
 import {
   CANONICAL_CATEGORY_MAP,
   UNIQUE_CATEGORIES,
   UNIQUE_SUBCATEGORIES,
   getTaxonomyIcon,
   buildVirtualModularMachines,
-} from '../../../utils/machineTaxonomy';
+} from '../../../utils/data/machineTaxonomy';
 import styles from './RecipeSelector.module.css';
-import { formatCurrency, formatRpMultiplier, toRomanNumeral } from '../../../utils/unitFormatting';
+import { formatCurrency, formatRpMultiplier, toRomanNumeral } from '../../../utils/formatting/unitFormatting';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useDataStore } from '../../../stores/useDataStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';

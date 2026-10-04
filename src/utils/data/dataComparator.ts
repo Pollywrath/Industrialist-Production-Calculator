@@ -1,5 +1,5 @@
-import type { Product, Machine, Research, Recipe } from '../types/data';
-import { sortItems } from './sorting';
+import type { Product, Machine, Research, Recipe } from '../../types/data';
+import { sortItems } from '../collections/sorting';
 
 function normalizeWikiMarkupValue(value: string): string {
   const document = new DOMParser().parseFromString(value, 'text/html');
@@ -62,10 +62,6 @@ export function getOptionalWikiBoolean(val: unknown): boolean | null {
     return val !== 0;
   }
   return null;
-}
-
-export function getWikiBoolean(val: unknown): boolean {
-  return getOptionalWikiBoolean(val) ?? false;
 }
 
 export function getWikiString(val: unknown): string {

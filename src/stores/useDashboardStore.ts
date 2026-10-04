@@ -6,16 +6,16 @@ import { useGlobalSettingsStore } from './useGlobalSettingsStore';
 import { useDataStore } from './useDataStore';
 import { getMachine, getProduct, getProductName } from '../data/lookup';
 import { getSpecialRecipe } from '../data/registry';
-import { buildHandleId } from '../utils/idGenerator';
+import { buildHandleId } from '../utils/ids/idGenerator';
 import { isRecipeNode } from '../types/nodes';
-import { getRecipePowerTotals } from '../utils/recipePower';
-import { getRecipeOptimizationMetrics } from '../utils/optimizationMetrics';
-import { ceilMachineCount } from '../utils/precision';
+import { getRecipePowerTotals } from '../utils/recipes/recipePower';
+import { getRecipeOptimizationMetrics } from '../utils/recipes/optimizationMetrics';
+import { ceilMachineCount } from '../utils/numeric/precision';
 import {
   EMPTY_RESEARCH_INFRASTRUCTURE_STATS,
   getOptimalSatelliteDishCount,
   type ResearchInfrastructureStats,
-} from '../utils/researchInfrastructure';
+} from '../utils/recipes/researchInfrastructure';
 
 export interface ProductDeficiencyGroup {
   productId: string;

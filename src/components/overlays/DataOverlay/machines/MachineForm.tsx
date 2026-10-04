@@ -17,7 +17,7 @@ import {
   CANONICAL_CATEGORY_MAP,
   UNIQUE_CATEGORIES,
   UNIQUE_SUBCATEGORIES,
-} from '../../../../utils/machineTaxonomy';
+} from '../../../../utils/data/machineTaxonomy';
 import type { Machine, MachineSize } from '../../../../types/data';
 import { GenericDataFormShell } from '../shared/GenericDataFormShell';
 import { ValidatedNumberInput } from '../../../shared/ValidatedNumberInput';

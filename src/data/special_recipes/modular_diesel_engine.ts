@@ -1,8 +1,8 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
 import { getMachine } from '../lookup';
-import { formatPower, formatQuantity } from '../../utils/unitFormatting';
-import { clamp, roundTo } from '../../utils/precision';
+import { formatPower, formatQuantity } from '../../utils/formatting/unitFormatting';
+import { clamp, roundTo } from '../../utils/numeric/precision';
 
 const FUEL_MAP: Record<string, { product_id: string; rate: number }> = {
   'Refined Diesel': { product_id: 'p_refined_diesel', rate: 690 },

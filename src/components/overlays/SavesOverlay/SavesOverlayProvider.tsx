@@ -15,7 +15,7 @@ import {
 import type { SaveRecord } from '../../../types/saves';
 import { serializeCanvas, deserializeCanvas } from '../../../persistence/transformer';
 import { mergeSaveIntoCanvas } from '../../../persistence/graphMerge';
-import { nextSaveId } from '../../../utils/idGenerator';
+import { nextSaveId } from '../../../utils/ids/idGenerator';
 import { exportCanvasAsPng, exportRecordAsJson } from '../../../services/canvasExportService';
 import {
   canPerformTutorialAction,
@@ -28,7 +28,7 @@ import {
   validateMachine,
   validateRecipe,
   validateResearch,
-} from '../../../utils/dataValidation';
+} from '../../../utils/data/dataValidation';
 import {
   getDefaultProducts,
   getDefaultMachines,

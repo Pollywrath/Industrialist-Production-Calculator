@@ -8,13 +8,13 @@ import {
   cleanMachineCount,
   toPlainString,
   computeQuantityMap,
-} from '../../../utils/recipeComputation';
+} from '../../../utils/recipes/recipeComputation';
 import { getSpecialRecipe } from '../../../data/registry';
 import { resolveActiveRecipe } from '../../../data/lookup';
 import {
   sanitizeMachineCountConstraint,
   type MachineCountConstraintMode,
-} from '../../../utils/machineCountConstraint';
+} from '../../../utils/recipes/machineCountConstraint';
 
 interface NodeEditorProviderProps {
   children: React.ReactNode;

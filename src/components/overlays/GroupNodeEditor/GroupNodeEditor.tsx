@@ -10,10 +10,10 @@ import { getProductName, resolveActiveRecipe } from '../../../data/lookup';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { useUIStore } from '../../../stores/useUIStore';
-import { createGraphResolutionContext } from '../../../utils/graphResolutionContext';
-import { parseHandleId } from '../../../utils/idGenerator';
-import { getRateSuffix } from '../../../utils/rateFormatting';
-import { cleanFlow, getRateMultiplier, toPlainString } from '../../../utils/recipeComputation';
+import { createGraphResolutionContext } from '../../../utils/graph/graphResolutionContext';
+import { parseHandleId } from '../../../utils/ids/idGenerator';
+import { getRateSuffix } from '../../../utils/formatting/rateFormatting';
+import { cleanFlow, getRateMultiplier, toPlainString } from '../../../utils/recipes/recipeComputation';
 import styles from '../NodeEditor/NodeEditor.module.css';
 
 interface GroupNodeEditorProps {

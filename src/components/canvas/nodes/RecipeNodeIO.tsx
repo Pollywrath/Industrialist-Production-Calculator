@@ -17,15 +17,15 @@ import {
   getRateMultiplier,
   calculateMachineCountFromRate,
   getNormalizedCycleTime,
-} from '../../../utils/recipeComputation';
-import { buildHandleId } from '../../../utils/idGenerator';
+} from '../../../utils/recipes/recipeComputation';
+import { buildHandleId } from '../../../utils/ids/idGenerator';
 import { calculateBalancedRate } from '../../../solver/systemicBalancer';
-import { constrainMachineCount } from '../../../utils/machineCountConstraint';
+import { constrainMachineCount } from '../../../utils/recipes/machineCountConstraint';
 import {
   getRecipeEntryHandleType,
   getRecipeEntryProductId,
   productTypeToHandleDataType,
-} from '../../../utils/handleTypes';
+} from '../../../utils/graph/handleTypes';
 import styles from './RecipeNode.module.css';
 import { useShallow } from 'zustand/react/shallow';
 import { PortSummaryRect } from './PortSummaryRect';

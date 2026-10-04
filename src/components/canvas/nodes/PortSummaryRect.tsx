@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { HandleRef } from '../../../types/nodes';
 import { getEffectiveToggleId, useUIStore } from '../../../stores/useUIStore';
-import { formatQuantity } from '../../../utils/unitFormatting';
+import { formatQuantity } from '../../../utils/formatting/unitFormatting';
 import styles from './RecipeNode.module.css';
 
 interface PortSummaryRectProps {

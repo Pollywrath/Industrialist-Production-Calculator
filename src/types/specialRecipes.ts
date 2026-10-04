@@ -1,5 +1,5 @@
 import type { ProductType, Recipe } from './data';
-import type { ResearchInfrastructureStats } from '../utils/researchInfrastructure';
+import type { ResearchInfrastructureStats } from '../utils/recipes/researchInfrastructure';
 
 export type SettingType = 'number' | 'select' | 'product';
 

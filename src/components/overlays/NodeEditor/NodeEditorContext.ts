@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react';
 import { useStore } from 'zustand';
 import type { StoreApi } from 'zustand';
 import type { Recipe } from '../../../types/data';
-import type { MachineCountConstraintMode } from '../../../utils/machineCountConstraint';
+import type { MachineCountConstraintMode } from '../../../utils/recipes/machineCountConstraint';
 
 export interface NodeEditorState {
   inputs: number[];

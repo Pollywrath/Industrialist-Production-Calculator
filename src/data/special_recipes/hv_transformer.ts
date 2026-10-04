@@ -1,6 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { getPowerTypeForDirection } from '../../utils/recipePower';
+import { getPowerTypeForDirection } from '../../utils/recipes/recipePower';
 
 type Direction = 'mv_to_hv' | 'hv_to_mv';
 type Coolant = 'none' | 'water' | 'machine_oil';

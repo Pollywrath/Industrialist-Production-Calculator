@@ -3,40 +3,33 @@ import {
   saveWikiBucketCache,
   type WikiBucketCacheRecord,
 } from '../persistence/idb';
+import {
+  buildWikiBucketQuery,
+  INDUSTRIALIST_BUCKETS,
+  MAX_BUCKET_LIMIT,
+} from '../../functions/_shared/wikiBucketQuery.js';
+import type {
+  BucketQueryRequest,
+  BucketScalarValue,
+  BucketWhereClause,
+  BucketWhereOperator,
+  IndustrialistBucketName,
+} from '../../functions/_shared/wikiBucketQuery.js';
+
+export { buildWikiBucketQuery, INDUSTRIALIST_BUCKETS, MAX_BUCKET_LIMIT };
+export type {
+  BucketQueryRequest,
+  BucketScalarValue,
+  BucketWhereClause,
+  BucketWhereOperator,
+  IndustrialistBucketName,
+};
 
 export const INDUSTRIALIST_WIKI_API_URL =
   import.meta.env.VITE_INDUSTRIALIST_WIKI_API_URL ?? 'https://industrialist.miraheze.org/w/api.php';
 
 export const INDUSTRIALIST_WIKI_BUCKET_PROXY_URL =
   import.meta.env.VITE_INDUSTRIALIST_WIKI_BUCKET_PROXY_URL ?? '/api/wiki-bucket';
-
-export const INDUSTRIALIST_BUCKETS = [
-  'items',
-  'machines',
-  'recipes_info',
-  'recipes_inputs',
-  'recipes_outputs',
-] as const;
-
-export type IndustrialistBucketName = (typeof INDUSTRIALIST_BUCKETS)[number];
-
-export type BucketScalarValue = string | number | boolean | null;
-
-export type BucketWhereOperator = '=' | '!=' | '<' | '<=' | '>' | '>=';
-
-export interface BucketWhereClause {
-  field: string;
-  operator?: BucketWhereOperator;
-  value: BucketScalarValue;
-}
-
-export interface BucketQueryRequest {
-  bucket: IndustrialistBucketName;
-  select?: string[];
-  where?: BucketWhereClause[];
-  limit?: number;
-  offset?: number;
-}
 
 export interface WikiBucketFetchOptions {
   apiUrl?: string;
@@ -91,74 +84,9 @@ export class WikiBucketApiError extends Error {
   }
 }
 
-const BUCKET_NAME_SET = new Set<string>(INDUSTRIALIST_BUCKETS);
-const FIELD_NAME_PATTERN = /^[a-z][a-z0-9_]*(?:\.[a-z][a-z0-9_]*)?$/;
 const SHOULD_USE_BUCKET_PROXY = import.meta.env.VITE_INDUSTRIALIST_WIKI_BUCKET_USE_PROXY === 'true';
 const SHOULD_ALLOW_DIRECT_FALLBACK =
   import.meta.env.VITE_INDUSTRIALIST_WIKI_BUCKET_ALLOW_DIRECT_FALLBACK === 'true';
-const DEFAULT_SELECT_FIELDS_BY_BUCKET: Record<IndustrialistBucketName, readonly string[]> = {
-  items: ['page_name', 'page_name_sub', 'title', 'image', 'sellvalue', 'resvalue', 'is_fluid'],
-  machines: [
-    'page_name',
-    'page_name_sub',
-    'tier',
-    'image',
-    'cost',
-    'size',
-    'pollution',
-    'powerinput',
-    'poweroutput',
-    'transferrate',
-    'capacity',
-    'title',
-    'research',
-    'category',
-    'subcategory',
-    'variant',
-    'limited',
-  ],
-  recipes_info: [
-    'page_name',
-    'page_name_sub',
-    'id',
-    'machine',
-    'time',
-    'time_mode',
-    'mamyflux',
-    'mamyflux_mode',
-  ],
-  recipes_inputs: ['page_name', 'page_name_sub', 'id', 'machine', 'item', 'amount', 'amount_mode'],
-  recipes_outputs: ['page_name', 'page_name_sub', 'id', 'machine', 'item', 'amount', 'amount_mode'],
-};
-const MAX_BUCKET_LIMIT = 1000;
-
-function assertBucketName(bucket: string): asserts bucket is IndustrialistBucketName {
-  if (!BUCKET_NAME_SET.has(bucket)) {
-    throw new Error(`Unsupported Industrialist wiki bucket: ${bucket}`);
-  }
-}
-
-function assertFieldName(field: string): void {
-  if (!FIELD_NAME_PATTERN.test(field)) {
-    throw new Error(`Invalid Bucket field name: ${field}`);
-  }
-}
-
-function toLuaString(value: string): string {
-  return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
-}
-
-function toLuaValue(value: BucketScalarValue): string {
-  if (typeof value === 'string') return toLuaString(value);
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) {
-      throw new Error(`Invalid Bucket numeric value: ${value}`);
-    }
-    return String(value);
-  }
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
-  return 'nil';
-}
 
 function hashString(value: string): string {
   let hash = 2166136261;
@@ -194,48 +122,6 @@ function toCachedResult(
     checkedAt: record.checkedAt,
     ...extras,
   };
-}
-
-export function buildWikiBucketQuery(request: BucketQueryRequest): string {
-  assertBucketName(request.bucket);
-
-  let query = `bucket(${toLuaString(request.bucket)})`;
-  const selectedFields =
-    request.select && request.select.length > 0
-      ? request.select
-      : DEFAULT_SELECT_FIELDS_BY_BUCKET[request.bucket];
-
-  selectedFields.forEach(assertFieldName);
-  query += `.select(${selectedFields.map(toLuaString).join(',')})`;
-
-  if (request.where && request.where.length > 0) {
-    for (const clause of request.where) {
-      assertFieldName(clause.field);
-      if (clause.operator) {
-        query += `.where(${toLuaString(clause.field)},${toLuaString(clause.operator)},${toLuaValue(
-          clause.value,
-        )})`;
-      } else {
-        query += `.where(${toLuaString(clause.field)},${toLuaValue(clause.value)})`;
-      }
-    }
-  }
-
-  if (request.limit !== undefined) {
-    if (!Number.isInteger(request.limit) || request.limit < 1 || request.limit > MAX_BUCKET_LIMIT) {
-      throw new Error(`Bucket limit must be an integer from 1 to ${MAX_BUCKET_LIMIT}`);
-    }
-    query += `.limit(${request.limit})`;
-  }
-
-  if (request.offset !== undefined) {
-    if (!Number.isInteger(request.offset) || request.offset < 0) {
-      throw new Error('Bucket offset must be a non-negative integer');
-    }
-    query += `.offset(${request.offset})`;
-  }
-
-  return `${query}.run()`;
 }
 
 function getApiErrorMessage(error: WikiBucketApiResponse['error']): string {

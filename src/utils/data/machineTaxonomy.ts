@@ -40,7 +40,7 @@ export {
   createVirtualModularMachine,
   validateModularConsistency,
   buildVirtualModularMachines,
-} from './modularMachineFactory';
+} from '../recipes/modularMachineFactory';
 
 const SUBCATEGORY_ICONS: Record<string, LucideIcon> = {
   'fluid extractor': Droplet,

@@ -31,10 +31,10 @@ import {
   formatMachineSpace,
   formatPollution,
   formatPower,
-} from '../../../utils/unitFormatting';
-import { ceilMachineCount, hasMeaningfulMachineCountDifference } from '../../../utils/precision';
+} from '../../../utils/formatting/unitFormatting';
+import { ceilMachineCount, hasMeaningfulMachineCountDifference } from '../../../utils/numeric/precision';
 import { isRecipeNode } from '../../../types/nodes';
-import { constrainMachineCount } from '../../../utils/machineCountConstraint';
+import { constrainMachineCount } from '../../../utils/recipes/machineCountConstraint';
 import styles from './LPSolverOverlay.module.css';
 import { ALL_TIPS } from '../HelpOverlay/tips';
 import { OptimizationConfigurePanel } from './OptimizationConfigurePanel';

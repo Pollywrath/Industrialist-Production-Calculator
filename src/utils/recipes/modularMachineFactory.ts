@@ -1,5 +1,5 @@
-import type { Machine } from '../types/data';
-import { getSpecialRecipe } from '../data/registry';
+import type { Machine } from '../../types/data';
+import { getSpecialRecipe } from '../../data/registry';
 
 export function createVirtualModularMachine(
   subcategory: string,

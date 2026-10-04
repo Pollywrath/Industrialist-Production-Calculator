@@ -1,38 +1,24 @@
-import type { RateMode } from '../types/ui';
-import { cleanFlow, toPlainString, cleanMachineCount } from './precision';
+import type { RateMode } from '../../types/ui';
+import { cleanFlow, toPlainString, cleanMachineCount } from '../numeric/precision';
 
-export { cleanMachineCount, cleanFlow, toPlainString } from './precision';
+export { cleanMachineCount, cleanFlow, toPlainString } from '../numeric/precision';
+
+const RATE_MODE_SCALE: Partial<Record<RateMode, number>> = {
+  second: 1,
+  minute: 60,
+  hour: 3600,
+};
 
 export function getRateMultiplier(cycleTime: number, mode: RateMode): number {
-  let multiplier = 1;
-  if (mode === 'minute') {
-    multiplier = 60;
-  } else if (mode === 'hour') {
-    multiplier = 3600;
-  }
-
-  if (mode !== 'raw') {
-    return multiplier / cycleTime;
-  }
-
-  return multiplier;
+  if (mode === 'raw') return 1;
+  return (RATE_MODE_SCALE[mode] ?? 1) / cycleTime;
 }
 
 export function getNormalizedCycleTime(cycleTime: number, mode: RateMode): number {
-  switch (mode) {
-    case 'second':
-      return 1;
-    case 'minute':
-      return 60;
-    case 'hour':
-      return 3600;
-    case 'raw':
-    default:
-      return cycleTime;
-  }
+  return RATE_MODE_SCALE[mode] ?? cycleTime;
 }
 
-import type { Recipe } from '../types/data';
+import type { Recipe } from '../../types/data';
 
 export function computeQuantityMap(
   recipe: Recipe,

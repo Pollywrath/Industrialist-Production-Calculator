@@ -1,6 +1,6 @@
 import type { TutorialHighlight } from '../../tutorials/types';
 import type { TutorialAlias } from '../../tutorials/types';
-import { buildHandleId } from '../../utils/idGenerator';
+import { buildHandleId } from '../../utils/ids/idGenerator';
 
 export const TUTORIAL_DRIVER_REFRESH_EVENT = 'industrialist:tutorial-driver-refresh';
 

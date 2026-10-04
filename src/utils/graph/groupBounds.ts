@@ -1,5 +1,5 @@
-import type { CanvasNode, RecipeNodeType } from '../types/nodes';
-import { isRecipeNode } from '../types/nodes';
+import type { CanvasNode, RecipeNodeType } from '../../types/nodes';
+import { isRecipeNode } from '../../types/nodes';
 import {
   BASE_INFO_HEIGHT,
   NODE_CSS_WIDTH,
@@ -8,7 +8,7 @@ import {
   RECT_GAP,
   IO_COLUMN_PADDING,
   BOTTOM_PADDING,
-} from '../constants/layoutConstants';
+} from '../../constants/layoutConstants';
 
 export const GROUP_PADDING_X = SNAP_GRID[0];
 export const GROUP_PADDING_Y = SNAP_GRID[1];

@@ -3,8 +3,8 @@ import type { HandleDataType, Recipe } from '../../../types/data';
 import { isGroupNode, isRecipeNode } from '../../../types/nodes';
 import type { CanvasNode, RecipeNodeType } from '../../../types/nodes';
 import { RECT_HEIGHT, RECT_GAP, SNAP_GRID, NODE_WIDTH } from '../../../constants/layoutConstants';
-import { calculateMachineCountFromRate } from '../../../utils/recipeComputation';
-import { nextNodeId, nextEdgeId, buildHandleId } from '../../../utils/idGenerator';
+import { calculateMachineCountFromRate } from '../../../utils/recipes/recipeComputation';
+import { nextNodeId, nextEdgeId, buildHandleId } from '../../../utils/ids/idGenerator';
 import { findBestProductMatchIndex } from './productMatch';
 
 interface InsertionParams {

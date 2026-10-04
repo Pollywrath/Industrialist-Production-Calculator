@@ -1,4 +1,4 @@
-import { buildHandleId, parseHandleId } from '../utils/idGenerator';
+import { buildHandleId, parseHandleId } from '../utils/ids/idGenerator';
 import { getEdgeAnchors } from './materialize';
 import type { LayoutEdgeSpec, MaterializedLayoutPass, PortOrderRefinement } from './types';
 

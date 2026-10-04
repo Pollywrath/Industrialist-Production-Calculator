@@ -1,6 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { clamp } from '../../utils/precision';
+import { clamp } from '../../utils/numeric/precision';
 
 export const air_separation_unit: SpecialRecipe = {
   id: 'r_air_separation_unit_01',

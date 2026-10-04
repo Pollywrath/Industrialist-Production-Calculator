@@ -1,6 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { clamp } from '../../utils/precision';
+import { clamp } from '../../utils/numeric/precision';
 
 const calculateCycleTime = (tempC: number): number => {
   const t = Math.max(0, tempC);

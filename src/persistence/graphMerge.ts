@@ -1,7 +1,7 @@
 import type { Edge } from '@xyflow/react';
 import { isGroupNode, isRecipeNode } from '../types/nodes';
 import type { CanvasNode } from '../types/nodes';
-import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/idGenerator';
+import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/ids/idGenerator';
 import { remapProxyHandleIds } from './proxyHandleIds';
 
 export function mergeSaveIntoCanvas(

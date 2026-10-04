@@ -6,9 +6,9 @@ import type {
   RecipeInput,
   RecipeOutput,
   Research,
-} from '../types/data';
+} from '../../types/data';
 import { CANONICAL_CATEGORY_MAP, isValidTaxonomy } from './taxonomyData';
-import { validateModularConsistency } from './modularMachineFactory';
+import { validateModularConsistency } from '../recipes/modularMachineFactory';
 
 export interface ValidationError {
   field: string;

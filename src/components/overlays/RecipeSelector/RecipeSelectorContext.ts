@@ -7,7 +7,7 @@ import {
   isPotentialHandleTypeMatch,
   isProductEntryMatch,
 } from './productMatch';
-import { hasRecipePowerOutput } from '../../../utils/recipePower';
+import { hasRecipePowerOutput } from '../../../utils/recipes/recipePower';
 
 export interface RecipeSelectorState {
   stage: 'select' | 'recipes';

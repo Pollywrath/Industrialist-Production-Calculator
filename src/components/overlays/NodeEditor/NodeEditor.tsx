@@ -5,13 +5,13 @@ import type { RecipeNodeData } from '../../../types/nodes';
 import type { Recipe } from '../../../types/data';
 import { useUIStore } from '../../../stores/useUIStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
-import { getConnectedNodes } from '../../../utils/graphTraversal';
-import { getRateMultiplier, cleanMachineCount } from '../../../utils/recipeComputation';
+import { getConnectedNodes } from '../../../utils/graph/graphTraversal';
+import { getRateMultiplier, cleanMachineCount } from '../../../utils/recipes/recipeComputation';
 import {
   clampHandleOrder,
   collectStaleHandleIndices,
   buildStaleHandleIds,
-} from '../../../utils/nodeEditorHandles';
+} from '../../../utils/graph/nodeEditorHandles';
 import { HandleEditorColumns } from './HandleEditorColumns';
 import styles from './NodeEditor.module.css';
 import { NodeEditorProvider } from './NodeEditorProvider';
@@ -22,7 +22,7 @@ import { isRecipeNode } from '../../../types/nodes';
 import {
   constrainMachineCount,
   createMachineCountConstraint,
-} from '../../../utils/machineCountConstraint';
+} from '../../../utils/recipes/machineCountConstraint';
 import {
   canPerformTutorialAction,
   completeTutorialAction,

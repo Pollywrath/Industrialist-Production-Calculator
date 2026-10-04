@@ -24,8 +24,8 @@ import {
   formatDiagnosticQuantity,
   formatMachineCount,
   formatMachineSpace,
-} from '../../utils/unitFormatting';
-import { toggleSetValue } from '../../utils/setToggle';
+} from '../../utils/formatting/unitFormatting';
+import { toggleSetValue } from '../../utils/collections/setToggle';
 import { VirtualList } from '../shared/VirtualList';
 import { ValidatedNumberInput } from '../shared/ValidatedNumberInput';
 import {

@@ -1,9 +1,9 @@
 import type { ReactFlowNode, ReactFlowEdge } from '../types/solver';
 import { resolveActiveRecipe } from '../data/lookup';
 import { getSpecialRecipe } from '../data/registry';
-import { parseHandleId, buildHandleId } from '../utils/idGenerator';
-import { createGraphResolutionContext } from '../utils/graphResolutionContext';
-import { isPositiveSolverFlow, normalizeSolverRate } from '../utils/precision';
+import { parseHandleId, buildHandleId } from '../utils/ids/idGenerator';
+import { createGraphResolutionContext } from '../utils/graph/graphResolutionContext';
+import { isPositiveSolverFlow, normalizeSolverRate } from '../utils/numeric/precision';
 import { sumConnectedEdgeFlows } from './flowAggregation';
 
 export interface TemperaturePropagationResult {

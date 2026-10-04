@@ -1,4 +1,4 @@
-import { buildHandleId, parseHandleId } from '../utils/idGenerator';
+import { buildHandleId, parseHandleId } from '../utils/ids/idGenerator';
 
 export function remapProxyHandleIds(
   handleIds: string[],

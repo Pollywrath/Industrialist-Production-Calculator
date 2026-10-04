@@ -2,10 +2,10 @@ import type { Edge } from '@xyflow/react';
 import { isGroupNode, isRecipeNode } from '../types/nodes';
 import type { CanvasNode } from '../types/nodes';
 import type { EdgeControlPoint } from '../types/edges';
-import { parseHandleId, buildHandleId, nextNodeId, nextEdgeId } from '../utils/idGenerator';
+import { parseHandleId, buildHandleId, nextNodeId, nextEdgeId } from '../utils/ids/idGenerator';
 import { getRecipe, resolveActiveRecipe } from '../data/lookup';
-import { cleanMachineCount } from '../utils/precision';
-import { sanitizeMachineCountConstraint } from '../utils/machineCountConstraint';
+import { cleanMachineCount } from '../utils/numeric/precision';
+import { sanitizeMachineCountConstraint } from '../utils/recipes/machineCountConstraint';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { remapProxyHandleIds } from './proxyHandleIds';
 

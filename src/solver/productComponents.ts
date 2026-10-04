@@ -121,18 +121,3 @@ export function findProductConnectedComponents(productData: SolverProductData): 
 
   return Array.from(components.values());
 }
-
-export function componentHasHandle(
-  component: ProductComponent,
-  nodeId: string,
-  side: 'input' | 'output',
-  index: number,
-): boolean {
-  for (let i = 0; i < component.ports.length; i++) {
-    const port = component.ports[i];
-    if (port.nodeId === nodeId && port.type === side && port.index === index) {
-      return true;
-    }
-  }
-  return false;
-}

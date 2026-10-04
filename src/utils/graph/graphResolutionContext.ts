@@ -1,8 +1,8 @@
-import type { ReactFlowNode, ReactFlowEdge } from '../types/solver';
-import type { HandleDataType } from '../types/data';
-import { buildHandleId } from './idGenerator';
+import type { ReactFlowNode, ReactFlowEdge } from '../../types/solver';
+import type { HandleDataType } from '../../types/data';
 import {
   buildEdgeLookupMap,
+  hasHandleConnection,
   resolveHandleProduct,
   resolveHandleType,
   type EdgeLookupMap,
@@ -37,8 +37,7 @@ export function createGraphResolutionContext(
       resolveHandleType: (side: 'input' | 'output', index: number) =>
         resolveHandleType(nodeId, side, index, nodesMap, edgeLookup, productCache),
       hasConnection: (side: 'input' | 'output', index: number) => {
-        const handleId = buildHandleId(nodeId, side, index);
-        return (edgeLookup.get(handleId)?.length ?? 0) > 0;
+        return hasHandleConnection(nodeId, side, index, edgeLookup);
       },
     }),
   };

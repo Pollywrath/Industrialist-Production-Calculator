@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 tools/*
+!tools/generate-function-catalog.mjs
 # Local precision and solver diagnostics; retain on disk without committing.
 tools/autocomplete-precision-test.mjs
 tools/flow-precision-test.mjs

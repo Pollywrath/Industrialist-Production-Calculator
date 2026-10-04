@@ -16,7 +16,7 @@ import { RecipeNode } from './nodes/RecipeNode';
 import { GroupNode } from './nodes/GroupNode';
 import { RecipeEdge } from './edges/RecipeEdge';
 import type { EdgeControlPoint } from '../../types/edges';
-import { createGraphResolutionContext } from '../../utils/graphResolutionContext';
+import { createGraphResolutionContext } from '../../utils/graph/graphResolutionContext';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useFlowResultStore } from '../../stores/useFlowResultStore';
 import { useEdgeThemeStore } from '../../stores/useEdgeThemeStore';
@@ -28,7 +28,7 @@ import {
   useTutorialStore,
 } from '../../stores/useTutorialStore';
 import { useFlowSolver } from '../../hooks/useFlowSolver';
-import { parseHandleId } from '../../utils/idGenerator';
+import { parseHandleId } from '../../utils/ids/idGenerator';
 import {
   insertOrthogonalTurnPair,
   type OrthogonalRouteAnchors,
@@ -44,8 +44,8 @@ import type { CanvasNode, RecipeNodeType } from '../../types/nodes';
 import {
   computeBoundsFromMembersWithMovedMember,
   getRecipeMemberBounds,
-} from '../../utils/groupBounds';
-import type { GroupBounds, GroupMemberBounds } from '../../utils/groupBounds';
+} from '../../utils/graph/groupBounds';
+import type { GroupBounds, GroupMemberBounds } from '../../utils/graph/groupBounds';
 import previewStyles from './GroupBoundsPreview.module.css';
 import { TUTORIAL_DRIVER_REFRESH_EVENT } from '../tutorial/tutorialHighlightUtils';
 

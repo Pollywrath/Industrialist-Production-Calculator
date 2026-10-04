@@ -12,7 +12,7 @@ import {
   getRateTolerance,
   normalizeSolverRate,
   RATE_NUMERICAL_ZERO,
-} from '../utils/precision';
+} from '../utils/numeric/precision';
 import {
   findProductConnectedComponents,
   getProductConnectionSourceKey,

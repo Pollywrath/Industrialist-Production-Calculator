@@ -1,6 +1,6 @@
 import ELK from 'elkjs/lib/elk-api.js';
 import ElkWorker from 'elkjs/lib/elk-worker.min.js?worker';
-import { buildHandleId } from '../utils/idGenerator';
+import { buildHandleId } from '../utils/ids/idGenerator';
 import { GRID_X, GROUP_PADDING, NODE_HANDLE_SIZE, ROOT_PADDING, getLayoutPortY } from './constants';
 import type {
   ElkInputEdge,

@@ -11,10 +11,10 @@ import { useFlowResultStore } from '../../../stores/useFlowResultStore';
 import { useGlobalSettingsStore } from '../../../stores/useGlobalSettingsStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { useDashboardStore } from '../../../stores/useDashboardStore';
-import type { ResearchInfrastructureStats } from '../../../utils/researchInfrastructure';
+import type { ResearchInfrastructureStats } from '../../../utils/recipes/researchInfrastructure';
 import { ValidatedNumberInput } from '../../shared/ValidatedNumberInput';
 import { SearchDropdown } from '../../shared/SearchDropdown';
-import { buildHandleId } from '../../../utils/idGenerator';
+import { buildHandleId } from '../../../utils/ids/idGenerator';
 import { getAllProducts } from '../../../data/lookup';
 import styles from './NodeEditor.module.css';
 

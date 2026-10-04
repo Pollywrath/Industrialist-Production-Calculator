@@ -1,6 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { clamp } from '../../utils/precision';
+import { clamp } from '../../utils/numeric/precision';
 
 export function computeChemicalPlantMultipliers(speedFactor: number, efficiencyFactor: number) {
   const clampedSpeed = clamp(speedFactor, 50, 200);

@@ -16,14 +16,14 @@ import type {
   RecipeNodeData,
   RecipeNodeType,
 } from '../types/nodes';
-import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/idGenerator';
+import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/ids/idGenerator';
 import { getProductName, getRecipe } from '../data/lookup';
 import { clearFlowCache } from '../solver/flowSolver';
 import {
   buildEdgeLookupMap,
   resolveHandleProduct,
   resolveHandleType,
-} from '../utils/productResolver';
+} from '../utils/graph/productResolver';
 import {
   RECT_HEIGHT,
   RECT_GAP,
@@ -39,8 +39,8 @@ import {
   computeBoundsFromMembers,
   getRecipeMemberBounds,
   getCollapsedGroupHeight,
-} from '../utils/groupBounds';
-import type { GroupMemberBounds } from '../utils/groupBounds';
+} from '../utils/graph/groupBounds';
+import type { GroupMemberBounds } from '../utils/graph/groupBounds';
 import {
   type HistoryEntry,
   type PositionHistoryEntry,

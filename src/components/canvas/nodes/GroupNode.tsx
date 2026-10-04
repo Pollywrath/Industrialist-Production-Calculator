@@ -15,16 +15,16 @@ import { isRecipeNode } from '../../../types/nodes';
 import type { GroupNodeType, RecipeNodeType } from '../../../types/nodes';
 import { getMachine, resolveActiveRecipe } from '../../../data/lookup';
 import { getSpecialRecipe } from '../../../data/registry';
-import { formatCurrency, formatPower, formatPollution } from '../../../utils/unitFormatting';
-import { getRecipePowerTotals } from '../../../utils/recipePower';
-import { ceilMachineCount } from '../../../utils/precision';
-import { getRecipeOptimizationMetrics } from '../../../utils/optimizationMetrics';
+import { formatCurrency, formatPower, formatPollution } from '../../../utils/formatting/unitFormatting';
+import { getRecipePowerTotals } from '../../../utils/recipes/recipePower';
+import { ceilMachineCount } from '../../../utils/numeric/precision';
+import { getRecipeOptimizationMetrics } from '../../../utils/recipes/optimizationMetrics';
 import {
   EMPTY_GROUP_HEIGHT,
   EMPTY_GROUP_WIDTH,
   GROUP_HEADER_HEIGHT,
   getCollapsedGroupHeight,
-} from '../../../utils/groupBounds';
+} from '../../../utils/graph/groupBounds';
 import { GroupNodeEditor } from '../../overlays/GroupNodeEditor';
 import { GroupNodeIO } from './GroupNodeIO';
 import styles from './GroupNode.module.css';

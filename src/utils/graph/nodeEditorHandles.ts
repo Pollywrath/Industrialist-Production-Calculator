@@ -1,5 +1,5 @@
 import type { Edge } from '@xyflow/react';
-import { buildHandleId, parseHandleId } from './idGenerator';
+import { buildHandleId, parseHandleId } from '../ids/idGenerator';
 
 export function clampHandleOrder(order: number[], handleCount: number): number[] {
   const clamped = order.filter((idx) => idx >= 0 && idx < handleCount);

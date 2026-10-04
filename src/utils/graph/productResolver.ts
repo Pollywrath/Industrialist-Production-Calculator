@@ -1,12 +1,22 @@
-import type { ReactFlowNode, ReactFlowEdge } from '../types/solver';
-import type { HandleDataType } from '../types/data';
-import { getProduct, resolveActiveRecipe } from '../data/lookup';
+import type { ReactFlowNode, ReactFlowEdge } from '../../types/solver';
+import type { HandleDataType } from '../../types/data';
+import { getProduct, resolveActiveRecipe } from '../../data/lookup';
 import { getRecipeEntryHandleType, productTypeToHandleDataType } from './handleTypes';
-import { parseHandleId, buildHandleId } from './idGenerator';
+import { parseHandleId, buildHandleId } from '../ids/idGenerator';
 
 export type EdgeLookupMap = Map<string, ReactFlowEdge[]>;
 
 type ResolveProductForRecipe = (side: 'input' | 'output', index: number) => string;
+
+export function hasHandleConnection(
+  nodeId: string,
+  side: 'input' | 'output',
+  index: number,
+  edgeLookup: EdgeLookupMap,
+): boolean {
+  const handleId = buildHandleId(nodeId, side, index);
+  return (edgeLookup.get(handleId)?.length ?? 0) > 0;
+}
 
 function createRecipeResolutionHelpers(
   nodeId: string,
@@ -16,8 +26,7 @@ function createRecipeResolutionHelpers(
   return {
     resolveProduct,
     hasConnection: (side: 'input' | 'output', index: number) => {
-      const handleId = buildHandleId(nodeId, side, index);
-      return (edgeLookup.get(handleId)?.length ?? 0) > 0;
+      return hasHandleConnection(nodeId, side, index, edgeLookup);
     },
   };
 }

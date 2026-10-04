@@ -24,7 +24,7 @@ import {
   validateMachine,
   validateResearch,
   validateRecipe,
-} from '../utils/dataValidation';
+} from '../utils/data/dataValidation';
 
 export interface PendingEdits {
   products: Record<string, Partial<Product> & { _tombstone?: boolean; _isNew?: boolean }>;

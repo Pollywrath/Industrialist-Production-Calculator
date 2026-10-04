@@ -72,6 +72,7 @@ Docker is required only to rebuild the native solver; follow the instructions in
 | `src/data/`                | Built-in recipes, machines, products, research, lookups, and special recipe rules |
 | `src/solver/`              | Flow and temperature pipeline, balancing, autocomplete, and ratio optimization    |
 | `src/stores/`              | Zustand stores for canvas, solver results, settings, and overlays                 |
+| `src/utils/`               | Shared helpers grouped by canvas, graph, data, recipes, formatting, and numeric logic |
 | `src/persistence/`         | IndexedDB access, autosave, save transformation, and graph merging                |
 | `src/tutorials/`           | Guided tutorial steps and tutorial graph definitions                              |
 | `functions/api/`           | Wiki data proxy used by the Data Manager comparison view                          |

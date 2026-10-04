@@ -1,4 +1,4 @@
-import type { HandleDataType, ProductType, Recipe, RecipeInput, RecipeOutput } from '../types/data';
+import type { HandleDataType, ProductType, Recipe, RecipeInput, RecipeOutput } from '../../types/data';
 
 export function isHandleDataType(value: unknown): value is HandleDataType {
   return value === 'item' || value === 'fluid';
@@ -27,11 +27,3 @@ export function getRecipeEntryHandleType(
   return isHandleDataType(entry?.handle_type) ? entry.handle_type : undefined;
 }
 
-export function getRecipeHandleTypeOverride(
-  recipe: Recipe | undefined,
-  side: 'input' | 'output',
-  index: number,
-): HandleDataType | undefined {
-  const list = side === 'input' ? recipe?.inputs : recipe?.outputs;
-  return getRecipeEntryHandleType(list?.[index]);
-}

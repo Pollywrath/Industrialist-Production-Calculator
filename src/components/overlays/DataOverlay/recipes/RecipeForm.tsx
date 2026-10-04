@@ -6,7 +6,7 @@ import {
   hasRecipeOverride,
 } from '../../../../data/lookup';
 import { getSpecialRecipe } from '../../../../data/registry';
-import { buildVirtualModularMachines } from '../../../../utils/modularMachineFactory';
+import { buildVirtualModularMachines } from '../../../../utils/recipes/modularMachineFactory';
 import { useDataStore, overlayPendingEdit } from '../../../../stores/useDataStore';
 import {
   canPerformTutorialAction,

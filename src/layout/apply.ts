@@ -1,7 +1,7 @@
 import type { Edge } from '@xyflow/react';
 import type { CanvasNode } from '../types/nodes';
 import { isGroupNode, isRecipeNode } from '../types/nodes';
-import { computeGroupBoundsByGroupId } from '../utils/groupBounds';
+import { computeGroupBoundsByGroupId } from '../utils/graph/groupBounds';
 import { snapToGrid } from './constants';
 import type { EdgeUpdate, LayoutGraphResult, LayoutNodeSpec } from './types';
 

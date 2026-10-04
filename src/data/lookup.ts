@@ -11,9 +11,9 @@ import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
 import { useFlowStore } from '../stores/useFlowStore';
 import { useFlowResultStore } from '../stores/useFlowResultStore';
 import { clearFlowCache } from '../solver/flowSolver';
-import { createGraphResolutionContext } from '../utils/graphResolutionContext';
-import { buildVirtualModularMachines } from '../utils/modularMachineFactory';
-import { buildHandleId } from '../utils/idGenerator';
+import { createGraphResolutionContext } from '../utils/graph/graphResolutionContext';
+import { buildVirtualModularMachines } from '../utils/recipes/modularMachineFactory';
+import { buildHandleId } from '../utils/ids/idGenerator';
 import { isRecipeNode } from '../types/nodes';
 
 let recipes: Recipe[] = [];
@@ -464,7 +464,7 @@ export function initializeDatabase(): Promise<void> {
 
     if (import.meta.env.DEV) {
       const { validateFullDatabase, getDatabaseChecksums } =
-        await import('../utils/dataValidation');
+        await import('../utils/data/dataValidation');
       const checksums = getDatabaseChecksums(products, machines, recipes, researches);
       const validation = validateFullDatabase(products, machines, recipes, researches);
       if (!validation.valid) {
@@ -662,10 +662,6 @@ export function getDefaultProducts(): Product[] {
 
 export function getDefaultMachines(): Machine[] {
   return defaultMachines;
-}
-
-export function getDefaultRecipes(): Recipe[] {
-  return defaultRecipes;
 }
 
 export function getDefaultResearches(): Research[] {

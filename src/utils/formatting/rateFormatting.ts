@@ -1,4 +1,4 @@
-import type { RateMode } from '../types/ui';
+import type { RateMode } from '../../types/ui';
 
 export function getRateSuffix(rateMode: RateMode): string {
   switch (rateMode) {

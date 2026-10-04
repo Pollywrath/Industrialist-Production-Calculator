@@ -14,7 +14,7 @@ import type { NodeFlowResult } from '../../../types/solver';
 import type { HandleDataType, Recipe } from '../../../types/data';
 import { RecipeSelectorProvider } from './RecipeSelectorProvider';
 import { useRecipeSelectorStore } from './RecipeSelectorContext';
-import { createGraphResolutionContext } from '../../../utils/graphResolutionContext';
+import { createGraphResolutionContext } from '../../../utils/graph/graphResolutionContext';
 import { isRecipeNode } from '../../../types/nodes';
 import {
   canPerformTutorialAction,

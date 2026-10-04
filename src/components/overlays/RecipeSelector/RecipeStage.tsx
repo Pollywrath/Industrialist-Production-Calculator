@@ -15,7 +15,7 @@ import {
   isTutorialActive,
   useTutorialStore,
 } from '../../../stores/useTutorialStore';
-import { isRecipeAvailable } from '../../../utils/recipeAvailability';
+import { isRecipeAvailable } from '../../../utils/recipes/recipeAvailability';
 
 interface RecipeStageProps {
   clickedRateInfo: { clickedPerSecondRate: number } | null;

@@ -4,22 +4,22 @@ import { getSpecialRecipe } from '../data/registry';
 import type { Recipe } from '../types/data';
 import { isRecipeNode, type CanvasNode, type RecipeNodeType } from '../types/nodes';
 import type { AutocompleteTemperatureRange, SpecialRecipe } from '../types/specialRecipes';
-import { buildHandleId, nextEdgeId, nextNodeId, parseHandleId } from '../utils/idGenerator';
-import { resolveOptimizationSettings } from '../utils/optimizationMetrics';
+import { buildHandleId, nextEdgeId, nextNodeId, parseHandleId } from '../utils/ids/idGenerator';
+import { resolveOptimizationSettings } from '../utils/recipes/optimizationMetrics';
 import {
   areNearlyEqual,
   areRatesEquivalent,
   isMachineCountNumericallyZero,
   isPositiveSolverFlow,
   normalizeSolverRate,
-} from '../utils/precision';
-import { getRateMultiplier } from '../utils/recipeComputation';
-import { hasRecipePowerOutput } from '../utils/recipePower';
+} from '../utils/numeric/precision';
+import { getRateMultiplier } from '../utils/recipes/recipeComputation';
+import { hasRecipePowerOutput } from '../utils/recipes/recipePower';
 import {
   getAvailableAutomationRecipes,
   isRecipeAvailableForAutomation,
-} from '../utils/recipeAvailability';
-import { constrainMachineCount } from '../utils/machineCountConstraint';
+} from '../utils/recipes/recipeAvailability';
+import { constrainMachineCount } from '../utils/recipes/machineCountConstraint';
 import { useGlobalSettingsStore, type GlobalSettings } from '../stores/useGlobalSettingsStore';
 import { solveFlowPipeline } from './solverPipeline';
 import {

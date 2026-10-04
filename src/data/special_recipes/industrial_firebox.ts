@@ -1,6 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { roundTo } from '../../utils/precision';
+import { roundTo } from '../../utils/numeric/precision';
 
 const FUEL_MAP: Record<string, { product_id: string; energy: number }> = {
   Coal: { product_id: 'p_coal', energy: 30000 },

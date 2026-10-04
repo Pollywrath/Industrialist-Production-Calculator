@@ -1,6 +1,6 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { clamp, roundTo } from '../../utils/precision';
+import { clamp, roundTo } from '../../utils/numeric/precision';
 
 const AMBIENT_TEMP = 18;
 const WATER_FLOW = 400;

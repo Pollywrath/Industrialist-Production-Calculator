@@ -1,4 +1,4 @@
-import { normalizeSolverRate } from '../utils/precision';
+import { normalizeSolverRate } from '../utils/numeric/precision';
 
 interface EdgeWithId {
   id: string;

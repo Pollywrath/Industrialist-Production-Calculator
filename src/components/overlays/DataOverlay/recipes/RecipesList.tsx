@@ -7,7 +7,7 @@ import {
   isBaselineRecipe,
   hasRecipeOverride,
 } from '../../../../data/lookup';
-import { buildVirtualModularMachines } from '../../../../utils/modularMachineFactory';
+import { buildVirtualModularMachines } from '../../../../utils/recipes/modularMachineFactory';
 import type { Machine, Recipe } from '../../../../types/data';
 import { useDataStore, overlayPendingEdit } from '../../../../stores/useDataStore';
 import {

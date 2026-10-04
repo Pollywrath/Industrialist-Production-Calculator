@@ -4,7 +4,7 @@ import type {
   SpecialRecipeAutocompleteSizingContext,
 } from '../../types/specialRecipes';
 import { getMachine } from '../lookup';
-import { ceilMachineCount, roundTo } from '../../utils/precision';
+import { ceilMachineCount, roundTo } from '../../utils/numeric/precision';
 
 const DEFAULT_CONTROLLER_ID = 'm_tree_farm_controller';
 const IGLOO_CONTROLLER_ID = 'm_igloo_farm_controller';

@@ -1,5 +1,5 @@
 import type { OrthogonalRouteAnchors } from '../utils/canvas/orthogonalEdgeRouting';
-import { buildHandleId, parseHandleId } from '../utils/idGenerator';
+import { buildHandleId, parseHandleId } from '../utils/ids/idGenerator';
 import { GRID_X, GRID_Y, getLayoutPortY, snapDimension, snapToGrid } from './constants';
 import type {
   CollectedLayoutedEdge,

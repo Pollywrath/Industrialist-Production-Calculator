@@ -12,7 +12,7 @@ import { type EdgeControlPoint, type RecipeEdgeData } from '../../../types/edges
 import { useEdgeThemeStore } from '../../../stores/useEdgeThemeStore';
 import { useFlowStore } from '../../../stores/useFlowStore';
 import { getEffectiveToggleId, useUIStore } from '../../../stores/useUIStore';
-import { parseHandleId } from '../../../utils/idGenerator';
+import { parseHandleId } from '../../../utils/ids/idGenerator';
 import {
   buildOrthogonalPathPoints,
   buildOrthogonalSegments,

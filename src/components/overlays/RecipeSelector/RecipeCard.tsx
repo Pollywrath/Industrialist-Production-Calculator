@@ -12,14 +12,14 @@ import {
   getRateMultiplier,
   getNormalizedCycleTime,
   calculateMachineCountFromRate,
-} from '../../../utils/recipeComputation';
+} from '../../../utils/recipes/recipeComputation';
 import {
   formatPollution,
   formatTime,
   formatQuantity,
   formatMachineCount,
-} from '../../../utils/unitFormatting';
-import { formatRecipePowerLine } from '../../../utils/recipePower';
+} from '../../../utils/formatting/unitFormatting';
+import { formatRecipePowerLine } from '../../../utils/recipes/recipePower';
 import { Star } from 'lucide-react';
 import styles from './RecipeSelector.module.css';
 import { findBestProductMatch } from './productMatch';

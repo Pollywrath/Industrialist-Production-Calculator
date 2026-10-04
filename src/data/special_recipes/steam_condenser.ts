@@ -1,7 +1,7 @@
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
-import { clamp } from '../../utils/precision';
-import { formatTemperature } from '../../utils/unitFormatting';
+import { clamp } from '../../utils/numeric/precision';
+import { formatTemperature } from '../../utils/formatting/unitFormatting';
 
 const MAX_COOLANT_FLOW = 800;
 const MAX_STEAM_FLOW = 24000;

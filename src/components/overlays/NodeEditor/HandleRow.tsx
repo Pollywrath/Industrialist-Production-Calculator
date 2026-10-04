@@ -3,9 +3,9 @@ import type { RateMode } from '../../../types/ui';
 import { ChevronUp, ChevronDown } from 'lucide-react';
 import { getProductName } from '../../../data/lookup';
 import { useFlowStore } from '../../../stores/useFlowStore';
-import { createGraphResolutionContext } from '../../../utils/graphResolutionContext';
+import { createGraphResolutionContext } from '../../../utils/graph/graphResolutionContext';
 import { isRecipeNode } from '../../../types/nodes';
-import { getRateSuffix } from '../../../utils/rateFormatting';
+import { getRateSuffix } from '../../../utils/formatting/rateFormatting';
 import styles from './NodeEditor.module.css';
 import { useNodeEditorStore } from './NodeEditorContext';
 

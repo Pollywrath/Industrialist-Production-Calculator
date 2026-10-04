@@ -5,13 +5,13 @@ import { resolveActiveRecipe } from '../data/lookup';
 import { buildSolverGraph } from './graphBuilder';
 import { calculateFlows } from './flowSolver';
 import { propagateTemperatures } from './temperaturePropagator';
-import { computeResolvedProducts } from '../utils/productResolver';
-import { createGraphResolutionContext } from '../utils/graphResolutionContext';
-import { buildHandleId } from '../utils/idGenerator';
+import { computeResolvedProducts } from '../utils/graph/productResolver';
+import { createGraphResolutionContext } from '../utils/graph/graphResolutionContext';
+import { buildHandleId } from '../utils/ids/idGenerator';
 import {
   areRatesEquivalent as areRateValuesEquivalent,
   normalizeSolverRate,
-} from '../utils/precision';
+} from '../utils/numeric/precision';
 import { sumConnectedEdgeFlows } from './flowAggregation';
 
 const MAX_TEMPERATURE_COUPLED_PASSES = 8;

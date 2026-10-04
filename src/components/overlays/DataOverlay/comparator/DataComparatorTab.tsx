@@ -27,7 +27,7 @@ import {
   type ComparisonResult,
   type DiffItem,
   type WikiRecipe,
-} from '../../../../utils/dataComparator';
+} from '../../../../utils/data/dataComparator';
 import {
   getAllProducts,
   getAllMachines,
@@ -37,8 +37,8 @@ import {
 import styles from '../DataOverlay.module.css';
 import { VirtualList } from '../../../shared/VirtualList';
 import type { Machine, Product, Recipe } from '../../../../types/data';
-import { sortItems } from '../../../../utils/sorting';
-import { toggleSetValue } from '../../../../utils/setToggle';
+import { sortItems } from '../../../../utils/collections/sorting';
+import { toggleSetValue } from '../../../../utils/collections/setToggle';
 
 interface ComparatorVirtualRow {
   key: string;

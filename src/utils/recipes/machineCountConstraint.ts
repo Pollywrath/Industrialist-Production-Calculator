@@ -2,7 +2,7 @@ import type {
   MachineCountConstraint,
   MachineCountConstraintKind,
   RecipeNodeData,
-} from '../types/nodes';
+} from '../../types/nodes';
 import { cleanMachineCount } from './recipeComputation';
 
 export type MachineCountConstraintMode = 'free' | MachineCountConstraintKind;

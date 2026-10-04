@@ -1,6 +1,6 @@
 import type { HandleDataType } from '../../../types/data';
 import { getProduct } from '../../../data/lookup';
-import { isHandleDataType, productTypeToHandleDataType } from '../../../utils/handleTypes';
+import { isHandleDataType, productTypeToHandleDataType } from '../../../utils/graph/handleTypes';
 
 interface ProductEntry {
   product_id: string;

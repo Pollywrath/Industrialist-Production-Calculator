@@ -6,7 +6,7 @@ import {
   EMPTY_GROUP_HEIGHT,
   EMPTY_GROUP_WIDTH,
   getCollapsedGroupHeight,
-} from '../utils/groupBounds';
+} from '../utils/graph/groupBounds';
 import {
   BASE_INFO_HEIGHT,
   BOTTOM_PADDING,

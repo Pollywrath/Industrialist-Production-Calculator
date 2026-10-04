@@ -3,14 +3,14 @@ import type { Recipe } from '../../../types/data';
 import type { MachineCountConstraint } from '../../../types/nodes';
 import { useUIStore, getEffectiveToggleId } from '../../../stores/useUIStore';
 import { getSpecialRecipe } from '../../../data/registry';
-import { getNormalizedCycleTime } from '../../../utils/recipeComputation';
+import { getNormalizedCycleTime } from '../../../utils/recipes/recipeComputation';
 import {
   formatPollution,
   formatTime,
   formatMachineCount,
   formatTemperature,
-} from '../../../utils/unitFormatting';
-import { formatRecipePowerLine } from '../../../utils/recipePower';
+} from '../../../utils/formatting/unitFormatting';
+import { formatRecipePowerLine } from '../../../utils/recipes/recipePower';
 import {
   canPerformTutorialAction,
   completeTutorialAction,

@@ -6,9 +6,9 @@ import type {
 } from '../types/solver';
 import type { Recipe } from '../types/data';
 import type { HandleRef } from '../types/nodes';
-import { buildHandleId, parseHandleId } from '../utils/idGenerator';
+import { buildHandleId, parseHandleId } from '../utils/ids/idGenerator';
 import { solveFlowPipeline } from './solverPipeline';
-import { getRateTolerance, normalizeSolverRate, RATE_NUMERICAL_ZERO } from '../utils/precision';
+import { getRateTolerance, normalizeSolverRate, RATE_NUMERICAL_ZERO } from '../utils/numeric/precision';
 
 const PHI = (Math.sqrt(5) - 1) / 2;
 

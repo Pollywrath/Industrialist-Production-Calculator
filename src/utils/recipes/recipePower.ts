@@ -1,5 +1,5 @@
-import type { PowerType, Recipe, RecipePowerEffect } from '../types/data';
-import { formatPower } from './unitFormatting';
+import type { PowerType, Recipe, RecipePowerEffect } from '../../types/data';
+import { formatPower } from '../formatting/unitFormatting';
 
 export interface RecipePowerTotals {
   use: number;
@@ -79,10 +79,6 @@ export function getRecipePowerTotals(recipe: Recipe, machineCount = 1): RecipePo
     hvUse,
     hvOutput,
   };
-}
-
-export function getRecipeNetPower(recipe: Recipe): number {
-  return getRecipePowerTotals(recipe).net;
 }
 
 export function hasRecipePowerOutput(recipe: Recipe): boolean {

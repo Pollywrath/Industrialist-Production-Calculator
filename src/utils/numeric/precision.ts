@@ -66,21 +66,12 @@ export function getRateExcess(produced: number, routed: number): number {
   return getPositiveDifference(produced, routed);
 }
 
-export function hasMeaningfulExcess(produced: number, routed: number): boolean {
-  return getRateExcess(produced, routed) > getRateTolerance(produced, routed);
-}
-
 export function isPositiveSolverFlow(value: number | undefined): boolean {
   return value !== undefined && normalizeSolverRate(value) > 0;
 }
 
 export function isMachineCountNumericallyZero(value: number | undefined): boolean {
   return value === undefined || !Number.isFinite(value) || value <= RATE_NUMERICAL_ZERO;
-}
-
-export function isMachineCountNearInteger(value: number): boolean {
-  if (!Number.isFinite(value)) return false;
-  return Math.abs(value - Math.round(value)) <= getMachineIntegerTolerance(value);
 }
 
 export function ceilMachineCount(value: number): number {
@@ -111,19 +102,6 @@ export function areNearlyEqual(
   return Math.abs(a - b) <= getScaledTolerance(a, b, absoluteTolerance, relativeTolerance);
 }
 
-export function hasMeaningfulDeficit(
-  required: number,
-  supplied: number,
-  absoluteTolerance = FLOW_STATUS_ABSOLUTE_TOLERANCE,
-  relativeTolerance = FLOW_STATUS_RELATIVE_TOLERANCE,
-): boolean {
-  if (required <= 0) return false;
-  return (
-    required - supplied >
-    getScaledTolerance(required, supplied, absoluteTolerance, relativeTolerance)
-  );
-}
-
 export function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
@@ -131,10 +109,6 @@ export function clamp(value: number, min: number, max: number): number {
 export function roundTo(value: number, decimals = 0): number {
   const multiplier = 10 ** decimals;
   return Math.round(value * multiplier) / multiplier;
-}
-
-export function clampFlow(flow: number): number {
-  return Math.abs(flow) < EPSILON ? 0 : Number(flow.toFixed(10));
 }
 
 export function toPlainString(num: number, maxDecimals: number): string {

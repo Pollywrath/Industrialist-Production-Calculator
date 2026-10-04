@@ -1,6 +1,6 @@
-import { getAllRecipes, getMachine, isMachineUnlocked } from '../data/lookup';
-import type { Machine, Recipe } from '../types/data';
-import type { GlobalSettings } from '../stores/useGlobalSettingsStore';
+import { getAllRecipes, getMachine, isMachineUnlocked } from '../../data/lookup';
+import type { Machine, Recipe } from '../../types/data';
+import type { GlobalSettings } from '../../stores/useGlobalSettingsStore';
 
 export function isMachineAvailable(
   machine: Machine,
@@ -50,10 +50,6 @@ function filterAvailableRecipes(
 ): Recipe[] {
   const unlockedResearchIds = new Set(settings.unlockedResearchIds);
   return getAllRecipes().filter((recipe) => isAvailable(recipe, settings, unlockedResearchIds));
-}
-
-export function getAvailableRecipes(settings: GlobalSettings): Recipe[] {
-  return filterAvailableRecipes(settings, isRecipeAvailable);
 }
 
 export function getAvailableAutomationRecipes(settings: GlobalSettings): Recipe[] {
