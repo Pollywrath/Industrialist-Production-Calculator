@@ -18,6 +18,7 @@ interface UIState {
   isOverlaysMinimized: boolean;
   isStatsMinimized: boolean;
   isExtendedMinimized: boolean;
+  isGlobalSettingsMinimized: boolean;
   activeToggleId: CanvasToggleId | null;
   temporaryOverrides: CanvasToggleId[];
   isRecipeSelectorOpen: boolean;
@@ -37,6 +38,7 @@ interface UIState {
   toggleOverlaysMinimized: () => void;
   toggleStatsMinimized: () => void;
   toggleExtendedMinimized: () => void;
+  toggleGlobalSettingsMinimized: () => void;
   toggleButton: (id: CanvasToggleId) => void;
   pushOverride: (id: CanvasToggleId) => void;
   popOverride: (id: CanvasToggleId) => void;
@@ -86,6 +88,7 @@ const useUIStore = create<UIState>((set) => ({
   isOverlaysMinimized: false,
   isStatsMinimized: false,
   isExtendedMinimized: false,
+  isGlobalSettingsMinimized: false,
   activeToggleId: null,
   temporaryOverrides: [],
   isRecipeSelectorOpen: false,
@@ -108,6 +111,8 @@ const useUIStore = create<UIState>((set) => ({
   toggleStatsMinimized: () => set((state) => ({ isStatsMinimized: !state.isStatsMinimized })),
   toggleExtendedMinimized: () =>
     set((state) => ({ isExtendedMinimized: !state.isExtendedMinimized })),
+  toggleGlobalSettingsMinimized: () =>
+    set((state) => ({ isGlobalSettingsMinimized: !state.isGlobalSettingsMinimized })),
   toggleButton: (id) =>
     set((state) => ({
       activeToggleId: state.activeToggleId === id ? null : id,

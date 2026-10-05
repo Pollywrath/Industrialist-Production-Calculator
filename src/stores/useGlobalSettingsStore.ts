@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getAllResearches } from '../data/lookup';
+import { DEFAULT_GAME_MONTH, type GameMonth } from '../types/globalSettings';
 
 const ALWAYS_UNLOCKED_SEEDS: Record<string, string[]> = {
   normal: [
@@ -63,6 +64,7 @@ const ALWAYS_UNLOCKED_SEEDS: Record<string, string[]> = {
 
 export interface GlobalSettings {
   global_pollution: number;
+  current_month: GameMonth;
   difficulty: string;
   unlockedResearchIds: string[];
   oreNodesEnabled: boolean;
@@ -72,6 +74,7 @@ export interface GlobalSettings {
 interface GlobalSettingsState {
   settings: GlobalSettings;
   setGlobalPollution: (value: number) => void;
+  setCurrentMonth: (month: GameMonth) => void;
   setDifficulty: (value: string) => void;
   setUnlockedResearchIds: (value: string[] | ((prev: string[]) => string[])) => void;
   setOreNodesEnabled: (value: boolean) => void;
@@ -83,6 +86,7 @@ export const useGlobalSettingsStore = create<GlobalSettingsState>((set) => {
   return {
     settings: {
       global_pollution: 10,
+      current_month: DEFAULT_GAME_MONTH,
       difficulty: 'sandbox',
       unlockedResearchIds: [],
       oreNodesEnabled: false,
@@ -99,6 +103,11 @@ export const useGlobalSettingsStore = create<GlobalSettingsState>((set) => {
 
         const nextSettings = { ...state.settings, global_pollution: finalValue };
         return { settings: nextSettings };
+      }),
+    setCurrentMonth: (current_month: GameMonth) =>
+      set((state) => {
+        if (state.settings.current_month === current_month) return state;
+        return { settings: { ...state.settings, current_month } };
       }),
     setDifficulty: (difficulty: string) =>
       set((state) => {
@@ -148,6 +157,7 @@ export const useGlobalSettingsStore = create<GlobalSettingsState>((set) => {
       set((state) => {
         const nextSettings = {
           global_pollution: settings.global_pollution ?? state.settings.global_pollution,
+          current_month: settings.current_month ?? state.settings.current_month,
           difficulty: settings.difficulty ?? state.settings.difficulty,
           unlockedResearchIds: settings.unlockedResearchIds ?? state.settings.unlockedResearchIds,
           oreNodesEnabled: settings.oreNodesEnabled ?? state.settings.oreNodesEnabled,

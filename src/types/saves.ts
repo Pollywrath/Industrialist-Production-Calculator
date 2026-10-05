@@ -1,4 +1,5 @@
 import type { MachineCountConstraint } from './nodes';
+import type { GameMonth } from './globalSettings';
 
 export interface SavedRecipeNode {
   id: string;
@@ -41,6 +42,7 @@ export interface SavedEdge {
 
 export interface GlobalSettings {
   global_pollution: number;
+  current_month?: GameMonth;
   difficulty?: string;
   unlockedResearchIds?: string[];
   oreNodesEnabled?: boolean;

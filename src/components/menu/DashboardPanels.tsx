@@ -15,6 +15,7 @@ import {
 import { useUIStore } from '../../stores/useUIStore';
 import { useFlowStore } from '../../stores/useFlowStore';
 import { useGlobalSettingsStore } from '../../stores/useGlobalSettingsStore';
+import { GAME_MONTHS, type GameMonth } from '../../types/globalSettings';
 import { useDashboardStore, initDashboardStore } from '../../stores/useDashboardStore';
 import { isGroupNode, isRecipeNode } from '../../types/nodes';
 import {
@@ -56,13 +57,17 @@ export function DashboardPanels() {
   const { setCenter } = useReactFlow();
   const isStatsMinimized = useUIStore((s) => s.isStatsMinimized);
   const isExtendedMinimized = useUIStore((s) => s.isExtendedMinimized);
+  const isGlobalSettingsMinimized = useUIStore((s) => s.isGlobalSettingsMinimized);
   const toggleStatsMinimized = useUIStore((s) => s.toggleStatsMinimized);
   const toggleExtendedMinimized = useUIStore((s) => s.toggleExtendedMinimized);
+  const toggleGlobalSettingsMinimized = useUIStore((s) => s.toggleGlobalSettingsMinimized);
   const rateMode = useUIStore((s) => s.rateMode);
 
   const globalPollution = useGlobalSettingsStore((s) => s.settings.global_pollution);
+  const currentMonth = useGlobalSettingsStore((s) => s.settings.current_month);
   const difficulty = useGlobalSettingsStore((s) => s.settings.difficulty);
   const setGlobalPollution = useGlobalSettingsStore((s) => s.setGlobalPollution);
+  const setCurrentMonth = useGlobalSettingsStore((s) => s.setCurrentMonth);
 
   const {
     mvUse,
@@ -342,27 +347,6 @@ export function DashboardPanels() {
 
         {!isExtendedMinimized && (
           <div className={styles['panel-body']}>
-            <div className={styles['global-var-group']}>
-              <span className={styles['global-var-label']}>Global Pollution</span>
-              <div className={styles['global-var-control']}>
-                {(() => {
-                  const isImpossible = difficulty === 'impossible' || difficulty === 'impossible2';
-                  return (
-                    <ValidatedNumberInput
-                      value={globalPollution}
-                      onChange={setGlobalPollution}
-                      defaultValue={1}
-                      allowDecimals={true}
-                      allowNegatives={!isImpossible}
-                      min={isImpossible ? 0 : undefined}
-                      step="any"
-                      className={styles['global-var-input']}
-                    />
-                  );
-                })()}
-              </div>
-            </div>
-
             <div data-tutorial-dashboard="outputs">
               <div className={styles['diagnostic-section-title']}>Deficiencies (Shortages)</div>
               <div className={styles['diagnostic-container']}>
@@ -512,6 +496,67 @@ export function DashboardPanels() {
                     }
                   </VirtualList>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className={styles['panel']}>
+        <button
+          className={styles['panel-header']}
+          onClick={() => {
+            if (isTutorialActive()) return;
+            toggleGlobalSettingsMinimized();
+          }}
+        >
+          <span className={styles['panel-header-title']}>
+            <Activity className={styles['panel-header-icon']} size={12} />
+            Global Settings
+          </span>
+          {isGlobalSettingsMinimized ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+        </button>
+
+        {!isGlobalSettingsMinimized && (
+          <div className={styles['panel-body']}>
+            <div className={styles['global-var-group']}>
+              <span className={styles['global-var-label']}>Global Pollution</span>
+              <div className={styles['global-var-control']}>
+                {(() => {
+                  const isImpossible = difficulty === 'impossible' || difficulty === 'impossible2';
+                  return (
+                    <ValidatedNumberInput
+                      value={globalPollution}
+                      onChange={setGlobalPollution}
+                      defaultValue={1}
+                      allowDecimals={true}
+                      allowNegatives={!isImpossible}
+                      min={isImpossible ? 0 : undefined}
+                      step="any"
+                      className={styles['global-var-input']}
+                    />
+                  );
+                })()}
+              </div>
+            </div>
+
+            <div className={styles['global-var-group']}>
+              <label className={styles['global-var-label']} htmlFor="current-game-month">
+                Current Month
+              </label>
+              <div className={styles['global-var-control']}>
+                <select
+                  id="current-game-month"
+                  className={styles['global-var-input']}
+                  value={currentMonth}
+                  onChange={(event) => setCurrentMonth(event.target.value as GameMonth)}
+                >
+                  {GAME_MONTHS.map((month) => (
+                    <option key={month} value={month}>
+                      {month}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>

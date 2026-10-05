@@ -10,6 +10,7 @@ const DEFAULT_CONTROLLER_ID = 'm_tree_farm_controller';
 const IGLOO_CONTROLLER_ID = 'm_igloo_farm_controller';
 const DEFAULT_TREE_ID = 'm_tree';
 const CANDY_CANE_TREE_ID = 'm_candy_cane_tree';
+const CANDY_CANE_GROWTH_SPEED_MULTIPLIER = 1.2;
 const BASE_LOGS_PER_TREE = 2;
 const IGLOO_WINTER_LOG_MULTIPLIER = 1.5;
 const MIN_TREE_COUNT = 1;
@@ -102,10 +103,15 @@ function hasIglooWinterBonus(
   controllerId: string,
   treeId: string,
 ): boolean {
+  const currentMonth = globalSettings?.current_month;
+  const isWinterMonth =
+    currentMonth === 'December' || currentMonth === 'January' || currentMonth === 'February';
+
   return (
     controllerId === IGLOO_CONTROLLER_ID &&
     treeId !== CANDY_CANE_TREE_ID &&
-    areVariantMachinesEnabled(globalSettings)
+    areVariantMachinesEnabled(globalSettings) &&
+    isWinterMonth
   );
 }
 
@@ -140,34 +146,31 @@ function calculateGrowthModifier(pollution: number): number {
 function calculateGrowthTime(pollution: number, treeId = DEFAULT_TREE_ID): number {
   const growthModifier = calculateGrowthModifier(pollution);
 
-  const P = 4500 * (treeId === CANDY_CANE_TREE_ID ? 0.8 : 1);
+  const P = 4500;
 
-  return 2 * (1000 / 30) * (P / growthModifier / 900 + 0.5);
+  const requiredGrowthUnits = Math.ceil(P / (growthModifier * 100));
+  const expectedPulses = new Array<number>(requiredGrowthUnits + 1).fill(0);
+
+  for (let growthUnits = 1; growthUnits <= requiredGrowthUnits; growthUnits += 1) {
+    let expectedPulseCount = 1;
+    for (let pulseGrowth = 7; pulseGrowth <= 11; pulseGrowth += 1) {
+      expectedPulseCount += expectedPulses[Math.max(0, growthUnits - pulseGrowth)] / 5;
+    }
+    expectedPulses[growthUnits] = expectedPulseCount;
+  }
+
+  const expectedGrowthTime = 2 * (1000 / 30) * expectedPulses[requiredGrowthUnits];
+  return treeId === CANDY_CANE_TREE_ID
+    ? expectedGrowthTime / CANDY_CANE_GROWTH_SPEED_MULTIPLIER
+    : expectedGrowthTime;
 }
-
-const growthTime = calculateGrowthTime(-50, DEFAULT_TREE_ID);
-console.log('TREE DEBUG', {
-  pollution: -50,
-  modifier: calculateGrowthModifier(-50),
-  growthTime,
-  treesFor10Logs: (10 * growthTime) / BASE_LOGS_PER_TREE,
-});
 
 function calculateHarvestersNeeded(
   numTrees: number,
   pollution: number,
   treeId = DEFAULT_TREE_ID,
 ): number {
-  const growthModifier = calculateGrowthModifier(pollution);
-  const P = 4500 * (treeId === CANDY_CANE_TREE_ID ? 0.8 : 1);
-
-  const growthHarvester = 2 * (1000 / 30) * Math.ceil(P / growthModifier / 1000);
-
-  return Math.ceil((numTrees * 11) / growthHarvester);
-}
-
-function calculateLogsPerSecond(numTrees: number, growthTime: number, logsPerTree: number): number {
-  return (numTrees * logsPerTree) / growthTime;
+  return Math.ceil((numTrees * 11) / calculateGrowthTime(pollution, treeId));
 }
 
 function calculateActualHarvestRate(
@@ -270,10 +273,15 @@ export const tree_farm_01: SpecialRecipe = {
         const pollution = (globalSettings?.global_pollution as number) ?? 10;
         const controllerId = getControllerId(settings, globalSettings);
         const treeId = getTreeId(settings, globalSettings);
-        const growthTime = calculateGrowthTime(pollution, treeId);
         const logsPerTree = getLogsPerTree(settings, globalSettings, controllerId, treeId);
-        const logsPerSecond = calculateLogsPerSecond(treeCount, growthTime, logsPerTree);
-        const treesPerSecond = treeCount / growthTime;
+        const harvestRate = calculateActualHarvestRate(
+          treeCount,
+          (settings.harvester_count as number) ?? 20,
+          pollution,
+          treeId,
+        );
+        const logsPerSecond = harvestRate * logsPerTree;
+        const treesPerSecond = harvestRate;
         return `Tree Count - Oak logs/s: ${roundTo(logsPerSecond, 3)}, Trees/s: ${roundTo(treesPerSecond, 3)}`;
       },
     },
@@ -342,7 +350,7 @@ export const tree_farm_01: SpecialRecipe = {
       pollution,
       treeId,
     );
-    const powerUse = actualHarvestRate * (200000 / 11);
+    const powerUse = actualHarvestRate * 200000;
     const waterConsumption = sprinklerCount * (33 / (100 / 3));
     const logsPerTree = getLogsPerTree(settings, globalSettings, controllerId, treeId);
     const treeName = getMachine(treeId)?.name ?? 'Tree';
@@ -404,7 +412,7 @@ export const tree_farm_01: SpecialRecipe = {
       pollution,
       treeId,
     );
-    const powerUse = actualHarvestRate * (200000 / 11);
+    const powerUse = actualHarvestRate * 200000;
 
     const waterTanks = Math.ceil(sprinklerCount / 3);
     const additionalPowerModels = Math.ceil(powerUse / 1500000);

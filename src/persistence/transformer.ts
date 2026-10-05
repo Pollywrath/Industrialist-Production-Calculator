@@ -7,6 +7,7 @@ import { getRecipe, resolveActiveRecipe } from '../data/lookup';
 import { cleanMachineCount } from '../utils/precision';
 import { sanitizeMachineCountConstraint } from '../utils/machineCountConstraint';
 import { useGlobalSettingsStore } from '../stores/useGlobalSettingsStore';
+import { DEFAULT_GAME_MONTH, isGameMonth } from '../types/globalSettings';
 import { remapProxyHandleIds } from './proxyHandleIds';
 
 import type {
@@ -194,6 +195,7 @@ export function migrateSaveData(rawData: unknown): SaveData {
     const gs = data.globalSettings as Record<string, unknown>;
     globalSettings = {
       global_pollution: typeof gs.global_pollution === 'number' ? gs.global_pollution : 10,
+      current_month: isGameMonth(gs.current_month) ? gs.current_month : DEFAULT_GAME_MONTH,
       difficulty: typeof gs.difficulty === 'string' ? gs.difficulty : undefined,
       unlockedResearchIds: Array.isArray(gs.unlockedResearchIds)
         ? gs.unlockedResearchIds.filter((x): x is string => typeof x === 'string')
