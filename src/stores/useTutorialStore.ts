@@ -55,7 +55,7 @@ interface UISnapshot {
   isSavesOverlayOpen: boolean;
   isDataOverlayOpen: boolean;
   isThemeOverlayOpen: boolean;
-  isMachineOverlayOpen: boolean;
+  isResearchOverlayOpen: boolean;
   isHelpOverlayOpen: boolean;
   isLPSolverOpen: boolean;
   preselectedProductId: string | null;
@@ -155,7 +155,7 @@ function captureUISnapshot(): UISnapshot {
     isSavesOverlayOpen: ui.isSavesOverlayOpen,
     isDataOverlayOpen: ui.isDataOverlayOpen,
     isThemeOverlayOpen: ui.isThemeOverlayOpen,
-    isMachineOverlayOpen: ui.isMachineOverlayOpen,
+    isResearchOverlayOpen: ui.isResearchOverlayOpen,
     isHelpOverlayOpen: ui.isHelpOverlayOpen,
     isLPSolverOpen: ui.isLPSolverOpen,
     preselectedProductId: ui.preselectedProductId,
@@ -224,7 +224,7 @@ function restoreUISnapshot(snapshot: UISnapshot): void {
     isSavesOverlayOpen: snapshot.isSavesOverlayOpen,
     isDataOverlayOpen: snapshot.isDataOverlayOpen,
     isThemeOverlayOpen: snapshot.isThemeOverlayOpen,
-    isMachineOverlayOpen: snapshot.isMachineOverlayOpen,
+    isResearchOverlayOpen: snapshot.isResearchOverlayOpen,
     isHelpOverlayOpen: snapshot.isHelpOverlayOpen,
     isLPSolverOpen: snapshot.isLPSolverOpen,
     rateMode: snapshot.rateMode,
@@ -244,7 +244,7 @@ function closeTutorialSurfaces(): void {
     isSavesOverlayOpen: false,
     isDataOverlayOpen: false,
     isThemeOverlayOpen: false,
-    isMachineOverlayOpen: false,
+    isResearchOverlayOpen: false,
     isHelpOverlayOpen: false,
     isLPSolverOpen: false,
     preselectedProductId: null,

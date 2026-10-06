@@ -749,26 +749,15 @@
   margin-left: 6px;
   top: 50%;
   transform: translateY(-50%);
-  display: inline-flex;
-  flex-direction: column;
-  font-size: 8px;
-  line-height: 0.8;
-  gap: 1px;
-}
-
-.sort-arrow {
-  color: var(--theme-color-secondary);
-  height: 5px;
   display: flex;
   align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
 }
 
-.sort-arrow:last-child {
-  margin-top: 2px;
-}
-
-.sort-arrow.is-active {
-  color: var(--theme-color-primary);
+.sort-indicator.is-active {
+  color: var(--theme-color-text-primary);
 }
 
 .machine-subicon {

@@ -37,6 +37,11 @@ function formatWithPrefix(
     tier++;
   }
 
+  if (tier === prefixes.length - 1 && scaled >= 1000) {
+    const formatted = absValue.toExponential(2);
+    return isNegative ? `-${formatted}` : formatted;
+  }
+
   const formattedNum = Number(scaled.toFixed(decimals));
   const formatted = `${prefixUnit}${formattedNum}${prefixes[tier]}${suffix}`;
   return isNegative ? `-${formatted}` : formatted;
@@ -92,10 +97,39 @@ export function formatTime(seconds: number): string {
   return isNegative ? `-${result}` : result;
 }
 
+export function formatLongTime(
+  seconds: number,
+  compact = false,
+  fractionDigits?: number,
+): string {
+  if (!Number.isFinite(seconds)) return seconds < 0 ? '-∞' : '∞';
+  const isNegative = seconds < 0;
+  const absSeconds = Math.abs(seconds);
+  const formatUnit = (value: number, shortUnit: string, longUnit: string) => {
+    const formattedValue =
+      fractionDigits === undefined
+        ? formatQuantity(value)
+        : formatQuantity(value, fractionDigits, fractionDigits);
+    const formatted = `${formattedValue}${compact ? shortUnit : ` ${longUnit}`}`;
+    return isNegative ? `-${formatted}` : formatted;
+  };
+
+  if (absSeconds < 60) {
+    const value = fractionDigits === undefined ? Number(absSeconds.toFixed(2)) : absSeconds;
+    return formatUnit(value, 's', 'sec');
+  }
+  if (absSeconds < 3600) return formatUnit(absSeconds / 60, 'm', 'min');
+  if (absSeconds < 86400) return formatUnit(absSeconds / 3600, 'h', 'hr');
+  if (absSeconds < 86400 * 365) return formatUnit(absSeconds / 86400, 'd', 'days');
+  return formatUnit(absSeconds / (86400 * 365), 'y', 'years');
+}
+
 function formatWithCommasAndCounting(
   value: number,
   rawFormatter: (val: number) => string,
   conversionLimit = 100000,
+  compactFractionDigits = 2,
+  keepCompactFractionDigits = false,
 ): string {
   const isNegative = value < 0;
   const absValue = Math.abs(value);
@@ -121,16 +155,37 @@ function formatWithCommasAndCounting(
     tier++;
   }
 
-  const formattedNum = Number(scaled.toFixed(2));
+  if (tier === prefixes.length - 1 && scaled >= 1000) {
+    const formatted = absValue.toExponential(2);
+    return isNegative ? `-${formatted}` : formatted;
+  }
+
+  const formattedNum = keepCompactFractionDigits
+    ? scaled.toFixed(compactFractionDigits)
+    : Number(scaled.toFixed(compactFractionDigits)).toString();
   const formatted = `${formattedNum}${prefixes[tier]}`;
   return isNegative ? `-${formatted}` : formatted;
 }
 
-export function formatQuantity(value: number): string {
+export function formatQuantity(
+  value: number,
+  maximumFractionDigits = 4,
+  minimumFractionDigits = 0,
+): string {
   if (!Number.isFinite(value)) {
     return value < 0 ? '-∞' : '∞';
   }
-  return formatWithCommasAndCounting(value, (val) => toPlainString(val, 4), 100000);
+  const formatValue = (val: number) =>
+    minimumFractionDigits > 0
+      ? val.toFixed(maximumFractionDigits)
+      : toPlainString(val, maximumFractionDigits);
+  return formatWithCommasAndCounting(
+    value,
+    formatValue,
+    100000,
+    minimumFractionDigits > 0 ? maximumFractionDigits : 2,
+    minimumFractionDigits > 0,
+  );
 }
 
 export function formatDiagnosticQuantity(value: number): string {

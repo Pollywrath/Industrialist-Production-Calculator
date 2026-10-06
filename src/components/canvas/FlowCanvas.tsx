@@ -23,7 +23,7 @@ const FallbackRecipeSelector: React.ComponentType<Record<string, never>> = () =>
 const FallbackSavesOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackDataOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackThemeOverlay: React.ComponentType<Record<string, never>> = () => null;
-const FallbackMachineOverlay: React.ComponentType<Record<string, never>> = () => null;
+const FallbackResearchOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackHelpOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackLPSolverOverlay: React.ComponentType<Record<string, never>> = () => null;
 
@@ -83,16 +83,16 @@ const LazyThemeOverlay = React.lazy(
       }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
 );
 
-const LazyMachineOverlay = React.lazy(
+const LazyResearchOverlay = React.lazy(
   () =>
-    import('../overlays/MachineOverlay')
+    import('../overlays/ResearchOverlay')
       .then((m) => {
-        overlayPrefetchCache.MachineOverlay = m.MachineOverlay;
-        return { default: m.MachineOverlay };
+        overlayPrefetchCache.ResearchOverlay = m.ResearchOverlay;
+        return { default: m.ResearchOverlay };
       })
       .catch((err) => {
-        console.warn('MachineOverlay chunk load failed.', err);
-        return { default: FallbackMachineOverlay };
+        console.warn('ResearchOverlay chunk load failed.', err);
+        return { default: FallbackResearchOverlay };
       }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
 );
 
@@ -128,7 +128,7 @@ export function FlowCanvas() {
   const isSavesOverlayOpen = useUIStore((s) => s.isSavesOverlayOpen);
   const isDataOverlayOpen = useUIStore((s) => s.isDataOverlayOpen);
   const isThemeOverlayOpen = useUIStore((s) => s.isThemeOverlayOpen);
-  const isMachineOverlayOpen = useUIStore((s) => s.isMachineOverlayOpen);
+  const isResearchOverlayOpen = useUIStore((s) => s.isResearchOverlayOpen);
   const isHelpOverlayOpen = useUIStore((s) => s.isHelpOverlayOpen);
   const isLPSolverOpen = useUIStore((s) => s.isLPSolverOpen);
   const isTransformingStore = useUIStore((s) => s.isTransforming);
@@ -183,12 +183,12 @@ export function FlowCanvas() {
           .catch((err) => {
             console.warn('Failed to prefetch ThemeOverlay chunk on idle:', err);
           }),
-        import('../overlays/MachineOverlay')
+        import('../overlays/ResearchOverlay')
           .then((m) => {
-            overlayPrefetchCache.MachineOverlay = m.MachineOverlay;
+            overlayPrefetchCache.ResearchOverlay = m.ResearchOverlay;
           })
           .catch((err) => {
-            console.warn('Failed to prefetch MachineOverlay chunk on idle:', err);
+            console.warn('Failed to prefetch ResearchOverlay chunk on idle:', err);
           }),
         import('../overlays/HelpOverlay')
           .then((m) => {
@@ -289,7 +289,7 @@ export function FlowCanvas() {
   const SavesOverlay = overlayPrefetchCache.SavesOverlay;
   const DataOverlay = overlayPrefetchCache.DataOverlay;
   const ThemeOverlay = overlayPrefetchCache.ThemeOverlay;
-  const MachineOverlay = overlayPrefetchCache.MachineOverlay;
+  const ResearchOverlay = overlayPrefetchCache.ResearchOverlay;
   const HelpOverlay = overlayPrefetchCache.HelpOverlay;
   const LPSolverOverlay = overlayPrefetchCache.LPSolverOverlay;
 
@@ -352,12 +352,12 @@ export function FlowCanvas() {
             <LazyThemeOverlay />
           </Suspense>
         ))}
-      {isMachineOverlayOpen &&
-        (MachineOverlay ? (
-          React.createElement(MachineOverlay)
+      {isResearchOverlayOpen &&
+        (ResearchOverlay ? (
+          React.createElement(ResearchOverlay)
         ) : (
-          <Suspense fallback={<LoadingScreen title="Machines" subtitle="Loading machine data…" />}>
-            <LazyMachineOverlay />
+          <Suspense fallback={<LoadingScreen title="Research" subtitle="Loading research…" />}>
+            <LazyResearchOverlay />
           </Suspense>
         ))}
       {isHelpOverlayOpen &&

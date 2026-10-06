@@ -5,6 +5,20 @@
     "patches": [
       {
         "hash": "pending",
+        "version": "v0.8.10",
+        "patch": 10,
+        "date": "2026-10-07",
+        "subject": "feat: integrate research RP calculator and improve canvas inspection",
+        "items": [
+          "Replaced the Machine overlay with a Research overlay that calculates station RP/s, RP caps, and satellite boosts from canvas recipes.",
+          "Added target RP and research-chain projections with zoomable RP-over-time graphs, point inspection, and improved rate and time calculations.",
+          "Credited the Industrialist Wiki as the source for the research station and satellite formulas.",
+          "Click canvas connections to inspect their product, allocated flow rate, and source and target machines; machine links center the canvas with animation.",
+          "Improved recipe selector sort indicators with a brighter, single direction arrow."
+        ]
+      },
+      {
+        "hash": "pending",
         "version": "v0.8.9",
         "patch": 9,
         "date": "2026-10-04",

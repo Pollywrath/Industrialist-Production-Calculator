@@ -12,11 +12,13 @@ This calculator is an unofficial, fan-made utility. It is not endorsed by, affil
 
 ---
 
-## 2. Sprites, Icons, and Logo (CC BY-NC-SA 4.0)
+## 2. Wiki Assets and Research Formula References (CC BY-NC-SA 4.0)
 
 Sprites and graphical icons included in this repository (located under `public/icons/` and `public/induslogo.webp`) are sourced from the official **Industrialist Wiki** (industrialist.miraheze.org), operated by Mamytema Studios. These assets are licensed under the **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0)**.
 
-These files are **NOT** covered by the MIT License. Any forks, redistributions, or alternative hosting configurations of this project must attribute the source, remain non-commercial, and distribute these assets under the same CC BY-NC-SA 4.0 license.
+The research RP formulas used by this calculator are taken from the corresponding Industrialist Wiki pages: [Research System](https://industrialist.miraheze.org/wiki/Research_System), [Research Station1](https://industrialist.miraheze.org/wiki/Research_Station1), [Research Station2](https://industrialist.miraheze.org/wiki/Research_Station2), [Research Station3](https://industrialist.miraheze.org/wiki/Research_Station3), [Research Station4](https://industrialist.miraheze.org/wiki/Research_Station4), [Satellite Dish](https://industrialist.miraheze.org/wiki/Satellite_Dish), and [Satellite Dish Controller](https://industrialist.miraheze.org/wiki/Satellite_Dish_Controller). This includes the station RP/s and RP cap formulas, RP decay, RS4 logic bonus, and satellite efficiency and RP boost formulas. Wiki content is available under CC BY-NC-SA 4.0 unless otherwise noted.
+
+These assets are **NOT** covered by the MIT License. Any forks, redistributions, or alternative hosting configurations of these assets must attribute the source, remain non-commercial, and distribute them under the same CC BY-NC-SA 4.0 license.
 
 - For more details, see the [CC BY-NC-SA 4.0 License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 

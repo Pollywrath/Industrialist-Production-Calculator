@@ -7,6 +7,8 @@ interface ValidatedNumberInputProps {
   defaultValue: number;
   allowDecimals?: boolean;
   allowNegatives?: boolean;
+  allowEmpty?: boolean;
+  onEmptyChange?: () => void;
   min?: number;
   max?: number;
   step?: string | number;
@@ -23,6 +25,8 @@ export function ValidatedNumberInput({
   defaultValue,
   allowDecimals = true,
   allowNegatives = true,
+  allowEmpty = false,
+  onEmptyChange,
   min,
   max,
   step = 'any',
@@ -42,6 +46,11 @@ export function ValidatedNumberInput({
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const valStr = e.target.value;
+
+    if (allowEmpty && valStr === '') {
+      onEmptyChange?.();
+      return;
+    }
 
     if (!allowNegatives && valStr.startsWith('-')) {
       if (inputRef.current) {
@@ -75,6 +84,10 @@ export function ValidatedNumberInput({
 
   const handleBlur = () => {
     const currentValStr = inputRef.current?.value || '';
+    if (allowEmpty && currentValStr === '') {
+      onEmptyChange?.();
+      return;
+    }
     const parsed = allowDecimals ? parseFloat(currentValStr) : parseInt(currentValStr, 10);
     let committed = isNaN(parsed) ? defaultValue : parsed;
 

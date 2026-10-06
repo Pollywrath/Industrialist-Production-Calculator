@@ -25,13 +25,17 @@ interface UIState {
   isSavesOverlayOpen: boolean;
   isDataOverlayOpen: boolean;
   isThemeOverlayOpen: boolean;
-  isMachineOverlayOpen: boolean;
+  isResearchOverlayOpen: boolean;
   isHelpOverlayOpen: boolean;
   preselectedProductId: string | null;
   preselectedSourceSide: 'input' | 'output' | null;
   preselectedNodeId: string | null;
   preselectedHandleIndex: number | null;
   rateMode: RateMode;
+  currentResearchPoints: number;
+  targetResearchPoints: number | undefined;
+  researchTargetIds: string[];
+  researchProjectionMode: 'target' | 'chain';
   nodeEditorOpenId: string | null;
 
   toggleControlsMinimized: () => void;
@@ -43,6 +47,10 @@ interface UIState {
   pushOverride: (id: CanvasToggleId) => void;
   popOverride: (id: CanvasToggleId) => void;
   cycleRateMode: () => void;
+  setCurrentResearchPoints: (value: number) => void;
+  setTargetResearchPoints: (value: number | undefined) => void;
+  setResearchTargetIds: (researchIds: string[]) => void;
+  setResearchProjectionMode: (mode: 'target' | 'chain') => void;
   setNodeEditorOpenId: (id: string | null) => void;
   setRecipeSelectorOpen: (
     isOpen: boolean,
@@ -54,7 +62,7 @@ interface UIState {
   setSavesOverlayOpen: (isOpen: boolean) => void;
   setDataOverlayOpen: (isOpen: boolean) => void;
   setThemeOverlayOpen: (isOpen: boolean) => void;
-  setMachineOverlayOpen: (isOpen: boolean) => void;
+  setResearchOverlayOpen: (isOpen: boolean) => void;
   setHelpOverlayOpen: (isOpen: boolean) => void;
   isAutosaveLoaded: boolean;
   setAutosaveLoaded: () => void;
@@ -95,13 +103,17 @@ const useUIStore = create<UIState>((set) => ({
   isSavesOverlayOpen: false,
   isDataOverlayOpen: false,
   isThemeOverlayOpen: false,
-  isMachineOverlayOpen: false,
+  isResearchOverlayOpen: false,
   isHelpOverlayOpen: false,
   preselectedProductId: null,
   preselectedSourceSide: null,
   preselectedNodeId: null,
   preselectedHandleIndex: null,
   rateMode: 'second',
+  currentResearchPoints: 0,
+  targetResearchPoints: undefined,
+  researchTargetIds: [],
+  researchProjectionMode: 'target',
   nodeEditorOpenId: null,
 
   toggleControlsMinimized: () =>
@@ -133,6 +145,15 @@ const useUIStore = create<UIState>((set) => ({
       const nextIndex = (currentIndex + 1) % modes.length;
       return { rateMode: modes[nextIndex] };
     }),
+  setCurrentResearchPoints: (value) =>
+    set({ currentResearchPoints: Number.isFinite(value) ? Math.max(0, value) : 0 }),
+  setTargetResearchPoints: (value) =>
+    set({
+      targetResearchPoints:
+        value === undefined ? undefined : Number.isFinite(value) ? Math.max(0, value) : undefined,
+    }),
+  setResearchTargetIds: (researchTargetIds) => set({ researchTargetIds: [...researchTargetIds] }),
+  setResearchProjectionMode: (researchProjectionMode) => set({ researchProjectionMode }),
   setNodeEditorOpenId: (id) => set({ nodeEditorOpenId: id }),
   setRecipeSelectorOpen: (
     isOpen,
@@ -168,9 +189,9 @@ const useUIStore = create<UIState>((set) => ({
       activeToggleId: isOpen ? null : state.activeToggleId,
       temporaryOverrides: isOpen ? [] : state.temporaryOverrides,
     })),
-  setMachineOverlayOpen: (isOpen) =>
+  setResearchOverlayOpen: (isOpen) =>
     set((state) => ({
-      isMachineOverlayOpen: isOpen,
+      isResearchOverlayOpen: isOpen,
       activeToggleId: isOpen ? null : state.activeToggleId,
       temporaryOverrides: isOpen ? [] : state.temporaryOverrides,
     })),

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -48,6 +48,13 @@ import {
 import type { GroupBounds, GroupMemberBounds } from '../../utils/groupBounds';
 import previewStyles from './GroupBoundsPreview.module.css';
 import { TUTORIAL_DRIVER_REFRESH_EVENT } from '../tutorial/tutorialHighlightUtils';
+import { EdgeInfoPopup } from './EdgeInfoPopup';
+
+interface EdgeInfoPopupState {
+  edgeId: string;
+  x: number;
+  y: number;
+}
 
 const nodeTypes = {
   recipe: RecipeNode,
@@ -307,11 +314,37 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
   const commitDragStop = useFlowStore((s) => s.commitDragStop);
   const moveNodesFromSnapshots = useFlowStore((s) => s.moveNodesFromSnapshots);
   const fitViewRequestId = useUIStore((s) => s.fitViewRequestId);
+  const [edgeInfoPopup, setEdgeInfoPopup] = useState<EdgeInfoPopupState | null>(null);
   const { screenToFlowPosition, getInternalNode, fitView } = useReactFlow();
 
   const batchDragRef = useRef<BatchDragState | null>(null);
   const groupBoundsPreviewRef = useRef<HTMLDivElement | null>(null);
   const connectionValidationCacheRef = useRef<ConnectionValidationCache | null>(null);
+
+  useEffect(() => {
+    if (!edgeInfoPopup) return;
+
+    const dismissOnPointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        (target.closest('.react-flow__edge') || target.closest('[data-edge-info-popup]'))
+      ) {
+        return;
+      }
+      setEdgeInfoPopup(null);
+    };
+    const dismissOnKeyDown = () => setEdgeInfoPopup(null);
+    const dismissOnWheel = () => setEdgeInfoPopup(null);
+    document.addEventListener('pointerdown', dismissOnPointerDown, true);
+    window.addEventListener('keydown', dismissOnKeyDown, true);
+    window.addEventListener('wheel', dismissOnWheel, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener('pointerdown', dismissOnPointerDown, true);
+      window.removeEventListener('keydown', dismissOnKeyDown, true);
+      window.removeEventListener('wheel', dismissOnWheel, true);
+    };
+  }, [edgeInfoPopup]);
 
   useEffect(() => {
     let wasMultiSelectMode = getEffectiveToggleId(useUIStore.getState()) === 'multi_select';
@@ -591,13 +624,18 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
 
     const toggleId = getEffectiveToggleId(useUIStore.getState());
     if (toggleId === 'delete_mode') {
+      setEdgeInfoPopup(null);
       event.stopPropagation();
       onEdgesChange([{ type: 'remove', id: edge.id }]);
+      return;
     }
+
+    setEdgeInfoPopup({ edgeId: edge.id, x: event.clientX + 14, y: event.clientY + 14 });
   };
 
   const onEdgeDoubleClick = (event: React.MouseEvent, clickedEdge: Edge) => {
     event.stopPropagation();
+    setEdgeInfoPopup(null);
     if (isTutorialActive()) return;
     if (!clickedEdge.selected) return;
 
@@ -749,7 +787,10 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
         }
         requestTutorialDriverRefresh();
       }}
-      onMoveStart={() => useUIStore.getState().setIsTransforming(true)}
+      onMoveStart={() => {
+        setEdgeInfoPopup(null);
+        useUIStore.getState().setIsTransforming(true);
+      }}
       onMoveEnd={() => {
         useUIStore.getState().setIsTransforming(false);
         requestTutorialDriverRefresh();
@@ -780,6 +821,14 @@ function FlowViewportCanvas({ isZoomedOut }: FlowViewportCanvasProps) {
         size={GRID_DOT_SIZE}
         color="var(--theme-color-grid-dots)"
       />
+      {edgeInfoPopup && (
+        <EdgeInfoPopup
+          edgeId={edgeInfoPopup.edgeId}
+          anchorX={edgeInfoPopup.x}
+          anchorY={edgeInfoPopup.y}
+          onDismiss={() => setEdgeInfoPopup(null)}
+        />
+      )}
     </ReactFlow>
   );
 }

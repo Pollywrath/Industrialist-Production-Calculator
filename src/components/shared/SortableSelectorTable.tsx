@@ -9,18 +9,13 @@ interface SortIndicatorProps {
 }
 
 function SortIndicator({ active, order }: SortIndicatorProps) {
+  if (!active) return null;
+
+  const SortIcon = order === 'asc' ? ChevronUp : ChevronDown;
+
   return (
-    <span className={styles['sort-indicator']}>
-      <span
-        className={`${styles['sort-arrow']} ${active && order === 'asc' ? styles['is-active'] : ''}`}
-      >
-        <ChevronUp size={8} />
-      </span>
-      <span
-        className={`${styles['sort-arrow']} ${active && order === 'desc' ? styles['is-active'] : ''}`}
-      >
-        <ChevronDown size={8} />
-      </span>
+    <span className={`${styles['sort-indicator']} ${styles['is-active']}`} aria-hidden="true">
+      <SortIcon size={13} strokeWidth={3} />
     </span>
   );
 }

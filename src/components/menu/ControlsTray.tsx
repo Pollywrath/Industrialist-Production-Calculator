@@ -7,7 +7,7 @@ import {
   Network,
   Cpu,
   Sparkles,
-  Settings,
+  FlaskConical,
   Clock,
   Eraser,
   Undo,
@@ -88,10 +88,10 @@ const BUTTONS: ButtonConfig[] = [
     Icon: Sparkles,
   },
   {
-    id: 'machine_toggle',
-    label: 'Machines',
+    id: 'research_toggle',
+    label: 'Research',
     type: 'menu',
-    Icon: Settings,
+    Icon: FlaskConical,
     dividerRight: true,
   },
   {
@@ -113,11 +113,11 @@ export function ControlsTray() {
   const isMinimized = useUIStore((s) => s.isControlsMinimized);
   const activeToggleId = useUIStore(getEffectiveToggleId);
   const rateMode = useUIStore((s) => s.rateMode);
-  const isMachineOverlayOpen = useUIStore((s) => s.isMachineOverlayOpen);
+  const isResearchOverlayOpen = useUIStore((s) => s.isResearchOverlayOpen);
   const edgePathStyle = useEdgeThemeStore((s) => s.pathStyle);
 
   const setRecipeSelectorOpen = useUIStore((s) => s.setRecipeSelectorOpen);
-  const setMachineOverlayOpen = useUIStore((s) => s.setMachineOverlayOpen);
+  const setResearchOverlayOpen = useUIStore((s) => s.setResearchOverlayOpen);
   const toggleButton = useUIStore((s) => s.toggleButton);
   const cycleRateMode = useUIStore((s) => s.cycleRateMode);
   const toggleMinimized = useUIStore((s) => s.toggleControlsMinimized);
@@ -179,8 +179,8 @@ export function ControlsTray() {
     } else if (btn.id === 'target') {
       toggleButton('target');
       completeTutorialAction({ type: 'control', id: btn.id });
-    } else if (btn.id === 'machine_toggle') {
-      setMachineOverlayOpen(!isMachineOverlayOpen);
+    } else if (btn.id === 'research_toggle') {
+      setResearchOverlayOpen(!isResearchOverlayOpen);
     } else if (btn.id === 'compute') {
       if (isRatioOptimizerRunning()) {
         void useUIStore.getState().confirm({
@@ -308,7 +308,7 @@ export function ControlsTray() {
               !isDisabled &&
               (btn.id === activeToggleId ||
                 (btn.id === 'add_recipe' && isAddGroupMode && hasGroupableSelection) ||
-                (btn.id === 'machine_toggle' && isMachineOverlayOpen));
+                (btn.id === 'research_toggle' && isResearchOverlayOpen));
             const label =
               btn.id === 'rate_mode'
                 ? getRateButtonLabel()

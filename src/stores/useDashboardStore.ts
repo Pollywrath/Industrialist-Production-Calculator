@@ -13,6 +13,7 @@ import { getRecipeOptimizationMetrics } from '../utils/optimizationMetrics';
 import { ceilMachineCount } from '../utils/precision';
 import {
   EMPTY_RESEARCH_INFRASTRUCTURE_STATS,
+  getResearchStationEffectiveAmount,
   getOptimalSatelliteDishCount,
   type ResearchInfrastructureStats,
 } from '../utils/researchInfrastructure';
@@ -111,6 +112,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
       const machineCount = node.data.machineCount ?? 0;
       const roundedCount = ceilMachineCount(machineCount);
+      const fractionalResearchCount = Math.max(0, machineCount);
 
       const machine = getMachine(recipe.machine_id);
       const machineName = machine?.name ?? 'Machine';
@@ -178,25 +180,72 @@ export const useDashboardStore = create<DashboardState>((set) => ({
         optimizationMetrics.modelCountIndependentOfMachineCount;
 
       if (recipe.id === 'r_research_station1_01') {
-        researchInfrastructure.researchStation1Count += roundedCount;
+        researchInfrastructure.researchStation1Count += fractionalResearchCount;
+        researchInfrastructure.researchStation1CapCount += roundedCount;
       } else if (recipe.id === 'r_research_station2_01') {
-        researchInfrastructure.researchStation2Count += roundedCount;
+        researchInfrastructure.researchStation2Count += fractionalResearchCount;
+        researchInfrastructure.researchStation2CapCount += roundedCount;
+        const productId =
+          resolvedProducts[buildHandleId(node.id, 'input', 0)] || recipe.inputs[0]?.product_id || '';
+        const product = getProduct(productId);
+        researchInfrastructure.researchStation2ResearchValue +=
+          (product?.rp_multiplier ?? 0) * fractionalResearchCount;
       } else if (recipe.id === 'r_research_station3_01') {
-        if (node.data.settings?.has_station_4 === 'Yes') {
-          researchInfrastructure.researchStation3With4Count += roundedCount;
+        const firstProductId =
+          resolvedProducts[buildHandleId(node.id, 'input', 0)] || recipe.inputs[0]?.product_id || '';
+        const secondProductId =
+          resolvedProducts[buildHandleId(node.id, 'input', 1)] || recipe.inputs[1]?.product_id || '';
+        const firstProduct = getProduct(firstProductId);
+        const secondProduct = getProduct(secondProductId);
+        const sameProduct = firstProductId !== '' && firstProductId === secondProductId;
+        const researchValue =
+          ((firstProduct?.rp_multiplier ?? 0) + (secondProduct?.rp_multiplier ?? 0)) *
+          (sameProduct ? 0.7 : 1) *
+          fractionalResearchCount;
+        const hasStation4 = node.data.settings?.has_station_4 === 'Yes';
+        const hasRs4Buff =
+          hasStation4 && node.data.settings?.rs4_buff_active === 'Yes';
+        if (hasStation4) {
+          researchInfrastructure.researchStation3With4Count += fractionalResearchCount;
+          researchInfrastructure.researchStation4EffectiveAmount +=
+            getResearchStationEffectiveAmount(
+              firstProduct?.sell_price ?? 0,
+              secondProduct?.sell_price ?? 0,
+              fractionalResearchCount,
+              hasRs4Buff,
+            );
+          researchInfrastructure.researchStation4CapEffectiveAmount +=
+            getResearchStationEffectiveAmount(
+              firstProduct?.sell_price ?? 0,
+              secondProduct?.sell_price ?? 0,
+              roundedCount,
+              hasRs4Buff,
+            );
+          researchInfrastructure.researchStation4ResearchValue += researchValue;
+          researchInfrastructure.researchStation4RawCount += fractionalResearchCount;
         } else {
-          researchInfrastructure.researchStation3Count += roundedCount;
+          researchInfrastructure.researchStation3Count += fractionalResearchCount;
+          researchInfrastructure.researchStation3EffectiveAmount +=
+            getResearchStationEffectiveAmount(
+              firstProduct?.sell_price ?? 0,
+              secondProduct?.sell_price ?? 0,
+              fractionalResearchCount,
+            );
+          researchInfrastructure.researchStation3CapEffectiveAmount +=
+            getResearchStationEffectiveAmount(
+              firstProduct?.sell_price ?? 0,
+              secondProduct?.sell_price ?? 0,
+              roundedCount,
+            );
+          researchInfrastructure.researchStation3ResearchValue += researchValue;
         }
       } else if (recipe.id === 'r_satellite_dish_controller_01') {
-        const configuredDishes = Number(node.data.settings?.satellite_dish_count ?? 0);
-        const dishesPerController = Number.isFinite(configuredDishes)
-          ? Math.max(0, Math.round(configuredDishes))
-          : 0;
-        researchInfrastructure.satelliteDishControllerCount += roundedCount;
-        researchInfrastructure.satelliteDishCount += roundedCount * dishesPerController;
+        researchInfrastructure.satelliteDishControllerCount += fractionalResearchCount;
         const fluid = getProduct(recipe.inputs[0]?.product_id ?? '');
         researchInfrastructure.satelliteDishResearchPoints +=
-          (fluid?.rp_multiplier ?? 0) * roundedCount;
+          (fluid?.rp_multiplier ?? 0) * fractionalResearchCount;
+      } else if (recipe.id === 'r_satellite_dish_01') {
+        researchInfrastructure.satelliteDishCount += fractionalResearchCount;
       }
 
       if (!isExtendedMinimized) {

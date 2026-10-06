@@ -76,7 +76,7 @@ export function TutorialController() {
   const isSavesOverlayOpen = useUIStore((s) => s.isSavesOverlayOpen);
   const isDataOverlayOpen = useUIStore((s) => s.isDataOverlayOpen);
   const isThemeOverlayOpen = useUIStore((s) => s.isThemeOverlayOpen);
-  const isMachineOverlayOpen = useUIStore((s) => s.isMachineOverlayOpen);
+  const isResearchOverlayOpen = useUIStore((s) => s.isResearchOverlayOpen);
   const isHelpOverlayOpen = useUIStore((s) => s.isHelpOverlayOpen);
   const isLPSolverOpen = useUIStore((s) => s.isLPSolverOpen);
   const hasConfirmDialog = useUIStore((s) => s.confirmDialog !== null);
@@ -95,7 +95,7 @@ export function TutorialController() {
     !isSavesOverlayOpen &&
     !isDataOverlayOpen &&
     !isThemeOverlayOpen &&
-    !isMachineOverlayOpen &&
+    !isResearchOverlayOpen &&
     !isHelpOverlayOpen &&
     !isLPSolverOpen &&
     !hasConfirmDialog;

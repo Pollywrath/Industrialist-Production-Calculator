@@ -10309,5 +10309,16 @@
         "temperature": 18
       }
     ]
+  },
+  {
+    "id": "r_satellite_dish_01",
+    "name": "Satellite Dish",
+    "machine_id": "m_satellite_dish",
+    "cycle_time": 1,
+    "power_use": 75000,
+    "power_type": "MV",
+    "pollution": 0,
+    "inputs": [],
+    "outputs": []
   }
 ]

@@ -377,6 +377,7 @@ function applySpecialRecipeOverrides(
   for (const entry of overrides) {
     if (!entry.id.startsWith('special_recipe:')) continue;
     const recipeId = entry.id.substring('special_recipe:'.length);
+    if (recipeId === 'r_satellite_dish_01') continue;
     if (entry.data._tombstone) {
       deletedSpecialRecipeIds.add(recipeId);
     } else {

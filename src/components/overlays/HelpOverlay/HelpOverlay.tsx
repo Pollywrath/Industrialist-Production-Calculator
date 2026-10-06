@@ -251,7 +251,7 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Actions',
         items: [
-          'Machines opens research, difficulty, and machine availability settings.',
+          'Research opens the research tree, difficulty, and machine availability settings.',
           'Rate switches between per-second, per-minute, per-hour, and raw recipe-cycle values.',
           'Clear removes the current graph. Undo and Redo move through its edit history.',
         ],
@@ -424,9 +424,9 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
     ],
   },
   {
-    id: 'machines-overlay',
+    id: 'research-overlay',
     tabId: 'controls',
-    title: 'Machines and research',
+    title: 'Research overlay',
     summary: 'Set difficulty, manage research unlocks, and control recipe availability.',
     Icon: PackageSearch,
     keywords: [
@@ -596,7 +596,7 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       'search by product',
       'search by machine',
       'filters',
-      'machine overlay',
+      'research overlay',
       'difficulty',
       'research',
       'ore nodes',
@@ -615,7 +615,7 @@ const BASE_HELP_ARTICLES: HelpArticle[] = [
       {
         title: 'Availability Checks',
         items: [
-          'In Machines, check the selected difficulty and whether the required research is unlocked.',
+          'In Research, check the selected difficulty and whether the required research is unlocked.',
           'Check the Ore Nodes and Variant & Limited Machines filters.',
           'If you changed the entry in Data Manager, save the change before searching again.',
         ],

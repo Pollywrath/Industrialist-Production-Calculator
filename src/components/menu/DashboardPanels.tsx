@@ -113,7 +113,7 @@ export function DashboardPanels() {
       const x = targetNode.position.x + (targetNode.measured?.width ?? targetNode.width ?? 200) / 2;
       const y =
         targetNode.position.y + (targetNode.measured?.height ?? targetNode.height ?? 120) / 2;
-      setCenter(x, y, { zoom: 1.2 });
+      setCenter(x, y, { zoom: 1.2, duration: 250 });
       completeTutorialAction({ type: 'dashboard-diagnostic', status, productId, nodeId });
     }
   };

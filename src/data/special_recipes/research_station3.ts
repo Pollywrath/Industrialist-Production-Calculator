@@ -1,4 +1,3 @@
-//TODO: Read the decompiled code
 import type { Recipe } from '../../types/data';
 import type { SpecialRecipe } from '../../types/specialRecipes';
 import { getMachine } from '../lookup';
@@ -7,6 +6,15 @@ const settingDefinitions = {
   has_station_4: {
     type: 'select' as const,
     label: 'Has Station 4?',
+    default: 'No',
+    options: [
+      { label: 'Yes', value: 'Yes' },
+      { label: 'No', value: 'No' },
+    ],
+  },
+  rs4_buff_active: {
+    type: 'select' as const,
+    label: 'RS4 Logic Buff Active?',
     default: 'No',
     options: [
       { label: 'Yes', value: 'Yes' },
