@@ -18,7 +18,7 @@
 .overlays-tray-grid {
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: repeat(4, 48px);
+  grid-template-rows: repeat(5, 48px);
   gap: 0;
   padding: 4px;
   background: var(--theme-color-bg-secondary);

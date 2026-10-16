@@ -1,5 +1,13 @@
 import type React from 'react';
-import { Save, Database, Palette, HelpCircle, ChevronUp, ChevronDown } from 'lucide-react';
+import {
+  Save,
+  Database,
+  Palette,
+  HelpCircle,
+  Calculator,
+  ChevronUp,
+  ChevronDown,
+} from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
 import {
   canPerformTutorialAction,
@@ -9,7 +17,7 @@ import {
 import styles from './OverlaysTray.module.css';
 
 interface OverlayButtonConfig {
-  id: 'saves' | 'data' | 'theme' | 'help';
+  id: 'saves' | 'data' | 'theme' | 'help' | 'npp-simulator';
   label: string;
   Icon: React.ComponentType<{ size?: number; className?: string }>;
   dividerBottom?: boolean;
@@ -19,7 +27,8 @@ const BUTTONS: OverlayButtonConfig[] = [
   { id: 'saves', label: 'Saves', Icon: Save, dividerBottom: true },
   { id: 'data', label: 'Data', Icon: Database, dividerBottom: true },
   { id: 'theme', label: 'Theme', Icon: Palette, dividerBottom: true },
-  { id: 'help', label: 'Help', Icon: HelpCircle },
+  { id: 'help', label: 'Help', Icon: HelpCircle, dividerBottom: true },
+  { id: 'npp-simulator', label: 'NPP Sim', Icon: Calculator },
 ];
 
 export function OverlaysTray() {
@@ -31,10 +40,12 @@ export function OverlaysTray() {
   const setThemeOverlayOpen = useUIStore((s) => s.setThemeOverlayOpen);
   const isHelpOverlayOpen = useUIStore((s) => s.isHelpOverlayOpen);
   const setHelpOverlayOpen = useUIStore((s) => s.setHelpOverlayOpen);
+  const isNppSimulatorOpen = useUIStore((s) => s.isNppSimulatorOpen);
+  const setNppSimulatorOpen = useUIStore((s) => s.setNppSimulatorOpen);
   const isOverlaysMinimized = useUIStore((s) => s.isOverlaysMinimized);
   const toggleOverlaysMinimized = useUIStore((s) => s.toggleOverlaysMinimized);
 
-  const handleClick = (id: 'saves' | 'data' | 'theme' | 'help') => {
+  const handleClick = (id: 'saves' | 'data' | 'theme' | 'help' | 'npp-simulator') => {
     if (isTutorialActive() && !canPerformTutorialAction({ type: 'overlay', id })) {
       return;
     }
@@ -47,6 +58,8 @@ export function OverlaysTray() {
       setThemeOverlayOpen(!isThemeOverlayOpen);
     } else if (id === 'help') {
       setHelpOverlayOpen(!isHelpOverlayOpen);
+    } else if (id === 'npp-simulator') {
+      setNppSimulatorOpen(!isNppSimulatorOpen);
     }
     completeTutorialAction({ type: 'overlay', id });
   };
@@ -60,7 +73,8 @@ export function OverlaysTray() {
               (btn.id === 'saves' && isSavesOverlayOpen) ||
               (btn.id === 'data' && isDataOverlayOpen) ||
               (btn.id === 'theme' && isThemeOverlayOpen) ||
-              (btn.id === 'help' && isHelpOverlayOpen);
+              (btn.id === 'help' && isHelpOverlayOpen) ||
+              (btn.id === 'npp-simulator' && isNppSimulatorOpen);
             const Icon = btn.Icon;
 
             return (
@@ -69,6 +83,11 @@ export function OverlaysTray() {
                 className={`${styles['overlays-tray-button']} ${isActive ? styles['is-active'] : ''} ${btn.dividerBottom ? styles['has-divider-bottom'] : ''}`}
                 onClick={() => handleClick(btn.id)}
                 data-tutorial-overlay-id={btn.id}
+                aria-label={btn.id === 'npp-simulator' ? 'Open NPP formula simulator' : btn.label}
+                aria-pressed={isActive}
+                title={
+                  btn.id === 'npp-simulator' ? 'Open temporary NPP formula simulator' : undefined
+                }
               >
                 <Icon size={16} className={styles['overlays-tray-button-icon']} />
                 <span className={styles['overlays-tray-button-label']}>{btn.label}</span>

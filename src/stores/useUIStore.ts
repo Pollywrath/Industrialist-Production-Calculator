@@ -27,6 +27,7 @@ interface UIState {
   isThemeOverlayOpen: boolean;
   isResearchOverlayOpen: boolean;
   isHelpOverlayOpen: boolean;
+  isNppSimulatorOpen: boolean;
   preselectedProductId: string | null;
   preselectedSourceSide: 'input' | 'output' | null;
   preselectedNodeId: string | null;
@@ -64,6 +65,7 @@ interface UIState {
   setThemeOverlayOpen: (isOpen: boolean) => void;
   setResearchOverlayOpen: (isOpen: boolean) => void;
   setHelpOverlayOpen: (isOpen: boolean) => void;
+  setNppSimulatorOpen: (isOpen: boolean) => void;
   isAutosaveLoaded: boolean;
   setAutosaveLoaded: () => void;
   isTransforming: boolean;
@@ -105,6 +107,7 @@ const useUIStore = create<UIState>((set) => ({
   isThemeOverlayOpen: false,
   isResearchOverlayOpen: false,
   isHelpOverlayOpen: false,
+  isNppSimulatorOpen: false,
   preselectedProductId: null,
   preselectedSourceSide: null,
   preselectedNodeId: null,
@@ -198,6 +201,12 @@ const useUIStore = create<UIState>((set) => ({
   setHelpOverlayOpen: (isOpen) =>
     set((state) => ({
       isHelpOverlayOpen: isOpen,
+      activeToggleId: isOpen ? null : state.activeToggleId,
+      temporaryOverrides: isOpen ? [] : state.temporaryOverrides,
+    })),
+  setNppSimulatorOpen: (isOpen) =>
+    set((state) => ({
+      isNppSimulatorOpen: isOpen,
       activeToggleId: isOpen ? null : state.activeToggleId,
       temporaryOverrides: isOpen ? [] : state.temporaryOverrides,
     })),

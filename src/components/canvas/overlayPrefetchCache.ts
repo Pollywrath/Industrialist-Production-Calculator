@@ -17,5 +17,6 @@ export const overlayPrefetchCache = {
   ThemeOverlay: null as React.ComponentType<Record<string, never>> | null,
   ResearchOverlay: null as React.ComponentType<Record<string, never>> | null,
   HelpOverlay: null as React.ComponentType<Record<string, never>> | null,
+  NppSimulatorOverlay: null as React.ComponentType<Record<string, never>> | null,
   LPSolverOverlay: null as React.ComponentType<Record<string, never>> | null,
 };

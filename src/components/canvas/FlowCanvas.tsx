@@ -25,6 +25,7 @@ const FallbackDataOverlay: React.ComponentType<Record<string, never>> = () => nu
 const FallbackThemeOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackResearchOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackHelpOverlay: React.ComponentType<Record<string, never>> = () => null;
+const FallbackNppSimulatorOverlay: React.ComponentType<Record<string, never>> = () => null;
 const FallbackLPSolverOverlay: React.ComponentType<Record<string, never>> = () => null;
 
 const LazyRecipeSelector = React.lazy(
@@ -122,6 +123,19 @@ const LazyLPSolverOverlay = React.lazy(
       }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
 );
 
+const LazyNppSimulatorOverlay = React.lazy(
+  () =>
+    import('../overlays/NppSimulatorOverlay/NppSimulatorOverlay')
+      .then((m) => {
+        overlayPrefetchCache.NppSimulatorOverlay = m.NppSimulatorOverlay;
+        return { default: m.NppSimulatorOverlay };
+      })
+      .catch((err) => {
+        console.warn('NppSimulatorOverlay chunk load failed.', err);
+        return { default: FallbackNppSimulatorOverlay };
+      }) as Promise<{ default: React.ComponentType<Record<string, never>> }>,
+);
+
 export function FlowCanvas() {
   const isDeleteMode = useUIStore((s) => getEffectiveToggleId(s) === 'delete_mode');
   const isRecipeSelectorOpen = useUIStore((s) => s.isRecipeSelectorOpen);
@@ -130,6 +144,7 @@ export function FlowCanvas() {
   const isThemeOverlayOpen = useUIStore((s) => s.isThemeOverlayOpen);
   const isResearchOverlayOpen = useUIStore((s) => s.isResearchOverlayOpen);
   const isHelpOverlayOpen = useUIStore((s) => s.isHelpOverlayOpen);
+  const isNppSimulatorOpen = useUIStore((s) => s.isNppSimulatorOpen);
   const isLPSolverOpen = useUIStore((s) => s.isLPSolverOpen);
   const isTransformingStore = useUIStore((s) => s.isTransforming);
   const isZoomedOutStore = useUIStore((s) => s.isZoomedOut);
@@ -196,6 +211,13 @@ export function FlowCanvas() {
           })
           .catch((err) => {
             console.warn('Failed to prefetch HelpOverlay chunk on idle:', err);
+          }),
+        import('../overlays/NppSimulatorOverlay/NppSimulatorOverlay')
+          .then((m) => {
+            overlayPrefetchCache.NppSimulatorOverlay = m.NppSimulatorOverlay;
+          })
+          .catch((err) => {
+            console.warn('Failed to prefetch NppSimulatorOverlay chunk on idle:', err);
           }),
         import('../overlays/LPSolverOverlay/LPSolverOverlay')
           .then((m) => {
@@ -291,6 +313,7 @@ export function FlowCanvas() {
   const ThemeOverlay = overlayPrefetchCache.ThemeOverlay;
   const ResearchOverlay = overlayPrefetchCache.ResearchOverlay;
   const HelpOverlay = overlayPrefetchCache.HelpOverlay;
+  const NppSimulatorOverlay = overlayPrefetchCache.NppSimulatorOverlay;
   const LPSolverOverlay = overlayPrefetchCache.LPSolverOverlay;
 
   if (!isAutosaveLoaded) {
@@ -366,6 +389,14 @@ export function FlowCanvas() {
         ) : (
           <Suspense fallback={<LoadingScreen title="Help" subtitle="Loading help…" />}>
             <LazyHelpOverlay />
+          </Suspense>
+        ))}
+      {isNppSimulatorOpen &&
+        (NppSimulatorOverlay ? (
+          React.createElement(NppSimulatorOverlay)
+        ) : (
+          <Suspense fallback={<LoadingScreen title="NPP simulator" subtitle="Loading formulas…" />}>
+            <LazyNppSimulatorOverlay />
           </Suspense>
         ))}
       {isLPSolverOpen &&
