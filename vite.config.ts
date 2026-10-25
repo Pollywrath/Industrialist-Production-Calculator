@@ -49,6 +49,9 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    entries: ['index.html'],
+  },
   build: {
     sourcemap: false,
     rollupOptions: {
@@ -58,6 +61,9 @@ export default defineConfig({
         assetFileNames: 'assets/[hash][extname]',
         manualChunks(id) {
           if (id.includes('node_modules')) {
+            if (id.includes('/pixi.js/') || id.includes('/@pixi/')) {
+              return 'pixi-canvas';
+            }
             if (id.includes('@xyflow')) {
               return 'react-flow';
             }

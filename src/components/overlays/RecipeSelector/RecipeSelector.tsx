@@ -1,6 +1,5 @@
 import { useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useReactFlow } from '@xyflow/react';
 import { resolveActiveRecipe, getProduct } from '../../../data/lookup';
 import { getSpecialRecipe } from '../../../data/registry';
 import { useUIStore } from '../../../stores/useUIStore';
@@ -15,6 +14,7 @@ import type { HandleDataType, Recipe } from '../../../types/data';
 import { RecipeSelectorProvider } from './RecipeSelectorProvider';
 import { useRecipeSelectorStore } from './RecipeSelectorContext';
 import { createGraphResolutionContext } from '../../../utils/graphResolutionContext';
+import { getCanvasAdapter } from '../../../canvas/canvasAdapterApi';
 import { isRecipeNode } from '../../../types/nodes';
 import {
   canPerformTutorialAction,
@@ -102,7 +102,6 @@ function RecipeSelectorModal() {
     return s.results.get(preselectedNodeId);
   });
 
-  const { screenToFlowPosition } = useReactFlow();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const stage = useRecipeSelectorStore((s) => s.stage);
@@ -168,6 +167,8 @@ function RecipeSelectorModal() {
     const recipe = resolvedSettings
       ? (resolveActiveRecipe(recipeId, resolvedSettings) ?? defaultRecipe)
       : defaultRecipe;
+    const canvasAdapter = getCanvasAdapter();
+    if (!canvasAdapter) return;
 
     const { newNode, nextEdges } = computeRecipeInsertion({
       recipe,
@@ -179,7 +180,7 @@ function RecipeSelectorModal() {
       derivedRate,
       nodes,
       edges,
-      screenToFlowPosition,
+      screenToFlowPosition: canvasAdapter.screenToGraph,
       resolvedSettings,
     });
 

@@ -145,6 +145,34 @@ test('convergent temperature propagation reports its iteration count', () => {
   assert.equal(result.iterationsRun, 2);
 });
 
+test('temperature propagation safely handles prototype-named graph IDs', () => {
+  const recipe = recipes.find(
+    (candidate) =>
+      !registry.getSpecialRecipe(candidate.id) &&
+      candidate.inputs.length > 0 &&
+      candidate.outputs.length > 0,
+  );
+  assert.ok(recipe);
+  const node = recipeNode('__proto__', recipe.id);
+  const edge = {
+    id: '__proto__',
+    source: node.id,
+    sourceHandle: idGenerator.buildHandleId(node.id, 'output', 0),
+    target: node.id,
+    targetHandle: idGenerator.buildHandleId(node.id, 'input', 0),
+  };
+  const edgeFlows = Object.create(null);
+  edgeFlows[edge.id] = 1;
+  const result = propagator.propagateTemperatures([node], [edge], edgeFlows, {});
+
+  assert.equal(Object.hasOwn(result.inputTemps, node.id), true);
+  assert.equal(Object.getPrototypeOf(result.inputTemps), null);
+  assert.equal(Object.getPrototypeOf(result.inputTemps[node.id]), null);
+  assert.equal(Object.hasOwn(result.edgeTemps, edge.id), true);
+  assert.equal(Object.getPrototypeOf(result.edgeTemps), null);
+  assert.equal(Object.getPrototypeOf(result.settingsOverrides), null);
+});
+
 test('temperature propagation reports the iteration cap for a nonconvergent special recipe', () => {
   const recipeId = 'r_steam_turbine_01';
   installDriftingSteamRecipe();

@@ -1,4 +1,3 @@
-import { useNodeConnections } from '@xyflow/react';
 import type { Recipe } from '../../../types/data';
 import type {
   ProductSettingDefinition,
@@ -28,6 +27,7 @@ interface SettingItemProps {
   settingKey: string;
   def: SettingDefinition;
   inputIndex: number | undefined;
+  isConnected: boolean;
   value: unknown;
   updateSetting: (key: string, val: unknown) => void;
   resolvedSettings: Record<string, unknown>;
@@ -53,24 +53,13 @@ function SettingItem({
   settingKey,
   def,
   inputIndex,
+  isConnected,
   value,
   updateSetting,
   resolvedSettings,
   globalSettings,
   researchInfrastructure,
 }: SettingItemProps) {
-  const handleId =
-    inputIndex !== undefined
-      ? buildHandleId(nodeId, 'input', inputIndex)
-      : 'dummy-non-existent-handle';
-
-  const connections = useNodeConnections({
-    handleType: 'target',
-    handleId,
-  });
-
-  const isConnected = inputIndex !== undefined && connections.length > 0;
-
   const propagatedTemp = useFlowResultStore((s) => s.inputTemps[nodeId]?.[inputIndex ?? -1]);
   const displayValue = isConnected && propagatedTemp !== undefined ? propagatedTemp : value;
 
@@ -183,7 +172,9 @@ export function SettingsEditor({ recipe, nodeId }: SettingsEditorProps) {
     for (const [inpIdxStr, settingK] of Object.entries(sr.inputTemperatureSettings)) {
       const inpIdx = Number(inpIdxStr);
       const handleId = buildHandleId(nodeId, 'input', inpIdx);
-      const isConnected = edges.some((e) => e.targetHandle === handleId);
+      const isConnected = edges.some(
+        (edge) => !edge.id.startsWith('proxy-') && edge.targetHandle === handleId,
+      );
       const tempVal = inputTempsMap[inpIdx];
       if (isConnected && tempVal !== undefined) {
         resolvedSettings[settingK] = tempVal;
@@ -197,6 +188,13 @@ export function SettingsEditor({ recipe, nodeId }: SettingsEditorProps) {
       {Object.entries(sr.settings).map(([key, def]) => {
         const value = settings[key] ?? def.default;
         const inputIndex = settingKeyToInputIndex[key];
+        const inputHandleId =
+          inputIndex !== undefined ? buildHandleId(nodeId, 'input', inputIndex) : null;
+        const isConnected =
+          inputHandleId !== null &&
+          edges.some(
+            (edge) => !edge.id.startsWith('proxy-') && edge.targetHandle === inputHandleId,
+          );
 
         return (
           <SettingItem
@@ -205,6 +203,7 @@ export function SettingsEditor({ recipe, nodeId }: SettingsEditorProps) {
             settingKey={key}
             def={def}
             inputIndex={inputIndex}
+            isConnected={isConnected}
             value={value}
             updateSetting={updateSetting}
             resolvedSettings={resolvedSettings}

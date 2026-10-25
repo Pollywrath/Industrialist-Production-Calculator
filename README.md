@@ -11,7 +11,9 @@ recipe autocomplete, editable game data, and local layout saves.
 ## Stack
 
 - TypeScript 6 and React 19, built with Vite 8.
-- [`@xyflow/react`](https://xyflow.com/) renders the recipe and group graph.
+- PixiJS renders the recipe and group graph by default (WebGPU, then WebGL), with
+  React Flow available as a device fallback and a selectable renderer in Theme
+  Editor.
 - Zustand stores canvas, settings, and result state.
 - SCIP and SoPlex compiled to WebAssembly run in a browser Worker for ratio
   optimization. The prebuilt bundle is in `public/scip/`.
@@ -68,7 +70,7 @@ Docker is required only to rebuild the native solver; follow the instructions in
 
 | Path                       | Responsibility                                                                    |
 | -------------------------- | --------------------------------------------------------------------------------- |
-| `src/components/canvas/`   | React Flow canvas, recipe and group nodes, ports, edges, and interactions         |
+| `src/components/canvas/`   | Shared canvas host plus renderer-specific PixiJS and React Flow views             |
 | `src/components/overlays/` | Recipe selector, optimizer, Data Manager, saves, themes, machines, and Help       |
 | `src/data/`                | Built-in recipes, machines, products, research, lookups, and special recipe rules |
 | `src/solver/`              | Flow and temperature pipeline, balancing, autocomplete, and ratio optimization    |

@@ -17,6 +17,10 @@ export interface TemperaturePropagationResult {
 export const MAX_TEMPERATURE_PROPAGATION_ITERATIONS = 80;
 const TEMPERATURE_CONVERGENCE_TOLERANCE = 1e-6;
 
+function createDictionary<T>(): Record<string, T> {
+  return Object.create(null) as Record<string, T>;
+}
+
 export function propagateTemperatures(
   nodes: ReactFlowNode[],
   edges: ReactFlowEdge[],
@@ -36,9 +40,9 @@ export function propagateTemperatures(
     };
   };
 
-  const nodeOutputTemps: Record<string, number[]> = {};
-  const inputTemps: Record<string, Record<number, number>> = {};
-  const edgeTemps: Record<string, number> = {};
+  const nodeOutputTemps = createDictionary<number[]>();
+  const inputTemps = createDictionary<Record<number, number>>();
+  const edgeTemps = createDictionary<number>();
 
   const resolveConfiguredInputTemp = (
     node: ReactFlowNode,
@@ -54,7 +58,7 @@ export function propagateTemperatures(
   };
 
   for (const node of nodes) {
-    inputTemps[node.id] = {};
+    inputTemps[node.id] = createDictionary<number>();
   }
   for (const edge of edges) {
     edgeTemps[edge.id] = 18;
@@ -83,13 +87,13 @@ export function propagateTemperatures(
   }
 
   const buildConnectedTemperatureOverrides = (): Record<string, Record<string, unknown>> => {
-    const settingsOverrides: Record<string, Record<string, unknown>> = {};
+    const settingsOverrides = createDictionary<Record<string, unknown>>();
 
     for (const node of nodes) {
       const sr = getSpecialRecipe(node.data.recipeId);
       if (!sr?.inputTemperatureSettings) continue;
 
-      const nodeOverrides: Record<string, unknown> = {};
+      const nodeOverrides = createDictionary<unknown>();
       let hasOverride = false;
 
       for (const [inpIdxStr, settingKey] of Object.entries(sr.inputTemperatureSettings)) {
@@ -112,14 +116,14 @@ export function propagateTemperatures(
     return settingsOverrides;
   };
 
-  const incomingEdges: Record<string, Record<number, typeof edges>> = {};
+  const incomingEdges = createDictionary<Record<number, typeof edges>>();
   for (const edge of edges) {
     if (!edge.targetHandle) continue;
     const targetParsed = parseHandleId(edge.targetHandle);
     if (!targetParsed) continue;
 
     if (!incomingEdges[edge.target]) {
-      incomingEdges[edge.target] = {};
+      incomingEdges[edge.target] = createDictionary<typeof edges>();
     }
     if (!incomingEdges[edge.target][targetParsed.index]) {
       incomingEdges[edge.target][targetParsed.index] = [];
@@ -132,12 +136,16 @@ export function propagateTemperatures(
 
   for (let iter = 0; iter < MAX_TEMPERATURE_PROPAGATION_ITERATIONS; iter++) {
     iterationsRun = iter + 1;
-    const previousOutputTemps = Object.fromEntries(
-      Object.entries(nodeOutputTemps).map(([nodeId, temperatures]) => [nodeId, [...temperatures]]),
-    );
-    const previousInputTemps = Object.fromEntries(
-      Object.entries(inputTemps).map(([nodeId, temperatures]) => [nodeId, { ...temperatures }]),
-    );
+    const previousOutputTemps = createDictionary<number[]>();
+    for (const [nodeId, temperatures] of Object.entries(nodeOutputTemps)) {
+      previousOutputTemps[nodeId] = [...temperatures];
+    }
+    const previousInputTemps = createDictionary<Record<number, number>>();
+    for (const [nodeId, temperatures] of Object.entries(inputTemps)) {
+      const previousNodeTemps = createDictionary<number>();
+      Object.assign(previousNodeTemps, temperatures);
+      previousInputTemps[nodeId] = previousNodeTemps;
+    }
 
     for (const edge of edges) {
       if (!edge.sourceHandle) continue;
@@ -168,7 +176,7 @@ export function propagateTemperatures(
       if (!recipe) continue;
 
       const sr = getSpecialRecipe(node.data.recipeId);
-      inputTemps[nodeId] = {};
+      inputTemps[nodeId] = createDictionary<number>();
 
       for (let i = 0; i < recipe.inputs.length; i++) {
         const handleId = buildHandleId(nodeId, 'input', i);
@@ -196,7 +204,7 @@ export function propagateTemperatures(
       }
 
       if (sr) {
-        const tempOverrides: Record<string, unknown> = {};
+        const tempOverrides = createDictionary<unknown>();
         if (sr.inputTemperatureSettings) {
           for (const [inpIdxStr, settingKey] of Object.entries(sr.inputTemperatureSettings)) {
             const inpIdx = Number(inpIdxStr);
@@ -275,7 +283,7 @@ export function propagateTemperatures(
 
   const finalSettingsOverrides = buildConnectedTemperatureOverrides();
 
-  const finalNodeOutputTemps: Record<string, number[]> = {};
+  const finalNodeOutputTemps = createDictionary<number[]>();
   for (const node of nodes) {
     const nodeOverrides = finalSettingsOverrides[node.id];
     const settings =

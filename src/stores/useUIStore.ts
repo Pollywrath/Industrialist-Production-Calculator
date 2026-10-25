@@ -91,6 +91,24 @@ interface UIState {
   closeConfirm: (status: 'confirm' | 'cancel' | 'close' | boolean) => void;
 }
 
+function hasCanvasOverlayOpen(state: UIState): boolean {
+  return (
+    state.isRecipeSelectorOpen ||
+    state.isSavesOverlayOpen ||
+    state.isDataOverlayOpen ||
+    state.isThemeOverlayOpen ||
+    state.isResearchOverlayOpen ||
+    state.isHelpOverlayOpen ||
+    state.isLPSolverOpen ||
+    state.nodeEditorOpenId !== null ||
+    state.confirmDialog !== null
+  );
+}
+
+function clearCanvasModes() {
+  return { activeToggleId: null, temporaryOverrides: [] as CanvasToggleId[] };
+}
+
 const useUIStore = create<UIState>((set) => ({
   isControlsMinimized: false,
   isOverlaysMinimized: false,
@@ -126,11 +144,16 @@ const useUIStore = create<UIState>((set) => ({
   toggleGlobalSettingsMinimized: () =>
     set((state) => ({ isGlobalSettingsMinimized: !state.isGlobalSettingsMinimized })),
   toggleButton: (id) =>
-    set((state) => ({
-      activeToggleId: state.activeToggleId === id ? null : id,
-    })),
+    set((state) =>
+      hasCanvasOverlayOpen(state)
+        ? {}
+        : {
+            activeToggleId: state.activeToggleId === id ? null : id,
+          },
+    ),
   pushOverride: (id) =>
     set((state) => {
+      if (hasCanvasOverlayOpen(state)) return {};
       if (state.temporaryOverrides.includes(id)) return {};
       return { temporaryOverrides: [...state.temporaryOverrides, id] };
     }),
@@ -154,7 +177,11 @@ const useUIStore = create<UIState>((set) => ({
     }),
   setResearchTargetIds: (researchTargetIds) => set({ researchTargetIds: [...researchTargetIds] }),
   setResearchProjectionMode: (researchProjectionMode) => set({ researchProjectionMode }),
-  setNodeEditorOpenId: (id) => set({ nodeEditorOpenId: id }),
+  setNodeEditorOpenId: (id) =>
+    set(() => ({
+      nodeEditorOpenId: id,
+      ...(id !== null ? clearCanvasModes() : {}),
+    })),
   setRecipeSelectorOpen: (
     isOpen,
     preselectedProductId = null,
@@ -212,7 +239,11 @@ const useUIStore = create<UIState>((set) => ({
   fitViewRequestId: 0,
   requestFitView: () => set((state) => ({ fitViewRequestId: state.fitViewRequestId + 1 })),
   isLPSolverOpen: false,
-  setIsLPSolverOpen: (isOpen) => set({ isLPSolverOpen: isOpen }),
+  setIsLPSolverOpen: (isOpen) =>
+    set(() => ({
+      isLPSolverOpen: isOpen,
+      ...(isOpen ? clearCanvasModes() : {}),
+    })),
   confirmQueue: [],
   confirmDialog: null,
   confirm: ((options: ConfirmOptions) => {
@@ -229,6 +260,7 @@ const useUIStore = create<UIState>((set) => ({
         return {
           confirmQueue: nextQueue,
           confirmDialog: nextActive,
+          ...(state.confirmDialog ? {} : clearCanvasModes()),
         };
       });
     });
@@ -257,9 +289,12 @@ const useUIStore = create<UIState>((set) => ({
 }));
 
 export const getEffectiveToggleId = (state: UIState): string | null => {
+  if (hasCanvasOverlayOpen(state)) return null;
   return state.temporaryOverrides.length > 0
     ? state.temporaryOverrides[state.temporaryOverrides.length - 1]
     : state.activeToggleId;
 };
+
+export const areCanvasModesBlocked = (): boolean => hasCanvasOverlayOpen(useUIStore.getState());
 
 export { useUIStore };

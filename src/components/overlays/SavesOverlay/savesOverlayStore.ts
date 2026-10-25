@@ -679,10 +679,9 @@ export function createSavesOverlayStore() {
             setStatusWithTimeout({ type: 'success', message: 'PNG exported successfully!' });
           } catch (err) {
             console.error('PNG Export Error:', err);
-            setStatusWithTimeout({
-              type: 'error',
-              message: 'Failed to generate PNG snapshot. Canvas may be tainted.',
-            });
+            const message =
+              err instanceof Error ? err.message : 'The canvas renderer returned an unknown error.';
+            await reportActionFailure('PNG export failed', message);
           }
         },
       };

@@ -19,6 +19,9 @@ tools/*
 !tools/save-migration.test.mjs
 !tools/autosave-schema.test.mjs
 !tools/flow-store-history.test.mjs
+!tools/pixi-canvas-adapter.test.mjs
+!tools/canvas-renderer-preference.test.mjs
+!tools/layout-groups.test.mjs
 !tools/design-rules-baseline.json
 # Local precision and solver diagnostics; retain on disk without committing.
 tools/autocomplete-precision-test.mjs

@@ -43,6 +43,12 @@ jobs:
       - name: Test graph position history
         run: npm run test:graph
 
+      - name: Test Pixi canvas adapter
+        run: npm run test:canvas
+
+      - name: Test group layout integrity
+        run: npm run test:layout
+
       - name: Test calculation validation and production flow
         run: npm run test:calculation
 

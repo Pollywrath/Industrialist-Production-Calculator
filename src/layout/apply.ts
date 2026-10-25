@@ -211,7 +211,8 @@ export function applyLayoutResult(
   const boundedNodes = applyExpandedGroupBounds(updatedNodes, expandedGroupIds);
 
   const updatedEdges = edges.map((edge) => {
-    const update = layout.edgeUpdates.get(edge.id);
+    const realEdgeId = edge.id.startsWith('proxy-') ? edge.id.slice('proxy-'.length) : edge.id;
+    const update = layout.edgeUpdates.get(edge.id) ?? layout.edgeUpdates.get(realEdgeId);
     return update ? applyEdgeUpdate(edge, update) : edge;
   });
 

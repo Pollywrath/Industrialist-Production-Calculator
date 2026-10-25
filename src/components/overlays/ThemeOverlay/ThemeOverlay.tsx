@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Palette, RotateCcw, Undo2, X } from 'lucide-react';
 import { useUIStore } from '../../../stores/useUIStore';
@@ -7,6 +7,7 @@ import {
   DEFAULT_EDGE_PATH_STYLE,
   hasCustomEdgeStyleSettings,
   useEdgeThemeStore,
+  type EdgeAnimationStyle,
   type EdgeLineStyle,
   type EdgePathStyle,
 } from '../../../stores/useEdgeThemeStore';
@@ -20,6 +21,14 @@ import {
   type ThemeVariableDefinition,
 } from '../../../theme/themeManager';
 import { THEME_PRESETS, type ThemePreset } from '../../../theme/themePresets';
+import { detectPixiBackendCapabilities } from '../../../canvas/pixiCapabilities';
+import {
+  getActiveRendererLabel,
+  isRendererChoiceAvailable,
+  useCanvasRendererStore,
+  type CanvasRendererPreference,
+  type RendererAvailability,
+} from '../../../stores/useCanvasRendererStore';
 import styles from './ThemeOverlay.module.css';
 
 interface VariableGroup {
@@ -46,6 +55,47 @@ interface EdgeOption<TValue extends string> {
   value: TValue;
   label: string;
   description: string;
+}
+
+interface RendererOptionProps {
+  preference: CanvasRendererPreference;
+  selected: boolean;
+  availability: RendererAvailability;
+  label: string;
+  description: string;
+  onChoose(preference: CanvasRendererPreference): void;
+}
+
+function RendererOption({
+  preference,
+  selected,
+  availability,
+  label,
+  description,
+  onChoose,
+}: RendererOptionProps) {
+  const status =
+    availability === 'available'
+      ? 'Available'
+      : availability === 'unavailable'
+        ? 'Unavailable on this device'
+        : 'Checking support…';
+
+  return (
+    <button
+      type="button"
+      className={`${styles['renderer-option']} ${selected ? styles['is-active'] : ''}`}
+      onClick={() => onChoose(preference)}
+      disabled={!isRendererChoiceAvailable(preference, availability)}
+      aria-pressed={selected}
+    >
+      <span className={styles['renderer-option-top']}>
+        <span className={styles['renderer-option-label']}>{label}</span>
+        <span className={styles['renderer-option-status']}>{status}</span>
+      </span>
+      <span className={styles['renderer-option-description']}>{description}</span>
+    </button>
+  );
 }
 
 const ADVANCED_GROUPS: VariableGroupConfig[] = [
@@ -193,17 +243,35 @@ const EDGE_LINE_OPTIONS: EdgeOption<EdgeLineStyle>[] = [
   {
     value: 'solid',
     label: 'Solid',
-    description: 'Static line with no motion.',
+    description: 'Draw each connection as an unbroken line.',
   },
   {
     value: 'dashed',
     label: 'Dashed',
-    description: 'Animated dashes flowing from source to target.',
+    description: 'Use a dash pattern for each connection.',
   },
   {
     value: 'dotted',
     label: 'Dotted',
-    description: 'Animated dots flowing from source to target.',
+    description: 'Use a dotted pattern for each connection.',
+  },
+];
+
+const EDGE_ANIMATION_OPTIONS: EdgeOption<EdgeAnimationStyle>[] = [
+  {
+    value: 'none',
+    label: 'No Animation',
+    description: 'Keep the selected line pattern static.',
+  },
+  {
+    value: 'moving-dashes',
+    label: 'Moving Dashes or Dots',
+    description: 'Move the selected dash or dot pattern toward each target.',
+  },
+  {
+    value: 'pulse-arrow',
+    label: 'Pulse Arrows',
+    description: 'Show arrows moving toward each target.',
   },
 ];
 
@@ -429,20 +497,50 @@ function ThemeOverlayModal() {
   const setThemeOverlayOpen = useUIStore((s) => s.setThemeOverlayOpen);
   const variables = discoverThemeVariables();
   const [overrides, setOverrides] = useState(loadThemeOverrides);
-  const [activeView, setActiveView] = useState<'presets' | 'advanced' | 'edges'>('presets');
+  const [activeView, setActiveView] = useState<'presets' | 'advanced' | 'edges' | 'renderer'>(
+    'presets',
+  );
   const [activePresetId, setActivePresetId] = useState<string | null>(() =>
     hasStoredColorOverrides() ? null : 'default',
   );
   const lineStyle = useEdgeThemeStore((s) => s.lineStyle);
   const pathStyle = useEdgeThemeStore((s) => s.pathStyle);
+  const animationStyle = useEdgeThemeStore((s) => s.animationStyle);
   const setLineStyle = useEdgeThemeStore((s) => s.setLineStyle);
   const setPathStyle = useEdgeThemeStore((s) => s.setPathStyle);
+  const setAnimationStyle = useEdgeThemeStore((s) => s.setAnimationStyle);
   const resetEdgeStyles = useEdgeThemeStore((s) => s.resetEdgeStyles);
+  const rendererPreference = useCanvasRendererStore((s) => s.preference);
+  const activeRenderer = useCanvasRendererStore((s) => s.activeRenderer);
+  const webgpuAvailability = useCanvasRendererStore((s) => s.webgpuAvailability);
+  const webglAvailability = useCanvasRendererStore((s) => s.webglAvailability);
+  const setRendererPreference = useCanvasRendererStore((s) => s.setPreference);
+  const setBackendAvailability = useCanvasRendererStore((s) => s.setBackendAvailability);
+
+  useEffect(() => {
+    if (activeView !== 'renderer') return;
+    let cancelled = false;
+    void detectPixiBackendCapabilities()
+      .then((capabilities) => {
+        if (cancelled) return;
+        setBackendAvailability('webgpu', capabilities.webgpu ? 'available' : 'unavailable');
+        setBackendAvailability('webgl', capabilities.webgl ? 'available' : 'unavailable');
+      })
+      .catch((error: unknown) => {
+        console.warn('PixiJS backend availability could not be checked.', error);
+        if (cancelled) return;
+        setBackendAvailability('webgpu', 'unavailable');
+        setBackendAvailability('webgl', 'unavailable');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeView, setBackendAvailability]);
 
   const colorVariables = variables.filter((variable) => variable.category === 'color');
 
   const hasColorOverrides = colorVariables.some((variable) => variable.name in overrides);
-  const hasEdgeOverrides = hasCustomEdgeStyleSettings({ lineStyle, pathStyle });
+  const hasEdgeOverrides = hasCustomEdgeStyleSettings({ lineStyle, pathStyle, animationStyle });
   const hasCustomizations = hasColorOverrides || hasEdgeOverrides;
   const colorVariableNames = colorVariables.map((variable) => variable.name);
 
@@ -579,6 +677,12 @@ function ThemeOverlayModal() {
           >
             Edge Editing
           </button>
+          <button
+            className={`${styles['tab-btn']} ${activeView === 'renderer' ? styles['is-active'] : ''}`}
+            onClick={() => setActiveView('renderer')}
+          >
+            Renderer
+          </button>
         </div>
 
         <div className={styles['theme-content']}>
@@ -662,7 +766,7 @@ function ThemeOverlayModal() {
                 ))}
               </div>
             )
-          ) : (
+          ) : activeView === 'edges' ? (
             <div className={styles['advanced-groups']}>
               <div className={styles['advanced-intro']}>
                 Choose how every edge is drawn on the canvas.
@@ -670,8 +774,7 @@ function ThemeOverlayModal() {
               <section className={styles['section']}>
                 <h3 className={styles['section-title']}>Line Style</h3>
                 <p className={styles['section-description']}>
-                  Dashed and dotted lines are animated from source to target. Solid lines remain
-                  static.
+                  Choose whether connections use solid, dashed, or dotted lines.
                 </p>
                 <div className={styles['edge-option-list']}>
                   {EDGE_LINE_OPTIONS.map((option) => (
@@ -691,6 +794,32 @@ function ThemeOverlayModal() {
                   ))}
                 </div>
               </section>
+              {activeRenderer !== 'react-flow' && (
+                <section className={styles['section']}>
+                  <h3 className={styles['section-title']}>Pixi Animation</h3>
+                  <p className={styles['section-description']}>
+                    These animation options apply while either PixiJS backend is active. React Flow
+                    uses the selected line pattern to show direction.
+                  </p>
+                  <div className={styles['edge-option-list']}>
+                    {EDGE_ANIMATION_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        className={`${styles['edge-option-btn']} ${
+                          animationStyle === option.value ? styles['is-active'] : ''
+                        }`}
+                        onClick={() => setAnimationStyle(option.value)}
+                        aria-pressed={animationStyle === option.value}
+                      >
+                        <span className={styles['edge-option-label']}>{option.label}</span>
+                        <span className={styles['edge-option-description']}>
+                          {option.description}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              )}
               <section className={styles['section']}>
                 <h3 className={styles['section-title']}>Path Style</h3>
                 <p className={styles['section-description']}>
@@ -714,10 +843,61 @@ function ThemeOverlayModal() {
                   ))}
                 </div>
                 <div className={styles['edge-auto-note']}>
-                  Default edge style: {DEFAULT_EDGE_LINE_STYLE} line + {DEFAULT_EDGE_PATH_STYLE}{' '}
-                  path.
+                  Default app settings: {DEFAULT_EDGE_LINE_STYLE} line + {DEFAULT_EDGE_PATH_STYLE}{' '}
+                  path, with {animationStyle} available on PixiJS.
                 </div>
+                {activeRenderer === 'react-flow' && (
+                  <div className={styles['edge-auto-note']}>
+                    React Flow animates dashed and dotted patterns toward the target. Solid lines
+                    stay static.
+                  </div>
+                )}
               </section>
+            </div>
+          ) : (
+            <div className={styles['advanced-groups']}>
+              <div className={styles['advanced-intro']}>
+                Choose the canvas renderer for this browser. The preference stays on this device;
+                unsupported PixiJS backends are disabled.
+              </div>
+              <div className={styles['renderer-status']} role="status">
+                Active renderer: <strong>{getActiveRendererLabel(activeRenderer)}</strong>
+                {activeRenderer && activeRenderer !== rendererPreference && (
+                  <span> · Requested: {getActiveRendererLabel(rendererPreference)}</span>
+                )}
+              </div>
+              <div className={styles['renderer-option-list']}>
+                <RendererOption
+                  preference="pixi-webgpu"
+                  selected={rendererPreference === 'pixi-webgpu'}
+                  availability={webgpuAvailability}
+                  label="PixiJS · WebGPU"
+                  description="Modern browser GPU API. PixiJS renders the graph in a GPU scene and supports the full Pixi edge animation set."
+                  onChoose={setRendererPreference}
+                />
+                <RendererOption
+                  preference="pixi-webgl"
+                  selected={rendererPreference === 'pixi-webgl'}
+                  availability={webglAvailability}
+                  label="PixiJS · WebGL"
+                  description="WebGL GPU API for a wider range of browsers and devices. Major performance caveats are treated as unavailable."
+                  onChoose={setRendererPreference}
+                />
+                <RendererOption
+                  preference="react-flow"
+                  selected={rendererPreference === 'react-flow'}
+                  availability="available"
+                  label="React Flow"
+                  description="DOM and SVG based graph rendering with broad browser compatibility. Dashed and dotted lines animate; pulse arrows are unavailable."
+                  onChoose={setRendererPreference}
+                />
+              </div>
+              {activeRenderer === 'react-flow' && rendererPreference !== 'react-flow' && (
+                <div className={styles['renderer-fallback-detail']}>
+                  The requested PixiJS backends could not start. React Flow is active, and your
+                  PixiJS preference is saved for the next attempt.
+                </div>
+              )}
             </div>
           )}
         </div>

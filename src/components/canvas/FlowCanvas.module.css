@@ -1,5 +1,29 @@
 .canvas-container {
+  position: relative;
   width: 100vw;
   height: 100dvh;
   background: var(--theme-color-canvas-bg);
+}
+
+.renderer-fallback-notice {
+  position: absolute;
+  z-index: 30;
+  top: 12px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  color: var(--theme-color-text-primary);
+  background: var(--theme-color-bg-secondary);
+  border: 1px solid var(--theme-color-border-primary);
+  transform: translateX(-50%);
+}
+
+.renderer-fallback-notice button {
+  padding: 2px 5px;
+  color: var(--theme-color-text-primary);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--theme-color-border-light);
 }

@@ -2,9 +2,17 @@ import { toBlob } from 'html-to-image';
 import { getNodesBounds, type Node } from '@xyflow/react';
 import type { SaveRecord } from '../types/saves';
 import { useUIStore } from '../stores/useUIStore';
+import { useFlowStore } from '../stores/useFlowStore';
 import { discoverThemeVariables } from '../theme/themeManager';
+import { getCanvasAdapter, hasPixiCanvasPngExporter } from '../canvas/canvasAdapterApi';
+import {
+  createCanvasExportFrame,
+  MAX_CANVAS_EXPORT_PIXELS,
+  unionCanvasExportBounds,
+} from '../canvas/canvasExportBounds';
 
 const MAX_CANVAS_DIMENSION = 16384;
+const MAX_PIXI_EXPORT_PIXELS = MAX_CANVAS_EXPORT_PIXELS * 4;
 const EXPORT_PADDING = 50;
 const EXPORT_READY_FRAMES = 2;
 
@@ -202,10 +210,21 @@ export function exportRecordAsJson(record: SaveRecord): void {
   URL.revokeObjectURL(url);
 }
 
+function downloadCanvasPng(blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.download = `industrialist-canvas-${Date.now()}.png`;
+  link.href = url;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function exportCanvasAsPng(nodes: Node[]): Promise<void> {
-  const viewportElement = document.querySelector('.react-flow__viewport') as HTMLElement | null;
-  if (!viewportElement || nodes.length === 0) {
-    throw new Error('No elements or nodes found for PNG export');
+  if (nodes.length === 0) throw new Error('No graph nodes found for PNG export.');
+
+  const canvasAdapter = getCanvasAdapter();
+  if (!canvasAdapter) {
+    throw new Error('No canvas is available for PNG export.');
   }
 
   const themeBg = getComputedStyle(document.documentElement)
@@ -223,24 +242,65 @@ export async function exportCanvasAsPng(nodes: Node[]): Promise<void> {
   >[1] extends { nodeLookup?: infer L }
     ? L
     : never;
-  const bounds = getNodesBounds(nodes, { nodeLookup });
-
-  const naturalWidth = bounds.width + EXPORT_PADDING * 2;
-  const naturalHeight = bounds.height + EXPORT_PADDING * 2;
-
-  const scale = Math.min(
-    1,
-    MAX_CANVAS_DIMENSION / naturalWidth,
-    MAX_CANVAS_DIMENSION / naturalHeight,
-  );
-  const exportWidth = Math.round(naturalWidth * scale);
-  const exportHeight = Math.round(naturalHeight * scale);
+  const nodeBounds = getNodesBounds(nodes, { nodeLookup });
+  const edgeBounds = useFlowStore
+    .getState()
+    .edges.filter((edge) => !edge.id.startsWith('proxy-'))
+    .flatMap((edge) => {
+      const geometry = canvasAdapter.getEdgeGeometry(edge.id, 'graph');
+      return geometry
+        ? [
+            {
+              minX: geometry.bounds.x,
+              minY: geometry.bounds.y,
+              maxX: geometry.bounds.x + geometry.bounds.width,
+              maxY: geometry.bounds.y + geometry.bounds.height,
+            },
+          ]
+        : [];
+    });
+  const bounds = unionCanvasExportBounds([
+    {
+      minX: nodeBounds.x,
+      minY: nodeBounds.y,
+      maxX: nodeBounds.x + nodeBounds.width,
+      maxY: nodeBounds.y + nodeBounds.height,
+    },
+    ...edgeBounds,
+  ]);
+  if (!bounds) throw new Error('No graph geometry is available for PNG export.');
+  const maxPixels =
+    canvasAdapter.canvasType === 'pixi' ? MAX_PIXI_EXPORT_PIXELS : MAX_CANVAS_EXPORT_PIXELS;
+  const frame = createCanvasExportFrame(bounds, EXPORT_PADDING, MAX_CANVAS_DIMENSION, maxPixels);
+  if (!frame) {
+    throw new Error(
+      'PNG export could not fit the graph geometry within the image dimension and pixel limits.',
+    );
+  }
+  const exportWidth = Math.ceil(frame.width * frame.resolution);
+  const exportHeight = Math.ceil(frame.height * frame.resolution);
 
   const uiStore = useUIStore.getState();
   uiStore.setIsExporting(true);
 
   try {
     await waitForExportReady();
+
+    if (hasPixiCanvasPngExporter(canvasAdapter)) {
+      const blob = await canvasAdapter.exportCanvasPng({
+        backgroundColor: themeBg,
+        padding: EXPORT_PADDING,
+        maxDimension: MAX_CANVAS_DIMENSION,
+        maxPixels,
+      });
+      downloadCanvasPng(blob);
+      return;
+    }
+
+    const viewportElement = document.querySelector('.react-flow__viewport');
+    if (!(viewportElement instanceof HTMLElement)) {
+      throw new Error('The React Flow canvas is unavailable for PNG export.');
+    }
 
     const themeVariableNames = getThemeVariableNames();
     const restoredStyles = [
@@ -257,9 +317,9 @@ export async function exportCanvasAsPng(nodes: Node[]): Promise<void> {
         includeStyleProperties: getExportStyleProperties(themeVariableNames),
         pixelRatio: 1,
         style: {
-          width: `${naturalWidth}px`,
-          height: `${naturalHeight}px`,
-          transform: `translate(${-bounds.x + EXPORT_PADDING}px, ${-bounds.y + EXPORT_PADDING}px) scale(${scale})`,
+          width: `${frame.width}px`,
+          height: `${frame.height}px`,
+          transform: `translate(${-frame.x * frame.resolution}px, ${-frame.y * frame.resolution}px) scale(${frame.resolution})`,
           transformOrigin: 'top left',
         },
       });
@@ -270,12 +330,7 @@ export async function exportCanvasAsPng(nodes: Node[]): Promise<void> {
       throw new Error('PNG export failed: toBlob returned null');
     }
 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.download = `industrialist-canvas-${Date.now()}.png`;
-    link.href = url;
-    link.click();
-    URL.revokeObjectURL(url);
+    downloadCanvasPng(blob);
   } finally {
     uiStore.setIsExporting(false);
   }

@@ -70,6 +70,10 @@
   pointer-events: auto;
 }
 
+:global(body.driver-active.tutorial-canvas-interaction-enabled canvas[role='application']) {
+  pointer-events: auto !important;
+}
+
 :global(:not(body):has(> .driver-active-element)) {
   overflow: visible !important;
 }

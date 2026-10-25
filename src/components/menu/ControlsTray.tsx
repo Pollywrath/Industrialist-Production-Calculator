@@ -139,9 +139,9 @@ export function ControlsTray() {
     }
     return count;
   });
-  const hasGroupableSelection = selectedGroupableNodeCount > 0;
+  const hasGroupableSelection = selectedGroupableNodeCount >= 2;
   const isMultiSelectMode = activeToggleId === 'multi_select';
-  const isAddGroupMode = isMultiSelectMode;
+  const isAddGroupMode = isMultiSelectMode || hasGroupableSelection;
 
   const handleButtonClick = (btn: ButtonConfig) => {
     if (isTutorialActive()) {

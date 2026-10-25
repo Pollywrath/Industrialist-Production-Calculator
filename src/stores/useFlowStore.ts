@@ -18,6 +18,7 @@ import type {
 } from '../types/nodes';
 import { nextNodeId, nextEdgeId, parseHandleId, buildHandleId } from '../utils/idGenerator';
 import { getProductName, getRecipe } from '../data/lookup';
+import { isAppConnectionValid, resolveAppConnection } from '../canvas/connectionValidation';
 import { clearFlowCache } from '../solver/flowSolver';
 import {
   buildEdgeLookupMap,
@@ -89,8 +90,8 @@ interface FlowState {
     startPositions: Map<string, PositionSnapshot>,
     deltaX: number,
     deltaY: number,
-    groupId?: string,
   ) => void;
+  moveNodesToPositions: (positions: ReadonlyMap<string, PositionSnapshot>) => void;
   toggleNodeSelection: (nodeId: string) => void;
   clearNodeSelection: () => void;
   createGroupFromSelection: () => string | null;
@@ -98,6 +99,17 @@ interface FlowState {
   onNodesChange: OnNodesChange<CanvasNode>;
   onEdgesChange: OnEdgesChange;
   onConnect: (connection: Connection) => void;
+  reconnectEdgeEndpoint: (
+    edgeId: string,
+    side: 'source' | 'target',
+    endpointNodeId: string,
+    endpointHandleId: string,
+  ) => { status: 'reconnected' | 'unchanged' | 'invalid'; reason?: string };
+  setEdgeRoutePoints: (
+    edgeId: string,
+    key: 'controlPoints' | 'orthogonalTurns',
+    points: readonly { readonly x: number; readonly y: number }[],
+  ) => boolean;
 
   setNodes: (nodes: CanvasNode[], options?: SetGraphOptions) => void;
   setEdges: (edges: Edge[], options?: SetGraphOptions) => void;
@@ -254,42 +266,23 @@ function isFiniteRoutePoint(value: unknown): value is { x: number; y: number } {
   );
 }
 
-function translateMovedRoutes(
-  edges: Edge[],
-  deltas: Map<string, NodePositionDelta>,
-  nodes: CanvasNode[],
-  groupId?: string,
-): Edge[] {
+function translateMovedRoutes(edges: Edge[], deltas: Map<string, NodePositionDelta>): Edge[] {
   let nextEdges = edges;
-  const nodesById = groupId ? createNodeMap(nodes) : null;
 
   for (let i = 0; i < edges.length; i++) {
     const edge = edges[i];
     if (edge.id.startsWith('proxy-')) continue;
 
     let delta: NodePositionDelta | undefined;
-    if (edge.source === edge.target) {
-      delta = deltas.get(edge.source);
-    } else if (groupId && nodesById) {
-      const source = nodesById.get(edge.source);
-      const target = nodesById.get(edge.target);
-      if (
-        isRecipeNode(source) &&
-        isRecipeNode(target) &&
-        source.data.groupId === groupId &&
-        target.data.groupId === groupId
-      ) {
-        const sourceDelta = deltas.get(edge.source);
-        const targetDelta = deltas.get(edge.target);
-        if (
-          sourceDelta &&
-          targetDelta &&
-          sourceDelta.x === targetDelta.x &&
-          sourceDelta.y === targetDelta.y
-        ) {
-          delta = sourceDelta;
-        }
-      }
+    const sourceDelta = deltas.get(edge.source);
+    const targetDelta = deltas.get(edge.target);
+    if (
+      sourceDelta &&
+      targetDelta &&
+      sourceDelta.x === targetDelta.x &&
+      sourceDelta.y === targetDelta.y
+    ) {
+      delta = sourceDelta;
     }
     if (!delta) continue;
 
@@ -453,7 +446,11 @@ const filterCompatibleRecipeEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[]
   return edges.filter((edge) => !removedEdgeIds.has(edge.id));
 };
 
-const syncProxyEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[] => {
+const syncProxyEdges = (
+  nodes: CanvasNode[],
+  edges: Edge[],
+  preserveUpdatedProxyRoutes = false,
+): Edge[] => {
   const recipeNodes = nodes.filter(isRecipeNode);
   const recipeNodeMap = new Map(recipeNodes.map((rn) => [rn.id, rn]));
   const groupNodes = nodes.filter(isGroupNode);
@@ -547,11 +544,20 @@ const syncProxyEdges = (nodes: CanvasNode[], edges: Edge[]): Edge[] => {
           existingProxyEdge.sourceHandle === finalSourceHandle &&
           existingProxyEdge.target === finalTarget &&
           existingProxyEdge.targetHandle === finalTargetHandle;
-        const nextData = proxyEndpointsUnchanged
-          ? { ...(existingProxyEdge.data as Record<string, unknown> | undefined) }
-          : existingProxyEdge
-            ? stripRouteData(edge.data)
-            : { ...(edge.data as Record<string, unknown> | undefined) };
+        let nextData: Record<string, unknown>;
+        if (proxyEndpointsUnchanged) {
+          nextData = { ...(existingProxyEdge.data as Record<string, unknown> | undefined) };
+        } else if (existingProxyEdge) {
+          nextData = stripRouteData(edge.data);
+          if (preserveUpdatedProxyRoutes) {
+            const proxyData = existingProxyEdge.data as Record<string, unknown> | undefined;
+            for (const key of ['controlPoints', 'orthogonalTurns'] as const) {
+              if (proxyData && key in proxyData) nextData[key] = proxyData[key];
+            }
+          }
+        } else {
+          nextData = { ...(edge.data as Record<string, unknown> | undefined) };
+        }
         proxyEdges.push({
           id: proxyId,
           type: 'recipe',
@@ -1010,7 +1016,6 @@ const useFlowStore = create(
     let transactionStart: { nodes: CanvasNode[]; edges: Edge[] } | null = null;
     let dragStartPositions: Map<string, PositionSnapshot> | null = null;
     let dragStartRouteEdges: Map<string, Edge> | null = null;
-    let dragStartGroupId: string | undefined;
 
     const pushHistoryEntry = (entry: HistoryEntry<CanvasNode, Edge> | null) => {
       if (!entry) return;
@@ -1039,7 +1044,6 @@ const useFlowStore = create(
       transactionStart = null;
       dragStartPositions = null;
       dragStartRouteEdges = null;
-      dragStartGroupId = undefined;
       set({
         historyPast: [],
         historyFuture: [],
@@ -1222,12 +1226,12 @@ const useFlowStore = create(
         }
 
         dragStartPositions = nextPositions.size > 0 ? nextPositions : null;
-        dragStartGroupId = groupId;
         dragStartRouteEdges = new Map(
           get()
             .edges.filter((edge) => {
               if (edge.id.startsWith('proxy-')) return false;
               if (edge.source === edge.target) return true;
+              if (uniqueIds.has(edge.source) && uniqueIds.has(edge.target)) return true;
               if (!groupId) return false;
               const source = nodesById.get(edge.source);
               const target = nodesById.get(edge.target);
@@ -1246,16 +1250,13 @@ const useFlowStore = create(
         if (isApplyingHistory || transactionDepth > 0) {
           dragStartPositions = null;
           dragStartRouteEdges = null;
-          dragStartGroupId = undefined;
           return;
         }
 
         const startPositions = dragStartPositions;
         const startRouteEdges = dragStartRouteEdges;
-        const groupId = dragStartGroupId;
         dragStartPositions = null;
         dragStartRouteEdges = null;
-        dragStartGroupId = undefined;
         if (!startPositions) return;
 
         const ids = new Set<string>();
@@ -1283,8 +1284,6 @@ const useFlowStore = create(
             const boundedEdges = translateMovedRoutes(
               stateBeforeBoundsCommit.edges,
               getNodePositionDeltas(stateBeforeBoundsCommit.nodes, boundedNodes),
-              boundedNodes,
-              groupId,
             );
             set({
               nodes: boundedNodes,
@@ -1341,7 +1340,7 @@ const useFlowStore = create(
         });
       },
 
-      moveNodesFromSnapshots: (startPositions, deltaX, deltaY, groupId) => {
+      moveNodesFromSnapshots: (startPositions, deltaX, deltaY) => {
         if (startPositions.size === 0) return;
 
         const state = get();
@@ -1379,11 +1378,42 @@ const useFlowStore = create(
           nodes: nextNodes,
           nodesMap: nextIndexes.nodesMap,
           groupMemberIds: nextIndexes.groupMemberIds,
+          edges: translateMovedRoutes(state.edges, getNodePositionDeltas(state.nodes, nextNodes)),
+        });
+      },
+
+      moveNodesToPositions: (positions) => {
+        if (positions.size === 0) return;
+        const state = get();
+        let changed = false;
+        const nextNodes = new Array<CanvasNode>(state.nodes.length);
+        const movedIds = new Set<string>();
+        for (let i = 0; i < state.nodes.length; i++) {
+          const node = state.nodes[i];
+          const position = positions.get(node.id);
+          if (!position) {
+            nextNodes[i] = node;
+            continue;
+          }
+          if (arePositionsEqual(toPositionSnapshot(node.position), position)) {
+            nextNodes[i] = node;
+            continue;
+          }
+          changed = true;
+          movedIds.add(node.id);
+          nextNodes[i] = { ...node, position };
+        }
+        if (!changed) return;
+        const affectedGroupIds = collectRecipeGroupIdsForNodeIds(nextNodes, movedIds);
+        const boundedNodes = applyGroupBoundsForGroups(nextNodes, affectedGroupIds);
+        const indexes = createNodeIndexes(boundedNodes);
+        set({
+          nodes: boundedNodes,
+          nodesMap: indexes.nodesMap,
+          groupMemberIds: indexes.groupMemberIds,
           edges: translateMovedRoutes(
             state.edges,
-            getNodePositionDeltas(state.nodes, nextNodes),
-            nextNodes,
-            groupId,
+            getNodePositionDeltas(state.nodes, boundedNodes),
           ),
         });
       },
@@ -1410,7 +1440,7 @@ const useFlowStore = create(
         }
 
         if (!changed) return;
-        set({ nodes: nextNodes });
+        set({ nodes: nextNodes, nodesMap: createNodesMap(nextNodes) });
       },
 
       clearNodeSelection: () => {
@@ -1435,7 +1465,7 @@ const useFlowStore = create(
         }
 
         if (!changed) return;
-        set({ nodes: nextNodes });
+        set({ nodes: nextNodes, nodesMap: createNodesMap(nextNodes) });
       },
 
       createGroupFromSelection: () => {
@@ -1570,7 +1600,6 @@ const useFlowStore = create(
         const nextEdges = translateMovedRoutes(
           state.edges,
           getNodePositionDeltas(state.nodes, finalNodes),
-          finalNodes,
         );
 
         if (!hasStructuralChange) {
@@ -1719,6 +1748,23 @@ const useFlowStore = create(
         const resolvedTarget = state.nodesMap.get(realTargetNodeId);
         if (!isRecipeNode(resolvedSource) || !isRecipeNode(resolvedTarget)) return;
 
+        if (
+          !isAppConnectionValid(
+            {
+              source: realSourceNodeId,
+              sourceHandle: realSourceHandle,
+              target: realTargetNodeId,
+              targetHandle: realTargetHandle,
+            },
+            {
+              nodes: state.nodes,
+              edges: state.edges,
+            },
+          )
+        ) {
+          return;
+        }
+
         const currentEdges = state.edges;
         for (let i = 0; i < currentEdges.length; i++) {
           const e = currentEdges[i];
@@ -1771,6 +1817,127 @@ const useFlowStore = create(
             buildGraphHistoryEntry(state.nodes, state.edges, state.nodes, nextEdges),
           );
         }
+      },
+
+      reconnectEdgeEndpoint: (edgeId, side, endpointNodeId, endpointHandleId) => {
+        if (edgeId.startsWith('proxy-')) {
+          return { status: 'invalid', reason: 'Proxy edges cannot be reconnected.' };
+        }
+        const state = get();
+        const edge = state.edges.find((candidate) => candidate.id === edgeId);
+        if (!edge || !edge.sourceHandle || !edge.targetHandle) {
+          return { status: 'invalid', reason: 'The connection no longer exists.' };
+        }
+        const connection =
+          side === 'source'
+            ? {
+                source: endpointNodeId,
+                sourceHandle: endpointHandleId,
+                target: edge.target,
+                targetHandle: edge.targetHandle,
+              }
+            : {
+                source: edge.source,
+                sourceHandle: edge.sourceHandle,
+                target: endpointNodeId,
+                targetHandle: endpointHandleId,
+              };
+        const resolved = resolveAppConnection(connection, state.nodes);
+        if (!resolved) {
+          return { status: 'invalid', reason: 'The new connection endpoint is invalid.' };
+        }
+        const duplicate = state.edges.find(
+          (candidate) =>
+            !candidate.id.startsWith('proxy-') &&
+            candidate.id !== edgeId &&
+            candidate.source === resolved.sourceNodeId &&
+            candidate.sourceHandle === resolved.sourceHandleId &&
+            candidate.target === resolved.targetNodeId &&
+            candidate.targetHandle === resolved.targetHandleId,
+        );
+        if (duplicate) return { status: 'invalid', reason: 'That connection already exists.' };
+        if (
+          !isAppConnectionValid(connection, {
+            nodes: state.nodes,
+            edges: state.edges,
+            excludeEdgeId: edgeId,
+          })
+        ) {
+          return {
+            status: 'invalid',
+            reason: 'The recipe products or item/fluid types are incompatible.',
+          };
+        }
+
+        if (
+          edge.source === resolved.sourceNodeId &&
+          edge.sourceHandle === resolved.sourceHandleId &&
+          edge.target === resolved.targetNodeId &&
+          edge.targetHandle === resolved.targetHandleId
+        ) {
+          return { status: 'unchanged' };
+        }
+
+        const nextEdges = state.edges.map((candidate) =>
+          candidate.id === edgeId
+            ? {
+                ...candidate,
+                source: resolved.sourceNodeId,
+                sourceHandle: resolved.sourceHandleId,
+                target: resolved.targetNodeId,
+                targetHandle: resolved.targetHandleId,
+              }
+            : candidate,
+        );
+        get().setEdges(nextEdges, { recordHistory: true });
+        const committed = get().edges.some(
+          (candidate) =>
+            candidate.id === edgeId &&
+            candidate.source === resolved.sourceNodeId &&
+            candidate.sourceHandle === resolved.sourceHandleId &&
+            candidate.target === resolved.targetNodeId &&
+            candidate.targetHandle === resolved.targetHandleId,
+        );
+        return committed
+          ? { status: 'reconnected' }
+          : { status: 'invalid', reason: 'The reconnection was rejected.' };
+      },
+
+      setEdgeRoutePoints: (edgeId, key, points) => {
+        if (edgeId.startsWith('proxy-')) return false;
+        if (points.some((point) => !Number.isFinite(point.x) || !Number.isFinite(point.y))) {
+          return false;
+        }
+        const state = get();
+        const normalizedPoints = points.map(({ x, y }) => ({ x, y }));
+        const realEdge = state.edges.find((edge) => edge.id === edgeId);
+        if (!realEdge) return false;
+        const currentPoints = (realEdge.data as Record<string, unknown> | undefined)?.[key];
+        const pointsMatch =
+          (Array.isArray(currentPoints) ? currentPoints.length : 0) === normalizedPoints.length &&
+          normalizedPoints.every((point, index) => {
+            const current = Array.isArray(currentPoints) ? currentPoints[index] : undefined;
+            return (
+              typeof current === 'object' &&
+              current !== null &&
+              'x' in current &&
+              'y' in current &&
+              current.x === point.x &&
+              current.y === point.y
+            );
+          });
+        if (pointsMatch || (normalizedPoints.length === 0 && currentPoints === undefined)) {
+          return false;
+        }
+        const nextEdges = state.edges.map((edge) => {
+          if (edge.id !== edgeId && edge.id !== `proxy-${edgeId}`) return edge;
+          const data = { ...(edge.data as Record<string, unknown> | undefined) };
+          if (normalizedPoints.length > 0) data[key] = normalizedPoints;
+          else delete data[key];
+          return { ...edge, data };
+        });
+        get().setEdges(nextEdges, { visualOnly: true });
+        return true;
       },
 
       setNodes: (nodes, options) => {
@@ -1899,7 +2066,7 @@ const useFlowStore = create(
           nextEdgesBase[i] = patchedEdge;
         }
 
-        const nextEdges = syncProxyEdges(nextNodes, nextEdgesBase);
+        const nextEdges = syncProxyEdges(nextNodes, nextEdgesBase, true);
         const shouldUpdateNodes = nodesChanged || nextNodes !== state.nodes;
         const shouldUpdateEdges = edgesChanged || nextEdges !== state.edges;
         if (!shouldUpdateNodes && !shouldUpdateEdges) return true;

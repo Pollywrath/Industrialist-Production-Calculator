@@ -1,9 +1,14 @@
-import React, { Suspense, useEffect, useRef } from 'react';
+import React, { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useUIStore, getEffectiveToggleId } from '../../stores/useUIStore';
 import { ControlsTray } from '../menu/ControlsTray';
 import { OverlaysTray } from '../menu/OverlaysTray';
 import { DashboardPanels } from '../menu/DashboardPanels';
-import { FlowViewport } from './FlowViewport';
+import { FlowViewport } from './react-flow/FlowViewport';
+import { getCanvasAdapter, setPendingCanvasViewState } from '../../canvas/canvasAdapterApi';
+import {
+  useCanvasRendererStore,
+  type CanvasRendererPreference,
+} from '../../stores/useCanvasRendererStore';
 import { LoadingScreen } from '../shared/LoadingScreen';
 import { useAutosave } from '../../persistence/useAutosave';
 import { overlayPrefetchCache } from './overlayPrefetchCache';
@@ -12,12 +17,56 @@ import { getConfiguredScipBundlePath, getScipAssetPath } from '../../solver/scip
 import { ASSET_VERSION } from '../../data/productIcons';
 import { TutorialController } from '../tutorial/TutorialController';
 import { useTutorialStore } from '../../stores/useTutorialStore';
+import { useCanvasKeyboardModes } from '../../hooks/useCanvasKeyboardModes';
+import { useFlowSolver } from '../../hooks/useFlowSolver';
 import {
   FIRST_PRODUCTION_CHAIN_PROMPT_KEY,
   FIRST_PRODUCTION_CHAIN_TUTORIAL_ID,
 } from '../../tutorials/firstProductionChain';
 
 import styles from './FlowCanvas.module.css';
+
+interface PixiCanvasMountProps {
+  preference: Exclude<CanvasRendererPreference, 'react-flow'>;
+  onUnavailable(error: unknown): void;
+  onBackendActive(backend: 'webgpu' | 'webgl'): void;
+  onBackendAvailability(backend: 'webgpu' | 'webgl', available: boolean): void;
+}
+
+type PixiCanvasComponent = React.ComponentType<PixiCanvasMountProps>;
+
+function PixiCanvasMount({
+  preference,
+  onUnavailable,
+  onBackendActive,
+  onBackendAvailability,
+}: PixiCanvasMountProps) {
+  const [CanvasComponent, setCanvasComponent] = useState<PixiCanvasComponent | null>(null);
+
+  useEffect(() => {
+    let disposed = false;
+    import('./pixi/PixiCanvasMirror')
+      .then(({ PixiCanvasMirror }) => {
+        if (!disposed) setCanvasComponent(() => PixiCanvasMirror);
+      })
+      .catch((error: unknown) => {
+        console.error('PixiJS canvas chunk could not be loaded.', error);
+        if (!disposed) onUnavailable(error);
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [onUnavailable]);
+
+  return CanvasComponent ? (
+    <CanvasComponent
+      preference={preference}
+      onUnavailable={onUnavailable}
+      onBackendActive={onBackendActive}
+      onBackendAvailability={onBackendAvailability}
+    />
+  ) : null;
+}
 
 const FallbackRecipeSelector: React.ComponentType<Record<string, never>> = () => null;
 const FallbackSavesOverlay: React.ComponentType<Record<string, never>> = () => null;
@@ -123,6 +172,8 @@ const LazyLPSolverOverlay = React.lazy(
 );
 
 export function FlowCanvas() {
+  useCanvasKeyboardModes();
+  useFlowSolver();
   const isDeleteMode = useUIStore((s) => getEffectiveToggleId(s) === 'delete_mode');
   const isRecipeSelectorOpen = useUIStore((s) => s.isRecipeSelectorOpen);
   const isSavesOverlayOpen = useUIStore((s) => s.isSavesOverlayOpen);
@@ -135,7 +186,46 @@ export function FlowCanvas() {
   const isZoomedOutStore = useUIStore((s) => s.isZoomedOut);
   const isExporting = useUIStore((s) => s.isExporting);
   const isAutosaveLoaded = useUIStore((s) => s.isAutosaveLoaded);
+  const preference = useCanvasRendererStore((state) => state.preference);
+  const preferenceRevision = useCanvasRendererStore((state) => state.preferenceRevision);
+  const fallbackNoticeVisible = useCanvasRendererStore((state) => state.fallbackNoticeVisible);
+  const setActiveRenderer = useCanvasRendererStore((state) => state.setActiveRenderer);
+  const setBackendAvailability = useCanvasRendererStore((state) => state.setBackendAvailability);
+  const showFallbackNotice = useCanvasRendererStore((state) => state.showFallbackNotice);
+  const dismissFallbackNotice = useCanvasRendererStore((state) => state.dismissFallbackNotice);
+  const [failedPreferenceRevision, setFailedPreferenceRevision] = useState<number | null>(null);
   const promptShownRef = useRef(false);
+  const usePixiCanvas =
+    preference !== 'react-flow' && failedPreferenceRevision !== preferenceRevision;
+  const pixiPreference = preference === 'pixi-webgl' ? 'pixi-webgl' : 'pixi-webgpu';
+  const handlePixiUnavailable = useCallback(
+    (error: unknown) => {
+      console.warn('Switching to React Flow after PixiJS initialization failed.', error);
+      const viewState = getCanvasAdapter()?.getViewState?.();
+      if (viewState) setPendingCanvasViewState(viewState);
+      setFailedPreferenceRevision(preferenceRevision);
+      setActiveRenderer('react-flow');
+      showFallbackNotice();
+    },
+    [preferenceRevision, setActiveRenderer, showFallbackNotice],
+  );
+  const handlePixiBackendActive = useCallback(
+    (backend: 'webgpu' | 'webgl') => {
+      setActiveRenderer(backend === 'webgpu' ? 'pixi-webgpu' : 'pixi-webgl');
+    },
+    [setActiveRenderer],
+  );
+  const handlePixiBackendAvailability = useCallback(
+    (backend: 'webgpu' | 'webgl', available: boolean) => {
+      setBackendAvailability(backend, available ? 'available' : 'unavailable');
+    },
+    [setBackendAvailability],
+  );
+
+  useEffect(() => {
+    if (preference === 'react-flow') setActiveRenderer('react-flow');
+    else setActiveRenderer(null);
+  }, [preference, setActiveRenderer]);
 
   const isZoomedOut = !isExporting && isZoomedOutStore;
   const isTransforming = !isExporting && isTransformingStore;
@@ -313,7 +403,28 @@ export function FlowCanvas() {
 
   return (
     <div className={containerClassName}>
-      <FlowViewport />
+      {usePixiCanvas ? (
+        <PixiCanvasMount
+          preference={pixiPreference}
+          onUnavailable={handlePixiUnavailable}
+          onBackendActive={handlePixiBackendActive}
+          onBackendAvailability={handlePixiBackendAvailability}
+        />
+      ) : (
+        <FlowViewport />
+      )}
+      {fallbackNoticeVisible && (
+        <div className={styles['renderer-fallback-notice']} role="status">
+          <span>Using React Flow as renderer instead.</span>
+          <button
+            type="button"
+            onClick={dismissFallbackNotice}
+            aria-label="Dismiss renderer notice"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       <ControlsTray />
       <OverlaysTray />
       <DashboardPanels />

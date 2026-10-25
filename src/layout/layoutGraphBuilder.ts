@@ -7,6 +7,7 @@ import {
   EMPTY_GROUP_WIDTH,
   getCollapsedGroupHeight,
 } from '../utils/groupBounds';
+import { buildHandleId } from '../utils/idGenerator';
 import {
   BASE_INFO_HEIGHT,
   BOTTOM_PADDING,
@@ -151,25 +152,50 @@ export function buildLayoutEdges(
   layoutNodeIds: ReadonlySet<string>,
 ): LayoutEdgeSpec[] {
   const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  const groupMap = new Map(nodes.filter(isGroupNode).map((group) => [group.id, group] as const));
   const layoutEdges: LayoutEdgeDraft[] = [];
 
   for (let i = 0; i < edges.length; i++) {
     const edge = edges[i];
-    if (edge.hidden) continue;
-    if (!layoutNodeIds.has(edge.source) || !layoutNodeIds.has(edge.target)) continue;
+    if (edge.id.startsWith('proxy-')) continue;
 
     const sourceNode = nodeMap.get(edge.source);
     const targetNode = nodeMap.get(edge.target);
     if (!sourceNode || !targetNode) continue;
-    if (isGroupNode(sourceNode) && !sourceNode.data.collapsed) continue;
-    if (isGroupNode(targetNode) && !targetNode.data.collapsed) continue;
+
+    const mapEndpoint = (node: CanvasNode, side: 'input' | 'output', handleId: string | null) => {
+      if (!isRecipeNode(node)) return null;
+      const group = node.data.groupId ? groupMap.get(node.data.groupId) : undefined;
+      if (!group?.data.collapsed) {
+        if (node.hidden || !layoutNodeIds.has(node.id)) return null;
+        return { nodeId: node.id, handleId: handleId ?? undefined };
+      }
+
+      const proxyHandleIds =
+        side === 'input' ? group.data.inputProxyHandleIds : group.data.outputProxyHandleIds;
+      const proxyIndex = handleId ? proxyHandleIds.indexOf(handleId) : -1;
+      if (proxyIndex === -1 || !layoutNodeIds.has(group.id)) return null;
+      return {
+        nodeId: group.id,
+        handleId: buildHandleId(group.id, side, proxyIndex),
+      };
+    };
+
+    const source = mapEndpoint(sourceNode, 'output', edge.sourceHandle ?? null);
+    const target = mapEndpoint(targetNode, 'input', edge.targetHandle ?? null);
+    if (!source || !target) continue;
+
+    const sourceGroup = groupMap.get(source.nodeId);
+    if (source.nodeId === target.nodeId && sourceGroup?.data.collapsed) {
+      continue;
+    }
 
     layoutEdges.push({
       id: edge.id,
-      source: edge.source,
-      target: edge.target,
-      sourceHandle: edge.sourceHandle ?? undefined,
-      targetHandle: edge.targetHandle ?? undefined,
+      source: source.nodeId,
+      target: target.nodeId,
+      sourceHandle: source.handleId,
+      targetHandle: target.handleId,
     });
   }
 

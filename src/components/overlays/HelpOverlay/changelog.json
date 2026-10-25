@@ -1,5 +1,24 @@
 [
   {
+    "minor": 9,
+    "minorName": "PixiJS canvas and renderer choice",
+    "patches": [
+      {
+        "hash": "pending",
+        "version": "v0.9.0",
+        "patch": 0,
+        "date": "2026-10-26",
+        "subject": "feat: make PixiJS the default renderer",
+        "items": [
+          "Made PixiJS the default canvas, with selectable WebGPU, WebGL, and React Flow renderers and automatic React Flow fallback when GPU rendering is unavailable.",
+          "Kept graph changes, history, solver results, groups, project saves, and tutorial state app-owned while adding Pixi projections and guided interactions.",
+          "Added high-resolution PNG export, shared edge appearance, graph inspection, group proxy handling, and renderer-aware tutorial targets.",
+          "Reduced graph update work by reusing unchanged canvas projections and cached recipe presentations."
+        ]
+      }
+    ]
+  },
+  {
     "minor": 8,
     "minorName": "Production planning and optimization",
     "patches": [

@@ -535,6 +535,30 @@ function actionMatches(
   event: TutorialActionEvent,
   aliases: Partial<Record<TutorialAlias, string>>,
 ): boolean {
+  if (expected.type === 'edge-connect' && event.type === 'edge-connect-start') {
+    if (event.side === 'output') {
+      return (
+        expectedAliasId(aliases, expected.sourceAlias) === event.nodeId &&
+        expected.sourceIndex === event.index
+      );
+    }
+    if (event.side === 'input') {
+      return (
+        expectedAliasId(aliases, expected.targetAlias) === event.nodeId &&
+        expected.targetIndex === event.index
+      );
+    }
+    return false;
+  }
+  if (expected.type === 'edge-reconnect' && event.type === 'edge-reconnect-start') {
+    return (
+      expectedAliasId(aliases, expected.sourceAlias) === event.sourceNodeId &&
+      expected.sourceIndex === event.sourceIndex &&
+      expectedAliasId(aliases, expected.targetAlias) === event.targetNodeId &&
+      expected.targetIndex === event.targetIndex &&
+      (event.side === undefined || expected.side === event.side)
+    );
+  }
   if (expected.type !== event.type) return false;
 
   switch (expected.type) {
@@ -564,11 +588,32 @@ function actionMatches(
         expected.side === event.side &&
         expected.index === event.index
       );
+    case 'node-move':
+      return expectedAliasId(aliases, expected.alias) === event.nodeId;
+    case 'group-move':
+      return expectedAliasId(aliases, expected.alias) === event.groupId;
     case 'edge-connect':
       return (
         expectedAliasId(aliases, expected.sourceAlias) === event.sourceNodeId &&
         expectedAliasId(aliases, expected.targetAlias) === event.targetNodeId &&
         expected.sourceIndex === event.sourceIndex &&
+        expected.targetIndex === event.targetIndex
+      );
+    case 'edge-reconnect':
+      return (
+        expectedAliasId(aliases, expected.sourceAlias) === event.sourceNodeId &&
+        expected.sourceIndex === event.sourceIndex &&
+        expectedAliasId(aliases, expected.targetAlias) === event.targetNodeId &&
+        expected.targetIndex === event.targetIndex &&
+        expected.side === event.side &&
+        expectedAliasId(aliases, expected.endpointAlias) === event.endpointNodeId &&
+        expected.endpointIndex === event.endpointIndex
+      );
+    case 'edge-route-edit':
+      return (
+        expectedAliasId(aliases, expected.sourceAlias) === event.sourceNodeId &&
+        expected.sourceIndex === event.sourceIndex &&
+        expectedAliasId(aliases, expected.targetAlias) === event.targetNodeId &&
         expected.targetIndex === event.targetIndex
       );
     case 'node-editor-open':
@@ -844,7 +889,10 @@ export const useTutorialStore = create<TutorialState>((set, get) => ({
     if (!state.activeTutorialId || state.isRestoring) return true;
     const step = state.getCurrentStep();
     if (!step) return true;
-    return actionMatches(step.action, event, state.aliases);
+    return (
+      actionMatches(step.action, event, state.aliases) ||
+      !!step.allowedActions?.some((action) => actionMatches(action, event, state.aliases))
+    );
   },
 
   completeAction: (event) => {

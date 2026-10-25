@@ -1,6 +1,6 @@
 import type { ReactFlowNode, ReactFlowEdge } from '../types/solver';
 import type { HandleDataType } from '../types/data';
-import { getProduct, resolveActiveRecipe } from '../data/lookup';
+import { getProduct, getRecipe, resolveActiveRecipe } from '../data/lookup';
 import { getRecipeEntryHandleType, productTypeToHandleDataType } from './handleTypes';
 import { parseHandleId, buildHandleId } from './idGenerator';
 
@@ -212,6 +212,21 @@ export function resolveHandleType(
   const entry = list?.[index];
   const override = getRecipeEntryHandleType(entry);
   if (override) return override;
+
+  const declaredRecipe = getRecipe(node.data.recipeId);
+  const declaredEntry = (side === 'input' ? declaredRecipe?.inputs : declaredRecipe?.outputs)?.[
+    index
+  ];
+  const declaredOverride = getRecipeEntryHandleType(declaredEntry);
+  if (declaredOverride) return declaredOverride;
+
+  const wildcardProductId = [entry?.product_id, declaredEntry?.product_id].find(
+    (productId) => productId === 'any_fluid' || productId === 'any_item',
+  );
+  if (wildcardProductId) {
+    const wildcardProduct = getProduct(wildcardProductId);
+    return productTypeToHandleDataType(wildcardProduct?.type) ?? '';
+  }
 
   const productId = resolveHandleProduct(
     nodeId,

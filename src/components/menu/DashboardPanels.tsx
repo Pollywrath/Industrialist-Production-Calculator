@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useReactFlow } from '@xyflow/react';
 import {
   ChevronUp,
   ChevronDown,
@@ -38,6 +37,7 @@ import {
   isTutorialActive,
 } from '../../stores/useTutorialStore';
 import styles from './DashboardPanels.module.css';
+import { getCanvasAdapter, getCanvasNodeCenter } from '../../canvas/canvasAdapterApi';
 
 interface DiagnosticVirtualItem {
   key: string;
@@ -57,7 +57,6 @@ export function DashboardPanels() {
     return unsubscribe;
   }, []);
 
-  const { setCenter } = useReactFlow();
   const isStatsMinimized = useUIStore((s) => s.isStatsMinimized);
   const isExtendedMinimized = useUIStore((s) => s.isExtendedMinimized);
   const isGlobalSettingsMinimized = useUIStore((s) => s.isGlobalSettingsMinimized);
@@ -141,10 +140,12 @@ export function DashboardPanels() {
         : node;
 
     if (targetNode) {
-      const x = targetNode.position.x + (targetNode.measured?.width ?? targetNode.width ?? 200) / 2;
-      const y =
-        targetNode.position.y + (targetNode.measured?.height ?? targetNode.height ?? 120) / 2;
-      setCenter(x, y, { zoom: 1.2, duration: 250 });
+      const center = getCanvasNodeCenter(targetNode.id, {
+        ...targetNode.position,
+        width: targetNode.measured?.width ?? targetNode.width ?? 200,
+        height: targetNode.measured?.height ?? targetNode.height ?? 120,
+      });
+      getCanvasAdapter()?.centerOnGraphPoint(center, 1.2, 250);
       completeTutorialAction({ type: 'dashboard-diagnostic', status, productId, nodeId });
     }
   };

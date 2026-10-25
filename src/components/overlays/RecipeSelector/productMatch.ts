@@ -38,7 +38,7 @@ export function isPotentialHandleTypeMatch(
   expectedHandleType: HandleDataType | '' | null | undefined,
 ): boolean {
   if (!expectedHandleType) return true;
-  return getDefaultHandleTypeForProduct(selectedProductId) === expectedHandleType;
+  return !!selectedProductId;
 }
 
 export function isProductEntryMatch<T extends ProductEntry>(
@@ -48,12 +48,14 @@ export function isProductEntryMatch<T extends ProductEntry>(
 ): boolean {
   if (!selectedProductId) return false;
 
-  const selectedProductType = getProduct(selectedProductId)?.type;
   const entryProductId = entry.product_id;
+  const selectedHandleType =
+    expectedHandleType || getDefaultHandleTypeForProduct(selectedProductId);
   const isProductMatch =
     entryProductId === selectedProductId ||
     (isPlaceholderProductId(entryProductId) &&
-      getProduct(entryProductId)?.type === selectedProductType);
+      !!selectedHandleType &&
+      getEntryHandleType(entry) === selectedHandleType);
 
   return isProductMatch && isEntryHandleTypeMatch(entry, expectedHandleType);
 }
@@ -65,8 +67,9 @@ export function findBestProductMatchIndex<T extends ProductEntry>(
 ): number {
   if (!selectedProductId) return -1;
 
-  const selectedProductType = getProduct(selectedProductId)?.type;
   let fallbackPlaceholderIndex = -1;
+  const selectedHandleType =
+    expectedHandleType || getDefaultHandleTypeForProduct(selectedProductId);
 
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
@@ -74,16 +77,21 @@ export function findBestProductMatchIndex<T extends ProductEntry>(
       continue;
     }
 
-    const entryProductId = entry.product_id;
-    if (entryProductId === selectedProductId) {
+    if (entry.product_id === selectedProductId) {
       return i;
     }
+  }
 
-    if (fallbackPlaceholderIndex === -1 && isPlaceholderProductId(entryProductId)) {
-      const entryProductType = getProduct(entryProductId)?.type;
-      if (entryProductType === selectedProductType) {
-        fallbackPlaceholderIndex = i;
-      }
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    if (
+      fallbackPlaceholderIndex === -1 &&
+      isPlaceholderProductId(entry.product_id) &&
+      !!selectedHandleType &&
+      getEntryHandleType(entry) === selectedHandleType &&
+      isEntryHandleTypeMatch(entry, expectedHandleType)
+    ) {
+      fallbackPlaceholderIndex = i;
     }
   }
 

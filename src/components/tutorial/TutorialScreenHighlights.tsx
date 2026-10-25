@@ -1,11 +1,15 @@
 import { createPortal } from 'react-dom';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { TutorialHighlight } from '../../tutorials/types';
+import { getCanvasAdapter, subscribeCanvasAdapter } from '../../canvas/canvasAdapterApi';
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import {
   getElementForTutorialHighlight,
   getSecondaryTutorialHighlights,
+  isTutorialFlowHighlight,
+  resolvePixiTutorialGeometry,
   TUTORIAL_DRIVER_REFRESH_EVENT,
+  getOffscreenTutorialAnchor,
 } from './tutorialHighlightUtils';
 import styles from './TutorialScreenHighlights.module.css';
 
@@ -14,13 +18,16 @@ interface ScreenRect {
   y: number;
   width: number;
   height: number;
+  anchor?: boolean;
+  visible?: boolean;
+  stepIndex?: number;
+  targetKey?: string;
+  cue?: { x: number; y: number; direction: 'up' | 'right' | 'down' | 'left' };
 }
 
 interface ScreenEdge {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
+  points: readonly { x: number; y: number }[];
+  primary: boolean;
 }
 
 interface ScreenHighlights {
@@ -31,35 +38,31 @@ interface ScreenHighlights {
 const RECT_PADDING = 6;
 const HANDLE_PADDING = 12;
 const RETRY_DELAY_MS = 120;
+const DRIVER_REFRESH_INTERVAL_MS = 40;
+
+function paddedRect(
+  bounds: { x: number; y: number; width: number; height: number },
+  padding: number,
+): ScreenRect {
+  return {
+    x: bounds.x - padding,
+    y: bounds.y - padding,
+    width: Math.max(1, bounds.width + padding * 2),
+    height: Math.max(1, bounds.height + padding * 2),
+  };
+}
 
 function rectFromElement(element: Element, padding: number): ScreenRect | null {
   const rect = element.getBoundingClientRect();
   if (rect.width <= 0 || rect.height <= 0) return null;
-
-  return {
-    x: rect.left - padding,
-    y: rect.top - padding,
-    width: rect.width + padding * 2,
-    height: rect.height + padding * 2,
-  };
+  return paddedRect(rect, padding);
 }
 
-function centerFromElement(element: Element): { x: number; y: number } | null {
-  const rect = element.getBoundingClientRect();
-  if (rect.width <= 0 || rect.height <= 0) return null;
-
-  return {
-    x: rect.left + rect.width / 2,
-    y: rect.top + rect.height / 2,
-  };
-}
-
-function resolveEdgeHighlight(
+function resolveDomEdge(
   highlight: TutorialHighlight,
   getNodeId: ReturnType<typeof useTutorialStore.getState>['getNodeId'],
 ): ScreenEdge | null {
   if (highlight.kind !== 'edge') return null;
-
   const sourceElement = getElementForTutorialHighlight(
     {
       kind: 'handle',
@@ -79,47 +82,110 @@ function resolveEdgeHighlight(
     getNodeId,
   );
   if (!sourceElement || !targetElement) return null;
-
-  const source = centerFromElement(sourceElement);
-  const target = centerFromElement(targetElement);
-  if (!source || !target) return null;
-
+  const source = sourceElement.getBoundingClientRect();
+  const target = targetElement.getBoundingClientRect();
+  if (source.width <= 0 || source.height <= 0 || target.width <= 0 || target.height <= 0)
+    return null;
   return {
-    x1: source.x,
-    y1: source.y,
-    x2: target.x,
-    y2: target.y,
+    points: [
+      { x: source.left + source.width / 2, y: source.top + source.height / 2 },
+      { x: target.left + target.width / 2, y: target.top + target.height / 2 },
+    ],
+    primary: false,
   };
 }
 
-function resolveRectHighlight(
-  highlight: TutorialHighlight,
+function resolveHighlights(
+  primary: TutorialHighlight | null,
+  secondary: TutorialHighlight[],
   getNodeId: ReturnType<typeof useTutorialStore.getState>['getNodeId'],
-): ScreenRect | null {
-  if (highlight.kind === 'edge') return null;
-
-  const element = getElementForTutorialHighlight(highlight, getNodeId);
-  if (!element) return null;
-
-  return rectFromElement(element, highlight.kind === 'handle' ? HANDLE_PADDING : RECT_PADDING);
-}
-
-function resolveScreenHighlights(
-  highlights: TutorialHighlight[],
-  getNodeId: ReturnType<typeof useTutorialStore.getState>['getNodeId'],
+  currentStepIndex: number,
+  targetKey: string,
 ): ScreenHighlights {
+  const adapter = getCanvasAdapter();
+  const isPixi = adapter?.canvasType === 'pixi';
   const rects: ScreenRect[] = [];
   const edges: ScreenEdge[] = [];
+  const targets = [...(primary ? [primary] : []), ...secondary];
 
-  for (let i = 0; i < highlights.length; i++) {
-    const highlight = highlights[i];
-    const rect = resolveRectHighlight(highlight, getNodeId);
-    const edge = resolveEdgeHighlight(highlight, getNodeId);
+  for (let index = 0; index < targets.length; index++) {
+    const highlight = targets[index];
+    if (!highlight) continue;
+    const isPrimary = index === 0 && primary !== null;
+
+    if (isPixi && isTutorialFlowHighlight(highlight)) {
+      const geometry = resolvePixiTutorialGeometry(highlight, getNodeId);
+      if (!geometry) continue;
+      const canvas = isPrimary
+        ? document.querySelector('canvas[role="application"]')?.getBoundingClientRect()
+        : null;
+      const cue =
+        canvas &&
+        getOffscreenTutorialAnchor(geometry.bounds, {
+          x: canvas.left,
+          y: canvas.top,
+          width: canvas.width,
+          height: canvas.height,
+        });
+      if (cue) {
+        rects.push({
+          x: cue.x - 1,
+          y: cue.y - 1,
+          width: 2,
+          height: 2,
+          anchor: true,
+          visible: false,
+          stepIndex: currentStepIndex,
+          targetKey,
+          cue,
+        });
+        continue;
+      }
+      if (highlight.kind === 'edge' && geometry.points) {
+        edges.push({ points: geometry.points, primary: isPrimary });
+        if (isPrimary)
+          rects.push({
+            ...paddedRect(geometry.bounds, 1),
+            anchor: true,
+            visible: false,
+            stepIndex: currentStepIndex,
+            targetKey,
+          });
+      } else {
+        rects.push({
+          ...paddedRect(
+            geometry.bounds,
+            highlight.kind === 'handle' ? HANDLE_PADDING : RECT_PADDING,
+          ),
+          anchor: isPrimary,
+          visible: true,
+          stepIndex: isPrimary ? currentStepIndex : undefined,
+          targetKey: isPrimary ? targetKey : undefined,
+        });
+      }
+      continue;
+    }
+
+    if (isPrimary) continue;
+    if (highlight.kind === 'edge') {
+      const edge = resolveDomEdge(highlight, getNodeId);
+      if (edge) edges.push(edge);
+      continue;
+    }
+    const element = getElementForTutorialHighlight(highlight, getNodeId);
+    if (!element) continue;
+    const rect = rectFromElement(
+      element,
+      highlight.kind === 'handle' ? HANDLE_PADDING : RECT_PADDING,
+    );
     if (rect) rects.push(rect);
-    if (edge) edges.push(edge);
   }
 
   return { rects, edges };
+}
+
+function sameHighlights(left: ScreenHighlights, right: ScreenHighlights): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
 }
 
 export function TutorialScreenHighlights() {
@@ -128,58 +194,131 @@ export function TutorialScreenHighlights() {
   const aliases = useTutorialStore((s) => s.aliases);
   const getCurrentStep = useTutorialStore((s) => s.getCurrentStep);
   const getNodeId = useTutorialStore((s) => s.getNodeId);
-  const frameRef = useRef<number | null>(null);
   const retryRef = useRef<number | null>(null);
+  const updateFrameRef = useRef<number | null>(null);
+  const lastAnchorKeyRef = useRef<string | null>(null);
+  const lastAnchorTargetKeyRef = useRef<string | null>(null);
+  const driverRefreshTimerRef = useRef<number | null>(null);
+  const lastDriverRefreshAtRef = useRef(0);
+  const highlightsRef = useRef<ScreenHighlights>({ rects: [], edges: [] });
+  const [adapterRevision, setAdapterRevision] = useState(0);
   const [screenHighlights, setScreenHighlights] = useState<ScreenHighlights>({
     rects: [],
     edges: [],
   });
 
-  useEffect(() => {
+  useEffect(() => subscribeCanvasAdapter(() => setAdapterRevision((value) => value + 1)), []);
+
+  useEffect(
+    () => () => {
+      if (driverRefreshTimerRef.current !== null) {
+        window.clearTimeout(driverRefreshTimerRef.current);
+        driverRefreshTimerRef.current = null;
+      }
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
     const clearRetry = () => {
       if (retryRef.current != null) {
         window.clearTimeout(retryRef.current);
         retryRef.current = null;
       }
     };
-
+    const adapter = getCanvasAdapter();
     const step = activeTutorialId ? getCurrentStep() : null;
     const secondaryHighlights = step ? getSecondaryTutorialHighlights(step) : [];
+    const primaryHighlight =
+      step && adapter?.canvasType === 'pixi' && isTutorialFlowHighlight(step.highlight)
+        ? step.highlight
+        : null;
 
-    const updateHighlights = () => {
+    const updateHighlightsNow = () => {
       clearRetry();
-
-      if (frameRef.current != null) return;
-      frameRef.current = window.requestAnimationFrame(() => {
-        frameRef.current = null;
-
-        const next = resolveScreenHighlights(secondaryHighlights, getNodeId);
+      const next = resolveHighlights(
+        primaryHighlight,
+        secondaryHighlights,
+        getNodeId,
+        currentStepIndex,
+        step ? `${activeTutorialId}:${currentStepIndex}:${step.id}` : '',
+      );
+      if (!sameHighlights(highlightsRef.current, next)) {
+        highlightsRef.current = next;
         setScreenHighlights(next);
+      }
+      if (
+        activeTutorialId &&
+        (primaryHighlight !== null || secondaryHighlights.length > 0) &&
+        next.rects.length + next.edges.length <
+          secondaryHighlights.length + (primaryHighlight ? 1 : 0)
+      ) {
+        retryRef.current = window.setTimeout(updateHighlightsNow, RETRY_DELAY_MS);
+      }
+    };
 
-        if (
-          activeTutorialId &&
-          secondaryHighlights.length > 0 &&
-          next.rects.length + next.edges.length < secondaryHighlights.length
-        ) {
-          retryRef.current = window.setTimeout(updateHighlights, RETRY_DELAY_MS);
-        }
+    const scheduleHighlightsUpdate = () => {
+      if (updateFrameRef.current !== null) return;
+      updateFrameRef.current = window.requestAnimationFrame(() => {
+        updateFrameRef.current = null;
+        updateHighlightsNow();
       });
     };
 
-    updateHighlights();
-    window.addEventListener(TUTORIAL_DRIVER_REFRESH_EVENT, updateHighlights);
-    window.addEventListener('resize', updateHighlights);
+    updateHighlightsNow();
+    window.addEventListener(TUTORIAL_DRIVER_REFRESH_EVENT, scheduleHighlightsUpdate);
+    window.addEventListener('resize', scheduleHighlightsUpdate);
+    const unsubscribeViewport = adapter?.subscribeViewport?.(scheduleHighlightsUpdate);
+    const unsubscribeResize = adapter?.subscribeResize?.(scheduleHighlightsUpdate);
+    const unsubscribeScene = adapter?.subscribeScene?.(scheduleHighlightsUpdate);
 
     return () => {
       clearRetry();
-      window.removeEventListener(TUTORIAL_DRIVER_REFRESH_EVENT, updateHighlights);
-      window.removeEventListener('resize', updateHighlights);
-      if (frameRef.current != null) {
-        window.cancelAnimationFrame(frameRef.current);
-        frameRef.current = null;
+      if (updateFrameRef.current !== null) {
+        window.cancelAnimationFrame(updateFrameRef.current);
+        updateFrameRef.current = null;
       }
+      window.removeEventListener(TUTORIAL_DRIVER_REFRESH_EVENT, scheduleHighlightsUpdate);
+      window.removeEventListener('resize', scheduleHighlightsUpdate);
+      unsubscribeViewport?.();
+      unsubscribeResize?.();
+      unsubscribeScene?.();
     };
-  }, [activeTutorialId, currentStepIndex, aliases, getCurrentStep, getNodeId]);
+  }, [activeTutorialId, currentStepIndex, aliases, adapterRevision, getCurrentStep, getNodeId]);
+
+  useLayoutEffect(() => {
+    const anchor = screenHighlights.rects.find((rect) => rect.anchor);
+    const anchorKey = anchor
+      ? [
+          anchor.targetKey,
+          anchor.x,
+          anchor.y,
+          anchor.width,
+          anchor.height,
+          anchor.cue?.x,
+          anchor.cue?.y,
+          anchor.cue?.direction,
+        ].join(':')
+      : null;
+    if (lastAnchorKeyRef.current === anchorKey) return;
+    const targetChanged = lastAnchorTargetKeyRef.current !== (anchor?.targetKey ?? null);
+    lastAnchorKeyRef.current = anchorKey;
+    lastAnchorTargetKeyRef.current = anchor?.targetKey ?? null;
+    if (driverRefreshTimerRef.current !== null) {
+      if (!targetChanged) return;
+      window.clearTimeout(driverRefreshTimerRef.current);
+      driverRefreshTimerRef.current = null;
+    }
+    const refreshDriver = () => {
+      driverRefreshTimerRef.current = null;
+      lastDriverRefreshAtRef.current = performance.now();
+      window.dispatchEvent(new Event(TUTORIAL_DRIVER_REFRESH_EVENT));
+    };
+    const elapsed = performance.now() - lastDriverRefreshAtRef.current;
+    const delay = targetChanged ? 0 : Math.max(0, DRIVER_REFRESH_INTERVAL_MS - elapsed);
+    if (delay === 0) refreshDriver();
+    else driverRefreshTimerRef.current = window.setTimeout(refreshDriver, delay);
+  }, [screenHighlights]);
 
   if (!activeTutorialId) return null;
   if (screenHighlights.rects.length === 0 && screenHighlights.edges.length === 0) return null;
@@ -189,21 +328,25 @@ export function TutorialScreenHighlights() {
       {screenHighlights.edges.length > 0 && (
         <svg className={styles.layer} aria-hidden="true" focusable="false">
           {screenHighlights.edges.map((edge, index) => (
-            <line
-              key={`${edge.x1}-${edge.y1}-${edge.x2}-${edge.y2}-${index}`}
+            <polyline
+              key={`${edge.primary}-${index}-${edge.points.map((point) => `${point.x},${point.y}`).join(';')}`}
               className={styles.edge}
-              x1={edge.x1}
-              y1={edge.y1}
-              x2={edge.x2}
-              y2={edge.y2}
+              points={edge.points.map((point) => `${point.x},${point.y}`).join(' ')}
             />
           ))}
         </svg>
       )}
       {screenHighlights.rects.map((rect, index) => (
         <div
-          key={`${rect.x}-${rect.y}-${rect.width}-${rect.height}-${index}`}
-          className={styles.rect}
+          key={
+            rect.anchor
+              ? 'primary-anchor'
+              : `${rect.x}-${rect.y}-${rect.width}-${rect.height}-${index}`
+          }
+          className={rect.visible === false ? styles.anchor : styles.rect}
+          data-tutorial-canvas-anchor={rect.anchor ? 'primary' : undefined}
+          data-tutorial-step-index={rect.anchor ? rect.stepIndex : undefined}
+          data-tutorial-target-key={rect.anchor ? rect.targetKey : undefined}
           style={{
             transform: `translate(${rect.x}px, ${rect.y}px)`,
             width: rect.width,
@@ -212,6 +355,28 @@ export function TutorialScreenHighlights() {
           aria-hidden="true"
         />
       ))}
+      {screenHighlights.rects.some((rect) => rect.cue) && (
+        <svg className={styles.cueLayer} aria-hidden="true" focusable="false">
+          {screenHighlights.rects.flatMap((rect, index) =>
+            rect.cue
+              ? [
+                  <g key={`cue-${index}-${rect.cue.x}-${rect.cue.y}`}>
+                    <circle className={styles.cueCircle} cx={rect.cue.x} cy={rect.cue.y} r="12" />
+                    <text className={styles.cueArrow} x={rect.cue.x} y={rect.cue.y}>
+                      {rect.cue.direction === 'up'
+                        ? '↑'
+                        : rect.cue.direction === 'right'
+                          ? '→'
+                          : rect.cue.direction === 'down'
+                            ? '↓'
+                            : '←'}
+                    </text>
+                  </g>,
+                ]
+              : [],
+          )}
+        </svg>
+      )}
     </div>,
     document.body,
   );

@@ -77,8 +77,27 @@ export type TutorialAction =
   | { type: 'selector-recipe'; recipeId: string; alias?: TutorialAlias }
   | { type: 'node-rect'; alias: TutorialAlias; side: 'input' | 'output'; index: number }
   | { type: 'node-handle-double'; alias: TutorialAlias; side: 'input' | 'output'; index: number }
+  | { type: 'node-move'; alias: TutorialAlias }
+  | { type: 'group-move'; alias: TutorialAlias }
   | {
       type: 'edge-connect';
+      sourceAlias: TutorialAlias;
+      sourceIndex: number;
+      targetAlias: TutorialAlias;
+      targetIndex: number;
+    }
+  | {
+      type: 'edge-reconnect';
+      sourceAlias: TutorialAlias;
+      sourceIndex: number;
+      targetAlias: TutorialAlias;
+      targetIndex: number;
+      side: 'source' | 'target';
+      endpointAlias: TutorialAlias;
+      endpointIndex: number;
+    }
+  | {
+      type: 'edge-route-edit';
       sourceAlias: TutorialAlias;
       sourceIndex: number;
       targetAlias: TutorialAlias;
@@ -123,11 +142,12 @@ export interface TutorialStep {
   secondaryHighlight?: TutorialHighlight;
   secondaryHighlights?: TutorialHighlight[];
   action: TutorialAction;
+  allowedActions?: TutorialAction[];
   disableActiveInteraction?: boolean;
   popoverSide?: 'top' | 'bottom' | 'left' | 'right';
 }
 
 export interface TutorialActionEvent {
-  type: TutorialAction['type'];
+  type: TutorialAction['type'] | 'edge-connect-start' | 'edge-reconnect-start';
   [key: string]: unknown;
 }

@@ -7,6 +7,7 @@ if (typeof window !== 'undefined') {
 }
 import { useTutorialStore } from '../../stores/useTutorialStore';
 import { useUIStore } from '../../stores/useUIStore';
+import { getCanvasAdapter } from '../../canvas/canvasAdapterApi';
 import type { TutorialStep } from '../../tutorials/types';
 import {
   getElementForTutorialHighlight,
@@ -48,7 +49,27 @@ function buildPopover(step: TutorialStep, isFirstStep: boolean): Popover {
 function getDriverElementForStep(
   step: TutorialStep,
   getNodeId: ReturnType<typeof useTutorialStore.getState>['getNodeId'],
+  tutorialId: string,
+  stepIndex: number,
 ): Element | null {
+  if (getCanvasAdapter()?.canvasType === 'pixi' && isTutorialFlowHighlight(step.highlight)) {
+    const element = document.querySelector<HTMLElement>('[data-tutorial-canvas-anchor="primary"]');
+    const targetKey = `${tutorialId}:${stepIndex}:${step.id}`;
+    if (
+      !element ||
+      element.dataset.tutorialStepIndex !== String(stepIndex) ||
+      element.dataset.tutorialTargetKey !== targetKey
+    ) {
+      return null;
+    }
+    const bounds = element.getBoundingClientRect();
+    return Number.isFinite(bounds.x) &&
+      Number.isFinite(bounds.y) &&
+      bounds.width > 0 &&
+      bounds.height > 0
+      ? element
+      : null;
+  }
   return getElementForTutorialHighlight(step.highlight, getNodeId);
 }
 
@@ -174,8 +195,27 @@ export function TutorialController() {
     if (!activeTutorialId) return;
 
     const refreshDriver = () => {
+      const tutorialState = useTutorialStore.getState();
+      const step = tutorialState.getCurrentStep();
+      if (!step) return;
+      if (
+        !getDriverElementForStep(
+          step,
+          getNodeId,
+          tutorialState.activeTutorialId ?? '',
+          tutorialState.currentStepIndex,
+        )
+      ) {
+        driverRef.current?.destroy();
+        driverRef.current = null;
+        setRetryNonce((value) => value + 1);
+        return;
+      }
+      if (!driverRef.current) {
+        setRetryNonce((value) => value + 1);
+        return;
+      }
       driverRef.current?.refresh();
-      syncDriverCanvasInteractivity();
     };
 
     window.addEventListener(TUTORIAL_DRIVER_REFRESH_EVENT, refreshDriver);
@@ -185,10 +225,10 @@ export function TutorialController() {
       window.removeEventListener(TUTORIAL_DRIVER_REFRESH_EVENT, refreshDriver);
       window.removeEventListener('resize', refreshDriver);
     };
-  }, [activeTutorialId]);
+  }, [activeTutorialId, getCurrentStep, getNodeId]);
 
   useEffect(() => {
-    if (!activeTutorialId || !driverRef.current) return;
+    if (!activeTutorialId) return;
 
     if (retryRef.current != null) {
       window.clearTimeout(retryRef.current);
@@ -198,15 +238,33 @@ export function TutorialController() {
     const step = getCurrentStep();
     if (!step) return;
 
-    const element = getDriverElementForStep(step, getNodeId);
+    const element = getDriverElementForStep(step, getNodeId, activeTutorialId, currentStepIndex);
     if (!element) {
+      driverRef.current?.destroy();
+      driverRef.current = null;
       retryRef.current = window.setTimeout(() => {
         setRetryNonce((value) => value + 1);
       }, 120);
       return;
     }
 
-    element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' });
+    if (!driverRef.current) {
+      driverRef.current = driver({
+        animate: false,
+        allowClose: false,
+        allowKeyboardControl: false,
+        overlayClickBehavior: () => undefined,
+        overlayOpacity: 0.68,
+        stagePadding: 6,
+        stageRadius: 6,
+        popoverClass: 'tutorial-popover',
+        showProgress: false,
+      });
+    }
+
+    if (!element.hasAttribute('data-tutorial-canvas-anchor')) {
+      element.scrollIntoView({ block: 'center', inline: 'center', behavior: 'auto' });
+    }
 
     driverRef.current.highlight({
       element,

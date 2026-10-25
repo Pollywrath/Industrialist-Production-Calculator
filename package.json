@@ -1,7 +1,7 @@
 {
   "name": "industrialist-calculator",
   "private": true,
-  "version": "0.8.12",
+  "version": "0.9.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,8 @@
     "format:check:tooling": "prettier --check \"package.json\" \".github/workflows/quality.yml\" \"tools/*.mjs\" \"tools/design-rules-baseline.json\"",
     "test:persistence": "node --test --test-concurrency=1 tools/save-migration.test.mjs tools/persistence-storage.test.mjs tools/autosave-schema.test.mjs",
     "test:graph": "node --test --test-concurrency=1 tools/flow-store-history.test.mjs",
+    "test:canvas": "node --test --test-concurrency=1 tools/pixi-canvas-adapter.test.mjs tools/canvas-renderer-preference.test.mjs",
+    "test:layout": "node --test --test-concurrency=1 tools/layout-groups.test.mjs",
     "test:calculation": "node --test tools/calculation-validation.test.mjs && node --test tools/production-flow.test.mjs",
     "check:design-rules": "node tools/check-design-rules.mjs",
     "preview": "vite preview"
@@ -23,6 +25,7 @@
     "html-to-image": "^1.11.13",
     "idb": "^8.0.3",
     "lucide-react": "^1.16.0",
+    "pixi.js": "8.22.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "zustand": "^5.0.13"
@@ -45,7 +48,12 @@
     "prettier": "^3.8.3",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.4",
-    "vite": "^8.0.14",
+    "vite": "^8.1.6",
     "vite-plugin-pwa": "^1.3.0"
+  },
+  "overrides": {
+    "fast-uri": "^3.1.9",
+    "serialize-javascript": "^7.1.3",
+    "zod": "^4.6.6"
   }
 }

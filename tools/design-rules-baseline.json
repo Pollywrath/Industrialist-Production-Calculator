@@ -1,126 +1,126 @@
 {
   "inlineStyles": [
     {
-      "file": "src/components/canvas/EdgeInfoPopup.tsx",
+      "file": "src/components/canvas/shared/EdgeInfoPopup.tsx",
       "element": "div",
       "expression": "{ left: anchorX, top: anchorY, visibility: 'hidden' }",
       "count": 1,
       "reason": "Measures and positions the popup before display."
     },
     {
-      "file": "src/components/canvas/EdgeInfoPopup.tsx",
+      "file": "src/components/canvas/shared/EdgeInfoPopup.tsx",
       "element": "button",
       "expression": "sourceTierStyle",
       "count": 1,
       "reason": "Applies the source machine tier color."
     },
     {
-      "file": "src/components/canvas/EdgeInfoPopup.tsx",
+      "file": "src/components/canvas/shared/EdgeInfoPopup.tsx",
       "element": "button",
       "expression": "targetTierStyle",
       "count": 1,
       "reason": "Applies the target machine tier color."
     },
     {
-      "file": "src/components/canvas/edges/RecipeEdge.tsx",
+      "file": "src/components/canvas/react-flow/edges/RecipeEdge.tsx",
       "element": "BaseEdge",
       "expression": "{\n    stroke: selected\n        ? 'var(--theme-color-edge-selected-stroke)'\n        : 'var(--theme-color-edge-stroke)',\n    strokeWidth: 2,\n    strokeDasharray: lineStyle === 'dashed' ? '10 8' : lineStyle === 'dotted' ? '1 8' : undefined,\n    strokeLinecap: lineStyle === 'dotted' ? 'round' : undefined,\n} as CSSProperties",
       "count": 1,
       "reason": "Renders React Flow edge color and line geometry."
     },
     {
-      "file": "src/components/canvas/nodes/GroupNode.tsx",
+      "file": "src/components/canvas/react-flow/nodes/GroupNode.tsx",
       "element": "div",
       "expression": "{ '--node-height': `${displayHeight}px` } as React.CSSProperties",
       "count": 1,
       "reason": "Provides the measured node height to its CSS Module."
     },
     {
-      "file": "src/components/canvas/nodes/GroupNode.tsx",
+      "file": "src/components/canvas/react-flow/nodes/GroupNode.tsx",
       "element": "div",
       "expression": "style",
       "count": 1,
       "reason": "Passes calculated group geometry to its wrapper."
     },
     {
-      "file": "src/components/canvas/nodes/GroupNodeIO.tsx",
+      "file": "src/components/canvas/react-flow/nodes/GroupNodeIO.tsx",
       "element": "div",
       "expression": "{\n    '--grid-template-columns': gridTemplateColumns,\n    '--padding-horizontal': `${SIDE_PADDING}px`,\n} as React.CSSProperties",
       "count": 1,
       "reason": "Sets dynamic port grid geometry."
     },
     {
-      "file": "src/components/canvas/nodes/GroupNodeIO.tsx",
+      "file": "src/components/canvas/react-flow/nodes/GroupNodeIO.tsx",
       "element": "Handle",
       "expression": "{\n    width: 'var(--theme-handle-size)',\n    height: 'var(--theme-handle-size)',\n    position: 'absolute',\n    top: '50%',\n    left: '50%',\n    transform: 'translate(-50%, -50%)',\n}",
       "count": 1,
       "reason": "Positions the React Flow handle over its port."
     },
     {
-      "file": "src/components/canvas/nodes/GroupNodeIO.tsx",
+      "file": "src/components/canvas/react-flow/nodes/GroupNodeIO.tsx",
       "element": "div",
       "expression": "{ '--io-area-height': `${ioAreaHeight}px` } as React.CSSProperties",
       "count": 1,
       "reason": "Sets measured port-area height."
     },
     {
-      "file": "src/components/canvas/nodes/GroupNodeIO.tsx",
+      "file": "src/components/canvas/react-flow/nodes/GroupNodeIO.tsx",
       "element": "div",
       "expression": "wrapperStyle",
       "count": 1,
       "reason": "Applies calculated wrapper geometry."
     },
     {
-      "file": "src/components/canvas/nodes/PortSummaryRect.tsx",
+      "file": "src/components/canvas/react-flow/nodes/PortSummaryRect.tsx",
       "element": "div",
       "expression": "{ '--rect-width': `${width}px` } as CSSProperties",
       "count": 1,
       "reason": "Provides a measured SVG summary rectangle width."
     },
     {
-      "file": "src/components/canvas/nodes/RecipeNode.tsx",
+      "file": "src/components/canvas/react-flow/nodes/RecipeNode.tsx",
       "element": "div",
       "expression": "{ '--node-height': `${displayHeight}px` } as React.CSSProperties",
       "count": 1,
       "reason": "Provides the measured node height to its CSS Module."
     },
     {
-      "file": "src/components/canvas/nodes/RecipeNodeIO.tsx",
+      "file": "src/components/canvas/react-flow/nodes/RecipeNodeIO.tsx",
       "element": "div",
       "expression": "{\n    '--grid-template-columns': gridTemplateColumns,\n    '--padding-horizontal': `${SIDE_PADDING}px`,\n} as React.CSSProperties",
       "count": 1,
       "reason": "Sets dynamic port grid geometry."
     },
     {
-      "file": "src/components/canvas/nodes/RecipeNodeIO.tsx",
+      "file": "src/components/canvas/react-flow/nodes/RecipeNodeIO.tsx",
       "element": "Handle",
       "expression": "{\n    width: 'var(--theme-handle-size)',\n    height: 'var(--theme-handle-size)',\n    position: 'absolute',\n    top: '50%',\n    left: '50%',\n    transform: 'translate(-50%, -50%)',\n}",
       "count": 1,
       "reason": "Positions the React Flow handle over its port."
     },
     {
-      "file": "src/components/canvas/nodes/RecipeNodeIO.tsx",
+      "file": "src/components/canvas/react-flow/nodes/RecipeNodeIO.tsx",
       "element": "div",
       "expression": "{ '--io-area-height': `${ioAreaHeight}px` } as React.CSSProperties",
       "count": 1,
       "reason": "Sets measured port-area height."
     },
     {
-      "file": "src/components/canvas/nodes/RecipeNodeIO.tsx",
+      "file": "src/components/canvas/react-flow/nodes/RecipeNodeIO.tsx",
       "element": "circle",
       "expression": "PRODUCT_LINK_DOT_STYLE",
       "count": 2,
       "reason": "Styles dynamic SVG product-link endpoints."
     },
     {
-      "file": "src/components/canvas/nodes/RecipeNodeIO.tsx",
+      "file": "src/components/canvas/react-flow/nodes/RecipeNodeIO.tsx",
       "element": "line",
       "expression": "PRODUCT_LINK_LINE_STYLE",
       "count": 1,
       "reason": "Styles a dynamic SVG product-link segment."
     },
     {
-      "file": "src/components/canvas/nodes/RecipeNodeIO.tsx",
+      "file": "src/components/canvas/react-flow/nodes/RecipeNodeIO.tsx",
       "element": "div",
       "expression": "wrapperStyle",
       "count": 1,
@@ -203,7 +203,7 @@
       "reason": "Communicates that the optimizer is solving."
     },
     {
-      "file": "src/components/canvas/edges/RecipeEdge.module.css",
+      "file": "src/components/canvas/react-flow/edges/RecipeEdge.module.css",
       "selector": ".line-style-dashed",
       "property": "animation",
       "value": "recipe-edge-dash-flow 1.1s linear infinite",
@@ -211,7 +211,7 @@
       "reason": "Shows source-to-target direction for dashed edges."
     },
     {
-      "file": "src/components/canvas/edges/RecipeEdge.module.css",
+      "file": "src/components/canvas/react-flow/edges/RecipeEdge.module.css",
       "selector": ".line-style-dotted",
       "property": "animation",
       "value": "recipe-edge-dot-flow 0.85s linear infinite",
@@ -241,12 +241,12 @@
       "count": 1
     },
     {
-      "file": "src/components/canvas/edges/RecipeEdge.module.css",
+      "file": "src/components/canvas/react-flow/edges/RecipeEdge.module.css",
       "name": "recipe-edge-dash-flow",
       "count": 1
     },
     {
-      "file": "src/components/canvas/edges/RecipeEdge.module.css",
+      "file": "src/components/canvas/react-flow/edges/RecipeEdge.module.css",
       "name": "recipe-edge-dot-flow",
       "count": 1
     }

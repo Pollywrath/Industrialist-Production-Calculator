@@ -5,6 +5,10 @@
   pointer-events: none;
 }
 
+.layer * {
+  pointer-events: none !important;
+}
+
 .rect {
   position: absolute;
   box-sizing: border-box;
@@ -13,6 +17,34 @@
   outline: 3px solid var(--theme-color-warning-translucent);
   outline-offset: 0;
   pointer-events: none;
+}
+
+.anchor {
+  position: absolute;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cueLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  pointer-events: none;
+}
+
+.cueCircle {
+  fill: var(--theme-color-canvas-bg);
+  stroke: var(--theme-color-warning);
+  stroke-width: 1;
+}
+
+.cueArrow {
+  fill: var(--theme-color-warning);
+  font-size: 18px;
+  font-family: sans-serif;
+  text-anchor: middle;
+  dominant-baseline: central;
 }
 
 .edge {
