@@ -20,7 +20,13 @@ export const satellite_dish_controller_01: SpecialRecipe = {
       power_use: 75000,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: resolvedFluid, quantity: 0.5 }],
+      inputs: [
+        {
+          product_id: resolvedFluid,
+          quantity: 0.5,
+          port_ids: ['m_satellite_dish_controller_port_1'],
+        },
+      ],
       outputs: [],
     };
 

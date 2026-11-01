@@ -17,11 +17,7 @@ import { isGroupNode, isRecipeNode } from '../../../types/nodes';
 import { resolveActiveRecipe } from '../../../data/lookup';
 import { LoadingScreen } from '../../shared/LoadingScreen';
 import { overlayPrefetchCache, type NodeEditorProps } from '../overlayPrefetchCache';
-import { detectPixiBackendCapabilities } from '../../../canvas/pixiCapabilities';
-import {
-  getAvailablePixiBackends,
-  type CanvasRendererPreference,
-} from '../../../stores/useCanvasRendererStore';
+import { detectPixiWebGLSupport } from '../../../canvas/pixiCapabilities';
 import styles from './PixiCanvasMirror.module.css';
 import { PixiEdgeInfoPopupLayer } from './PixiEdgeInfoPopupLayer';
 
@@ -76,14 +72,12 @@ function PixiNodeEditorOverlay() {
 }
 
 interface PixiCanvasMirrorProps {
-  preference: Exclude<CanvasRendererPreference, 'react-flow'>;
   onUnavailable(error: unknown): void;
-  onBackendActive(backend: 'webgpu' | 'webgl'): void;
-  onBackendAvailability(backend: 'webgpu' | 'webgl', available: boolean): void;
+  onBackendActive(): void;
+  onBackendAvailability(available: boolean): void;
 }
 
 export function PixiCanvasMirror({
-  preference,
   onUnavailable,
   onBackendActive,
   onBackendAvailability,
@@ -111,72 +105,85 @@ export function PixiCanvasMirror({
     let app: Application | null = null;
 
     const initialize = async () => {
-      let lastError: unknown = new Error('No supported PixiJS rendering backend is available.');
-      let capabilities = { webgpu: false, webgl: false };
+      let lastError: unknown = new Error('WebGL is not available for PixiJS rendering.');
+      let webglAvailable = false;
+
       try {
-        capabilities = await detectPixiBackendCapabilities();
+        webglAvailable = await detectPixiWebGLSupport();
       } catch (error) {
         lastError = error;
       }
-      onBackendAvailability('webgpu', capabilities.webgpu);
-      onBackendAvailability('webgl', capabilities.webgl);
 
-      for (const backend of getAvailablePixiBackends(preference, capabilities)) {
-        if (disposed) return;
+      onBackendAvailability(webglAvailable);
 
-        const candidate = new Application();
-        try {
-          clearCanvasThemeColorsCache();
-          await candidate.init({
-            antialias: true,
-            autoDensity: true,
-            autoStart: false,
-            background: getCanvasThemeColors().canvasBackground,
-            failIfMajorPerformanceCaveat: backend === 'webgl',
-            preference: [backend],
-            resolution: window.devicePixelRatio || 1,
-            resizeTo: host,
-          });
-          if (disposed) {
-            candidate.destroy({ removeView: true }, { children: true });
-            return;
-          }
-          app = candidate;
-          onBackendActive(backend);
-          adapterRef.current = attachPixiCanvasAdapter(
-            candidate,
-            host,
-            (error) => {
-              console.error('PixiJS canvas mirror could not be updated.', error);
-              onUnavailable(error);
-            },
-            viewportRef.current ?? undefined,
-          );
-          return;
-        } catch (error) {
-          lastError = error;
-          onBackendAvailability(backend, false);
-          try {
-            candidate.destroy({ removeView: true }, { children: true });
-          } catch (cleanupError) {
-            console.warn('Failed to clean up an unavailable PixiJS renderer.', cleanupError);
-          }
-        }
+      if (disposed) return;
+
+      if (!webglAvailable) {
+        onUnavailable(lastError);
+        return;
       }
-      console.warn('PixiJS could not initialize either supported GPU backend.', lastError);
-      if (!disposed) onUnavailable(lastError);
+
+      const candidate = new Application();
+
+      try {
+        clearCanvasThemeColorsCache();
+
+        await candidate.init({
+          antialias: true,
+          autoDensity: true,
+          autoStart: false,
+          background: getCanvasThemeColors().canvasBackground,
+          failIfMajorPerformanceCaveat: true,
+          preference: ['webgl'],
+          resolution: window.devicePixelRatio || 1,
+          resizeTo: host,
+        });
+
+        if (disposed) {
+          candidate.destroy({ removeView: true }, { children: true });
+          return;
+        }
+
+        app = candidate;
+        onBackendActive();
+
+        adapterRef.current = attachPixiCanvasAdapter(
+          candidate,
+          host,
+          (error) => {
+            console.error('PixiJS canvas mirror could not be updated.', error);
+            onUnavailable(error);
+          },
+          viewportRef.current ?? undefined,
+        );
+      } catch (error) {
+        lastError = error;
+        onBackendAvailability(false);
+
+        try {
+          candidate.destroy({ removeView: true }, { children: true });
+        } catch (cleanupError) {
+          console.warn('Failed to clean up an unavailable PixiJS renderer.', cleanupError);
+        }
+
+        if (!disposed) onUnavailable(lastError);
+      }
     };
 
     void initialize();
 
     return () => {
       disposed = true;
-      if (adapterRef.current) viewportRef.current = adapterRef.current.camera.getState();
+
+      if (adapterRef.current) {
+        viewportRef.current = adapterRef.current.camera.getState();
+      }
+
       adapterRef.current?.destroy();
       adapterRef.current = null;
       app?.destroy({ removeView: true }, { children: true });
     };
-  }, [onBackendActive, onBackendAvailability, onUnavailable, preference, themeRevision]);
+  }, [onBackendActive, onBackendAvailability, onUnavailable, themeRevision]);
 
   useEffect(() => {
     if (fitViewRequestId === 0) return;

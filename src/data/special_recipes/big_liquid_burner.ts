@@ -39,7 +39,17 @@ export const big_liquid_burner_01: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution,
-      inputs: [{ product_id: resolvedFluid, quantity: 120 }],
+      inputs: [
+        {
+          product_id: resolvedFluid,
+          quantity: 120,
+          port_ids: [
+            'm_big_liquid_burner_port_3',
+            'm_big_liquid_burner_port_2',
+            'm_big_liquid_burner_port_1',
+          ],
+        },
+      ],
       outputs: [],
     };
 

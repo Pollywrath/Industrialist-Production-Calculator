@@ -95,8 +95,17 @@ export const vertical_heat_exchanger_distilled_water: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0,
       inputs: [
-        { product_id: 'p_distilled_water', quantity: 400 },
-        { product_id: 'p_distilled_water', quantity: 400, product_link_id: 'coolant' },
+        {
+          product_id: 'p_distilled_water',
+          quantity: 400,
+          port_ids: ['m_vertical_heat_exchanger_port_4'],
+        },
+        {
+          product_id: 'p_distilled_water',
+          quantity: 400,
+          product_link_id: 'coolant',
+          port_ids: ['m_vertical_heat_exchanger_port_3'],
+        },
       ],
       outputs: [
         {
@@ -104,11 +113,13 @@ export const vertical_heat_exchanger_distilled_water: SpecialRecipe = {
           quantity: 400,
           temperature: Math.max(18, roundTo(coolantOut - heatLoss, 2)),
           product_link_id: 'coolant',
+          port_ids: ['m_vertical_heat_exchanger_port_1'],
         },
         {
           product_id: 'p_high_pressure_steam',
           quantity: steamQty,
           temperature: Math.max(18, roundTo(steam - heatLoss, 2)),
+          port_ids: ['m_vertical_heat_exchanger_port_2'],
         },
       ],
       runtime: {
@@ -178,8 +189,17 @@ export const vertical_heat_exchanger_contaminated_water: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0,
       inputs: [
-        { product_id: 'p_distilled_water', quantity: 400 },
-        { product_id: 'p_contaminated_water', quantity: 400, product_link_id: 'coolant' },
+        {
+          product_id: 'p_distilled_water',
+          quantity: 400,
+          port_ids: ['m_vertical_heat_exchanger_port_4'],
+        },
+        {
+          product_id: 'p_contaminated_water',
+          quantity: 400,
+          product_link_id: 'coolant',
+          port_ids: ['m_vertical_heat_exchanger_port_3'],
+        },
       ],
       outputs: [
         {
@@ -187,11 +207,13 @@ export const vertical_heat_exchanger_contaminated_water: SpecialRecipe = {
           quantity: 400,
           temperature: Math.max(18, roundTo(coolantOut - heatLoss, 2)),
           product_link_id: 'coolant',
+          port_ids: ['m_vertical_heat_exchanger_port_1'],
         },
         {
           product_id: 'p_high_pressure_steam',
           quantity: steamQty,
           temperature: Math.max(18, roundTo(steam - heatLoss, 2)),
+          port_ids: ['m_vertical_heat_exchanger_port_2'],
         },
       ],
       runtime: {

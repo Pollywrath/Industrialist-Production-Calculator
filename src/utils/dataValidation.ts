@@ -286,6 +286,27 @@ export function validateRecipe(
 
   const r = recipe as Partial<Recipe> & Record<string, unknown>;
 
+  const validatePortIds = (field: string, value: unknown) => {
+    if (value === undefined) return;
+
+    if (!Array.isArray(value)) {
+      errors.push({
+        field,
+        message: 'Port IDs must be an array when present',
+      });
+      return;
+    }
+
+    value.forEach((portId: unknown, index: number) => {
+      if (typeof portId !== 'string' || !portId.trim()) {
+        errors.push({
+          field: `${field}[${index}]`,
+          message: 'Port ID must be a non-empty string',
+        });
+      }
+    });
+  };
+
   const recipeIdRegex = /^r_([a-zA-Z0-9_]+)_(0[1-9]|[1-9]\d*)$/;
   if (typeof r.id !== 'string' || !r.id.trim()) {
     errors.push({ field: 'id', message: 'ID must be a non-empty string' });
@@ -417,6 +438,7 @@ export function validateRecipe(
         return;
       }
       const inp = input as Partial<RecipeInput> & Record<string, unknown>;
+      validatePortIds(`inputs[${idx}].port_ids`, inp.port_ids);
       if (typeof inp.product_id !== 'string' || !inp.product_id.trim()) {
         errors.push({
           field: `inputs[${idx}].product_id`,
@@ -510,6 +532,7 @@ export function validateRecipe(
         return;
       }
       const out = output as Partial<RecipeOutput> & Record<string, unknown>;
+      validatePortIds(`outputs[${idx}].port_ids`, out.port_ids);
       if (typeof out.product_id !== 'string' || !out.product_id.trim()) {
         errors.push({
           field: `outputs[${idx}].product_id`,

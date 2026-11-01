@@ -22,7 +22,9 @@ export const huge_truck_depot_01: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution: 0.135,
-      inputs: [{ product_id: resolvedItem, quantity: 400 }],
+      inputs: [
+        { product_id: resolvedItem, quantity: 400, port_ids: ['m_huge_truck_depot_port_1'] },
+      ],
       outputs: [],
     };
 

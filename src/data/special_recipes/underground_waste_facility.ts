@@ -43,8 +43,18 @@ export const underground_waste_facility_01: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0,
       inputs: [
-        { product_id: item1, quantity: 240, variable: true },
-        { product_id: fluid1, quantity: 240, variable: true },
+        {
+          product_id: item1,
+          quantity: 240,
+          variable: true,
+          port_ids: ['m_underground_waste_facility_port_3'],
+        },
+        {
+          product_id: fluid1,
+          quantity: 240,
+          variable: true,
+          port_ids: ['m_underground_waste_facility_port_4'],
+        },
         {
           product_id: 'p_concrete_block',
           quantity: concreteQuantity,
@@ -53,6 +63,7 @@ export const underground_waste_facility_01: SpecialRecipe = {
             { sourceInputIndex: 0, coefficient: 140 / 7000 },
             { sourceInputIndex: 1, coefficient: 140 / 7000 },
           ],
+          port_ids: ['m_underground_waste_facility_port_1'],
         },
         {
           product_id: 'p_lead_ingot',
@@ -62,6 +73,7 @@ export const underground_waste_facility_01: SpecialRecipe = {
             { sourceInputIndex: 0, coefficient: 70 / 7000 },
             { sourceInputIndex: 1, coefficient: 70 / 7000 },
           ],
+          port_ids: ['m_underground_waste_facility_port_2'],
         },
       ],
       outputs: [],

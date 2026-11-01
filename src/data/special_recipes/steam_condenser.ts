@@ -168,10 +168,12 @@ export const steam_condenser_01: SpecialRecipe = {
           product_id: 'p_distilled_water',
           quantity: result.coolantFlow,
           product_link_id: 'coolant',
+          port_ids: ['m_steam_condenser_port_2', 'm_steam_condenser_port_1'],
         },
         {
           product_id: 'p_low_pressure_steam',
           quantity: result.actualSteamFlow,
+          port_ids: ['m_steam_condenser_port_4', 'm_steam_condenser_port_3'],
         },
       ],
       outputs: [
@@ -180,11 +182,13 @@ export const steam_condenser_01: SpecialRecipe = {
           quantity: result.coolantFlow,
           temperature: result.tCoolantOutput,
           product_link_id: 'coolant',
+          port_ids: ['m_steam_condenser_port_7', 'm_steam_condenser_port_6'],
         },
         {
           product_id: 'p_condensate',
           quantity: result.actualCondensate,
           temperature: result.tCondensate,
+          port_ids: ['m_steam_condenser_port_5'],
         },
       ],
     };

@@ -41,12 +41,22 @@ export const steam_cracking_plant_01: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0.432,
       inputs: [
-        { product_id: 'p_crude_oil', quantity: 2 },
-        { product_id: 'p_steam', quantity: 150 },
+        { product_id: 'p_crude_oil', quantity: 2, port_ids: ['m_steam_cracking_plant_port_2'] },
+        { product_id: 'p_steam', quantity: 150, port_ids: ['m_steam_cracking_plant_port_1'] },
       ],
       outputs: [
-        { product_id: 'p_paraxylene', quantity: 2, temperature: 18 },
-        { product_id: 'p_ethylene', quantity: 3, temperature: 18 },
+        {
+          product_id: 'p_paraxylene',
+          quantity: 2,
+          temperature: 18,
+          port_ids: ['m_steam_cracking_plant_port_3'],
+        },
+        {
+          product_id: 'p_ethylene',
+          quantity: 3,
+          temperature: 18,
+          port_ids: ['m_steam_cracking_plant_port_4'],
+        },
       ],
     };
 
@@ -73,12 +83,22 @@ export const steam_cracking_plant_02: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0.432,
       inputs: [
-        { product_id: 'p_light_oil', quantity: 15 },
-        { product_id: 'p_steam', quantity: 150 },
+        { product_id: 'p_light_oil', quantity: 15, port_ids: ['m_steam_cracking_plant_port_2'] },
+        { product_id: 'p_steam', quantity: 150, port_ids: ['m_steam_cracking_plant_port_1'] },
       ],
       outputs: [
-        { product_id: 'p_crude_diesel', quantity: 12, temperature: 18 },
-        { product_id: 'p_residue', quantity: 3, temperature: 18 },
+        {
+          product_id: 'p_crude_diesel',
+          quantity: 12,
+          temperature: 18,
+          port_ids: ['m_steam_cracking_plant_port_3'],
+        },
+        {
+          product_id: 'p_residue',
+          quantity: 3,
+          temperature: 18,
+          port_ids: ['m_steam_cracking_plant_port_4'],
+        },
       ],
     };
 
@@ -105,12 +125,22 @@ export const steam_cracking_plant_03: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0.432,
       inputs: [
-        { product_id: 'p_heavy_oil', quantity: 20 },
-        { product_id: 'p_steam', quantity: 150 },
+        { product_id: 'p_heavy_oil', quantity: 20, port_ids: ['m_steam_cracking_plant_port_2'] },
+        { product_id: 'p_steam', quantity: 150, port_ids: ['m_steam_cracking_plant_port_1'] },
       ],
       outputs: [
-        { product_id: 'p_light_oil', quantity: 12, temperature: 18 },
-        { product_id: 'p_residue', quantity: 8, temperature: 18 },
+        {
+          product_id: 'p_light_oil',
+          quantity: 12,
+          temperature: 18,
+          port_ids: ['m_steam_cracking_plant_port_3'],
+        },
+        {
+          product_id: 'p_residue',
+          quantity: 8,
+          temperature: 18,
+          port_ids: ['m_steam_cracking_plant_port_4'],
+        },
       ],
     };
 
@@ -133,12 +163,22 @@ export const steam_cracking_plant_04: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0.432,
       inputs: [
-        { product_id: 'p_heavy_oil', quantity: 20 },
-        { product_id: 'p_hydrogen', quantity: 3 },
+        { product_id: 'p_heavy_oil', quantity: 20, port_ids: ['m_steam_cracking_plant_port_2'] },
+        { product_id: 'p_hydrogen', quantity: 3, port_ids: ['m_steam_cracking_plant_port_1'] },
       ],
       outputs: [
-        { product_id: 'p_naphtha', quantity: 15, temperature: 18 },
-        { product_id: 'p_residue', quantity: 5, temperature: 18 },
+        {
+          product_id: 'p_naphtha',
+          quantity: 15,
+          temperature: 18,
+          port_ids: ['m_steam_cracking_plant_port_3'],
+        },
+        {
+          product_id: 'p_residue',
+          quantity: 5,
+          temperature: 18,
+          port_ids: ['m_steam_cracking_plant_port_4'],
+        },
       ],
     };
     return recipe;
@@ -160,12 +200,22 @@ export const steam_cracking_plant_05: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0.432,
       inputs: [
-        { product_id: 'p_naphtha', quantity: 20 },
-        { product_id: 'p_hydrogen', quantity: 3 },
+        { product_id: 'p_naphtha', quantity: 20, port_ids: ['m_steam_cracking_plant_port_2'] },
+        { product_id: 'p_hydrogen', quantity: 3, port_ids: ['m_steam_cracking_plant_port_1'] },
       ],
       outputs: [
-        { product_id: 'p_light_oil', quantity: 15, temperature: 18 },
-        { product_id: 'p_residue', quantity: 5, temperature: 18 },
+        {
+          product_id: 'p_light_oil',
+          quantity: 15,
+          temperature: 18,
+          port_ids: ['m_steam_cracking_plant_port_3'],
+        },
+        {
+          product_id: 'p_residue',
+          quantity: 5,
+          temperature: 18,
+          port_ids: ['m_steam_cracking_plant_port_4'],
+        },
       ],
     };
     return recipe;

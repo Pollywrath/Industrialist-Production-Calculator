@@ -20,7 +20,9 @@ export const m_research_station2_01: SpecialRecipe = {
       power_use: 17000,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: resolvedItem, quantity: 0.5 }],
+      inputs: [
+        { product_id: resolvedItem, quantity: 0.5, port_ids: ['m_research_station2_port_2'] },
+      ],
       outputs: [],
     };
 

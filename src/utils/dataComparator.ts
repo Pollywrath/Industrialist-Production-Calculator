@@ -88,11 +88,15 @@ export function matchPluralAndSingular(appVal: string, wikiVal: string): boolean
 
 export function matchSize(appSize: { x: number; y: number }, wikiSize: string): boolean {
   if (!wikiSize) return false;
-  const cleanApp = `${appSize.x}x${appSize.y}`.toLowerCase().replace(/\s+/g, '');
+
   const cleanWiki = normalizeCompareKey(wikiSize)
     .replace(/\s+/g, '')
     .replace(/\u00d7/g, 'x');
-  return cleanApp === cleanWiki;
+
+  const normalSize = `${appSize.x}x${appSize.y}`;
+  const swappedSize = `${appSize.y}x${appSize.x}`;
+
+  return cleanWiki === normalSize || cleanWiki === swappedSize;
 }
 
 export function matchVariant(appVariant: string, wikiVariant: string): boolean {

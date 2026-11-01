@@ -69,10 +69,22 @@ export const industrial_firebox_01: SpecialRecipe = {
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
-        { product_id: fuel.product_id, quantity: fuelQty },
-        { product_id: 'p_liquid_sulfur', quantity: 4.5 },
+        {
+          product_id: fuel.product_id,
+          quantity: fuelQty,
+          port_ids: ['m_industrial_firebox_port_2'],
+        },
+        { product_id: 'p_liquid_sulfur', quantity: 4.5, port_ids: ['m_industrial_firebox_port_3'] },
       ],
-      outputs: [{ product_id: 'p_sulfur_dioxide', quantity: 9, temperature: 18, voidable: true }],
+      outputs: [
+        {
+          product_id: 'p_sulfur_dioxide',
+          quantity: 9,
+          temperature: 18,
+          voidable: true,
+          port_ids: ['m_industrial_firebox_port_4'],
+        },
+      ],
     };
 
     return recipe;
@@ -100,10 +112,22 @@ export const industrial_firebox_02: SpecialRecipe = {
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
-        { product_id: fuel.product_id, quantity: fuelQty },
-        { product_id: 'p_boric_acid', quantity: 2 },
+        {
+          product_id: fuel.product_id,
+          quantity: fuelQty,
+          port_ids: ['m_industrial_firebox_port_2'],
+        },
+        { product_id: 'p_boric_acid', quantity: 2, port_ids: ['m_industrial_firebox_port_3'] },
       ],
-      outputs: [{ product_id: 'p_boron', quantity: 1, temperature: 18, voidable: true }],
+      outputs: [
+        {
+          product_id: 'p_boron',
+          quantity: 1,
+          temperature: 18,
+          voidable: true,
+          port_ids: ['m_industrial_firebox_port_1'],
+        },
+      ],
     };
 
     return recipe;
@@ -131,10 +155,22 @@ export const industrial_firebox_03: SpecialRecipe = {
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
-        { product_id: fuel.product_id, quantity: fuelQty },
-        { product_id: 'p_water', quantity: 12 },
+        {
+          product_id: fuel.product_id,
+          quantity: fuelQty,
+          port_ids: ['m_industrial_firebox_port_2'],
+        },
+        { product_id: 'p_water', quantity: 12, port_ids: ['m_industrial_firebox_port_3'] },
       ],
-      outputs: [{ product_id: 'p_water', quantity: 12, temperature: 300, voidable: true }],
+      outputs: [
+        {
+          product_id: 'p_water',
+          quantity: 12,
+          temperature: 300,
+          voidable: true,
+          port_ids: ['m_industrial_firebox_port_4'],
+        },
+      ],
     };
 
     return recipe;
@@ -162,10 +198,22 @@ export const industrial_firebox_04: SpecialRecipe = {
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
-        { product_id: fuel.product_id, quantity: fuelQty },
-        { product_id: 'p_filtered_water', quantity: 12 },
+        {
+          product_id: fuel.product_id,
+          quantity: fuelQty,
+          port_ids: ['m_industrial_firebox_port_2'],
+        },
+        { product_id: 'p_filtered_water', quantity: 12, port_ids: ['m_industrial_firebox_port_3'] },
       ],
-      outputs: [{ product_id: 'p_filtered_water', quantity: 12, temperature: 300, voidable: true }],
+      outputs: [
+        {
+          product_id: 'p_filtered_water',
+          quantity: 12,
+          temperature: 300,
+          voidable: true,
+          port_ids: ['m_industrial_firebox_port_4'],
+        },
+      ],
     };
 
     return recipe;
@@ -193,11 +241,25 @@ export const industrial_firebox_05: SpecialRecipe = {
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
-        { product_id: fuel.product_id, quantity: fuelQty },
-        { product_id: 'p_distilled_water', quantity: 12 },
+        {
+          product_id: fuel.product_id,
+          quantity: fuelQty,
+          port_ids: ['m_industrial_firebox_port_2'],
+        },
+        {
+          product_id: 'p_distilled_water',
+          quantity: 12,
+          port_ids: ['m_industrial_firebox_port_3'],
+        },
       ],
       outputs: [
-        { product_id: 'p_distilled_water', quantity: 12, temperature: 300, voidable: true },
+        {
+          product_id: 'p_distilled_water',
+          quantity: 12,
+          temperature: 300,
+          voidable: true,
+          port_ids: ['m_industrial_firebox_port_4'],
+        },
       ],
     };
 
@@ -226,12 +288,32 @@ export const industrial_firebox_06: SpecialRecipe = {
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
-        { product_id: fuel.product_id, quantity: fuelQty },
-        { product_id: 'p_concentrated_salt_solution', quantity: 12 },
+        {
+          product_id: fuel.product_id,
+          quantity: fuelQty,
+          port_ids: ['m_industrial_firebox_port_2'],
+        },
+        {
+          product_id: 'p_concentrated_salt_solution',
+          quantity: 12,
+          port_ids: ['m_industrial_firebox_port_3'],
+        },
       ],
       outputs: [
-        { product_id: 'p_water', quantity: 12, temperature: 300, voidable: true },
-        { product_id: 'p_table_salt', quantity: 2, temperature: 18, voidable: true },
+        {
+          product_id: 'p_water',
+          quantity: 12,
+          temperature: 300,
+          voidable: true,
+          port_ids: ['m_industrial_firebox_port_4'],
+        },
+        {
+          product_id: 'p_table_salt',
+          quantity: 2,
+          temperature: 18,
+          voidable: true,
+          port_ids: ['m_industrial_firebox_port_1'],
+        },
       ],
     };
 
@@ -254,12 +336,24 @@ export const industrial_firebox_07: SpecialRecipe = {
       power_type: 'MV',
       pollution: 1.8,
       inputs: [
-        { product_id: 'p_water', quantity: 16 },
-        { product_id: 'p_oak_log', quantity: 1 },
+        { product_id: 'p_water', quantity: 16, port_ids: ['m_industrial_firebox_port_3'] },
+        { product_id: 'p_oak_log', quantity: 1, port_ids: ['m_industrial_firebox_port_2'] },
       ],
       outputs: [
-        { product_id: 'p_water', quantity: 16, temperature: 18, voidable: true },
-        { product_id: 'p_sodium_carbonate', quantity: 16, temperature: 18, voidable: true },
+        {
+          product_id: 'p_water',
+          quantity: 16,
+          temperature: 18,
+          voidable: true,
+          port_ids: ['m_industrial_firebox_port_4'],
+        },
+        {
+          product_id: 'p_sodium_carbonate',
+          quantity: 16,
+          temperature: 18,
+          voidable: true,
+          port_ids: ['m_industrial_firebox_port_1'],
+        },
       ],
     };
 

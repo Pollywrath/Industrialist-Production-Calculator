@@ -400,6 +400,58 @@ test('numeric validators reject non-finite values while preserving the machine c
   const recipe = recipes.find((entry) => entry.id === 'r_steam_turbine_01');
   assert.ok(recipe);
   assert.equal(validation.validateRecipe(recipe, productIds, machineIds).valid, true);
+
+  const emptyPortMappings = {
+    ...recipe,
+    inputs: recipe.inputs.map((input) => ({
+      ...input,
+      port_ids: [],
+    })),
+    outputs: recipe.outputs.map((output) => ({
+      ...output,
+      port_ids: [],
+    })),
+  };
+
+  assert.equal(validation.validateRecipe(emptyPortMappings, productIds, machineIds).valid, true);
+
+  const mappedRecipe = {
+    ...recipe,
+    inputs: recipe.inputs.map((input, index) =>
+      index === 0 ? { ...input, port_ids: ['test-input-port'] } : input,
+    ),
+    outputs: recipe.outputs.map((output, index) =>
+      index === 0 ? { ...output, port_ids: ['test-output-port'] } : output,
+    ),
+  };
+
+  assert.equal(validation.validateRecipe(mappedRecipe, productIds, machineIds).valid, true);
+
+  const invalidInputPortIds = {
+    ...recipe,
+    inputs: recipe.inputs.map((input, index) =>
+      index === 0 ? { ...input, port_ids: 'test-input-port' } : input,
+    ),
+  };
+
+  assert.ok(
+    validation
+      .validateRecipe(invalidInputPortIds, productIds, machineIds)
+      .errors.some((error) => error.field === 'inputs[0].port_ids'),
+  );
+
+  const invalidOutputPortIds = {
+    ...recipe,
+    outputs: recipe.outputs.map((output, index) =>
+      index === 0 ? { ...output, port_ids: [''] } : output,
+    ),
+  };
+
+  assert.ok(
+    validation
+      .validateRecipe(invalidOutputPortIds, productIds, machineIds)
+      .errors.some((error) => error.field === 'outputs[0].port_ids[0]'),
+  );
   for (const field of ['cycle_time', 'power_use', 'pollution']) {
     for (const value of [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NaN]) {
       assert.ok(

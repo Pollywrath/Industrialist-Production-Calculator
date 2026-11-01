@@ -312,6 +312,7 @@ export const modular_turbine_01: SpecialRecipe = {
         {
           product_id: 'p_high_pressure_steam',
           quantity: roundTo(result.steamFlow, 1),
+          port_ids: ['m_turbine_input_port_1', 'm_turbine_input_port_2'],
         },
       ],
       outputs: [
@@ -319,6 +320,7 @@ export const modular_turbine_01: SpecialRecipe = {
           product_id: 'p_low_pressure_steam',
           quantity: roundTo(result.steamFlow, 1),
           temperature: result.finalTemp,
+          port_ids: ['m_turbine_output_port_1', 'm_turbine_output_port_2'],
         },
       ],
     };

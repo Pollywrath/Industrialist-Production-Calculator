@@ -226,8 +226,13 @@ export const boiler_standard: SpecialRecipe = {
         power_type: 'MV',
         pollution: 0,
         inputs: [
-          { product_id: 'p_water', quantity: 3 },
-          { product_id: resolvedCoolant, quantity: 3, product_link_id: 'coolant' },
+          { product_id: 'p_water', quantity: 3, port_ids: ['m_boiler_port_2'] },
+          {
+            product_id: resolvedCoolant,
+            quantity: 3,
+            product_link_id: 'coolant',
+            port_ids: ['m_boiler_port_4'],
+          },
         ],
         outputs: [
           {
@@ -235,11 +240,13 @@ export const boiler_standard: SpecialRecipe = {
             quantity: 3,
             temperature: Math.max(18, roundTo(coolantOutTemp - heatLoss, 2)),
             product_link_id: 'coolant',
+            port_ids: ['m_boiler_port_3'],
           },
           {
             product_id: 'p_steam',
             quantity: steamQty,
             temperature: Math.max(18, roundTo(steamOutTemp - heatLoss, 2)),
+            port_ids: ['m_boiler_port_1'],
           },
         ],
         runtime: {
@@ -266,12 +273,19 @@ export const boiler_standard: SpecialRecipe = {
         power_use: 0,
         power_type: 'MV',
         pollution: 0,
-        inputs: [{ product_id: 'p_water', quantity: 3 }],
+        inputs: [
+          {
+            product_id: 'p_water',
+            quantity: 3,
+            port_ids: ['m_boiler_port_2'],
+          },
+        ],
         outputs: [
           {
             product_id: 'p_steam',
             quantity: steamQty,
             temperature: Math.max(18, roundTo(steamOutTemp - heatLoss, 2)),
+            port_ids: ['m_boiler_port_1'],
           },
         ],
         runtime: {

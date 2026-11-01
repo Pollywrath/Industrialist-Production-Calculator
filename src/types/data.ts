@@ -1,7 +1,35 @@
+export type ProductType = 'Item' | 'Fluid';
+export type HandleDataType = 'item' | 'fluid';
+export type PowerType = 'MV' | 'HV';
+
+export type MachinePortDirection = 'input' | 'output' | 'both';
+export type MachinePortSide = 'top' | 'right' | 'bottom' | 'left';
+
 export interface MachineSize {
   x: number;
   y: number;
 }
+
+interface BaseMachinePort {
+  id: string;
+  direction: MachinePortDirection;
+  x: number;
+  y: number;
+  width: number;
+}
+
+export interface ProductMachinePort extends BaseMachinePort {
+  type: 'product';
+  side: MachinePortSide;
+  product_type: ProductType;
+}
+
+export interface PowerMachinePort extends BaseMachinePort {
+  type: 'power';
+  power_type: PowerType;
+}
+
+export type MachinePort = ProductMachinePort | PowerMachinePort;
 
 export interface Machine {
   id: string;
@@ -14,13 +42,11 @@ export interface Machine {
   research: string;
   category: string;
   subcategory: string;
+  ports?: MachinePort[];
   sandboxOnly?: boolean;
   sandboxPlusOnly?: boolean;
   requiresManualOperation?: boolean;
 }
-
-export type ProductType = 'Item' | 'Fluid';
-export type HandleDataType = 'item' | 'fluid';
 
 export interface Product {
   id: string;
@@ -31,8 +57,6 @@ export interface Product {
   profit?: boolean;
   research?: boolean;
 }
-
-export type PowerType = 'MV' | 'HV';
 
 export interface RecipePowerEffect {
   power_type: PowerType;
@@ -45,6 +69,7 @@ export interface RecipePowerEffect {
 export interface RecipeInput {
   product_id: string;
   quantity: number;
+  port_ids?: string[];
   handle_type?: HandleDataType;
   product_link_id?: string;
   variable?: boolean;
@@ -57,6 +82,7 @@ export interface RecipeOutput {
   product_id: string;
   quantity: number;
   temperature: number;
+  port_ids?: string[];
   handle_type?: HandleDataType;
   product_link_id?: string;
   voidable?: boolean;

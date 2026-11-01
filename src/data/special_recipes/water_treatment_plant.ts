@@ -42,14 +42,19 @@ export const water_treatment_plant_01: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0,
       inputs: [
-        { product_id: 'p_water', quantity: outputQuantity },
-        { product_id: 'p_steam', quantity: 90 },
+        {
+          product_id: 'p_water',
+          quantity: outputQuantity,
+          port_ids: ['m_water_treatment_plant_port_1'],
+        },
+        { product_id: 'p_steam', quantity: 90, port_ids: ['m_water_treatment_plant_port_2'] },
       ],
       outputs: [
         {
           product_id: 'p_distilled_water',
           quantity: outputQuantity,
           temperature: outputTemperature,
+          port_ids: ['m_water_treatment_plant_port_4'],
         },
       ],
     };
@@ -78,14 +83,19 @@ export const water_treatment_plant_02: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0,
       inputs: [
-        { product_id: 'p_condensate', quantity: outputQuantity },
-        { product_id: 'p_steam', quantity: 90 },
+        {
+          product_id: 'p_condensate',
+          quantity: outputQuantity,
+          port_ids: ['m_water_treatment_plant_port_3'],
+        },
+        { product_id: 'p_steam', quantity: 90, port_ids: ['m_water_treatment_plant_port_2'] },
       ],
       outputs: [
         {
           product_id: 'p_distilled_water',
           quantity: outputQuantity,
           temperature: outputTemperature,
+          port_ids: ['m_water_treatment_plant_port_4'],
         },
       ],
     };
@@ -114,14 +124,19 @@ export const water_treatment_plant_03: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0,
       inputs: [
-        { product_id: 'p_contaminated_water', quantity: outputQuantity },
-        { product_id: 'p_steam', quantity: 90 },
+        {
+          product_id: 'p_contaminated_water',
+          quantity: outputQuantity,
+          port_ids: ['m_water_treatment_plant_port_3'],
+        },
+        { product_id: 'p_steam', quantity: 90, port_ids: ['m_water_treatment_plant_port_2'] },
       ],
       outputs: [
         {
           product_id: 'p_distilled_water',
           quantity: outputQuantity,
           temperature: outputTemperature,
+          port_ids: ['m_water_treatment_plant_port_4'],
         },
       ],
     };

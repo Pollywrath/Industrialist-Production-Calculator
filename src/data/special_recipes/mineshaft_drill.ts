@@ -446,28 +446,38 @@ export const m_mineshaft_drill_01: SpecialRecipe = {
       powerUse,
     } = getComputedValues(settings);
 
-    const inputsList: { product_id: string; quantity: number }[] = [
-      { product_id: drillHead.product_id, quantity: 1 / cycleTime },
+    const inputsList: { product_id: string; quantity: number; port_ids: string[] }[] = [
+      {
+        product_id: drillHead.product_id,
+        quantity: 1 / cycleTime,
+        port_ids: ['m_mineshaft_drill_port_4'],
+      },
     ];
 
     if (acid.product_id) {
       inputsList.push({
         product_id: acid.product_id,
         quantity: acid.rate * drillingEfficiency,
+        port_ids: ['m_mineshaft_drill_port_1'],
       });
     }
 
     if (hasMachineOil) {
       const oilRate = 2 * (1 - 12 / cycleTime);
-      inputsList.push({ product_id: 'p_machine_oil', quantity: oilRate });
+      inputsList.push({
+        product_id: 'p_machine_oil',
+        quantity: oilRate,
+        port_ids: ['m_mineshaft_drill_port_2'],
+      });
     }
 
     const baseYields = DEPTH_YIELDS[depth] ?? [];
-    const outputsList = baseYields.map((o) => ({
+    const outputsList = baseYields.map((o, index) => ({
       product_id: o.product_id,
       quantity: o.amount * oilMultiplier * drillingEfficiency,
       temperature: 18,
       voidable: true,
+      port_ids: [`m_mineshaft_drill_port_${index + 5}`],
     }));
 
     const recipe: Recipe = {

@@ -21,7 +21,7 @@ export const m_van_depot_01: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution: 0.03375,
-      inputs: [{ product_id: resolvedItem, quantity: 85 }],
+      inputs: [{ product_id: resolvedItem, quantity: 85, port_ids: ['m_van_depot_port_1'] }],
       outputs: [],
     };
 

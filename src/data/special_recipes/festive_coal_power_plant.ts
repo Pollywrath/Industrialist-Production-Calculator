@@ -642,19 +642,29 @@ export const festive_coal_power_plant_01: SpecialRecipe = {
       power_type: 'HV',
       pollution: 0,
       inputs: [
-        { product_id: 'p_coal', quantity: roundTo(coalBurn, 6) },
-        { product_id: 'p_distilled_water', quantity: WATER_FLOW },
+        {
+          product_id: 'p_coal',
+          quantity: roundTo(coalBurn, 6),
+          port_ids: ['m_festive_coal_power_plant_port_7', 'm_festive_coal_power_plant_port_6'],
+        },
+        {
+          product_id: 'p_distilled_water',
+          quantity: WATER_FLOW,
+          port_ids: ['m_festive_coal_power_plant_port_5'],
+        },
       ],
       outputs: [
         {
           product_id: 'p_distilled_water',
           quantity: WATER_FLOW,
           temperature: roundTo(outputTemp, 6),
+          port_ids: ['m_festive_coal_power_plant_port_4'],
         },
         {
           product_id: 'p_exhaust',
           quantity: roundTo(exhaustOutput, 6),
           temperature: AMBIENT_TEMP,
+          port_ids: ['m_festive_coal_power_plant_port_3'],
         },
       ],
       runtime: {

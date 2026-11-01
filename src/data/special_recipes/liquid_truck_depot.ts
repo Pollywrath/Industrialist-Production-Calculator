@@ -22,7 +22,9 @@ export const liquid_truck_depot_01: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution: 0.045,
-      inputs: [{ product_id: resolvedFluid, quantity: 400 }],
+      inputs: [
+        { product_id: resolvedFluid, quantity: 400, port_ids: ['m_liquid_truck_depot_port_1'] },
+      ],
       outputs: [],
     };
 

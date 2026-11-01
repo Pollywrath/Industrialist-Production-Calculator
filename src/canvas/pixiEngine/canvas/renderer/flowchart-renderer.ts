@@ -9,7 +9,6 @@ import {
   type TextStyleFontWeight,
   Texture,
   TilingSprite,
-  WebGPURenderer,
 } from 'pixi.js';
 import {
   GRID_DOT_SIZE,
@@ -5022,9 +5021,7 @@ export function createFlowchartRenderer(
               throw new Error('The browser returned an unsupported Pixi export tile.');
             }
             await drawCanvasExportTile(context, tileCanvas, tile, async () => {
-              if (app.renderer instanceof WebGPURenderer) {
-                await app.renderer.gpu.device.queue.onSubmittedWorkDone();
-              }
+              // WebGL does not require the WebGPU-specific queue synchronization.
             });
           } finally {
             tileCanvas.width = 0;

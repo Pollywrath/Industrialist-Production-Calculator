@@ -38,15 +38,16 @@ export const alloyer_ferroaluminium: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0.324,
       inputs: [
-        { product_id: 'p_iron_ingot', quantity: 4 },
-        { product_id: 'p_aluminium_ingot', quantity: 2 },
-        { product_id: 'p_steam', quantity: 200 },
+        { product_id: 'p_iron_ingot', quantity: 4, port_ids: ['m_alloyer_port_4'] },
+        { product_id: 'p_aluminium_ingot', quantity: 2, port_ids: ['m_alloyer_port_3'] },
+        { product_id: 'p_steam', quantity: 200, port_ids: ['m_alloyer_port_5'] },
       ],
       outputs: [
         {
           product_id: 'p_molten_ferroaluminium_alloy',
           quantity: 2,
           temperature: 18,
+          port_ids: ['m_alloyer_port_2'],
         },
       ],
     };
@@ -74,15 +75,16 @@ export const alloyer_purple_gold: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0.324,
       inputs: [
-        { product_id: 'p_gold_ingot', quantity: 1 },
-        { product_id: 'p_aluminium_ingot', quantity: 2 },
-        { product_id: 'p_steam', quantity: 200 },
+        { product_id: 'p_gold_ingot', quantity: 1, port_ids: ['m_alloyer_port_4'] },
+        { product_id: 'p_aluminium_ingot', quantity: 2, port_ids: ['m_alloyer_port_3'] },
+        { product_id: 'p_steam', quantity: 200, port_ids: ['m_alloyer_port_5'] },
       ],
       outputs: [
         {
           product_id: 'p_molten_purple_gold',
           quantity: 2,
           temperature: 18,
+          port_ids: ['m_alloyer_port_2'],
         },
       ],
     };
@@ -110,15 +112,16 @@ export const alloyer_brass: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0.324,
       inputs: [
-        { product_id: 'p_copper_ingot', quantity: 6 },
-        { product_id: 'p_zinc', quantity: 3 },
-        { product_id: 'p_steam', quantity: 200 },
+        { product_id: 'p_copper_ingot', quantity: 6, port_ids: ['m_alloyer_port_4'] },
+        { product_id: 'p_zinc', quantity: 3, port_ids: ['m_alloyer_port_3'] },
+        { product_id: 'p_steam', quantity: 200, port_ids: ['m_alloyer_port_5'] },
       ],
       outputs: [
         {
           product_id: 'p_liquid_brass',
           quantity: 9,
           temperature: 18,
+          port_ids: ['m_alloyer_port_2'],
         },
       ],
     };

@@ -15,6 +15,7 @@ class MemoryStorage {
 }
 
 const storage = new MemoryStorage();
+storage.setItem('industrialist_canvas_renderer_v1', 'pixi-webgpu');
 storage.setItem(
   'industrialist_edge_theme_v1',
   JSON.stringify({ lineStyle: 'dotted', pathStyle: 'straight', animationStyle: 'none' }),
@@ -35,12 +36,16 @@ const edgeStore = await viteServer.ssrLoadModule('/src/stores/useEdgeThemeStore.
 
 after(async () => viteServer.close());
 
-test('renderer preference defaults to WebGPU and rejects unknown stored values', () => {
+test('renderer preference defaults to WebGL and migrates saved WebGPU preferences', () => {
   const state = rendererStore.useCanvasRendererStore.getState();
-  assert.equal(state.preference, 'pixi-webgpu');
-  assert.equal(rendererStore.resolveCanvasRendererPreference(null), 'pixi-webgpu');
-  assert.equal(rendererStore.resolveCanvasRendererPreference('canvas-2d'), 'pixi-webgpu');
+
+  assert.equal(state.preference, 'pixi-webgl');
+  assert.equal(rendererStore.DEFAULT_CANVAS_RENDERER, 'pixi-webgl');
+  assert.equal(rendererStore.resolveCanvasRendererPreference(null), 'pixi-webgl');
+  assert.equal(rendererStore.resolveCanvasRendererPreference('canvas-2d'), 'pixi-webgl');
+  assert.equal(rendererStore.resolveCanvasRendererPreference('pixi-webgpu'), 'pixi-webgl');
   assert.equal(rendererStore.resolveCanvasRendererPreference('react-flow'), 'react-flow');
+  assert.equal(storage.getItem(rendererStore.CANVAS_RENDERER_STORAGE_KEY), 'pixi-webgl');
 });
 
 test('new edge defaults are orthogonal, solid, and pulse arrows while saved preferences persist', () => {
@@ -73,20 +78,10 @@ test('renderer preference persists locally and keeps active renderer separate', 
   assert.equal(rendererStore.useCanvasRendererStore.getState().activeRenderer, 'react-flow');
 });
 
-test('backend fallback order honors the preferred GPU and filters unavailable backends', () => {
-  assert.deepEqual(rendererStore.getPixiBackendOrder('pixi-webgpu'), ['webgpu', 'webgl']);
-  assert.deepEqual(rendererStore.getPixiBackendOrder('pixi-webgl'), ['webgl', 'webgpu']);
-  assert.deepEqual(
-    rendererStore.getAvailablePixiBackends('pixi-webgpu', { webgpu: false, webgl: true }),
-    ['webgl'],
-  );
-  assert.deepEqual(
-    rendererStore.getAvailablePixiBackends('pixi-webgl', { webgpu: false, webgl: false }),
-    [],
-  );
-  assert.equal(rendererStore.isRendererChoiceAvailable('pixi-webgpu', 'available'), true);
+test('WebGL and React Flow renderer availability is respected', () => {
+  assert.equal(rendererStore.isRendererChoiceAvailable('pixi-webgl', 'available'), true);
   assert.equal(rendererStore.isRendererChoiceAvailable('pixi-webgl', 'unavailable'), false);
-  assert.equal(rendererStore.isRendererChoiceAvailable('pixi-webgpu', 'unknown'), false);
+  assert.equal(rendererStore.isRendererChoiceAvailable('pixi-webgl', 'unknown'), false);
   assert.equal(rendererStore.isRendererChoiceAvailable('react-flow', 'unavailable'), true);
 });
 

@@ -5,10 +5,7 @@ import { OverlaysTray } from '../menu/OverlaysTray';
 import { DashboardPanels } from '../menu/DashboardPanels';
 import { FlowViewport } from './react-flow/FlowViewport';
 import { getCanvasAdapter, setPendingCanvasViewState } from '../../canvas/canvasAdapterApi';
-import {
-  useCanvasRendererStore,
-  type CanvasRendererPreference,
-} from '../../stores/useCanvasRendererStore';
+import { useCanvasRendererStore } from '../../stores/useCanvasRendererStore';
 import { LoadingScreen } from '../shared/LoadingScreen';
 import { useAutosave } from '../../persistence/useAutosave';
 import { overlayPrefetchCache } from './overlayPrefetchCache';
@@ -27,16 +24,14 @@ import {
 import styles from './FlowCanvas.module.css';
 
 interface PixiCanvasMountProps {
-  preference: Exclude<CanvasRendererPreference, 'react-flow'>;
   onUnavailable(error: unknown): void;
-  onBackendActive(backend: 'webgpu' | 'webgl'): void;
-  onBackendAvailability(backend: 'webgpu' | 'webgl', available: boolean): void;
+  onBackendActive(): void;
+  onBackendAvailability(available: boolean): void;
 }
 
 type PixiCanvasComponent = React.ComponentType<PixiCanvasMountProps>;
 
 function PixiCanvasMount({
-  preference,
   onUnavailable,
   onBackendActive,
   onBackendAvailability,
@@ -45,6 +40,7 @@ function PixiCanvasMount({
 
   useEffect(() => {
     let disposed = false;
+
     import('./pixi/PixiCanvasMirror')
       .then(({ PixiCanvasMirror }) => {
         if (!disposed) setCanvasComponent(() => PixiCanvasMirror);
@@ -53,6 +49,7 @@ function PixiCanvasMount({
         console.error('PixiJS canvas chunk could not be loaded.', error);
         if (!disposed) onUnavailable(error);
       });
+
     return () => {
       disposed = true;
     };
@@ -60,7 +57,6 @@ function PixiCanvasMount({
 
   return CanvasComponent ? (
     <CanvasComponent
-      preference={preference}
       onUnavailable={onUnavailable}
       onBackendActive={onBackendActive}
       onBackendAvailability={onBackendAvailability}
@@ -190,14 +186,14 @@ export function FlowCanvas() {
   const preferenceRevision = useCanvasRendererStore((state) => state.preferenceRevision);
   const fallbackNoticeVisible = useCanvasRendererStore((state) => state.fallbackNoticeVisible);
   const setActiveRenderer = useCanvasRendererStore((state) => state.setActiveRenderer);
-  const setBackendAvailability = useCanvasRendererStore((state) => state.setBackendAvailability);
+  const setWebGLAvailability = useCanvasRendererStore((state) => state.setWebGLAvailability);
   const showFallbackNotice = useCanvasRendererStore((state) => state.showFallbackNotice);
   const dismissFallbackNotice = useCanvasRendererStore((state) => state.dismissFallbackNotice);
   const [failedPreferenceRevision, setFailedPreferenceRevision] = useState<number | null>(null);
   const promptShownRef = useRef(false);
   const usePixiCanvas =
     preference !== 'react-flow' && failedPreferenceRevision !== preferenceRevision;
-  const pixiPreference = preference === 'pixi-webgl' ? 'pixi-webgl' : 'pixi-webgpu';
+
   const handlePixiUnavailable = useCallback(
     (error: unknown) => {
       console.warn('Switching to React Flow after PixiJS initialization failed.', error);
@@ -209,17 +205,16 @@ export function FlowCanvas() {
     },
     [preferenceRevision, setActiveRenderer, showFallbackNotice],
   );
-  const handlePixiBackendActive = useCallback(
-    (backend: 'webgpu' | 'webgl') => {
-      setActiveRenderer(backend === 'webgpu' ? 'pixi-webgpu' : 'pixi-webgl');
-    },
-    [setActiveRenderer],
-  );
+
+  const handlePixiBackendActive = useCallback(() => {
+    setActiveRenderer('pixi-webgl');
+  }, [setActiveRenderer]);
+
   const handlePixiBackendAvailability = useCallback(
-    (backend: 'webgpu' | 'webgl', available: boolean) => {
-      setBackendAvailability(backend, available ? 'available' : 'unavailable');
+    (available: boolean) => {
+      setWebGLAvailability(available ? 'available' : 'unavailable');
     },
-    [setBackendAvailability],
+    [setWebGLAvailability],
   );
 
   useEffect(() => {
@@ -405,7 +400,6 @@ export function FlowCanvas() {
     <div className={containerClassName}>
       {usePixiCanvas ? (
         <PixiCanvasMount
-          preference={pixiPreference}
           onUnavailable={handlePixiUnavailable}
           onBackendActive={handlePixiBackendActive}
           onBackendAvailability={handlePixiBackendAvailability}

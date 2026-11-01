@@ -437,7 +437,13 @@ export const modular_diesel_engine_01: SpecialRecipe = {
       power_use: -roundTo(power, 6),
       power_type: 'MV',
       pollution: roundTo(0.648 * exhaustsSetting, 6),
-      inputs: [{ product_id: fuelDefinition.product_id, quantity: roundTo(metrics.fuelUsage, 6) }],
+      inputs: [
+        {
+          product_id: fuelDefinition.product_id,
+          quantity: roundTo(metrics.fuelUsage, 6),
+          port_ids: ['m_diesel_engine_fuel_input_port_2'],
+        },
+      ],
       outputs: [],
     };
 

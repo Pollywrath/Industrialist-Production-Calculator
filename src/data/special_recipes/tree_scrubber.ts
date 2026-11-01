@@ -45,8 +45,15 @@ export const tree_scrubber_01: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution,
-      inputs: [{ product_id: 'p_water', quantity: 18 }],
-      outputs: [{ product_id: 'p_residue', quantity: residueQuantity, temperature: 18 }],
+      inputs: [{ product_id: 'p_water', quantity: 18, port_ids: ['m_tree_scrubber_port_1'] }],
+      outputs: [
+        {
+          product_id: 'p_residue',
+          quantity: residueQuantity,
+          temperature: 18,
+          port_ids: ['m_tree_scrubber_port_2'],
+        },
+      ],
     };
 
     return recipe;

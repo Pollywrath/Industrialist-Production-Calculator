@@ -40,9 +40,17 @@ export const m_research_station3_01: SpecialRecipe = {
       ? helpers.resolveProduct('input', 1) || 'any_item'
       : 'any_item';
 
-    const inputsList: { product_id: string; quantity: number }[] = [
-      { product_id: item1, quantity: 0.1 },
-      { product_id: item2, quantity: 0.1 },
+    const inputsList = [
+      {
+        product_id: item1,
+        quantity: 0.1,
+        port_ids: ['m_research_station3_port_1', 'm_research_station3_port_2'],
+      },
+      {
+        product_id: item2,
+        quantity: 0.1,
+        port_ids: ['m_research_station3_port_1', 'm_research_station3_port_2'],
+      },
     ];
 
     const recipe: Recipe = {

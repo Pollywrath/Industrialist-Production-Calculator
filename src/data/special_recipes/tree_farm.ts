@@ -363,13 +363,20 @@ export const tree_farm_01: SpecialRecipe = {
       power_use: roundTo(powerUse, 6),
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_water', quantity: waterConsumption }],
+      inputs: [
+        {
+          product_id: 'p_water',
+          quantity: waterConsumption,
+          port_ids: ['m_tree_farm_water_input_port_1'],
+        },
+      ],
       outputs: [
         {
           product_id: 'p_oak_log',
           quantity: actualHarvestRate * logsPerTree,
           temperature: 18,
           voidable: true,
+          port_ids: ['m_tree_farm_output_port_1'],
         },
       ],
     };

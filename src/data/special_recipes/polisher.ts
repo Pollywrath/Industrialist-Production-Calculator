@@ -32,15 +32,16 @@ export const polisher_01: SpecialRecipe = {
       power_type: 'MV',
       pollution: 0,
       inputs: [
-        { product_id: 'p_condensate', quantity: 400 },
-        { product_id: 'p_hydrochloric_acid', quantity: 1 },
-        { product_id: 'p_sodium_hydroxide_solution', quantity: 1 },
+        { product_id: 'p_condensate', quantity: 400, port_ids: ['m_polisher_port_3'] },
+        { product_id: 'p_hydrochloric_acid', quantity: 1, port_ids: ['m_polisher_port_1'] },
+        { product_id: 'p_sodium_hydroxide_solution', quantity: 1, port_ids: ['m_polisher_port_2'] },
       ],
       outputs: [
         {
           product_id: 'p_distilled_water',
           quantity: 400,
           temperature: condensateTemp * 0.9,
+          port_ids: ['m_polisher_port_4'],
         },
       ],
     };

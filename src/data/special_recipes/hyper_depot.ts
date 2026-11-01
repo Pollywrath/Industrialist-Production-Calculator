@@ -21,7 +21,7 @@ export const m_hyper_depot_01: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: resolvedItem, quantity: 2 }],
+      inputs: [{ product_id: resolvedItem, quantity: 2, port_ids: ['m_hyper_depot_port_1'] }],
       outputs: [],
     };
 

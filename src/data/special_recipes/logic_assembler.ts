@@ -127,23 +127,30 @@ export const logic_assembler_01: SpecialRecipe = {
     if (productId === 'p_microchip_scrap') {
       return { fail_step: 'Yes' };
     }
+
     const stage = CHIP_STAGES.find((c) => c.productId === productId);
     if (stage) {
       return { target_chip: productId, fail_step: 'No' };
     }
+
     return null;
   },
   compute: (settings) => {
     const { cycleTime, totalStages, hasMachineOil, failStep, targetChip, scrapQuantity, stage } =
       getComputedValues(settings);
 
-    const inputsList = CORRECT_ORDER.map((id) => ({
+    const inputsList = CORRECT_ORDER.map((id, index) => ({
       product_id: id,
       quantity: MATERIALS_PER_STAGE[id] * totalStages,
+      port_ids: [`m_logic_assembler_port_${index + 1}`],
     }));
 
     if (hasMachineOil) {
-      inputsList.push({ product_id: 'p_machine_oil', quantity: MACHINE_OIL_RATE * cycleTime });
+      inputsList.push({
+        product_id: 'p_machine_oil',
+        quantity: MACHINE_OIL_RATE * cycleTime,
+        port_ids: ['m_logic_assembler_port_7'],
+      });
     }
 
     const outputsList = failStep
@@ -153,9 +160,18 @@ export const logic_assembler_01: SpecialRecipe = {
             quantity: scrapQuantity,
             temperature: 18,
             voidable: true,
+            port_ids: ['m_logic_assembler_port_6'],
           },
         ]
-      : [{ product_id: targetChip, quantity: 1, temperature: 18, voidable: true }];
+      : [
+          {
+            product_id: targetChip,
+            quantity: 1,
+            temperature: 18,
+            voidable: true,
+            port_ids: ['m_logic_assembler_port_5'],
+          },
+        ];
 
     const recipe: Recipe = {
       id: 'r_logic_assembler_01',

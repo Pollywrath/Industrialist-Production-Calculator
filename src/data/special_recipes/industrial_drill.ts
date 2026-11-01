@@ -37,8 +37,15 @@ export const m_industrial_drill_01: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_steam', quantity: 720 }],
-      outputs: [{ product_id: 'p_raw_iron', quantity: 10 * multiplier, temperature: 18 }],
+      inputs: [{ product_id: 'p_steam', quantity: 720, port_ids: ['m_industrial_drill_port_1'] }],
+      outputs: [
+        {
+          product_id: 'p_raw_iron',
+          quantity: 10 * multiplier,
+          temperature: 18,
+          port_ids: ['m_industrial_drill_port_2'],
+        },
+      ],
     };
 
     return recipe;
@@ -62,8 +69,15 @@ export const m_industrial_drill_02: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_steam', quantity: 720 }],
-      outputs: [{ product_id: 'p_raw_copper', quantity: 10 * multiplier, temperature: 18 }],
+      inputs: [{ product_id: 'p_steam', quantity: 720, port_ids: ['m_industrial_drill_port_1'] }],
+      outputs: [
+        {
+          product_id: 'p_raw_copper',
+          quantity: 10 * multiplier,
+          temperature: 18,
+          port_ids: ['m_industrial_drill_port_2'],
+        },
+      ],
     };
 
     return recipe;
@@ -87,8 +101,15 @@ export const m_industrial_drill_03: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_steam', quantity: 720 }],
-      outputs: [{ product_id: 'p_bauxite_residue', quantity: 0.5 * multiplier, temperature: 18 }],
+      inputs: [{ product_id: 'p_steam', quantity: 720, port_ids: ['m_industrial_drill_port_1'] }],
+      outputs: [
+        {
+          product_id: 'p_bauxite_residue',
+          quantity: 0.5 * multiplier,
+          temperature: 18,
+          port_ids: ['m_industrial_drill_port_2'],
+        },
+      ],
     };
 
     return recipe;

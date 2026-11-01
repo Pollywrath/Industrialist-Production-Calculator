@@ -51,10 +51,35 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_hydrogen', quantity: 30 },
-      { product_id: 'p_nitrogen', quantity: 10 },
+      {
+        product_id: 'p_hydrogen',
+        quantity: 30,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_nitrogen',
+        quantity: 10,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
-    outputs: [{ product_id: 'p_ammonia', quantity: 20, temperature: 18 }],
+    outputs: [
+      {
+        product_id: 'p_ammonia',
+        quantity: 20,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_12'],
+      },
+    ],
   },
   {
     id: 'r_chemical_plant_02',
@@ -65,10 +90,35 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_ammonia', quantity: 25 },
-      { product_id: 'p_naphtha', quantity: 5 },
+      {
+        product_id: 'p_ammonia',
+        quantity: 25,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_naphtha',
+        quantity: 5,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
-    outputs: [{ product_id: 'p_hardened_plastic_pellets', quantity: 50, temperature: 18 }],
+    outputs: [
+      {
+        product_id: 'p_hardened_plastic_pellets',
+        quantity: 50,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_10'],
+      },
+    ],
   },
   {
     id: 'r_chemical_plant_03',
@@ -79,10 +129,35 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_steam', quantity: 90 },
-      { product_id: 'p_refined_gas', quantity: 60 },
+      {
+        product_id: 'p_steam',
+        quantity: 90,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_refined_gas',
+        quantity: 60,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
-    outputs: [{ product_id: 'p_hydrogen', quantity: 15, temperature: 18 }],
+    outputs: [
+      {
+        product_id: 'p_hydrogen',
+        quantity: 15,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_12'],
+      },
+    ],
   },
   {
     id: 'r_chemical_plant_04',
@@ -93,10 +168,30 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_yellowcake', quantity: 0.5 },
-      { product_id: 'p_hydrofluoric_acid', quantity: 0.5 },
+      {
+        product_id: 'p_yellowcake',
+        quantity: 0.5,
+        port_ids: ['m_chemical_plant_port_6', 'm_chemical_plant_port_7'],
+      },
+      {
+        product_id: 'p_hydrofluoric_acid',
+        quantity: 0.5,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
-    outputs: [{ product_id: 'p_unenriched_uf6_gas', quantity: 1.5, temperature: 18 }],
+    outputs: [
+      {
+        product_id: 'p_unenriched_uf6_gas',
+        quantity: 1.5,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_12'],
+      },
+    ],
   },
   {
     id: 'r_chemical_plant_05',
@@ -107,15 +202,61 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_mixed_fissile_oxides', quantity: 0.5 },
-      { product_id: 'p_hydrochloric_acid', quantity: 0.5 },
-      { product_id: 'p_sodium_hydroxide_solution', quantity: 0.5 },
-      { product_id: 'p_argon', quantity: 30 },
+      {
+        product_id: 'p_mixed_fissile_oxides',
+        quantity: 0.5,
+        port_ids: ['m_chemical_plant_port_6', 'm_chemical_plant_port_7'],
+      },
+      {
+        product_id: 'p_hydrochloric_acid',
+        quantity: 0.5,
+        port_ids: [
+          'm_chemical_plant_port_5',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_2',
+        ],
+      },
+      {
+        product_id: 'p_sodium_hydroxide_solution',
+        quantity: 0.5,
+        port_ids: [
+          'm_chemical_plant_port_5',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_2',
+        ],
+      },
+      {
+        product_id: 'p_argon',
+        quantity: 30,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
     outputs: [
-      { product_id: 'p_residue', quantity: 3, temperature: 18 },
-      { product_id: 'p_reprocessed_uranium', quantity: 0.1, temperature: 18 },
-      { product_id: 'p_plutonium_oxide_pellets', quantity: 0.05, temperature: 18 },
+      {
+        product_id: 'p_residue',
+        quantity: 3,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_11'],
+      },
+      {
+        product_id: 'p_reprocessed_uranium',
+        quantity: 0.1,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_10'],
+      },
+      {
+        product_id: 'p_plutonium_oxide_pellets',
+        quantity: 0.05,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_9'],
+      },
     ],
   },
   {
@@ -127,12 +268,35 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_deep_earth_fragment', quantity: 0.5 },
-      { product_id: 'p_sulfuric_acid', quantity: 0.5 },
+      {
+        product_id: 'p_deep_earth_fragment',
+        quantity: 0.5,
+        port_ids: ['m_chemical_plant_port_6', 'm_chemical_plant_port_7'],
+      },
+      {
+        product_id: 'p_sulfuric_acid',
+        quantity: 0.5,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
     outputs: [
-      { product_id: 'p_hydrofluoric_acid', quantity: 2, temperature: 18 },
-      { product_id: 'p_residue', quantity: 2, temperature: 18 },
+      {
+        product_id: 'p_hydrofluoric_acid',
+        quantity: 2,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_12'],
+      },
+      {
+        product_id: 'p_residue',
+        quantity: 2,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_11'],
+      },
     ],
   },
   {
@@ -144,10 +308,30 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_reprocessed_uranium', quantity: 1 },
-      { product_id: 'p_hydrofluoric_acid', quantity: 0.5 },
+      {
+        product_id: 'p_reprocessed_uranium',
+        quantity: 1,
+        port_ids: ['m_chemical_plant_port_6', 'm_chemical_plant_port_7'],
+      },
+      {
+        product_id: 'p_hydrofluoric_acid',
+        quantity: 0.5,
+        port_ids: [
+          'm_chemical_plant_port_5',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_2',
+        ],
+      },
     ],
-    outputs: [{ product_id: 'p_slightly_enriched_uf6_gas', quantity: 2, temperature: 18 }],
+    outputs: [
+      {
+        product_id: 'p_slightly_enriched_uf6_gas',
+        quantity: 2,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_12'],
+      },
+    ],
   },
   {
     id: 'r_chemical_plant_08',
@@ -158,12 +342,35 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_impure_boron', quantity: 1.6 },
-      { product_id: 'p_hydrochloric_acid', quantity: 0.5 },
+      {
+        product_id: 'p_impure_boron',
+        quantity: 1.6,
+        port_ids: ['m_chemical_plant_port_6', 'm_chemical_plant_port_7'],
+      },
+      {
+        product_id: 'p_hydrochloric_acid',
+        quantity: 0.5,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
     outputs: [
-      { product_id: 'p_boric_acid', quantity: 2, temperature: 18 },
-      { product_id: 'p_residue', quantity: 2, temperature: 18 },
+      {
+        product_id: 'p_boric_acid',
+        quantity: 2,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_12'],
+      },
+      {
+        product_id: 'p_residue',
+        quantity: 2,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_11'],
+      },
     ],
   },
   {
@@ -175,12 +382,35 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_impure_boron', quantity: 1.6 },
-      { product_id: 'p_sulfuric_acid', quantity: 0.35 },
+      {
+        product_id: 'p_impure_boron',
+        quantity: 1.6,
+        port_ids: ['m_chemical_plant_port_6', 'm_chemical_plant_port_7'],
+      },
+      {
+        product_id: 'p_sulfuric_acid',
+        quantity: 0.35,
+        port_ids: [
+          'm_chemical_plant_port_5',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_2',
+        ],
+      },
     ],
     outputs: [
-      { product_id: 'p_boric_acid', quantity: 2, temperature: 18 },
-      { product_id: 'p_residue', quantity: 2, temperature: 18 },
+      {
+        product_id: 'p_boric_acid',
+        quantity: 2,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_12'],
+      },
+      {
+        product_id: 'p_residue',
+        quantity: 2,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_11'],
+      },
     ],
   },
   {
@@ -192,12 +422,35 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_shallow_earth_fragment', quantity: 2 },
-      { product_id: 'p_hydrochloric_acid', quantity: 6 },
+      {
+        product_id: 'p_shallow_earth_fragment',
+        quantity: 2,
+        port_ids: ['m_chemical_plant_port_6', 'm_chemical_plant_port_7'],
+      },
+      {
+        product_id: 'p_hydrochloric_acid',
+        quantity: 6,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
     outputs: [
-      { product_id: 'p_phosphorus_oxychloride', quantity: 3, temperature: 18 },
-      { product_id: 'p_residue', quantity: 2, temperature: 18 },
+      {
+        product_id: 'p_phosphorus_oxychloride',
+        quantity: 3,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_12'],
+      },
+      {
+        product_id: 'p_residue',
+        quantity: 2,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_11'],
+      },
     ],
   },
   {
@@ -209,13 +462,50 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_phosphorus_oxychloride', quantity: 1.5 },
-      { product_id: 'p_ethanol', quantity: 1.5 },
-      { product_id: 'p_steam', quantity: 90 },
+      {
+        product_id: 'p_phosphorus_oxychloride',
+        quantity: 1.5,
+        port_ids: [
+          'm_chemical_plant_port_5',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_2',
+        ],
+      },
+      {
+        product_id: 'p_ethanol',
+        quantity: 1.5,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_steam',
+        quantity: 90,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
     outputs: [
-      { product_id: 'p_tributyl_phosphate', quantity: 1, temperature: 18 },
-      { product_id: 'p_hydrochloric_acid', quantity: 1, temperature: 18 },
+      {
+        product_id: 'p_tributyl_phosphate',
+        quantity: 1,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_12'],
+      },
+      {
+        product_id: 'p_hydrochloric_acid',
+        quantity: 1,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_11'],
+      },
     ],
   },
   {
@@ -227,13 +517,50 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_enriched_uf6_gas', quantity: 0.05 },
-      { product_id: 'p_steam', quantity: 90 },
-      { product_id: 'p_tributyl_phosphate', quantity: 1 },
+      {
+        product_id: 'p_enriched_uf6_gas',
+        quantity: 0.05,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_steam',
+        quantity: 90,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_tributyl_phosphate',
+        quantity: 1,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
     outputs: [
-      { product_id: 'p_enriched_uo2_pellets', quantity: 0.05, temperature: 18 },
-      { product_id: 'p_residue', quantity: 5, temperature: 18 },
+      {
+        product_id: 'p_enriched_uo2_pellets',
+        quantity: 0.05,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_10'],
+      },
+      {
+        product_id: 'p_residue',
+        quantity: 5,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_11'],
+      },
     ],
   },
   {
@@ -245,13 +572,50 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_enriched_uf6_gas', quantity: 0.02 },
-      { product_id: 'p_steam', quantity: 90 },
-      { product_id: 'p_hydrogen', quantity: 4 },
+      {
+        product_id: 'p_enriched_uf6_gas',
+        quantity: 0.02,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_steam',
+        quantity: 90,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_hydrogen',
+        quantity: 4,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
     outputs: [
-      { product_id: 'p_enriched_uo2_pellets', quantity: 0.01, temperature: 18 },
-      { product_id: 'p_residue', quantity: 5, temperature: 18 },
+      {
+        product_id: 'p_enriched_uo2_pellets',
+        quantity: 0.01,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_10'],
+      },
+      {
+        product_id: 'p_residue',
+        quantity: 5,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_11'],
+      },
     ],
   },
   {
@@ -263,13 +627,50 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_sulfur_trioxide', quantity: 14 },
-      { product_id: 'p_distilled_water', quantity: 11 },
-      { product_id: 'p_argon', quantity: 70 },
+      {
+        product_id: 'p_sulfur_trioxide',
+        quantity: 14,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_distilled_water',
+        quantity: 11,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_argon',
+        quantity: 70,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
     outputs: [
-      { product_id: 'p_sulfuric_acid', quantity: 11, temperature: 18 },
-      { product_id: 'p_residue', quantity: 2, temperature: 18 },
+      {
+        product_id: 'p_sulfuric_acid',
+        quantity: 11,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_12'],
+      },
+      {
+        product_id: 'p_residue',
+        quantity: 2,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_11'],
+      },
     ],
   },
   {
@@ -281,12 +682,55 @@ const baseRecipes: Recipe[] = [
     power_type: 'HV',
     pollution: 0.72,
     inputs: [
-      { product_id: 'p_chlorine', quantity: 20 },
-      { product_id: 'p_hydrogen', quantity: 20 },
-      { product_id: 'p_distilled_water', quantity: 10 },
-      { product_id: 'p_argon', quantity: 20 },
+      {
+        product_id: 'p_chlorine',
+        quantity: 20,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_hydrogen',
+        quantity: 20,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_distilled_water',
+        quantity: 10,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
+      {
+        product_id: 'p_argon',
+        quantity: 20,
+        port_ids: [
+          'm_chemical_plant_port_2',
+          'm_chemical_plant_port_3',
+          'm_chemical_plant_port_4',
+          'm_chemical_plant_port_5',
+        ],
+      },
     ],
-    outputs: [{ product_id: 'p_hydrochloric_acid', quantity: 10, temperature: 18 }],
+    outputs: [
+      {
+        product_id: 'p_hydrochloric_acid',
+        quantity: 10,
+        temperature: 18,
+        port_ids: ['m_chemical_plant_port_12'],
+      },
+    ],
   },
 ];
 

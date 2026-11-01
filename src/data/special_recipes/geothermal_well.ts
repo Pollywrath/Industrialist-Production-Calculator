@@ -35,8 +35,17 @@ export const geothermal_well_01: SpecialRecipe = {
       power_use: 3000,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_water', quantity: inputQty }],
-      outputs: [{ product_id: 'p_water', quantity: outputQty, temperature: outputTemp }],
+      inputs: [
+        { product_id: 'p_water', quantity: inputQty, port_ids: ['m_geothermal_well_port_2'] },
+      ],
+      outputs: [
+        {
+          product_id: 'p_water',
+          quantity: outputQty,
+          temperature: outputTemp,
+          port_ids: ['m_geothermal_well_port_3'],
+        },
+      ],
     };
 
     return recipe;
@@ -61,8 +70,21 @@ export const geothermal_well_02: SpecialRecipe = {
       power_use: 3000,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_filtered_water', quantity: inputQty }],
-      outputs: [{ product_id: 'p_filtered_water', quantity: outputQty, temperature: outputTemp }],
+      inputs: [
+        {
+          product_id: 'p_filtered_water',
+          quantity: inputQty,
+          port_ids: ['m_geothermal_well_port_2'],
+        },
+      ],
+      outputs: [
+        {
+          product_id: 'p_filtered_water',
+          quantity: outputQty,
+          temperature: outputTemp,
+          port_ids: ['m_geothermal_well_port_3'],
+        },
+      ],
     };
 
     return recipe;
@@ -87,8 +109,21 @@ export const geothermal_well_03: SpecialRecipe = {
       power_use: 3000,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_distilled_water', quantity: inputQty }],
-      outputs: [{ product_id: 'p_distilled_water', quantity: outputQty, temperature: outputTemp }],
+      inputs: [
+        {
+          product_id: 'p_distilled_water',
+          quantity: inputQty,
+          port_ids: ['m_geothermal_well_port_2'],
+        },
+      ],
+      outputs: [
+        {
+          product_id: 'p_distilled_water',
+          quantity: outputQty,
+          temperature: outputTemp,
+          port_ids: ['m_geothermal_well_port_3'],
+        },
+      ],
     };
 
     return recipe;

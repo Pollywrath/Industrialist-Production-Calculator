@@ -21,7 +21,7 @@ export const m_sleigh_depot_01: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: resolvedItem, quantity: 111 }],
+      inputs: [{ product_id: resolvedItem, quantity: 111, port_ids: ['m_sleigh_depot_port_1'] }],
       outputs: [],
     };
 

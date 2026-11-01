@@ -12,7 +12,88 @@
     "limited": false,
     "research": "s_production_advanced_assembler",
     "category": "Factory",
-    "subcategory": "Assembler"
+    "subcategory": "Assembler",
+    "ports": [
+      {
+        "id": "m_advanced_assembler_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 2,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_assembler_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_assembler_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 10,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_assembler_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 9,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_assembler_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 8,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_assembler_port_6",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_assembler_port_7",
+        "type": "product",
+        "direction": "input",
+        "x": 6,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_assembler_port_8",
+        "type": "power",
+        "direction": "input",
+        "x": 0.25,
+        "y": 0.25,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_advanced_coal_drill",
@@ -27,7 +108,28 @@
     "limited": false,
     "research": "s_production_advanced_coal_extraction",
     "category": "Extractor",
-    "subcategory": "Item Extractor"
+    "subcategory": "Item Extractor",
+    "ports": [
+      {
+        "id": "m_advanced_coal_drill_port_2",
+        "type": "power",
+        "direction": "input",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_advanced_coal_drill_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 9,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_advanced_copper_drill",
@@ -42,7 +144,28 @@
     "limited": false,
     "research": "s_production_advanced_copper_extraction",
     "category": "Extractor",
-    "subcategory": "Item Extractor"
+    "subcategory": "Item Extractor",
+    "ports": [
+      {
+        "id": "m_advanced_copper_drill_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_advanced_copper_drill_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 7,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_advanced_oil_separator",
@@ -57,7 +180,78 @@
     "limited": false,
     "research": "s_production_advanced_oil_refining",
     "category": "Factory",
-    "subcategory": "Separator"
+    "subcategory": "Separator",
+    "ports": [
+      {
+        "id": "m_advanced_oil_separator_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 11,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_oil_separator_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 8,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_oil_separator_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 21,
+        "y": 19,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_oil_separator_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 21,
+        "y": 15,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_oil_separator_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 21,
+        "y": 11,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_oil_separator_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 21,
+        "y": 6,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_oil_separator_port_7",
+        "type": "power",
+        "direction": "input",
+        "x": 0.5,
+        "y": 12.75,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_advanced_oxidation_plant",
@@ -65,14 +259,105 @@
     "cost": 2000000,
     "tier": 4,
     "size": {
-      "x": 28,
-      "y": 24
+      "x": 24,
+      "y": 28
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_advanced_oxidation_plant",
     "category": "Factory",
-    "subcategory": "Plant"
+    "subcategory": "Plant",
+    "ports": [
+      {
+        "id": "m_advanced_oxidation_plant_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 27,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_oxidation_plant_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 21,
+        "y": 27,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_oxidation_plant_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 27,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_oxidation_plant_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 20,
+        "y": 27,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_oxidation_plant_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 10,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_oxidation_plant_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 13,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_oxidation_plant_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 11,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_oxidation_plant_port_8",
+        "type": "product",
+        "direction": "output",
+        "x": 12,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_oxidation_plant_port_9",
+        "type": "power",
+        "direction": "input",
+        "x": 5.5,
+        "y": 5.5,
+        "width": 1,
+        "power_type": "HV"
+      }
+    ]
   },
   {
     "id": "m_air_separation_unit",
@@ -87,7 +372,58 @@
     "limited": false,
     "research": "s_production_air_separation_unit",
     "category": "Extractor",
-    "subcategory": "Fluid Extractor"
+    "subcategory": "Fluid Extractor",
+    "ports": [
+      {
+        "id": "m_air_separation_unit_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 23,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_air_separation_unit_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 12,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_air_separation_unit_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 19,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_air_separation_unit_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 26,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_air_separation_unit_port_5",
+        "type": "power",
+        "direction": "input",
+        "x": 27.25,
+        "y": 22.5,
+        "width": 1,
+        "power_type": "HV"
+      }
+    ]
   },
   {
     "id": "m_alloyer",
@@ -95,14 +431,65 @@
     "cost": 999999,
     "tier": 3,
     "size": {
-      "x": 10,
-      "y": 6
+      "x": 6,
+      "y": 10
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_alloyer",
     "category": "Factory",
-    "subcategory": "Furnace"
+    "subcategory": "Furnace",
+    "ports": [
+      {
+        "id": "m_alloyer_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 0.25,
+        "y": 8,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_alloyer_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 4,
+        "y": 9,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_alloyer_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_alloyer_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 4,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_alloyer_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 5,
+        "y": 7,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_atmospheric_distillation_plant",
@@ -117,7 +504,108 @@
     "limited": false,
     "research": "s_production_oil_fracking",
     "category": "Factory",
-    "subcategory": "Plant"
+    "subcategory": "Plant",
+    "ports": [
+      {
+        "id": "m_atmospheric_distillation_plant_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_atmospheric_distillation_plant_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 2,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_atmospheric_distillation_plant_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_atmospheric_distillation_plant_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 4,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_atmospheric_distillation_plant_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 6,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_atmospheric_distillation_plant_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_atmospheric_distillation_plant_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 8,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_atmospheric_distillation_plant_port_8",
+        "type": "product",
+        "direction": "input",
+        "x": 12,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_atmospheric_distillation_plant_port_9",
+        "type": "product",
+        "direction": "input",
+        "x": 13,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_atmospheric_distillation_plant_port_10",
+        "type": "power",
+        "direction": "input",
+        "x": 10.5,
+        "y": 3.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_battery_charger",
@@ -125,14 +613,45 @@
     "cost": 100000,
     "tier": 3,
     "size": {
-      "x": 4,
-      "y": 2
+      "x": 2,
+      "y": 4
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_charger",
     "category": "Factory",
-    "subcategory": "Misc"
+    "subcategory": "Misc",
+    "ports": [
+      {
+        "id": "m_battery_charger_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_battery_charger_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_battery_charger_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 1,
+        "y": 3,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_blast_furnace",
@@ -147,7 +666,48 @@
     "limited": false,
     "research": "s_production_steel",
     "category": "Factory",
-    "subcategory": "Furnace"
+    "subcategory": "Furnace",
+    "ports": [
+      {
+        "id": "m_blast_furnace_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 4,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_blast_furnace_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_blast_furnace_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 4,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_blast_furnace_port_4",
+        "type": "power",
+        "direction": "input",
+        "x": 6.5,
+        "y": 6.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_blast_furnace_mk2",
@@ -162,7 +722,48 @@
     "limited": false,
     "research": "s_production_blast_furnace_mk2",
     "category": "Factory",
-    "subcategory": "Furnace"
+    "subcategory": "Furnace",
+    "ports": [
+      {
+        "id": "m_blast_furnace_mk2_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 15,
+        "y": 8,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_blast_furnace_mk2_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 15,
+        "y": 7,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_blast_furnace_mk2_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 15,
+        "y": 6,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_blast_furnace_mk2_port_4",
+        "type": "power",
+        "direction": "input",
+        "x": 0.5,
+        "y": 8.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_boiler",
@@ -177,7 +778,49 @@
     "limited": false,
     "research": "s_energy_boiler",
     "category": "Power",
-    "subcategory": "Misc"
+    "subcategory": "Misc",
+    "ports": [
+      {
+        "id": "m_boiler_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_boiler_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 6,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_boiler_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 2,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_boiler_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_bottling_plant",
@@ -185,14 +828,55 @@
     "cost": 100000,
     "tier": 3,
     "size": {
-      "x": 8,
-      "y": 6
+      "x": 6,
+      "y": 8
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_water_bottling",
     "category": "Factory",
-    "subcategory": "Plant"
+    "subcategory": "Plant",
+    "ports": [
+      {
+        "id": "m_bottling_plant_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_bottling_plant_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_bottling_plant_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_bottling_plant_port_4",
+        "type": "power",
+        "direction": "input",
+        "x": 5,
+        "y": 0.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_chemical_plant",
@@ -207,7 +891,128 @@
     "limited": false,
     "research": "s_production_advanced_chemical_plant",
     "category": "Factory",
-    "subcategory": "Plant"
+    "subcategory": "Plant",
+    "ports": [
+      {
+        "id": "m_chemical_plant_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 21.25,
+        "y": 16.5,
+        "width": 1,
+        "power_type": "HV"
+      },
+      {
+        "id": "m_chemical_plant_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 22,
+        "y": 22,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_chemical_plant_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 22,
+        "y": 21,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_chemical_plant_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 22,
+        "y": 20,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_chemical_plant_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 22,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_chemical_plant_port_6",
+        "type": "product",
+        "direction": "input",
+        "x": 22,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_chemical_plant_port_7",
+        "type": "product",
+        "direction": "input",
+        "x": 22,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_chemical_plant_port_8",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 14,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_chemical_plant_port_9",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 11,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_chemical_plant_port_10",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 8,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_chemical_plant_port_12",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_chemical_plant_port_11",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 4,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_chemical_reactor",
@@ -222,7 +1027,108 @@
     "limited": false,
     "research": "s_production_chemical_reactor",
     "category": "Factory",
-    "subcategory": "Misc"
+    "subcategory": "Misc",
+    "ports": [
+      {
+        "id": "m_chemical_reactor_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 9,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_chemical_reactor_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 9,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_chemical_reactor_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 5,
+        "y": 9,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_chemical_reactor_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 6,
+        "y": 9,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_chemical_reactor_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 9,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_chemical_reactor_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_chemical_reactor_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 4,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_chemical_reactor_port_8",
+        "type": "product",
+        "direction": "output",
+        "x": 5,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_chemical_reactor_port_9",
+        "type": "product",
+        "direction": "output",
+        "x": 6,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_chemical_reactor_port_10",
+        "type": "power",
+        "direction": "input",
+        "x": 0.75,
+        "y": 1.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_coal_drill",
@@ -230,14 +1136,35 @@
     "cost": 50,
     "tier": 1,
     "size": {
-      "x": 6,
-      "y": 2
+      "x": 2,
+      "y": 6
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_coal_extracting",
     "category": "Extractor",
-    "subcategory": "Item Extractor"
+    "subcategory": "Item Extractor",
+    "ports": [
+      {
+        "id": "m_coal_drill_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 5,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_coal_drill_port_2",
+        "type": "power",
+        "direction": "input",
+        "x": 0.5,
+        "y": 4,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_coal_generator",
@@ -252,7 +1179,78 @@
     "limited": false,
     "research": "s_energy_coal_generator",
     "category": "Power",
-    "subcategory": "Non-Renewable"
+    "subcategory": "Non-Renewable",
+    "ports": [
+      {
+        "id": "m_coal_generator_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 2,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_coal_generator_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_coal_generator_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_coal_generator_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_coal_generator_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_coal_generator_port_6",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_coal_generator_port_7",
+        "type": "power",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_coal_liquefaction_plant",
@@ -267,7 +1265,78 @@
     "limited": false,
     "research": "s_production_advanced_oil_refining",
     "category": "Factory",
-    "subcategory": "Plant"
+    "subcategory": "Plant",
+    "ports": [
+      {
+        "id": "m_coal_liquefaction_plant_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 18.5,
+        "y": 12.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_coal_liquefaction_plant_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_coal_liquefaction_plant_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_coal_liquefaction_plant_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 16,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_coal_liquefaction_plant_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 19,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_coal_liquefaction_plant_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 9,
+        "y": 19,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_coal_liquefaction_plant_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 10,
+        "y": 19,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_coal_power_plant",
@@ -282,7 +1351,77 @@
     "limited": false,
     "research": "s_energy_coal_power_plant",
     "category": "Power",
-    "subcategory": "Large Power Plant"
+    "subcategory": "Large Power Plant",
+    "ports": [
+      {
+        "id": "m_coal_power_plant_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 6.5,
+        "y": 17.5,
+        "width": 1,
+        "power_type": "HV"
+      },
+      {
+        "id": "m_coal_power_plant_port_2",
+        "type": "power",
+        "direction": "input",
+        "x": 82.5,
+        "y": 1,
+        "width": 1,
+        "power_type": "Data"
+      },
+      {
+        "id": "m_coal_power_plant_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 4,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_coal_power_plant_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 2,
+        "y": 0,
+        "width": 2,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_coal_power_plant_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 6,
+        "y": 0,
+        "width": 2,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_coal_power_plant_port_6",
+        "type": "product",
+        "direction": "input",
+        "x": 14,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_coal_power_plant_port_7",
+        "type": "product",
+        "direction": "input",
+        "x": 15,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_compact_coal_power_plant",
@@ -297,7 +1436,38 @@
     "limited": false,
     "research": "s_energy_compact_coal_generator",
     "category": "Power",
-    "subcategory": "Non-Renewable"
+    "subcategory": "Non-Renewable",
+    "ports": [
+      {
+        "id": "m_compact_coal_power_plant_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_compact_coal_power_plant_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_compact_coal_power_plant_port_3",
+        "type": "power",
+        "direction": "output",
+        "x": 1.5,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_concrete_plant",
@@ -305,14 +1475,65 @@
     "cost": 2000,
     "tier": 2,
     "size": {
-      "x": 16,
-      "y": 10
+      "x": 10,
+      "y": 16
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_brick_production",
     "category": "Factory",
-    "subcategory": "Plant"
+    "subcategory": "Plant",
+    "ports": [
+      {
+        "id": "m_concrete_plant_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 9,
+        "y": 11,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_concrete_plant_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 9,
+        "y": 9,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_concrete_plant_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 9,
+        "y": 8,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_concrete_plant_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 9,
+        "y": 7,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_concrete_plant_port_5",
+        "type": "power",
+        "direction": "input",
+        "x": 7,
+        "y": 13,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_condenser",
@@ -327,7 +1548,58 @@
     "limited": false,
     "research": "s_production_gas_refining",
     "category": "Factory",
-    "subcategory": "Misc"
+    "subcategory": "Misc",
+    "ports": [
+      {
+        "id": "m_condenser_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_condenser_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 13,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_condenser_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 13,
+        "y": 4,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_condenser_port_5",
+        "type": "power",
+        "direction": "input",
+        "x": 6.25,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_condenser_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 13,
+        "y": 0,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_cooling_tower",
@@ -342,7 +1614,29 @@
     "limited": false,
     "research": "s_energy_coal_power_plant",
     "category": "Power",
-    "subcategory": "Large Power Plant"
+    "subcategory": "Large Power Plant",
+    "ports": [
+      {
+        "id": "m_cooling_tower_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_cooling_tower_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 5,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_copper_drill",
@@ -357,7 +1651,28 @@
     "limited": false,
     "research": "s_production_copper_extracting",
     "category": "Extractor",
-    "subcategory": "Item Extractor"
+    "subcategory": "Item Extractor",
+    "ports": [
+      {
+        "id": "m_copper_drill_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 5,
+        "y": 0.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_copper_drill_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 5,
+        "y": 0,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_craft_assembler",
@@ -372,7 +1687,48 @@
     "limited": false,
     "research": "s_production_craft_assembler",
     "category": "Factory",
-    "subcategory": "Assembler"
+    "subcategory": "Assembler",
+    "ports": [
+      {
+        "id": "m_craft_assembler_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_craft_assembler_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 5,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_craft_assembler_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 0,
+        "y": 0.25,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_craft_assembler_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_crude_oil_separator",
@@ -387,7 +1743,78 @@
     "limited": false,
     "research": "s_production_oil_refining",
     "category": "Factory",
-    "subcategory": "Separator"
+    "subcategory": "Separator",
+    "ports": [
+      {
+        "id": "m_crude_oil_separator_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 9,
+        "y": 6.75,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_crude_oil_separator_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 9,
+        "y": 6,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_crude_oil_separator_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 6,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_crude_oil_separator_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_crude_oil_separator_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 4,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_crude_oil_separator_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_crude_oil_separator_port_8",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_diesel_engine_air_input",
@@ -402,7 +1829,8 @@
     "limited": false,
     "research": "s_energy_modular_diesel_engines",
     "category": "Modular",
-    "subcategory": "Modular Diesel Engine"
+    "subcategory": "Modular Diesel Engine",
+    "ports": []
   },
   {
     "id": "m_diesel_engine_controller",
@@ -417,7 +1845,8 @@
     "limited": false,
     "research": "s_energy_modular_diesel_engines",
     "category": "Modular",
-    "subcategory": "Modular Diesel Engine"
+    "subcategory": "Modular Diesel Engine",
+    "ports": []
   },
   {
     "id": "m_diesel_engine_crankshaft",
@@ -432,7 +1861,8 @@
     "limited": false,
     "research": "s_energy_modular_diesel_engines",
     "category": "Modular",
-    "subcategory": "Modular Diesel Engine"
+    "subcategory": "Modular Diesel Engine",
+    "ports": []
   },
   {
     "id": "m_diesel_engine_crankshaft_sideways",
@@ -447,7 +1877,8 @@
     "limited": false,
     "research": "s_energy_modular_diesel_engines",
     "category": "Modular",
-    "subcategory": "Modular Diesel Engine"
+    "subcategory": "Modular Diesel Engine",
+    "ports": []
   },
   {
     "id": "m_diesel_engine_cylinder",
@@ -462,7 +1893,8 @@
     "limited": false,
     "research": "s_energy_modular_diesel_engines",
     "category": "Modular",
-    "subcategory": "Modular Diesel Engine"
+    "subcategory": "Modular Diesel Engine",
+    "ports": []
   },
   {
     "id": "m_diesel_engine_decoration",
@@ -477,7 +1909,8 @@
     "limited": false,
     "research": "s_energy_modular_diesel_engines",
     "category": "Modular",
-    "subcategory": "Modular Diesel Engine"
+    "subcategory": "Modular Diesel Engine",
+    "ports": []
   },
   {
     "id": "m_diesel_engine_exhaust",
@@ -492,7 +1925,8 @@
     "limited": false,
     "research": "s_energy_modular_diesel_engines",
     "category": "Modular",
-    "subcategory": "Modular Diesel Engine"
+    "subcategory": "Modular Diesel Engine",
+    "ports": []
   },
   {
     "id": "m_diesel_engine_flywheel",
@@ -507,7 +1941,8 @@
     "limited": false,
     "research": "s_energy_modular_diesel_engines",
     "category": "Modular",
-    "subcategory": "Modular Diesel Engine"
+    "subcategory": "Modular Diesel Engine",
+    "ports": []
   },
   {
     "id": "m_diesel_engine_fuel_input",
@@ -522,7 +1957,19 @@
     "limited": false,
     "research": "s_energy_modular_diesel_engines",
     "category": "Modular",
-    "subcategory": "Modular Diesel Engine"
+    "subcategory": "Modular Diesel Engine",
+    "ports": [
+      {
+        "id": "m_diesel_engine_fuel_input_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_diesel_engine_generator",
@@ -537,7 +1984,18 @@
     "limited": false,
     "research": "s_energy_modular_diesel_engines",
     "category": "Modular",
-    "subcategory": "Modular Diesel Engine"
+    "subcategory": "Modular Diesel Engine",
+    "ports": [
+      {
+        "id": "m_diesel_engine_generator_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 0.5,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_diesel_engine_info_panel",
@@ -552,7 +2010,8 @@
     "limited": false,
     "research": "s_energy_modular_diesel_engines",
     "category": "Modular",
-    "subcategory": "Modular Diesel Engine"
+    "subcategory": "Modular Diesel Engine",
+    "ports": []
   },
   {
     "id": "m_diesel_engine_info_panel_debug",
@@ -568,7 +2027,8 @@
     "research": "",
     "category": "Modular",
     "subcategory": "Modular Diesel Engine",
-    "sandboxPlusOnly": true
+    "sandboxPlusOnly": true,
+    "ports": []
   },
   {
     "id": "m_diesel_generator",
@@ -576,14 +2036,35 @@
     "cost": 4500,
     "tier": 2,
     "size": {
-      "x": 8,
-      "y": 4
+      "x": 4,
+      "y": 8
     },
     "variant": "none",
     "limited": false,
     "research": "s_energy_diesel_generator",
     "category": "Power",
-    "subcategory": "Non-Renewable"
+    "subcategory": "Non-Renewable",
+    "ports": [
+      {
+        "id": "m_diesel_generator_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_diesel_generator_port_2",
+        "type": "power",
+        "direction": "output",
+        "x": 1.5,
+        "y": 7,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_diesel_refinery",
@@ -598,7 +2079,48 @@
     "limited": false,
     "research": "s_production_diesel_refining",
     "category": "Factory",
-    "subcategory": "Refinery"
+    "subcategory": "Refinery",
+    "ports": [
+      {
+        "id": "m_diesel_refinery_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 10,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_diesel_refinery_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 11,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_diesel_refinery_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 11,
+        "y": 0,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_diesel_refinery_port_4",
+        "type": "power",
+        "direction": "input",
+        "x": 8.75,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_electric_furnace",
@@ -613,7 +2135,58 @@
     "limited": false,
     "research": "s_production_electric_furnace_and_molding",
     "category": "Factory",
-    "subcategory": "Furnace"
+    "subcategory": "Furnace",
+    "ports": [
+      {
+        "id": "m_electric_furnace_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_electric_furnace_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 2,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_electric_furnace_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_electric_furnace_port_2",
+        "type": "power",
+        "direction": "output",
+        "x": 5,
+        "y": 4.75,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_electric_furnace_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 5,
+        "y": 5,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_electric_water_heater",
@@ -628,7 +2201,47 @@
     "limited": false,
     "research": "s_energy_electric_water_heater",
     "category": "Power",
-    "subcategory": "Non-Renewable"
+    "subcategory": "Non-Renewable",
+    "ports": [
+      {
+        "id": "m_electric_water_heater_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_electric_water_heater_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_electric_water_heater_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 2,
+        "y": 1,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_electric_water_heater_port_4",
+        "type": "power",
+        "direction": "input",
+        "x": 6,
+        "y": 1,
+        "width": 1,
+        "power_type": "HV"
+      }
+    ]
   },
   {
     "id": "m_electrolysis_plant",
@@ -636,14 +2249,85 @@
     "cost": 650000,
     "tier": 4,
     "size": {
-      "x": 10,
-      "y": 6
+      "x": 6,
+      "y": 10
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_electrolysis_plant",
     "category": "Factory",
-    "subcategory": "Plant"
+    "subcategory": "Plant",
+    "ports": [
+      {
+        "id": "m_electrolysis_plant_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 9,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_electrolysis_plant_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 9,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_electrolysis_plant_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 4,
+        "y": 9,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_electrolysis_plant_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 4,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_electrolysis_plant_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_electrolysis_plant_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 2,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_electrolysis_plant_port_7",
+        "type": "power",
+        "direction": "input",
+        "x": 0.5,
+        "y": 8.5,
+        "width": 1,
+        "power_type": "HV"
+      }
+    ]
   },
   {
     "id": "m_exhaust_stack",
@@ -658,7 +2342,39 @@
     "limited": false,
     "research": "s_energy_coal_power_plant",
     "category": "Miscellaneous",
-    "subcategory": "Other"
+    "subcategory": "Other",
+    "ports": [
+      {
+        "id": "m_exhaust_stack_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 23,
+        "y": 21,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_exhaust_stack_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 23,
+        "y": 12,
+        "width": 2,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_exhaust_stack_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 23,
+        "y": 10,
+        "width": 2,
+        "side": "right",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_farm_harvester",
@@ -673,7 +2389,8 @@
     "limited": false,
     "research": "s_production_modular_tree_farm",
     "category": "Modular",
-    "subcategory": "Tree Farm"
+    "subcategory": "Tree Farm",
+    "ports": []
   },
   {
     "id": "m_filtration_plant",
@@ -688,7 +2405,38 @@
     "limited": false,
     "research": "s_production_water_filtering",
     "category": "Factory",
-    "subcategory": "Plant"
+    "subcategory": "Plant",
+    "ports": [
+      {
+        "id": "m_filtration_plant_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 4,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_filtration_plant_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 4,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_filtration_plant_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 6,
+        "y": 5.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_firebox",
@@ -696,14 +2444,46 @@
     "cost": 550,
     "tier": 2,
     "size": {
-      "x": 6,
-      "y": 4
+      "x": 4,
+      "y": 6
     },
     "variant": "none",
     "limited": false,
     "research": "s_energy_firebox",
     "category": "Power",
-    "subcategory": "Non-Renewable"
+    "subcategory": "Non-Renewable",
+    "ports": [
+      {
+        "id": "m_firebox_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_firebox_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_firebox_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_foundry",
@@ -711,14 +2491,65 @@
     "cost": 2000000,
     "tier": 4,
     "size": {
-      "x": 27,
-      "y": 21
+      "x": 21,
+      "y": 27
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_foundry",
     "category": "Factory",
-    "subcategory": "Molder"
+    "subcategory": "Molder",
+    "ports": [
+      {
+        "id": "m_foundry_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 20,
+        "y": 10,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_foundry_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 20,
+        "y": 11,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_foundry_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 20,
+        "y": 15,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_foundry_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 20,
+        "y": 16,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_foundry_port_5",
+        "type": "power",
+        "direction": "input",
+        "x": 18.25,
+        "y": 24.5,
+        "width": 1,
+        "power_type": "HV"
+      }
+    ]
   },
   {
     "id": "m_gas_burner",
@@ -733,7 +2564,39 @@
     "limited": false,
     "research": "s_energy_gas_burner",
     "category": "Power",
-    "subcategory": "Non-Renewable"
+    "subcategory": "Non-Renewable",
+    "ports": [
+      {
+        "id": "m_gas_burner_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 2,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_gas_burner_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_gas_burner_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 9,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_gas_centrifuge",
@@ -748,7 +2611,58 @@
     "limited": false,
     "research": "s_production_centrifuge",
     "category": "Factory",
-    "subcategory": "Separator"
+    "subcategory": "Separator",
+    "ports": [
+      {
+        "id": "m_gas_centrifuge_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 5,
+        "y": 15,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_gas_centrifuge_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 6,
+        "y": 15,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_gas_centrifuge_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 7,
+        "y": 15,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_gas_centrifuge_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 8,
+        "y": 15,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_gas_centrifuge_port_5",
+        "type": "power",
+        "direction": "input",
+        "x": 12.25,
+        "y": 14.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_gas_refinery",
@@ -756,14 +2670,55 @@
     "cost": 175000,
     "tier": 3,
     "size": {
-      "x": 7,
-      "y": 6
+      "x": 12,
+      "y": 14
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_gas_refining",
     "category": "Factory",
-    "subcategory": "Refinery"
+    "subcategory": "Refinery",
+    "ports": [
+      {
+        "id": "m_gas_refinery_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 11,
+        "y": 12.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_gas_refinery_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 11,
+        "y": 12,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_gas_refinery_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 12,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_gas_refinery_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 7,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_gasoline_generator",
@@ -778,7 +2733,28 @@
     "limited": false,
     "research": "s_energy_gasoline_generator",
     "category": "Power",
-    "subcategory": "Non-Renewable"
+    "subcategory": "Non-Renewable",
+    "ports": [
+      {
+        "id": "m_gasoline_generator_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_gasoline_generator_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_geothermal_well",
@@ -786,14 +2762,45 @@
     "cost": 1500,
     "tier": 2,
     "size": {
-      "x": 8,
-      "y": 5
+      "x": 5,
+      "y": 8
     },
     "variant": "none",
     "limited": false,
     "research": "s_energy_geothermal_plant",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_geothermal_well_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 3.5,
+        "y": 6.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_geothermal_well_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 4,
+        "y": 4,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_geothermal_well_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 4,
+        "y": 5,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_gold_acid_refinery",
@@ -808,7 +2815,68 @@
     "limited": false,
     "research": "s_production_gold_acid_refinery",
     "category": "Factory",
-    "subcategory": "Refinery"
+    "subcategory": "Refinery",
+    "ports": [
+      {
+        "id": "m_gold_acid_refinery_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 4,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_gold_acid_refinery_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_gold_acid_refinery_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_gold_acid_refinery_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 17,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_gold_acid_refinery_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 17,
+        "y": 7,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_gold_acid_refinery_port_6",
+        "type": "power",
+        "direction": "input",
+        "x": 14.75,
+        "y": 2,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_grinder",
@@ -823,7 +2891,48 @@
     "limited": false,
     "research": "s_production_grinder",
     "category": "Factory",
-    "subcategory": "Processor"
+    "subcategory": "Processor",
+    "ports": [
+      {
+        "id": "m_grinder_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_grinder_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 3,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_grinder_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 5,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_grinder_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 2.5,
+        "y": 2.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_grinder_mk2",
@@ -831,14 +2940,55 @@
     "cost": 125000,
     "tier": 3,
     "size": {
-      "x": 20,
-      "y": 15
+      "x": 15,
+      "y": 20
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_grinder_mk2",
     "category": "Factory",
-    "subcategory": "Processor"
+    "subcategory": "Processor",
+    "ports": [
+      {
+        "id": "m_grinder_mk2_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 19,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_grinder_mk2_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 13,
+        "y": 19,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_grinder_mk2_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 7,
+        "y": 0.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_grinder_mk2_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_hand_crank",
@@ -854,7 +3004,18 @@
     "requiresManualOperation": true,
     "research": "s_energy_hand_crank",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_hand_crank_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 1,
+        "y": 1,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_hand_crank_mk2",
@@ -870,7 +3031,18 @@
     "requiresManualOperation": true,
     "research": "",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_hand_crank_mk2_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 3.5,
+        "y": 3.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_hand_pump",
@@ -886,7 +3058,19 @@
     "requiresManualOperation": true,
     "research": "s_energy_hand_crank",
     "category": "Extractor",
-    "subcategory": "Fluid Extractor"
+    "subcategory": "Fluid Extractor",
+    "ports": [
+      {
+        "id": "m_hand_pump_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_heat_exchanger",
@@ -901,7 +3085,58 @@
     "limited": false,
     "research": "s_energy_coal_power_plant",
     "category": "Power",
-    "subcategory": "Large Power Plant"
+    "subcategory": "Large Power Plant",
+    "ports": [
+      {
+        "id": "m_heat_exchanger_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 9,
+        "y": 9,
+        "width": 2,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_heat_exchanger_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 15,
+        "y": 9,
+        "width": 2,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_heat_exchanger_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 4,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_heat_exchanger_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 25,
+        "y": 4,
+        "width": 2,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_heat_exchanger_port_5",
+        "type": "power",
+        "direction": "output",
+        "x": 21.25,
+        "y": 0,
+        "width": 1,
+        "power_type": "Data"
+      }
+    ]
   },
   {
     "id": "m_high_pressure_turbine",
@@ -916,7 +3151,8 @@
     "limited": false,
     "research": "s_energy_modular_turbines",
     "category": "Modular",
-    "subcategory": "Modular Turbine"
+    "subcategory": "Modular Turbine",
+    "ports": []
   },
   {
     "id": "m_huge_truck_depot",
@@ -931,7 +3167,19 @@
     "limited": false,
     "research": "s_utility_huge_truck_depot",
     "category": "Miscellaneous",
-    "subcategory": "Depot"
+    "subcategory": "Depot",
+    "ports": [
+      {
+        "id": "m_huge_truck_depot_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 9,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_hv_transformer",
@@ -946,7 +3194,47 @@
     "limited": false,
     "research": "s_energy_hv_pole",
     "category": "Power",
-    "subcategory": "Misc"
+    "subcategory": "Misc",
+    "ports": [
+      {
+        "id": "m_hv_transformer_port_1",
+        "type": "power",
+        "direction": "both",
+        "x": 3.5,
+        "y": 0.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_hv_transformer_port_2",
+        "type": "power",
+        "direction": "both",
+        "x": 3.5,
+        "y": 6.5,
+        "width": 1,
+        "power_type": "HV"
+      },
+      {
+        "id": "m_hv_transformer_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_hv_transformer_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 4,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_industrial_diesel_refinery",
@@ -954,14 +3242,65 @@
     "cost": 150000,
     "tier": 3,
     "size": {
-      "x": 8,
-      "y": 5
+      "x": 10,
+      "y": 16
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_industrial_diesel_refining",
     "category": "Factory",
-    "subcategory": "Refinery"
+    "subcategory": "Refinery",
+    "ports": [
+      {
+        "id": "m_industrial_diesel_refinery_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 7,
+        "y": 15,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_industrial_diesel_refinery_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 8,
+        "y": 15,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_industrial_diesel_refinery_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 4,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_industrial_diesel_refinery_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 5,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_industrial_diesel_refinery_port_5",
+        "type": "power",
+        "direction": "input",
+        "x": 0.25,
+        "y": 0.25,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_industrial_drill",
@@ -976,7 +3315,29 @@
     "limited": false,
     "research": "",
     "category": "Extractor",
-    "subcategory": "Item Extractor"
+    "subcategory": "Item Extractor",
+    "ports": [
+      {
+        "id": "m_industrial_drill_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 4,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_industrial_drill_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_industrial_electric_furnace",
@@ -984,14 +3345,65 @@
     "cost": 1000000,
     "tier": 3,
     "size": {
-      "x": 12,
-      "y": 12
+      "x": 6,
+      "y": 6
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_industrial_electric_furnace",
     "category": "Factory",
-    "subcategory": "Furnace"
+    "subcategory": "Furnace",
+    "ports": [
+      {
+        "id": "m_industrial_electric_furnace_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_electric_furnace_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 5,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_electric_furnace_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 5,
+        "y": 5,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_industrial_electric_furnace_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 5,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_industrial_electric_furnace_port_4",
+        "type": "power",
+        "direction": "input",
+        "x": 4,
+        "y": 2,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_industrial_firebox",
@@ -999,14 +3411,56 @@
     "cost": 250000,
     "tier": 3,
     "size": {
-      "x": 9,
-      "y": 4
+      "x": 4,
+      "y": 9
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_industrial_firebox",
     "category": "Power",
-    "subcategory": "Non-Renewable"
+    "subcategory": "Non-Renewable",
+    "ports": [
+      {
+        "id": "m_industrial_firebox_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 8,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_firebox_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_firebox_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_industrial_firebox_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 7,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_industrial_kiln",
@@ -1014,14 +3468,55 @@
     "cost": 7500,
     "tier": 2,
     "size": {
-      "x": 20,
-      "y": 10
+      "x": 10,
+      "y": 20
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_concrete_production",
     "category": "Factory",
-    "subcategory": "Furnace"
+    "subcategory": "Furnace",
+    "ports": [
+      {
+        "id": "m_industrial_kiln_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 9,
+        "y": 12,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_kiln_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 9,
+        "y": 7,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_kiln_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_kiln_port_4",
+        "type": "power",
+        "direction": "input",
+        "x": 1,
+        "y": 10,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_industrial_oil_separator",
@@ -1036,7 +3531,68 @@
     "limited": false,
     "research": "s_production_advanced_oil_refining",
     "category": "Factory",
-    "subcategory": "Separator"
+    "subcategory": "Separator",
+    "ports": [
+      {
+        "id": "m_industrial_oil_separator_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 2.5,
+        "y": 7,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_industrial_oil_separator_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_industrial_oil_separator_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_industrial_oil_separator_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 2,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_industrial_oil_separator_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_industrial_oil_separator_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_industrial_plastic_molder",
@@ -1044,14 +3600,45 @@
     "cost": 200000,
     "tier": 3,
     "size": {
-      "x": 12,
-      "y": 5
+      "x": 5,
+      "y": 12
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_industrial_plastic_molding",
     "category": "Factory",
-    "subcategory": "Molder"
+    "subcategory": "Molder",
+    "ports": [
+      {
+        "id": "m_industrial_plastic_molder_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 11,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_plastic_molder_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 2,
+        "y": 11,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_plastic_molder_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 0,
+        "y": 11,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_industrial_roller",
@@ -1059,14 +3646,45 @@
     "cost": 150000,
     "tier": 3,
     "size": {
-      "x": 4,
-      "y": 2
+      "x": 2,
+      "y": 4
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_industrial_roller",
     "category": "Factory",
-    "subcategory": "Processor"
+    "subcategory": "Processor",
+    "ports": [
+      {
+        "id": "m_industrial_roller_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_roller_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_roller_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 0.5,
+        "y": 3,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_industrial_sawmill",
@@ -1074,14 +3692,46 @@
     "cost": 75000,
     "tier": 3,
     "size": {
-      "x": 14,
-      "y": 8
+      "x": 8,
+      "y": 14
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_industrial_sawmill",
     "category": "Factory",
-    "subcategory": "Processor"
+    "subcategory": "Processor",
+    "ports": [
+      {
+        "id": "m_industrial_sawmill_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 13,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_sawmill_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 7,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_sawmill_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_ingot_molder",
@@ -1096,7 +3746,38 @@
     "limited": false,
     "research": "s_production_electric_furnace_and_molding",
     "category": "Factory",
-    "subcategory": "Molder"
+    "subcategory": "Molder",
+    "ports": [
+      {
+        "id": "m_ingot_molder_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_ingot_molder_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_ingot_molder_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_intermediate_pressure_turbine",
@@ -1111,7 +3792,8 @@
     "limited": false,
     "research": "s_energy_modular_turbines",
     "category": "Modular",
-    "subcategory": "Modular Turbine"
+    "subcategory": "Modular Turbine",
+    "ports": []
   },
   {
     "id": "m_iron_drill",
@@ -1126,7 +3808,28 @@
     "limited": false,
     "research": "s_production_iron_extracting",
     "category": "Extractor",
-    "subcategory": "Item Extractor"
+    "subcategory": "Item Extractor",
+    "ports": [
+      {
+        "id": "m_iron_drill_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 5,
+        "y": 0.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_iron_drill_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 5,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_kiln",
@@ -1134,14 +3837,45 @@
     "cost": 3200,
     "tier": 2,
     "size": {
-      "x": 14,
-      "y": 8
+      "x": 8,
+      "y": 14
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_brick_production",
     "category": "Factory",
-    "subcategory": "Furnace"
+    "subcategory": "Furnace",
+    "ports": [
+      {
+        "id": "m_kiln_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 13,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_kiln_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 6,
+        "y": 13,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_kiln_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_large_diesel_engine",
@@ -1149,14 +3883,55 @@
     "cost": 100000,
     "tier": 3,
     "size": {
-      "x": 14,
-      "y": 8
+      "x": 8,
+      "y": 14
     },
     "variant": "none",
     "limited": false,
     "research": "s_energy_large_diesel_engine",
     "category": "Power",
-    "subcategory": "Non-Renewable"
+    "subcategory": "Non-Renewable",
+    "ports": [
+      {
+        "id": "m_large_diesel_engine_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 13,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_large_diesel_engine_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 5,
+        "y": 13,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_large_diesel_engine_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 13,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_large_diesel_engine_port_3",
+        "type": "power",
+        "direction": "output",
+        "x": 4.5,
+        "y": 12,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_large_liquid_truck_depot",
@@ -1171,7 +3946,19 @@
     "limited": false,
     "research": "s_utility_large_liquid_truck_depot",
     "category": "Miscellaneous",
-    "subcategory": "Depot"
+    "subcategory": "Depot",
+    "ports": [
+      {
+        "id": "m_large_liquid_truck_depot_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 16,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_large_pumpjack",
@@ -1186,7 +3973,38 @@
     "limited": false,
     "research": "s_production_large_oil_rig",
     "category": "Extractor",
-    "subcategory": "Fluid Extractor"
+    "subcategory": "Fluid Extractor",
+    "ports": [
+      {
+        "id": "m_large_pumpjack_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 4,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_large_pumpjack_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_large_pumpjack_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 6.25,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_large_turbine",
@@ -1201,7 +4019,38 @@
     "limited": false,
     "research": "s_energy_large_turbines",
     "category": "Power",
-    "subcategory": "Non-Renewable"
+    "subcategory": "Non-Renewable",
+    "ports": [
+      {
+        "id": "m_large_turbine_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_large_turbine_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_large_turbine_port_3",
+        "type": "power",
+        "direction": "output",
+        "x": 4,
+        "y": 1.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_lathe",
@@ -1216,7 +4065,38 @@
     "limited": false,
     "research": "s_production_mineshaft_drill",
     "category": "Factory",
-    "subcategory": "Processor"
+    "subcategory": "Processor",
+    "ports": [
+      {
+        "id": "m_lathe_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 15,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_lathe_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 16,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_lathe_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 13.5,
+        "y": 2,
+        "width": 1,
+        "power_type": "HV"
+      }
+    ]
   },
   {
     "id": "m_liquid_boiler",
@@ -1224,14 +4104,45 @@
     "cost": 900,
     "tier": 2,
     "size": {
-      "x": 6,
-      "y": 4
+      "x": 4,
+      "y": 6
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_oil_refining",
     "category": "Factory",
-    "subcategory": "Misc"
+    "subcategory": "Misc",
+    "ports": [
+      {
+        "id": "m_liquid_boiler_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 3,
+        "y": 0.25,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_liquid_boiler_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_liquid_boiler_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_liquid_burner",
@@ -1246,7 +4157,89 @@
     "limited": false,
     "research": "s_utility_liquid_burner_dump",
     "category": "Miscellaneous",
-    "subcategory": "Other"
+    "subcategory": "Other",
+    "ports": [
+      {
+        "id": "m_liquid_burner_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_liquid_burner_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_liquid_burner_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_liquid_burner_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_liquid_burner_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_liquid_burner_port_6",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_liquid_burner_port_7",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_liquid_burner_port_8",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_liquid_dump",
@@ -1261,7 +4254,29 @@
     "limited": false,
     "research": "s_utility_pollution",
     "category": "Miscellaneous",
-    "subcategory": "Other"
+    "subcategory": "Other",
+    "ports": [
+      {
+        "id": "m_liquid_dump_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_liquid_dump_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_liquid_truck_depot",
@@ -1276,7 +4291,19 @@
     "limited": false,
     "research": "s_utility_liquid_truck_depot",
     "category": "Miscellaneous",
-    "subcategory": "Depot"
+    "subcategory": "Depot",
+    "ports": [
+      {
+        "id": "m_liquid_truck_depot_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 8,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_lithium_brine_extractor",
@@ -1291,7 +4318,48 @@
     "limited": false,
     "research": "s_production_lithium",
     "category": "Extractor",
-    "subcategory": "Fluid Extractor"
+    "subcategory": "Fluid Extractor",
+    "ports": [
+      {
+        "id": "m_lithium_brine_extractor_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 8,
+        "y": 17,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_lithium_brine_extractor_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 8,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_lithium_brine_extractor_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 9,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_lithium_brine_extractor_port_4",
+        "type": "power",
+        "direction": "input",
+        "x": 9.5,
+        "y": 8,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_lithium_ore_drill",
@@ -1299,14 +4367,45 @@
     "cost": 250000,
     "tier": 3,
     "size": {
-      "x": 10,
-      "y": 4
+      "x": 4,
+      "y": 10
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_lithium",
     "category": "Extractor",
-    "subcategory": "Item Extractor"
+    "subcategory": "Item Extractor",
+    "ports": [
+      {
+        "id": "m_lithium_ore_drill_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 9,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_lithium_ore_drill_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 9,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_lithium_ore_drill_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 2.5,
+        "y": 6.75,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_lng_plant",
@@ -1321,7 +4420,38 @@
     "limited": false,
     "research": "s_production_lng_plant",
     "category": "Factory",
-    "subcategory": "Plant"
+    "subcategory": "Plant",
+    "ports": [
+      {
+        "id": "m_lng_plant_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 20,
+        "y": 13,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_lng_plant_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 19,
+        "y": 13,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_lng_plant_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 7.5,
+        "y": 7.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_logic_assembler",
@@ -1329,14 +4459,95 @@
     "cost": 25000000,
     "tier": 4,
     "size": {
-      "x": 22,
-      "y": 12
+      "x": 12,
+      "y": 22
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_logic_assembler",
     "category": "Factory",
-    "subcategory": "Assembler"
+    "subcategory": "Assembler",
+    "ports": [
+      {
+        "id": "m_logic_assembler_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 4,
+        "y": 21,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_logic_assembler_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 5,
+        "y": 21,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_logic_assembler_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 6,
+        "y": 21,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_logic_assembler_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 21,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_logic_assembler_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 5,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_logic_assembler_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 6,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_logic_assembler_port_7",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_logic_assembler_port_8",
+        "type": "power",
+        "direction": "input",
+        "x": 9.5,
+        "y": 19.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_low_pressure_turbine",
@@ -1351,7 +4562,8 @@
     "limited": false,
     "research": "s_energy_modular_turbines",
     "category": "Modular",
-    "subcategory": "Modular Turbine"
+    "subcategory": "Modular Turbine",
+    "ports": []
   },
   {
     "id": "m_mineshaft_drill",
@@ -1366,7 +4578,108 @@
     "limited": false,
     "research": "s_production_mineshaft_drill",
     "category": "Extractor",
-    "subcategory": "Item Extractor"
+    "subcategory": "Item Extractor",
+    "ports": [
+      {
+        "id": "m_mineshaft_drill_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 6,
+        "y": 13,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_mineshaft_drill_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 13,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_mineshaft_drill_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 13,
+        "y": 7,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_mineshaft_drill_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 10,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_mineshaft_drill_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 8,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_mineshaft_drill_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_mineshaft_drill_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 6,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_mineshaft_drill_port_8",
+        "type": "product",
+        "direction": "output",
+        "x": 5,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_mineshaft_drill_port_9",
+        "type": "product",
+        "direction": "output",
+        "x": 13,
+        "y": 6,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_mineshaft_drill_port_10",
+        "type": "power",
+        "direction": "input",
+        "x": 12.5,
+        "y": 12.5,
+        "width": 1,
+        "power_type": "HV"
+      }
+    ]
   },
   {
     "id": "m_natural_gas_well",
@@ -1381,7 +4694,48 @@
     "limited": false,
     "research": "s_production_natural_gas_well",
     "category": "Extractor",
-    "subcategory": "Fluid Extractor"
+    "subcategory": "Fluid Extractor",
+    "ports": [
+      {
+        "id": "m_natural_gas_well_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 11,
+        "y": 8.25,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_natural_gas_well_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 11,
+        "y": 9,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_natural_gas_well_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 11,
+        "y": 8,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_natural_gas_well_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 11,
+        "y": 7,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_nuclear_power_plant",
@@ -1396,7 +4750,202 @@
     "limited": false,
     "research": "s_energy_nuclear_power_plant",
     "category": "Power",
-    "subcategory": "Large Power Plant"
+    "subcategory": "Large Power Plant",
+    "ports": [
+      {
+        "id": "m_nuclear_power_plant_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 4,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 6,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 8,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 10,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 20,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_6",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 22,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_7",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 23,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_8",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 38,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_9",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 36,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_10",
+        "type": "product",
+        "direction": "output",
+        "x": 130,
+        "y": 28,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_11",
+        "type": "product",
+        "direction": "output",
+        "x": 130,
+        "y": 29,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_12",
+        "type": "product",
+        "direction": "input",
+        "x": 130,
+        "y": 30,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_13",
+        "type": "product",
+        "direction": "input",
+        "x": 130,
+        "y": 31,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_14",
+        "type": "power",
+        "direction": "input",
+        "x": 63.5,
+        "y": 4.5,
+        "width": 1,
+        "power_type": "HV"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_15",
+        "type": "power",
+        "direction": "input",
+        "x": 63.5,
+        "y": 1.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_17",
+        "type": "power",
+        "direction": "output",
+        "x": 64,
+        "y": 1,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_18",
+        "type": "power",
+        "direction": "output",
+        "x": 63.75,
+        "y": 1,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_19",
+        "type": "power",
+        "direction": "output",
+        "x": 63.5,
+        "y": 1,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_16",
+        "type": "power",
+        "direction": "output",
+        "x": 63.25,
+        "y": 1,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_nuclear_power_plant_port_20",
+        "type": "power",
+        "direction": "input",
+        "x": 61.5,
+        "y": 1.5,
+        "width": 1,
+        "power_type": "Data"
+      }
+    ]
   },
   {
     "id": "m_oil_fracking_tower",
@@ -1411,7 +4960,68 @@
     "limited": false,
     "research": "s_production_oil_fracking",
     "category": "Extractor",
-    "subcategory": "Fluid Extractor"
+    "subcategory": "Fluid Extractor",
+    "ports": [
+      {
+        "id": "m_oil_fracking_tower_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 7.25,
+        "y": 0.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_oil_fracking_tower_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_oil_fracking_tower_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_oil_fracking_tower_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 2,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_oil_fracking_tower_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 4,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_oil_fracking_tower_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 11,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_oil_rig",
@@ -1426,7 +5036,28 @@
     "limited": false,
     "research": "s_production_oil_extraction",
     "category": "Extractor",
-    "subcategory": "Fluid Extractor"
+    "subcategory": "Fluid Extractor",
+    "ports": [
+      {
+        "id": "m_oil_rig_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_oil_rig_port_2",
+        "type": "power",
+        "direction": "input",
+        "x": 7,
+        "y": 1,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_ore_enrichment_facility",
@@ -1434,14 +5065,105 @@
     "cost": 4000000,
     "tier": 4,
     "size": {
-      "x": 32,
+      "x": 34,
       "y": 36
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_ore_enrichment_facility",
     "category": "Factory",
-    "subcategory": "Separator"
+    "subcategory": "Separator",
+    "ports": [
+      {
+        "id": "m_ore_enrichment_facility_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 2.25,
+        "y": 7.5,
+        "width": 1,
+        "power_type": "HV"
+      },
+      {
+        "id": "m_ore_enrichment_facility_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 26,
+        "y": 35,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_ore_enrichment_facility_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 23,
+        "y": 35,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_ore_enrichment_facility_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 25,
+        "y": 35,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_ore_enrichment_facility_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 24,
+        "y": 35,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_ore_enrichment_facility_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 26,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_ore_enrichment_facility_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 23,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_ore_enrichment_facility_port_8",
+        "type": "product",
+        "direction": "output",
+        "x": 25,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_ore_enrichment_facility_port_9",
+        "type": "product",
+        "direction": "output",
+        "x": 24,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_oxidation_plant",
@@ -1449,14 +5171,55 @@
     "cost": 200000,
     "tier": 3,
     "size": {
-      "x": 8,
-      "y": 6
+      "x": 12,
+      "y": 16
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_plastics",
     "category": "Factory",
-    "subcategory": "Plant"
+    "subcategory": "Plant",
+    "ports": [
+      {
+        "id": "m_oxidation_plant_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 4,
+        "y": 14,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_oxidation_plant_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 15,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_oxidation_plant_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 15,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_oxidation_plant_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 2,
+        "y": 15,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_paper_mill",
@@ -1464,14 +5227,55 @@
     "cost": 80000,
     "tier": 2,
     "size": {
-      "x": 12,
-      "y": 6
+      "x": 6,
+      "y": 12
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_paper_mill",
     "category": "Factory",
-    "subcategory": "Misc"
+    "subcategory": "Misc",
+    "ports": [
+      {
+        "id": "m_paper_mill_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 1,
+        "y": 0.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_paper_mill_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_paper_mill_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_paper_mill_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 5,
+        "y": 6,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_plastic_molding_machine",
@@ -1486,7 +5290,38 @@
     "limited": false,
     "research": "s_production_plastic_molding",
     "category": "Factory",
-    "subcategory": "Molder"
+    "subcategory": "Molder",
+    "ports": [
+      {
+        "id": "m_plastic_molding_machine_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_plastic_molding_machine_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 3,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_plastic_molding_machine_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_plastic_production_facility",
@@ -1501,7 +5336,48 @@
     "limited": false,
     "research": "s_production_plastics",
     "category": "Factory",
-    "subcategory": "Misc"
+    "subcategory": "Misc",
+    "ports": [
+      {
+        "id": "m_plastic_production_facility_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 12.25,
+        "y": 0.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_plastic_production_facility_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 14,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_plastic_production_facility_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_plastic_production_facility_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_plastic_refinery",
@@ -1509,14 +5385,55 @@
     "cost": 100000,
     "tier": 3,
     "size": {
-      "x": 14,
+      "x": 15,
       "y": 10
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_plastics",
     "category": "Factory",
-    "subcategory": "Refinery"
+    "subcategory": "Refinery",
+    "ports": [
+      {
+        "id": "m_plastic_refinery_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 14,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_plastic_refinery_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 14,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_plastic_refinery_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 14,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_plastic_refinery_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 13,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_polisher",
@@ -1531,7 +5448,67 @@
     "limited": false,
     "research": "s_energy_coal_power_plant",
     "category": "Power",
-    "subcategory": "Large Power Plant"
+    "subcategory": "Large Power Plant",
+    "ports": [
+      {
+        "id": "m_polisher_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 11,
+        "y": 11,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_polisher_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 16,
+        "y": 11,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_polisher_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 13,
+        "y": 11,
+        "width": 2,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_polisher_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 13,
+        "y": 0,
+        "width": 2,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_polisher_port_5",
+        "type": "power",
+        "direction": "input",
+        "x": 6.5,
+        "y": 8.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_polisher_port_6",
+        "type": "power",
+        "direction": "output",
+        "x": 8.5,
+        "y": 10.5,
+        "width": 1,
+        "power_type": "Data"
+      }
+    ]
   },
   {
     "id": "m_precision_assembler",
@@ -1546,7 +5523,78 @@
     "limited": false,
     "research": "s_production_precision_assembler",
     "category": "Factory",
-    "subcategory": "Assembler"
+    "subcategory": "Assembler",
+    "ports": [
+      {
+        "id": "m_precision_assembler_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 11,
+        "y": 2.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_precision_assembler_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 11,
+        "y": 4,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_precision_assembler_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 11,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_precision_assembler_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 11,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_precision_assembler_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 11,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_precision_assembler_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 2,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_precision_assembler_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_press",
@@ -1561,7 +5609,38 @@
     "limited": false,
     "research": "s_production_press",
     "category": "Factory",
-    "subcategory": "Processor"
+    "subcategory": "Processor",
+    "ports": [
+      {
+        "id": "m_press_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 0,
+        "y": 0.75,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_press_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_press_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_press_mk2",
@@ -1576,7 +5655,38 @@
     "limited": false,
     "research": "s_production_press_mk2",
     "category": "Factory",
-    "subcategory": "Processor"
+    "subcategory": "Processor",
+    "ports": [
+      {
+        "id": "m_press_mk2_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 7.75,
+        "y": 8.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_press_mk2_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 14,
+        "y": 7,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_press_mk2_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 7,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_pressurized_water_filter",
@@ -1584,14 +5694,65 @@
     "cost": 350000,
     "tier": 3,
     "size": {
-      "x": 9,
-      "y": 6
+      "x": 6,
+      "y": 9
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_pressurized_water_filter",
     "category": "Factory",
-    "subcategory": "Misc"
+    "subcategory": "Misc",
+    "ports": [
+      {
+        "id": "m_pressurized_water_filter_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_pressurized_water_filter_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 2,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_pressurized_water_filter_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 5,
+        "y": 4,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_pressurized_water_filter_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 5,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_pressurized_water_filter_port_5",
+        "type": "power",
+        "direction": "input",
+        "x": 4.5,
+        "y": 4,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_quarry",
@@ -1606,7 +5767,48 @@
     "limited": false,
     "research": "s_production_quarry",
     "category": "Extractor",
-    "subcategory": "Item Extractor"
+    "subcategory": "Item Extractor",
+    "ports": [
+      {
+        "id": "m_quarry_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 12.25,
+        "y": 23,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_quarry_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 13,
+        "y": 23,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_quarry_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 14,
+        "y": 23,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_quarry_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 15,
+        "y": 23,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_raw_mill",
@@ -1614,14 +5816,75 @@
     "cost": 1250,
     "tier": 2,
     "size": {
-      "x": 13,
-      "y": 9
+      "x": 9,
+      "y": 13
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_concrete_production",
     "category": "Factory",
-    "subcategory": "Processor"
+    "subcategory": "Processor",
+    "ports": [
+      {
+        "id": "m_raw_mill_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 7,
+        "y": 12,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_raw_mill_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 12,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_raw_mill_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 12,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_raw_mill_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 8,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_raw_mill_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 6,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_raw_mill_port_6",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_research_station1",
@@ -1636,7 +5899,18 @@
     "limited": false,
     "research": "s_production_research_station_1",
     "category": "Miscellaneous",
-    "subcategory": "Research"
+    "subcategory": "Research",
+    "ports": [
+      {
+        "id": "m_research_station1_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 5,
+        "y": 7,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_research_station2",
@@ -1651,7 +5925,28 @@
     "limited": false,
     "research": "s_production_research_station_2",
     "category": "Miscellaneous",
-    "subcategory": "Research"
+    "subcategory": "Research",
+    "ports": [
+      {
+        "id": "m_research_station2_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 9,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_research_station2_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 0,
+        "y": 2.25,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_research_station3",
@@ -1659,14 +5954,45 @@
     "cost": 100000,
     "tier": 3,
     "size": {
-      "x": 24,
-      "y": 16
+      "x": 16,
+      "y": 24
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_research_station_3",
     "category": "Miscellaneous",
-    "subcategory": "Research"
+    "subcategory": "Research",
+    "ports": [
+      {
+        "id": "m_research_station3_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 15,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_research_station3_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 15,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_research_station3_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 13.25,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_research_station4",
@@ -1674,14 +6000,133 @@
     "cost": 1500000,
     "tier": 4,
     "size": {
-      "x": 24,
-      "y": 16
+      "x": 16,
+      "y": 24
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_research_station_4",
     "category": "Miscellaneous",
-    "subcategory": "Research"
+    "subcategory": "Research",
+    "ports": [
+      {
+        "id": "m_research_station4_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 10.75,
+        "y": 23,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_research_station4_port_2",
+        "type": "power",
+        "direction": "input",
+        "x": 10,
+        "y": 23,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_research_station4_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 9.75,
+        "y": 23,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_research_station4_port_4",
+        "type": "power",
+        "direction": "input",
+        "x": 9.5,
+        "y": 23,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_research_station4_port_5",
+        "type": "power",
+        "direction": "input",
+        "x": 9.25,
+        "y": 23,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_research_station4_port_6",
+        "type": "power",
+        "direction": "input",
+        "x": 9,
+        "y": 23,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_research_station4_port_7",
+        "type": "power",
+        "direction": "output",
+        "x": 11,
+        "y": 22.75,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_research_station4_port_8",
+        "type": "power",
+        "direction": "output",
+        "x": 10.75,
+        "y": 22.75,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_research_station4_port_9",
+        "type": "power",
+        "direction": "output",
+        "x": 10.25,
+        "y": 22.75,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_research_station4_port_10",
+        "type": "power",
+        "direction": "output",
+        "x": 10,
+        "y": 22.75,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_research_station4_port_11",
+        "type": "power",
+        "direction": "output",
+        "x": 9.75,
+        "y": 22.75,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_research_station4_port_12",
+        "type": "power",
+        "direction": "output",
+        "x": 9.5,
+        "y": 22.75,
+        "width": 1,
+        "power_type": "Logic"
+      },
+      {
+        "id": "m_research_station4_port_13",
+        "type": "power",
+        "direction": "output",
+        "x": 9,
+        "y": 22.75,
+        "width": 1,
+        "power_type": "Logic"
+      }
+    ]
   },
   {
     "id": "m_roller",
@@ -1696,7 +6141,38 @@
     "limited": false,
     "research": "s_production_roller",
     "category": "Factory",
-    "subcategory": "Processor"
+    "subcategory": "Processor",
+    "ports": [
+      {
+        "id": "m_roller_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 0,
+        "y": 0.75,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_roller_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_roller_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_roller_mk2",
@@ -1704,14 +6180,45 @@
     "cost": 150000,
     "tier": 3,
     "size": {
-      "x": 15,
-      "y": 12
+      "x": 12,
+      "y": 15
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_roller_mk2",
     "category": "Factory",
-    "subcategory": "Processor"
+    "subcategory": "Processor",
+    "ports": [
+      {
+        "id": "m_roller_mk2_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 2,
+        "y": 7,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_roller_mk2_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 11,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_roller_mk2_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_satellite_dish",
@@ -1726,7 +6233,18 @@
     "limited": false,
     "research": "s_production_satellite_dishes",
     "category": "Miscellaneous",
-    "subcategory": "Research"
+    "subcategory": "Research",
+    "ports": [
+      {
+        "id": "m_satellite_dish_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 11.5,
+        "y": 4.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_satellite_dish_controller",
@@ -1734,14 +6252,35 @@
     "cost": 250000,
     "tier": 3,
     "size": {
-      "x": 15,
-      "y": 10
+      "x": 10,
+      "y": 15
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_satellite_dishes",
     "category": "Miscellaneous",
-    "subcategory": "Research"
+    "subcategory": "Research",
+    "ports": [
+      {
+        "id": "m_satellite_dish_controller_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 8,
+        "y": 14,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_satellite_dish_controller_port_2",
+        "type": "power",
+        "direction": "input",
+        "x": 1,
+        "y": 10.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_sawmill",
@@ -1756,7 +6295,38 @@
     "limited": false,
     "research": "s_production_sawmill",
     "category": "Factory",
-    "subcategory": "Processor"
+    "subcategory": "Processor",
+    "ports": [
+      {
+        "id": "m_sawmill_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 0.5,
+        "y": 3,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_sawmill_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_sawmill_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_scrubber",
@@ -1771,7 +6341,38 @@
     "limited": false,
     "research": "s_utility_scrubber",
     "category": "Miscellaneous",
-    "subcategory": "Other"
+    "subcategory": "Other",
+    "ports": [
+      {
+        "id": "m_scrubber_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 7,
+        "y": 7,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_scrubber_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 6,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_scrubber_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 4,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_solar_farm1",
@@ -1786,7 +6387,27 @@
     "limited": false,
     "research": "s_energy_solar_farm_1",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_solar_farm1_port_2",
+        "type": "power",
+        "direction": "output",
+        "x": 9.5,
+        "y": 9.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_solar_farm1_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 9.5,
+        "y": 7.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_solar_panel",
@@ -1801,7 +6422,18 @@
     "limited": false,
     "research": "s_energy_solar_panel_1",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_solar_panel_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 0,
+        "y": 0.25,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_solar_panel2",
@@ -1809,14 +6441,25 @@
     "cost": 1500,
     "tier": 2,
     "size": {
-      "x": 4,
-      "y": 2
+      "x": 2,
+      "y": 4
     },
     "variant": "none",
     "limited": false,
     "research": "s_energy_solar_panel_2",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_solar_panel2_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 1,
+        "y": 2.25,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_solar_panel3",
@@ -1831,7 +6474,18 @@
     "limited": false,
     "research": "s_energy_solar_panel_3",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_solar_panel3_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 3,
+        "y": 2.25,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_steam_condenser",
@@ -1846,7 +6500,97 @@
     "limited": false,
     "research": "s_energy_coal_power_plant",
     "category": "Power",
-    "subcategory": "Large Power Plant"
+    "subcategory": "Large Power Plant",
+    "ports": [
+      {
+        "id": "m_steam_condenser_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 51,
+        "y": 5,
+        "width": 2,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_steam_condenser_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 51,
+        "y": 9,
+        "width": 2,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_steam_condenser_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 22,
+        "y": 0,
+        "width": 2,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_steam_condenser_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 24,
+        "y": 0,
+        "width": 2,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_steam_condenser_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 23,
+        "y": 15,
+        "width": 2,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_steam_condenser_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 9,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_steam_condenser_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 5,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_steam_condenser_port_8",
+        "type": "power",
+        "direction": "input",
+        "x": 50.5,
+        "y": 13.25,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_steam_condenser_port_9",
+        "type": "power",
+        "direction": "output",
+        "x": 45,
+        "y": 7.5,
+        "width": 1,
+        "power_type": "Data"
+      }
+    ]
   },
   {
     "id": "m_steam_cracking_plant",
@@ -1861,7 +6605,58 @@
     "limited": false,
     "research": "s_production_plastics",
     "category": "Factory",
-    "subcategory": "Plant"
+    "subcategory": "Plant",
+    "ports": [
+      {
+        "id": "m_steam_cracking_plant_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 7,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_steam_cracking_plant_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 7,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_steam_cracking_plant_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 7,
+        "y": 6,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_steam_cracking_plant_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 7,
+        "y": 5,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_steam_cracking_plant_port_5",
+        "type": "power",
+        "direction": "input",
+        "x": 5.5,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_steam_turbine",
@@ -1876,7 +6671,38 @@
     "limited": false,
     "research": "s_energy_turbines",
     "category": "Power",
-    "subcategory": "Non-Renewable"
+    "subcategory": "Non-Renewable",
+    "ports": [
+      {
+        "id": "m_steam_turbine_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 0,
+        "y": 0.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_steam_turbine_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_steam_turbine_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_tree",
@@ -1891,7 +6717,8 @@
     "limited": false,
     "research": "s_production_modular_tree_farm",
     "category": "Modular",
-    "subcategory": "Tree Farm"
+    "subcategory": "Tree Farm",
+    "ports": []
   },
   {
     "id": "m_tree_farm_controller",
@@ -1906,7 +6733,18 @@
     "limited": false,
     "research": "s_production_modular_tree_farm",
     "category": "Modular",
-    "subcategory": "Tree Farm"
+    "subcategory": "Tree Farm",
+    "ports": [
+      {
+        "id": "m_tree_farm_controller_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 2.5,
+        "y": 3,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_tree_farm_output",
@@ -1921,7 +6759,19 @@
     "limited": false,
     "research": "s_production_modular_tree_farm",
     "category": "Modular",
-    "subcategory": "Tree Farm"
+    "subcategory": "Tree Farm",
+    "ports": [
+      {
+        "id": "m_tree_farm_output_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 3,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_tree_farm_sprinkler",
@@ -1936,7 +6786,8 @@
     "limited": false,
     "research": "s_production_modular_tree_farm",
     "category": "Modular",
-    "subcategory": "Tree Farm"
+    "subcategory": "Tree Farm",
+    "ports": []
   },
   {
     "id": "m_tree_farm_water_tank",
@@ -1951,7 +6802,19 @@
     "limited": false,
     "research": "s_production_modular_tree_farm",
     "category": "Modular",
-    "subcategory": "Tree Farm"
+    "subcategory": "Tree Farm",
+    "ports": [
+      {
+        "id": "m_tree_farm_water_tank_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 8,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_trommel",
@@ -1966,7 +6829,78 @@
     "limited": false,
     "research": "s_production_gold_refining",
     "category": "Factory",
-    "subcategory": "Processor"
+    "subcategory": "Processor",
+    "ports": [
+      {
+        "id": "m_trommel_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 6,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_trommel_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 4,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_trommel_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_trommel_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 4,
+        "y": 5,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_trommel_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 5,
+        "y": 5,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_trommel_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 6,
+        "y": 5,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_trommel_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 11,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_truck_depot",
@@ -1981,7 +6915,19 @@
     "limited": false,
     "research": "s_utility_truck_depot",
     "category": "Miscellaneous",
-    "subcategory": "Depot"
+    "subcategory": "Depot",
+    "ports": [
+      {
+        "id": "m_truck_depot_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_turbine_generator",
@@ -1996,7 +6942,27 @@
     "limited": false,
     "research": "s_energy_modular_turbines",
     "category": "Modular",
-    "subcategory": "Modular Turbine"
+    "subcategory": "Modular Turbine",
+    "ports": [
+      {
+        "id": "m_turbine_generator_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 4.25,
+        "y": 5.5,
+        "width": 1,
+        "power_type": "HV"
+      },
+      {
+        "id": "m_turbine_generator_port_2",
+        "type": "power",
+        "direction": "output",
+        "x": 7.75,
+        "y": 9.5,
+        "width": 1,
+        "power_type": "Data"
+      }
+    ]
   },
   {
     "id": "m_turbine_input",
@@ -2004,14 +6970,36 @@
     "cost": 150000,
     "tier": 4,
     "size": {
-      "x": 12,
-      "y": 6
+      "x": 6,
+      "y": 12
     },
     "variant": "none",
     "limited": false,
     "research": "s_energy_modular_turbines",
     "category": "Modular",
-    "subcategory": "Modular Turbine"
+    "subcategory": "Modular Turbine",
+    "ports": [
+      {
+        "id": "m_turbine_input_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 11,
+        "width": 2,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_turbine_input_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 0,
+        "width": 2,
+        "side": "top",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_turbine_output",
@@ -2019,14 +7007,36 @@
     "cost": 150000,
     "tier": 4,
     "size": {
-      "x": 12,
-      "y": 6
+      "x": 6,
+      "y": 12
     },
     "variant": "none",
     "limited": false,
     "research": "s_energy_modular_turbines",
     "category": "Modular",
-    "subcategory": "Modular Turbine"
+    "subcategory": "Modular Turbine",
+    "ports": [
+      {
+        "id": "m_turbine_output_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 11,
+        "width": 2,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_turbine_output_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 0,
+        "width": 2,
+        "side": "top",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_underground_waste_facility",
@@ -2041,7 +7051,58 @@
     "limited": false,
     "research": "s_production_radioactive_waste_storage",
     "category": "Miscellaneous",
-    "subcategory": "Other"
+    "subcategory": "Other",
+    "ports": [
+      {
+        "id": "m_underground_waste_facility_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 22,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_underground_waste_facility_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 21,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_underground_waste_facility_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 20,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_underground_waste_facility_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 19,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_underground_waste_facility_port_5",
+        "type": "power",
+        "direction": "input",
+        "x": 0,
+        "y": 18,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_van_depot",
@@ -2056,7 +7117,19 @@
     "limited": false,
     "research": "s_utility_van_depot",
     "category": "Miscellaneous",
-    "subcategory": "Depot"
+    "subcategory": "Depot",
+    "ports": [
+      {
+        "id": "m_van_depot_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_vaporizer",
@@ -2064,14 +7137,45 @@
     "cost": 10000,
     "tier": 3,
     "size": {
-      "x": 6,
-      "y": 8
+      "x": 8,
+      "y": 6
     },
     "variant": "none",
     "limited": false,
     "research": "s_production_air_separation_unit",
     "category": "Factory",
-    "subcategory": "Misc"
+    "subcategory": "Misc",
+    "ports": [
+      {
+        "id": "m_vaporizer_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 5.25,
+        "y": 5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_vaporizer_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_vaporizer_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 6,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_vertical_heat_exchanger",
@@ -2086,7 +7190,58 @@
     "limited": false,
     "research": "s_energy_coal_power_plant",
     "category": "Power",
-    "subcategory": "Large Power Plant"
+    "subcategory": "Large Power Plant",
+    "ports": [
+      {
+        "id": "m_vertical_heat_exchanger_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 6,
+        "y": 13,
+        "width": 2,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_vertical_heat_exchanger_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 4,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_vertical_heat_exchanger_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 6,
+        "y": 0,
+        "width": 2,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_vertical_heat_exchanger_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 13,
+        "y": 9,
+        "width": 2,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_vertical_heat_exchanger_port_5",
+        "type": "power",
+        "direction": "output",
+        "x": 8,
+        "y": 2,
+        "width": 1,
+        "power_type": "Data"
+      }
+    ]
   },
   {
     "id": "m_water_pump",
@@ -2101,7 +7256,38 @@
     "limited": false,
     "research": "s_production_water_pump",
     "category": "Extractor",
-    "subcategory": "Fluid Extractor"
+    "subcategory": "Fluid Extractor",
+    "ports": [
+      {
+        "id": "m_water_pump_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 0,
+        "y": 0.25,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_water_pump_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_water_pump_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_water_pump2",
@@ -2116,7 +7302,28 @@
     "limited": false,
     "research": "s_production_water_pump_2",
     "category": "Extractor",
-    "subcategory": "Fluid Extractor"
+    "subcategory": "Fluid Extractor",
+    "ports": [
+      {
+        "id": "m_water_pump2_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_water_pump2_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 3,
+        "y": 1,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_water_treatment_plant",
@@ -2131,7 +7338,68 @@
     "limited": false,
     "research": "s_energy_coal_power_plant",
     "category": "Factory",
-    "subcategory": "Plant"
+    "subcategory": "Plant",
+    "ports": [
+      {
+        "id": "m_water_treatment_plant_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 16,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_water_treatment_plant_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 13,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_water_treatment_plant_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 14,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_water_treatment_plant_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 29,
+        "y": 14,
+        "width": 2,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_water_treatment_plant_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 29,
+        "y": 16,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_water_treatment_plant_port_6",
+        "type": "power",
+        "direction": "input",
+        "x": 11.5,
+        "y": 14.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_wind_turbine1",
@@ -2146,7 +7414,18 @@
     "limited": false,
     "research": "s_energy_wind_turbine_1",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_wind_turbine1_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_wind_turbine2",
@@ -2161,7 +7440,18 @@
     "limited": false,
     "research": "s_energy_wind_turbine_2",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_wind_turbine2_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 0.25,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_wind_turbine3",
@@ -2176,7 +7466,18 @@
     "limited": false,
     "research": "s_energy_wind_turbine_3",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_wind_turbine3_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 0.5,
+        "y": 3.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_american_oil_rig",
@@ -2191,7 +7492,28 @@
     "limited": true,
     "research": "",
     "category": "Extractor",
-    "subcategory": "Fluid Extractor"
+    "subcategory": "Fluid Extractor",
+    "ports": [
+      {
+        "id": "m_american_oil_rig_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_american_oil_rig_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 7,
+        "y": 1,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_hot_water_pump",
@@ -2203,11 +7525,42 @@
       "y": 4
     },
     "variant": "none",
-    "limited": true,
+    "limited": false,
     "research": "",
     "category": "Extractor",
     "subcategory": "Fluid Extractor",
-    "sandboxPlusOnly": true
+    "sandboxPlusOnly": true,
+    "ports": [
+      {
+        "id": "m_hot_water_pump_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 0,
+        "y": 0.25,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_hot_water_pump_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_hot_water_pump_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_og_oil_rig",
@@ -2222,7 +7575,28 @@
     "limited": true,
     "research": "",
     "category": "Extractor",
-    "subcategory": "Fluid Extractor"
+    "subcategory": "Fluid Extractor",
+    "ports": [
+      {
+        "id": "m_og_oil_rig_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 7,
+        "y": 0,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_og_oil_rig_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 7,
+        "y": 1,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_sand_excavator",
@@ -2238,7 +7612,28 @@
     "research": "",
     "category": "Extractor",
     "subcategory": "Item Extractor",
-    "sandboxOnly": true
+    "sandboxPlusOnly": true,
+    "ports": [
+      {
+        "id": "m_sand_excavator_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 8,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_sand_excavator_port_2",
+        "type": "power",
+        "direction": "input",
+        "x": 7,
+        "y": 5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_soil_excavator",
@@ -2254,7 +7649,38 @@
     "research": "",
     "category": "Extractor",
     "subcategory": "Item Extractor",
-    "sandboxOnly": true
+    "sandboxPlusOnly": true,
+    "ports": [
+      {
+        "id": "m_soil_excavator_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_soil_excavator_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 9,
+        "y": 4,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_soil_excavator_port_2",
+        "type": "power",
+        "direction": "input",
+        "x": 3.5,
+        "y": 4,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_gold_drill",
@@ -2269,7 +7695,28 @@
     "limited": true,
     "research": "",
     "category": "Extractor",
-    "subcategory": "Item Extractor"
+    "subcategory": "Item Extractor",
+    "ports": [
+      {
+        "id": "m_gold_drill_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 7,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_gold_drill_port_2",
+        "type": "power",
+        "direction": "input",
+        "x": 0.25,
+        "y": 1,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_uranium_drill",
@@ -2284,7 +7731,28 @@
     "limited": true,
     "research": "",
     "category": "Extractor",
-    "subcategory": "Item Extractor"
+    "subcategory": "Item Extractor",
+    "ports": [
+      {
+        "id": "m_uranium_drill_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 5,
+        "y": 0.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_uranium_drill_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 5,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_fancy_coal_drill",
@@ -2299,7 +7767,28 @@
     "limited": true,
     "research": "",
     "category": "Extractor",
-    "subcategory": "Item Extractor"
+    "subcategory": "Item Extractor",
+    "ports": [
+      {
+        "id": "m_fancy_coal_drill_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_fancy_coal_drill_port_2",
+        "type": "power",
+        "direction": "input",
+        "x": 1.5,
+        "y": 0.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_cat_assembler",
@@ -2314,7 +7803,49 @@
     "limited": true,
     "research": "",
     "category": "Factory",
-    "subcategory": "Assembler"
+    "subcategory": "Assembler",
+    "ports": [
+      {
+        "id": "m_cat_assembler_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 4,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_cat_assembler_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 4,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_cat_assembler_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 4,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_cat_assembler_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 4,
+        "y": 4,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_advanced_electric_furnace",
@@ -2322,14 +7853,85 @@
     "cost": 100000,
     "tier": 2,
     "size": {
-      "x": 9,
-      "y": 9
+      "x": 6,
+      "y": 6
     },
     "variant": "m_electric_furnace",
     "limited": true,
     "research": "",
     "category": "Factory",
-    "subcategory": "Furnace"
+    "subcategory": "Furnace",
+    "ports": [
+      {
+        "id": "m_advanced_electric_furnace_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 2,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_electric_furnace_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_electric_furnace_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 3.25,
+        "y": 0.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_advanced_electric_furnace_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_electric_furnace_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 5,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_electric_furnace_port_6",
+        "type": "product",
+        "direction": "input",
+        "x": 4,
+        "y": 5,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_advanced_electric_furnace_port_7",
+        "type": "product",
+        "direction": "input",
+        "x": 5,
+        "y": 5,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_industrial_press",
@@ -2341,11 +7943,42 @@
       "y": 2
     },
     "variant": "none",
-    "limited": true,
+    "limited": false,
     "research": "",
     "category": "Factory",
     "subcategory": "Processor",
-    "sandboxPlusOnly": true
+    "sandboxPlusOnly": true,
+    "ports": [
+      {
+        "id": "m_industrial_press_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_press_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_industrial_press_port_3",
+        "type": "power",
+        "direction": "input",
+        "x": 1.5,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_advanced_diesel_refinery",
@@ -2360,7 +7993,58 @@
     "limited": true,
     "research": "",
     "category": "Factory",
-    "subcategory": "Refinery"
+    "subcategory": "Refinery",
+    "ports": [
+      {
+        "id": "m_advanced_diesel_refinery_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 13,
+        "y": 10.5,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_advanced_diesel_refinery_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 13,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_diesel_refinery_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 13,
+        "y": 2,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_diesel_refinery_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 12,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_advanced_diesel_refinery_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 13,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_residue_refinery",
@@ -2375,7 +8059,58 @@
     "limited": true,
     "research": "",
     "category": "Factory",
-    "subcategory": "Refinery"
+    "subcategory": "Refinery",
+    "ports": [
+      {
+        "id": "m_residue_refinery_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 4,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_residue_refinery_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 4,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_residue_refinery_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 2,
+        "y": 4,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_residue_refinery_port_4",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 4,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_residue_refinery_port_5",
+        "type": "power",
+        "direction": "input",
+        "x": 6,
+        "y": 3,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_hyper_depot",
@@ -2391,7 +8126,19 @@
     "research": "",
     "category": "Miscellaneous",
     "subcategory": "Depot",
-    "sandboxPlusOnly": true
+    "sandboxPlusOnly": true,
+    "ports": [
+      {
+        "id": "m_hyper_depot_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_sleigh_depot",
@@ -2406,7 +8153,19 @@
     "limited": true,
     "research": "",
     "category": "Miscellaneous",
-    "subcategory": "Depot"
+    "subcategory": "Depot",
+    "ports": [
+      {
+        "id": "m_sleigh_depot_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 2,
+        "y": 7,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_big_liquid_burner",
@@ -2421,7 +8180,39 @@
     "limited": true,
     "research": "",
     "category": "Miscellaneous",
-    "subcategory": "Other"
+    "subcategory": "Other",
+    "ports": [
+      {
+        "id": "m_big_liquid_burner_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_big_liquid_burner_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 2,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_big_liquid_burner_port_3",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_incinerator",
@@ -2436,7 +8227,29 @@
     "limited": true,
     "research": "",
     "category": "Miscellaneous",
-    "subcategory": "Other"
+    "subcategory": "Other",
+    "ports": [
+      {
+        "id": "m_incinerator_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_incinerator_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_item_dump",
@@ -2451,7 +8264,29 @@
     "limited": true,
     "research": "",
     "category": "Miscellaneous",
-    "subcategory": "Other"
+    "subcategory": "Other",
+    "ports": [
+      {
+        "id": "m_item_dump_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 1,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_item_dump_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_tree_scrubber",
@@ -2459,14 +8294,36 @@
     "cost": 25000,
     "tier": 1,
     "size": {
-      "x": 9,
-      "y": 8
+      "x": 8,
+      "y": 9
     },
     "variant": "m_scrubber",
     "limited": true,
     "research": "",
     "category": "Miscellaneous",
-    "subcategory": "Other"
+    "subcategory": "Other",
+    "ports": [
+      {
+        "id": "m_tree_scrubber_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 8,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_tree_scrubber_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 2,
+        "y": 8,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_fluid_spawner",
@@ -2478,11 +8335,93 @@
       "y": 2
     },
     "variant": "none",
-    "limited": true,
+    "limited": false,
     "research": "",
     "category": "Miscellaneous",
     "subcategory": "Pipes",
-    "sandboxPlusOnly": true
+    "sandboxPlusOnly": true,
+    "ports": [
+      {
+        "id": "m_fluid_spawner_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_fluid_spawner_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_fluid_spawner_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_fluid_spawner_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_fluid_spawner_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_fluid_spawner_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_fluid_spawner_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_fluid_spawner_port_8",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_item_spawner",
@@ -2494,11 +8433,93 @@
       "y": 2
     },
     "variant": "none",
-    "limited": true,
+    "limited": false,
     "research": "",
     "category": "Miscellaneous",
     "subcategory": "Pipes",
-    "sandboxPlusOnly": true
+    "sandboxPlusOnly": true,
+    "ports": [
+      {
+        "id": "m_item_spawner_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_item_spawner_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_item_spawner_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_item_spawner_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 1,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_item_spawner_port_5",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 1,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_item_spawner_port_6",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 0,
+        "width": 1,
+        "side": "right",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_item_spawner_port_7",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_item_spawner_port_8",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "side": "left",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_candy_cane_tree",
@@ -2513,7 +8534,8 @@
     "limited": true,
     "research": "",
     "category": "Modular",
-    "subcategory": "Tree Farm"
+    "subcategory": "Tree Farm",
+    "ports": []
   },
   {
     "id": "m_christmas_tree",
@@ -2528,7 +8550,8 @@
     "limited": true,
     "research": "",
     "category": "Modular",
-    "subcategory": "Tree Farm"
+    "subcategory": "Tree Farm",
+    "ports": []
   },
   {
     "id": "m_igloo_farm_controller",
@@ -2543,7 +8566,18 @@
     "limited": true,
     "research": "",
     "category": "Modular",
-    "subcategory": "Tree Farm"
+    "subcategory": "Tree Farm",
+    "ports": [
+      {
+        "id": "m_igloo_farm_controller_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 1.5,
+        "y": 3,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_festive_coal_power_plant",
@@ -2558,7 +8592,77 @@
     "limited": true,
     "research": "",
     "category": "Power",
-    "subcategory": "Large Power Plant"
+    "subcategory": "Large Power Plant",
+    "ports": [
+      {
+        "id": "m_festive_coal_power_plant_port_1",
+        "type": "power",
+        "direction": "input",
+        "x": 6.5,
+        "y": 17.5,
+        "width": 1,
+        "power_type": "HV"
+      },
+      {
+        "id": "m_festive_coal_power_plant_port_2",
+        "type": "power",
+        "direction": "input",
+        "x": 82.5,
+        "y": 1,
+        "width": 1,
+        "power_type": "Data"
+      },
+      {
+        "id": "m_festive_coal_power_plant_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 4,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_festive_coal_power_plant_port_4",
+        "type": "product",
+        "direction": "output",
+        "x": 2,
+        "y": 0,
+        "width": 2,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_festive_coal_power_plant_port_5",
+        "type": "product",
+        "direction": "input",
+        "x": 6,
+        "y": 0,
+        "width": 2,
+        "side": "top",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_festive_coal_power_plant_port_6",
+        "type": "product",
+        "direction": "input",
+        "x": 14,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      },
+      {
+        "id": "m_festive_coal_power_plant_port_7",
+        "type": "product",
+        "direction": "input",
+        "x": 15,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Item"
+      }
+    ]
   },
   {
     "id": "m_festive_cooling_tower",
@@ -2573,7 +8677,29 @@
     "limited": true,
     "research": "",
     "category": "Power",
-    "subcategory": "Large Power Plant"
+    "subcategory": "Large Power Plant",
+    "ports": [
+      {
+        "id": "m_festive_cooling_tower_port_1",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 1,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_festive_cooling_tower_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 5,
+        "width": 2,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_footstep_power_generator",
@@ -2588,7 +8714,18 @@
     "limited": true,
     "research": "",
     "category": "Power",
-    "subcategory": "Misc"
+    "subcategory": "Misc",
+    "ports": [
+      {
+        "id": "m_footstep_power_generator_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 1,
+        "y": 1,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_small_turbine",
@@ -2596,14 +8733,45 @@
     "cost": 2500,
     "tier": 2,
     "size": {
-      "x": 4,
-      "y": 2
+      "x": 2,
+      "y": 4
     },
     "variant": "m_large_turbine",
     "limited": true,
     "research": "",
     "category": "Power",
-    "subcategory": "Non-Renewable"
+    "subcategory": "Non-Renewable",
+    "ports": [
+      {
+        "id": "m_small_turbine_port_2",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 3,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_small_turbine_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 1,
+        "y": 3,
+        "width": 1,
+        "side": "right",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_small_turbine_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 0.5,
+        "y": 2,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_lightning_rod",
@@ -2618,7 +8786,18 @@
     "limited": true,
     "research": "",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_lightning_rod_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 0,
+        "y": 8,
+        "width": 1,
+        "power_type": "HV"
+      }
+    ]
   },
   {
     "id": "m_3_turbine_wind",
@@ -2633,7 +8812,18 @@
     "limited": true,
     "research": "",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_3_turbine_wind_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_4_panel_solar",
@@ -2648,7 +8838,18 @@
     "limited": true,
     "research": "",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_4_panel_solar_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 2.25,
+        "y": 0,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_dev_solar_panel",
@@ -2660,11 +8861,31 @@
       "y": 2
     },
     "variant": "none",
-    "limited": true,
+    "limited": false,
     "research": "",
     "category": "Power",
     "subcategory": "Renewable",
-    "sandboxPlusOnly": true
+    "sandboxPlusOnly": true,
+    "ports": [
+      {
+        "id": "m_dev_solar_panel_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 0.25,
+        "y": 0.25,
+        "width": 1,
+        "power_type": "MV"
+      },
+      {
+        "id": "m_dev_solar_panel_port_2",
+        "type": "power",
+        "direction": "output",
+        "x": 0,
+        "y": 0,
+        "width": 1,
+        "power_type": "HV"
+      }
+    ]
   },
   {
     "id": "m_energy_wheel",
@@ -2679,7 +8900,18 @@
     "limited": true,
     "research": "",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_energy_wheel_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 9,
+        "y": 8,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_rtg",
@@ -2694,7 +8926,18 @@
     "limited": true,
     "research": "",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_rtg_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 0.5,
+        "y": 1,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_solar_heater",
@@ -2709,7 +8952,29 @@
     "limited": true,
     "research": "",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_solar_heater_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 3,
+        "y": 6,
+        "width": 1,
+        "side": "bottom",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_solar_heater_port_2",
+        "type": "product",
+        "direction": "output",
+        "x": 3,
+        "y": 0,
+        "width": 1,
+        "side": "top",
+        "product_type": "Fluid"
+      }
+    ]
   },
   {
     "id": "m_wind_turbine4",
@@ -2724,7 +8989,18 @@
     "limited": true,
     "research": "",
     "category": "Power",
-    "subcategory": "Renewable"
+    "subcategory": "Renewable",
+    "ports": [
+      {
+        "id": "m_wind_turbine4_port_1",
+        "type": "power",
+        "direction": "output",
+        "x": 8.5,
+        "y": 13.5,
+        "width": 1,
+        "power_type": "MV"
+      }
+    ]
   },
   {
     "id": "m_classic_tree",
@@ -2739,7 +9015,8 @@
     "limited": false,
     "research": "",
     "category": "Modular",
-    "subcategory": "Tree Farm"
+    "subcategory": "Tree Farm",
+    "ports": []
   },
   {
     "id": "m_fort_tech_heavy_cannon_mk2",
@@ -2754,6 +9031,28 @@
     "limited": true,
     "research": "",
     "category": "Miscellaneous",
-    "subcategory": "Decoration"
+    "subcategory": "Decoration",
+    "ports": [
+      {
+        "id": "m_fort_tech_heavy_cannon_mk2_port_1",
+        "type": "product",
+        "direction": "input",
+        "x": 0,
+        "y": 5,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      },
+      {
+        "id": "m_fort_tech_heavy_cannon_mk2_port_3",
+        "type": "product",
+        "direction": "output",
+        "x": 0,
+        "y": 7,
+        "width": 1,
+        "side": "left",
+        "product_type": "Fluid"
+      }
+    ]
   }
 ]

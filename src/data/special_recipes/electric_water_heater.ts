@@ -49,8 +49,17 @@ export const electric_water_heater_01: SpecialRecipe = {
       power_use: powerUse,
       power_type: powerType,
       pollution: 0,
-      inputs: [{ product_id: 'p_water', quantity: 6 }],
-      outputs: [{ product_id: 'p_water', quantity: 6, temperature: target }],
+      inputs: [
+        { product_id: 'p_water', quantity: 6, port_ids: ['m_electric_water_heater_port_1'] },
+      ],
+      outputs: [
+        {
+          product_id: 'p_water',
+          quantity: 6,
+          temperature: target,
+          port_ids: ['m_electric_water_heater_port_2'],
+        },
+      ],
     };
 
     return recipe;
@@ -75,8 +84,21 @@ export const electric_water_heater_02: SpecialRecipe = {
       power_use: powerUse,
       power_type: powerType,
       pollution: 0,
-      inputs: [{ product_id: 'p_filtered_water', quantity: 6 }],
-      outputs: [{ product_id: 'p_filtered_water', quantity: 6, temperature: target }],
+      inputs: [
+        {
+          product_id: 'p_filtered_water',
+          quantity: 6,
+          port_ids: ['m_electric_water_heater_port_1'],
+        },
+      ],
+      outputs: [
+        {
+          product_id: 'p_filtered_water',
+          quantity: 6,
+          temperature: target,
+          port_ids: ['m_electric_water_heater_port_2'],
+        },
+      ],
     };
 
     return recipe;
@@ -101,8 +123,21 @@ export const electric_water_heater_03: SpecialRecipe = {
       power_use: powerUse * 4,
       power_type: powerType,
       pollution: 0,
-      inputs: [{ product_id: 'p_distilled_water', quantity: 6 }],
-      outputs: [{ product_id: 'p_distilled_water', quantity: 6, temperature: target }],
+      inputs: [
+        {
+          product_id: 'p_distilled_water',
+          quantity: 6,
+          port_ids: ['m_electric_water_heater_port_1'],
+        },
+      ],
+      outputs: [
+        {
+          product_id: 'p_distilled_water',
+          quantity: 6,
+          temperature: target,
+          port_ids: ['m_electric_water_heater_port_2'],
+        },
+      ],
     };
 
     return recipe;

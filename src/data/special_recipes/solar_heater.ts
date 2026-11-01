@@ -32,8 +32,15 @@ export const solar_heater_01: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_water', quantity: 12 }],
-      outputs: [{ product_id: 'p_water', quantity: 12, temperature: outputTemp }],
+      inputs: [{ product_id: 'p_water', quantity: 12, port_ids: ['m_solar_heater_port_1'] }],
+      outputs: [
+        {
+          product_id: 'p_water',
+          quantity: 12,
+          temperature: outputTemp,
+          port_ids: ['m_solar_heater_port_2'],
+        },
+      ],
     };
 
     return recipe;

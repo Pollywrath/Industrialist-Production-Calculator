@@ -5,12 +5,25 @@
     "patches": [
       {
         "hash": "pending",
+        "version": "v0.9.1",
+        "patch": 0,
+        "date": "2026-11-01",
+        "subject": "feat: add machine and recipe port definitions",
+        "items": [
+          "Disabled the WebGPU renderer and removed it from renderer selection. PixiJS now uses WebGL, with React Flow retained as a fallback.",
+          "Automatically migrate previously saved WebGPU renderer preferences to WebGL.",
+          "Added machine port definitions, including port IDs, types, directions, positions, widths, sides, and product or power types.",
+          "Added recipe input and output port mappings through port_ids, linking recipe products to their corresponding machine ports."
+        ]
+      },
+      {
+        "hash": "pending",
         "version": "v0.9.0",
         "patch": 0,
         "date": "2026-10-26",
         "subject": "feat: make PixiJS the default renderer",
         "items": [
-          "Made PixiJS the default canvas, with selectable WebGPU, WebGL, and React Flow renderers and automatic React Flow fallback when GPU rendering is unavailable.",
+          "Made PixiJS the default canvas using WebGL, with React Flow available as a selectable renderer and automatic fallback when WebGL is unavailable.",
           "Kept graph changes, history, solver results, groups, project saves, and tutorial state app-owned while adding Pixi projections and guided interactions.",
           "Added high-resolution PNG export, shared edge appearance, graph inspection, group proxy handling, and renderer-aware tutorial targets.",
           "Reduced graph update work by reusing unchanged canvas projections and cached recipe presentations."

@@ -53,10 +53,22 @@ function getLossRate(coolant: Coolant): number {
 
 function getCoolantInputs(coolant: Coolant): Recipe['inputs'] {
   if (coolant === 'water') {
-    return [{ product_id: 'p_water', quantity: 1 }];
+    return [
+      {
+        product_id: 'p_water',
+        quantity: 1,
+        port_ids: ['m_hv_transformer_port_3', 'm_hv_transformer_port_4'],
+      },
+    ];
   }
   if (coolant === 'machine_oil') {
-    return [{ product_id: 'p_machine_oil', quantity: 0.5 }];
+    return [
+      {
+        product_id: 'p_machine_oil',
+        quantity: 0.5,
+        port_ids: ['m_hv_transformer_port_3', 'm_hv_transformer_port_4'],
+      },
+    ];
   }
   return [];
 }

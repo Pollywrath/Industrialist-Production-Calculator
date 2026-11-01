@@ -33,12 +33,19 @@ export const festive_cooling_tower_01: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_distilled_water', quantity: 800 }],
+      inputs: [
+        {
+          product_id: 'p_distilled_water',
+          quantity: 800,
+          port_ids: ['m_festive_cooling_tower_port_2'],
+        },
+      ],
       outputs: [
         {
           product_id: 'p_distilled_water',
           quantity: 800,
           temperature: outputTemp,
+          port_ids: ['m_festive_cooling_tower_port_1'],
         },
       ],
     };

@@ -40,14 +40,29 @@ export const coal_liquefaction_01: SpecialRecipe = {
       power_type: 'MV',
       pollution: 6.48,
       inputs: [
-        { product_id: 'p_coal', quantity: 40 },
-        { product_id: 'p_crude_oil', quantity: 10 },
-        { product_id: 'p_steam', quantity: 200 },
+        { product_id: 'p_coal', quantity: 40, port_ids: ['m_coal_liquefaction_plant_port_3'] },
+        { product_id: 'p_crude_oil', quantity: 10, port_ids: ['m_coal_liquefaction_plant_port_2'] },
+        { product_id: 'p_steam', quantity: 200, port_ids: ['m_coal_liquefaction_plant_port_4'] },
       ],
       outputs: [
-        { product_id: 'p_residue', quantity: 10, temperature: 18 },
-        { product_id: 'p_heavy_oil', quantity: 40, temperature: 18 },
-        { product_id: 'p_light_oil', quantity: 30, temperature: 18 },
+        {
+          product_id: 'p_residue',
+          quantity: 10,
+          temperature: 18,
+          port_ids: ['m_coal_liquefaction_plant_port_5'],
+        },
+        {
+          product_id: 'p_heavy_oil',
+          quantity: 40,
+          temperature: 18,
+          port_ids: ['m_coal_liquefaction_plant_port_6'],
+        },
+        {
+          product_id: 'p_light_oil',
+          quantity: 30,
+          temperature: 18,
+          port_ids: ['m_coal_liquefaction_plant_port_7'],
+        },
       ],
     };
 

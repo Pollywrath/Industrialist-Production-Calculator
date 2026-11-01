@@ -11,9 +11,8 @@ recipe autocomplete, editable game data, and local layout saves.
 ## Stack
 
 - TypeScript 6 and React 19, built with Vite 8.
-- PixiJS renders the recipe and group graph by default (WebGPU, then WebGL), with
-  React Flow available as a device fallback and a selectable renderer in Theme
-  Editor.
+- PixiJS renders the recipe and group graph by default using WebGL, with React Flow
+  available as a device fallback and a selectable renderer in Theme Editor.
 - Zustand stores canvas, settings, and result state.
 - SCIP and SoPlex compiled to WebAssembly run in a browser Worker for ratio
   optimization. The prebuilt bundle is in `public/scip/`.

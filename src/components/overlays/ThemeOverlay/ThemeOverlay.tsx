@@ -21,7 +21,7 @@ import {
   type ThemeVariableDefinition,
 } from '../../../theme/themeManager';
 import { THEME_PRESETS, type ThemePreset } from '../../../theme/themePresets';
-import { detectPixiBackendCapabilities } from '../../../canvas/pixiCapabilities';
+import { detectPixiWebGLSupport } from '../../../canvas/pixiCapabilities';
 import {
   getActiveRendererLabel,
   isRendererChoiceAvailable,
@@ -512,30 +512,31 @@ function ThemeOverlayModal() {
   const resetEdgeStyles = useEdgeThemeStore((s) => s.resetEdgeStyles);
   const rendererPreference = useCanvasRendererStore((s) => s.preference);
   const activeRenderer = useCanvasRendererStore((s) => s.activeRenderer);
-  const webgpuAvailability = useCanvasRendererStore((s) => s.webgpuAvailability);
   const webglAvailability = useCanvasRendererStore((s) => s.webglAvailability);
   const setRendererPreference = useCanvasRendererStore((s) => s.setPreference);
-  const setBackendAvailability = useCanvasRendererStore((s) => s.setBackendAvailability);
+  const setWebGLAvailability = useCanvasRendererStore((s) => s.setWebGLAvailability);
 
   useEffect(() => {
     if (activeView !== 'renderer') return;
+
     let cancelled = false;
-    void detectPixiBackendCapabilities()
-      .then((capabilities) => {
+
+    void detectPixiWebGLSupport()
+      .then((available) => {
         if (cancelled) return;
-        setBackendAvailability('webgpu', capabilities.webgpu ? 'available' : 'unavailable');
-        setBackendAvailability('webgl', capabilities.webgl ? 'available' : 'unavailable');
+        setWebGLAvailability(available ? 'available' : 'unavailable');
       })
       .catch((error: unknown) => {
-        console.warn('PixiJS backend availability could not be checked.', error);
+        console.warn('PixiJS WebGL availability could not be checked.', error);
+
         if (cancelled) return;
-        setBackendAvailability('webgpu', 'unavailable');
-        setBackendAvailability('webgl', 'unavailable');
+        setWebGLAvailability('unavailable');
       });
+
     return () => {
       cancelled = true;
     };
-  }, [activeView, setBackendAvailability]);
+  }, [activeView, setWebGLAvailability]);
 
   const colorVariables = variables.filter((variable) => variable.category === 'color');
 
@@ -857,8 +858,7 @@ function ThemeOverlayModal() {
           ) : (
             <div className={styles['advanced-groups']}>
               <div className={styles['advanced-intro']}>
-                Choose the canvas renderer for this browser. The preference stays on this device;
-                unsupported PixiJS backends are disabled.
+                Choose the canvas renderer for this browser. The preference stays on this device.
               </div>
               <div className={styles['renderer-status']} role="status">
                 Active renderer: <strong>{getActiveRendererLabel(activeRenderer)}</strong>
@@ -868,19 +868,11 @@ function ThemeOverlayModal() {
               </div>
               <div className={styles['renderer-option-list']}>
                 <RendererOption
-                  preference="pixi-webgpu"
-                  selected={rendererPreference === 'pixi-webgpu'}
-                  availability={webgpuAvailability}
-                  label="PixiJS · WebGPU"
-                  description="Modern browser GPU API. PixiJS renders the graph in a GPU scene and supports the full Pixi edge animation set."
-                  onChoose={setRendererPreference}
-                />
-                <RendererOption
                   preference="pixi-webgl"
                   selected={rendererPreference === 'pixi-webgl'}
                   availability={webglAvailability}
                   label="PixiJS · WebGL"
-                  description="WebGL GPU API for a wider range of browsers and devices. Major performance caveats are treated as unavailable."
+                  description="GPU rendering through WebGL, with React Flow available as a fallback on unsupported devices."
                   onChoose={setRendererPreference}
                 />
                 <RendererOption

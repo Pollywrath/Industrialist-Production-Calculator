@@ -73,8 +73,15 @@ export const large_turbine_01: SpecialRecipe = {
       power_use: -actualPowerOutput,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_steam', quantity: 90 }],
-      outputs: [{ product_id: 'p_water', quantity: 3, temperature: waterOutputTemp }],
+      inputs: [{ product_id: 'p_steam', quantity: 90, port_ids: ['m_large_turbine_port_1'] }],
+      outputs: [
+        {
+          product_id: 'p_water',
+          quantity: 3,
+          temperature: waterOutputTemp,
+          port_ids: ['m_large_turbine_port_2'],
+        },
+      ],
     };
 
     return recipe;

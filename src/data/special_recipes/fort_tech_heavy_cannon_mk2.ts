@@ -36,12 +36,19 @@ export const fort_tech_heavy_cannon_mk2_01: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution: 0,
-      inputs: [{ product_id: 'p_water', quantity: inputQty }],
+      inputs: [
+        {
+          product_id: 'p_water',
+          quantity: inputQty,
+          port_ids: ['m_fort_tech_heavy_cannon_mk2_port_1'],
+        },
+      ],
       outputs: [
         {
           product_id: 'p_water',
           quantity: outputQty,
           temperature: outputTemp,
+          port_ids: ['m_fort_tech_heavy_cannon_mk2_port_3'],
         },
       ],
     };

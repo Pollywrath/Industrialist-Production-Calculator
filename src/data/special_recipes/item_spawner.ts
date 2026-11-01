@@ -44,6 +44,16 @@ export const item_spawner_01: SpecialRecipe = {
           quantity,
           temperature: DEFAULT_TEMPERATURE,
           handle_type: 'item',
+          port_ids: [
+            'm_item_spawner_port_7',
+            'm_item_spawner_port_8',
+            'm_item_spawner_port_2',
+            'm_item_spawner_port_3',
+            'm_item_spawner_port_5',
+            'm_item_spawner_port_4',
+            'm_item_spawner_port_6',
+            'm_item_spawner_port_1',
+          ],
         },
       ],
     };

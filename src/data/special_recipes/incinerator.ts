@@ -24,7 +24,13 @@ export const incinerator_01: SpecialRecipe = {
       power_use: 0,
       power_type: 'MV',
       pollution,
-      inputs: [{ product_id: resolvedFluid, quantity: 40 }],
+      inputs: [
+        {
+          product_id: resolvedFluid,
+          quantity: 40,
+          port_ids: ['m_incinerator_port_2', 'm_incinerator_port_1'],
+        },
+      ],
       outputs: [],
     };
 
