@@ -103,6 +103,8 @@ export function PixiCanvasMirror({
 
     let disposed = false;
     let app: Application | null = null;
+    let webglCanvas: HTMLCanvasElement | null = null;
+    let webglContextLostHandler: ((event: Event) => void) | null = null;
 
     const initialize = async () => {
       let lastError: unknown = new Error('WebGL is not available for PixiJS rendering.');
@@ -129,13 +131,13 @@ export function PixiCanvasMirror({
         clearCanvasThemeColorsCache();
 
         await candidate.init({
-          antialias: true,
+          antialias: false,
           autoDensity: true,
           autoStart: false,
           background: getCanvasThemeColors().canvasBackground,
           failIfMajorPerformanceCaveat: true,
           preference: ['webgl'],
-          resolution: window.devicePixelRatio || 1,
+          resolution: Math.min(window.devicePixelRatio || 1, 1.5),
           resizeTo: host,
         });
 
@@ -143,6 +145,30 @@ export function PixiCanvasMirror({
           candidate.destroy({ removeView: true }, { children: true });
           return;
         }
+
+        webglCanvas = candidate.canvas as HTMLCanvasElement;
+
+        webglContextLostHandler = (event: Event) => {
+          const statusMessage = (event as WebGLContextEvent).statusMessage;
+
+          console.error('PixiJS WebGL context was lost.', {
+            statusMessage: statusMessage || null,
+          });
+
+          if (disposed) return;
+
+          onBackendAvailability(false);
+
+          onUnavailable(
+            new Error(
+              statusMessage
+                ? `PixiJS WebGL context was lost: ${statusMessage}`
+                : 'PixiJS WebGL context was lost.',
+            ),
+          );
+        };
+
+        webglCanvas.addEventListener('webglcontextlost', webglContextLostHandler, { once: true });
 
         app = candidate;
         onBackendActive();
@@ -174,6 +200,10 @@ export function PixiCanvasMirror({
 
     return () => {
       disposed = true;
+
+      if (webglCanvas && webglContextLostHandler) {
+        webglCanvas.removeEventListener('webglcontextlost', webglContextLostHandler);
+      }
 
       if (adapterRef.current) {
         viewportRef.current = adapterRef.current.camera.getState();

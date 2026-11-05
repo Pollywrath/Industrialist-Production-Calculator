@@ -2038,21 +2038,28 @@ export function createFlowchartRenderer(
     const labels = view.textContainer.children.filter(
       (child): child is Text => child instanceof Text && child.visible,
     );
-    if (exportingCanvasPng) {
-      for (const label of view.textContainer.children) label.visible = true;
-      view.textContainer.mask = null;
-      view.controlContainer.mask = null;
-      nodeOcclusion.setOcclusionKey(id, occlusionKey);
-      return;
-    }
-    const labelBounds = labels.map(
-      (label): Bounds => ({
-        minX: label.x - label.width * label.anchor.x,
-        minY: label.y - label.height * label.anchor.y,
-        maxX: label.x + label.width * (1 - label.anchor.x),
-        maxY: label.y + label.height * (1 - label.anchor.y),
+    const visibleStatusBadges = view.statusBadges.filter((badge) => badge.visible);
+
+    const labelBounds = [
+      ...labels.map(
+        (label): Bounds => ({
+          minX: label.x - label.width * label.anchor.x,
+          minY: label.y - label.height * label.anchor.y,
+          maxX: label.x + label.width * (1 - label.anchor.x),
+          maxY: label.y + label.height * (1 - label.anchor.y),
+        }),
+      ),
+      ...visibleStatusBadges.map((badge): Bounds => {
+        const bounds = badge.getLocalBounds();
+
+        return {
+          minX: badge.x + bounds.x,
+          minY: badge.y + bounds.y,
+          maxX: badge.x + bounds.x + bounds.width,
+          maxY: badge.y + bounds.y + bounds.height,
+        };
       }),
-    );
+    ];
     const controlBounds: Bounds | undefined = view.expandButton?.visible
       ? {
           minX: COLLAPSED_GROUP_EXPAND_BUTTON.x,
@@ -2095,7 +2102,11 @@ export function createFlowchartRenderer(
           .filter((candidate): candidate is NonNullable<typeof candidate> => !!candidate),
     });
     labels.forEach((label, index) => {
-      if (!layout.labelFragments[index]) label.visible = false;
+      label.visible = layout.labelFragments[index] !== null;
+    });
+
+    visibleStatusBadges.forEach((badge, index) => {
+      badge.visible = layout.labelFragments[labels.length + index] !== null;
     });
     const visibleLabelFragments = layout.labelFragments.filter(
       (fragments): fragments is readonly Bounds[] => fragments !== null,
@@ -2396,14 +2407,19 @@ export function createFlowchartRenderer(
       overscanNodeIds.clear();
       for (const id of nextOverscanNodeIds) overscanNodeIds.add(id);
     }
-    if (detailLevelChanged) {
-      const visibleIds = [...cameraVisibleNodeIds];
-      if (exportingCanvasPng) {
-        nodeTextRefreshQueue.clear();
-        for (const id of visibleIds) updateNodeText(id);
-      } else {
-        enqueueNodeTextRefresh([...visibleIds, ...nodeViews.keys()], true);
+    if (exportingCanvasPng) {
+      nodeTextRefreshQueue.clear();
+
+      for (const id of cameraVisibleNodeIds) {
+        updateNodeText(id, true);
       }
+
+      lastDetailLevel = detailLevel;
+    } else if (detailLevelChanged) {
+      const visibleIds = [...cameraVisibleNodeIds];
+
+      enqueueNodeTextRefresh([...visibleIds, ...nodeViews.keys()], true);
+
       lastDetailLevel = detailLevel;
     } else if (visibleNodesChanged) {
       enqueueNodeTextRefresh([
@@ -5044,6 +5060,11 @@ export function createFlowchartRenderer(
         });
         applyViewportTransform(camera.getState());
         syncVisibleViews(true, undefined, false);
+
+        for (const id of cameraVisibleNodeIds) {
+          updateNodeText(id, true);
+        }
+
         invalidate();
       }
       if (!canvas) throw new Error('PNG export failed to render the graph.');

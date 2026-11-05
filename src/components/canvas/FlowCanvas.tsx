@@ -4,7 +4,6 @@ import { ControlsTray } from '../menu/ControlsTray';
 import { OverlaysTray } from '../menu/OverlaysTray';
 import { DashboardPanels } from '../menu/DashboardPanels';
 import { FlowViewport } from './react-flow/FlowViewport';
-import { getCanvasAdapter, setPendingCanvasViewState } from '../../canvas/canvasAdapterApi';
 import { useCanvasRendererStore } from '../../stores/useCanvasRendererStore';
 import { LoadingScreen } from '../shared/LoadingScreen';
 import { useAutosave } from '../../persistence/useAutosave';
@@ -186,6 +185,7 @@ export function FlowCanvas() {
   const preferenceRevision = useCanvasRendererStore((state) => state.preferenceRevision);
   const fallbackNoticeVisible = useCanvasRendererStore((state) => state.fallbackNoticeVisible);
   const setActiveRenderer = useCanvasRendererStore((state) => state.setActiveRenderer);
+  const setCanvasRendererPreference = useCanvasRendererStore((state) => state.setPreference);
   const setWebGLAvailability = useCanvasRendererStore((state) => state.setWebGLAvailability);
   const showFallbackNotice = useCanvasRendererStore((state) => state.showFallbackNotice);
   const dismissFallbackNotice = useCanvasRendererStore((state) => state.dismissFallbackNotice);
@@ -197,13 +197,13 @@ export function FlowCanvas() {
   const handlePixiUnavailable = useCallback(
     (error: unknown) => {
       console.warn('Switching to React Flow after PixiJS initialization failed.', error);
-      const viewState = getCanvasAdapter()?.getViewState?.();
-      if (viewState) setPendingCanvasViewState(viewState);
+
       setFailedPreferenceRevision(preferenceRevision);
+      setCanvasRendererPreference('react-flow');
       setActiveRenderer('react-flow');
       showFallbackNotice();
     },
-    [preferenceRevision, setActiveRenderer, showFallbackNotice],
+    [preferenceRevision, setCanvasRendererPreference, setActiveRenderer, showFallbackNotice],
   );
 
   const handlePixiBackendActive = useCallback(() => {
